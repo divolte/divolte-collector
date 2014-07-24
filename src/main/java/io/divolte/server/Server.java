@@ -17,8 +17,11 @@ public class Server implements Runnable {
         final String host = config.getString("divolte.server.host");
         final int port = config.getInt("divolte.server.port");
 
+        final DivolteEventHandler divolteEventHandler = new DivolteEventHandler();
+
         final PathHandler handler = new PathHandler();
-        handler.addExactPath("/ping", PingHandler.HANDLER);
+        handler.addExactPath("/ping", PingHandler::handlePingRequest);
+        handler.addExactPath("/event", divolteEventHandler::handleEventRequest);
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
 
