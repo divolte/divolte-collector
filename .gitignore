@@ -1,0 +1,16 @@
+# Gradle
+/.gradle
+/build/
+
+# Finder
+.DS_Store
+
+# IntelliJ.
+*.iml
+/.idea/
+
+# Eclipse.
+/.project
+/.classpath
+/.settings
+/.cache

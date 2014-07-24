@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <target>System.out</target>
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-6level[%logger{0}]: %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="${LOGLEVEL_ROOT:-INFO}">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+</configuration>
