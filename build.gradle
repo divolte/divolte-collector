@@ -5,7 +5,6 @@ apply plugin:'application'
 sourceCompatibility = 1.8
 version = '0.1-SNAPSHOT'
 mainClassName = "io.divolte.server.Server"
-applicationDefaultJvmArgs = ["-Dorg.jboss.logging.provider=slf4j"]
 
 repositories {
     mavenCentral()

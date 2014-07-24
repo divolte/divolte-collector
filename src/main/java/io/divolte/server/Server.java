@@ -44,6 +44,10 @@ public class Server implements Runnable {
     }
 
     public static void main(final String[] args) {
+        // Tell Undertow to use Slf4J for logging by default.
+        if (null == System.getProperty("org.jboss.logging.provider")) {
+            System.setProperty("org.jboss.logging.provider", "slf4j");
+        }
         new Server(ConfigFactory.load()).run();
     }
 }
