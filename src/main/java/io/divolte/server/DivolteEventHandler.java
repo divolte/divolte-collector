@@ -92,7 +92,7 @@ final class DivolteEventHandler {
         responseHeaders.put(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
         responseHeaders.put(Headers.PRAGMA, "no-cache");
         responseHeaders.put(Headers.EXPIRES, 0);
-        exchange.getResponseSender().send(transparentImage);
+        exchange.getResponseSender().send(transparentImage.slice());
     }
 
     private static String getTrackingIdentifier(final HttpServerExchange exchange,
