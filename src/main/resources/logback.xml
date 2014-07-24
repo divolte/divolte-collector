@@ -7,7 +7,7 @@
     </encoder>
   </appender>
 
-  <root level="${LOGLEVEL_ROOT:-INFO}">
+  <root level="info">
     <appender-ref ref="CONSOLE"/>
   </root>
 </configuration>
