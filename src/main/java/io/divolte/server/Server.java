@@ -1,28 +1,30 @@
 package io.divolte.server;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.undertow.Undertow;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.util.Headers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.charset.StandardCharsets;
 
 public class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
 
-    public Server(final String host) {
+    public Server(final Config config) {
+        final String host = config.getString("divolte.server.host");
+        final int port = config.getInt("divolte.server.port");
+
         final PathHandler handler = new PathHandler();
-        handler.addExactPath("/ping", (exchange) -> {
-            logger.debug("PING!");
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-            exchange.getResponseSender().send("pong", StandardCharsets.UTF_8);
-        });
+        handler.addExactPath("/ping", PingHandler.HANDLER);
+        final SetHeaderHandler headerHandler =
+                new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
 
         undertow = Undertow.builder()
-                           .addHttpListener(1234, host)
-                           .setHandler(handler)
+                           .addHttpListener(port, host)
+                           .setHandler(headerHandler)
                            .build();
     }
 
@@ -39,6 +41,6 @@ public class Server implements Runnable {
     }
 
     public static void main(final String[] args) {
-        new Server("localhost").run();
+        new Server(ConfigFactory.load()).run();
     }
 }
