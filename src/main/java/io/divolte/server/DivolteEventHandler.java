@@ -41,8 +41,8 @@ final class DivolteEventHandler {
         this.sessionTimeout = Preconditions.checkNotNull(sessionTimeout);
         try {
             this.transparentImage = ByteBuffer.wrap(
-                Resources.toByteArray(Resources.getResource("transparent1x1.png"))
-            );
+                Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
+            ).asReadOnlyBuffer();
         } catch (final IOException e) {
             // Should throw something more specific than this.
             throw new RuntimeException("Could not load transparent image resource.", e);
@@ -88,7 +88,7 @@ final class DivolteEventHandler {
 
     private void serveImage(final HttpServerExchange exchange) {
         final HeaderMap responseHeaders = exchange.getResponseHeaders();
-        responseHeaders.put(Headers.CONTENT_TYPE, "image/png");
+        responseHeaders.put(Headers.CONTENT_TYPE, "image/gif");
         responseHeaders.put(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
         responseHeaders.put(Headers.PRAGMA, "no-cache");
         responseHeaders.put(Headers.EXPIRES, 0);
