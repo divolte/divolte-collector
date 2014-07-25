@@ -30,6 +30,16 @@
     }
     return myElement;
   }();
+  // Figure out the pageview ID, if one is present.
+  var pageViewId = function(element) {
+    var myUrl = element.src,
+        anchorIndex = myUrl.indexOf("#"),
+        anchor = -1 !== anchorIndex ? myUrl.substring(anchorIndex + 1) : undefined;
+    if ('undefined' !== typeof anchor && -1 !== anchor.indexOf('/')) {
+      throw "DVT not initialized correctly; page view ID may not contain a slash ('/').";
+    }
+    return anchor;
+  }(dvtElement);
   // Detect the base URL for the Divolte server that served this file.
   var baseURL = function(element) {
     var myUrl = element.src;
@@ -44,6 +54,7 @@
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
           event = {
+            p: pageViewId,
             l: window.location.href,
             r: document.referrer || undefined,
             i: window.screen.availWidth,
