@@ -3,6 +3,7 @@ package io.divolte.server;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.undertow.Undertow;
+import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.util.Headers;
@@ -28,6 +29,7 @@ public class Server implements Runnable {
         undertow = Undertow.builder()
                            .addHttpListener(port, host)
                            .setHandler(headerHandler)
+                           .setServerOption(UndertowOptions.RECORD_REQUEST_START_TIME, true)
                            .build();
     }
 
