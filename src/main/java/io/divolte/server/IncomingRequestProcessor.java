@@ -17,7 +17,7 @@ final class IncomingRequestProcessor {
     private final LinkedBlockingQueue<HttpServerExchange> queue;
 
     public IncomingRequestProcessor() {
-        this.queue = new LinkedBlockingQueue<HttpServerExchange>();
+        this.queue = new LinkedBlockingQueue<>();
     }
 
     public void readQueue() {
