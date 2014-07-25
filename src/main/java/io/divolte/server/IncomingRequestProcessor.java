@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class IncomingRequestProcessor {
+final class IncomingRequestProcessor {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
     
     private final LinkedBlockingQueue<HttpServerExchange> queue;
@@ -24,14 +24,17 @@ public class IncomingRequestProcessor {
         final List<HttpServerExchange> batch = new ArrayList<>(maxBatchSize);
         
         while(true) {
-            int batchSize = queue.drainTo(batch, maxBatchSize);
-            batch.stream().forEach((exchange) -> {
+            final int batchSize = queue.drainTo(batch, maxBatchSize);
+            
+            batch.forEach((exchange) -> {
                 processExchange(exchange);
             });
+            batch.clear();
 
             // if the batch was empty, block on the queue until something is available
-            if (batchSize == 0) {
-                batch.add(pollQuietly(queue, 1, TimeUnit.SECONDS));
+            final HttpServerExchange polled;
+            if (batchSize == 0 && (polled = pollQuietly(queue, 1, TimeUnit.SECONDS)) != null) {
+                batch.add(polled);
             }
         }
     }

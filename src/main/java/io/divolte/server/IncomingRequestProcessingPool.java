@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class IncomingRequestProcessingPool {
+final class IncomingRequestProcessingPool {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
     private final List<IncomingRequestProcessor> processors;
     
@@ -25,7 +25,7 @@ public class IncomingRequestProcessingPool {
     }
     
     public IncomingRequestProcessingPool(Config config) {
-        final int numSerializationThreads = config.getInt("divolte.server.serialization.threads");
+        final int numSerializationThreads = config.getInt("divolte.server.incomingrequestprocessor.threads");
         
         processors = new ArrayList<IncomingRequestProcessor>(numSerializationThreads);
         Stream.generate(() -> new LinkedBlockingQueue<HttpServerExchange>())
@@ -36,7 +36,7 @@ public class IncomingRequestProcessingPool {
             scheduleQueueReader(
                     Executors.newFixedThreadPool(
                             1,
-                            (runnable) -> new Thread(runnable, "Incoming HttpServerExchange reader thread for queue " + queue.hashCode())),
+                            (runnable) -> new Thread(runnable, "Incoming Request Processor-" + processors.size())),
                     processor);
         });
     }

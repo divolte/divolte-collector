@@ -30,15 +30,19 @@ final class DivolteEventHandler {
     private final Duration sessionTimeout;
 
     private final ByteBuffer transparentImage;
+    
+    private final IncomingRequestProcessingPool processingPool;
 
     public DivolteEventHandler(final String partyCookieName,
                                final Duration partyTimeout,
                                final String sessionCookieName,
-                               final Duration sessionTimeout) {
+                               final Duration sessionTimeout,
+                               final IncomingRequestProcessingPool processingPool) {
         this.partyCookieName =   Objects.requireNonNull(partyCookieName);
         this.partyTimeout =      Objects.requireNonNull(partyTimeout);
         this.sessionCookieName = Objects.requireNonNull(sessionCookieName);
         this.sessionTimeout =    Objects.requireNonNull(sessionTimeout);
+        this.processingPool =    Objects.requireNonNull(processingPool);
         try {
             this.transparentImage = ByteBuffer.wrap(
                 Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
@@ -53,7 +57,8 @@ final class DivolteEventHandler {
         this(config.getString("divolte.tracking.party_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.party_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.session_cookie"),
-             Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)));
+             Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)),
+             new IncomingRequestProcessingPool(config));
     }
 
     public void handleEventRequest(final HttpServerExchange exchange) throws Exception {
@@ -65,13 +70,17 @@ final class DivolteEventHandler {
          */
         // We only accept GET requests.
         if (exchange.getRequestMethod().equals(Methods.GET)) {
+            // 1
             final String partyId = getTrackingIdentifier(exchange, partyCookieName, partyTimeout);
             final String sessionId = getTrackingIdentifier(exchange, sessionCookieName, sessionTimeout);
 
+            // 2
             exchange.setResponseCode(StatusCodes.ACCEPTED);
             serveImage(exchange);
-
-            logger.info("Event received: {}/{}", partyId, sessionId);
+            
+            // 3
+            logger.debug("Enqueuing event: {}/{}", partyId, sessionId);
+            processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
         } else {
             methodNotAllowed(exchange);
         }
