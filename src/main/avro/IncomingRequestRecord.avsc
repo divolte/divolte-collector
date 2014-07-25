@@ -1,0 +1,63 @@
+{
+    "namespace": "io.divolte.record",
+    "type": "record",
+    "name": "IncomingRequestRecord",
+    "fields": [
+        {
+            "name": "firstInSession",
+            "type": "boolean"
+        },
+        {
+            "name": "timestamp",
+            "type": "long"
+        },
+        {
+            "name": "userAgent",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "remoteHost",
+            "type": "string"
+        },
+        {
+            "name": "referer",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "location",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "viewportWidth",
+            "type": ["null", "int"]
+        },
+        {
+            "name": "viewportHeight",
+            "type": ["null", "int"]
+        },
+        {
+            "name": "screenWidth",
+            "type": ["null", "int"]
+        },
+        {
+            "name": "screenHeight",
+            "type": ["null", "int"]
+        },
+        {
+            "name": "partyId",
+            "type": "string"
+        },
+        {
+            "name": "sessionId",
+            "type": "string"
+        },
+        {
+            "name": "pageViewId",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "completeRequest",
+            "type": "boolean"
+        }
+    ]
+}

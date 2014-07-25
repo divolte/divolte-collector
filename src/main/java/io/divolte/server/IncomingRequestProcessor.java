@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import io.divolte.record.IncomingRequestRecord;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.ArrayList;
@@ -31,7 +32,7 @@ final class IncomingRequestProcessor {
             });
             batch.clear();
 
-            // if the batch was empty, block on the queue until something is available
+            // if the batch was empty, block on the queue for some time until something is available
             final HttpServerExchange polled;
             if (batchSize == 0 && (polled = pollQuietly(queue, 1, TimeUnit.SECONDS)) != null) {
                 batch.add(polled);
@@ -40,7 +41,9 @@ final class IncomingRequestProcessor {
     }
     
     private void processExchange(final HttpServerExchange exchange) {
-        logger.debug("Handling exchange: {}", exchange);
+        IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange);
+        AvroRecordBuffer<IncomingRequestRecord> avroBuffer = AvroRecordBuffer.fromRecord(avroRecord);
+        
     }
     
     private static <E> E pollQuietly(final LinkedBlockingQueue<E> queue, long timeout, TimeUnit unit) {

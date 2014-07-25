@@ -55,6 +55,8 @@ final class IncomingRequestProcessingPool {
     }
     
     public void enqueueIncomingExchangeForProcessing(String partyId, HttpServerExchange exchange) {
+        // we assign request with the same party ID to the same thread,
+        // such that we do not re-order messages for the same party ID.
         processors.get((partyId.hashCode() & Integer.MAX_VALUE) % processors.size()).add(exchange);
     }
 }
