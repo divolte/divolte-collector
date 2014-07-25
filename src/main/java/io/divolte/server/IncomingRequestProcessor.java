@@ -27,9 +27,7 @@ final class IncomingRequestProcessor {
         while(true) {
             final int batchSize = queue.drainTo(batch, maxBatchSize);
             
-            batch.forEach((exchange) -> {
-                processExchange(exchange);
-            });
+            batch.forEach(this::processExchange);
             batch.clear();
 
             // if the batch was empty, block on the queue for some time until something is available
