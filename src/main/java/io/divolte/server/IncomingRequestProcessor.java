@@ -41,7 +41,7 @@ final class IncomingRequestProcessor {
     private void processExchange(final HttpServerExchange exchange) {
         IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange);
         AvroRecordBuffer<IncomingRequestRecord> avroBuffer = AvroRecordBuffer.fromRecord(avroRecord);
-        logger.debug("Serialized Avro record: {}", avroBuffer);
+        logger.debug("Serialized Avro record: {}", avroRecord);
     }
 
     private static <E> E pollQuietly(final LinkedBlockingQueue<E> queue, long timeout, TimeUnit unit) {
