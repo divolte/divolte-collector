@@ -1,17 +1,20 @@
 package io.divolte.server;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import io.divolte.record.IncomingRequestRecord;
 import io.divolte.record.IncomingRequestRecord.Builder;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
-import org.apache.avro.specific.SpecificRecord;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 final class RecordUtil {
+    private static final Deque<String> emtpyDeque = new ArrayDeque<String>();
+    
     private static final String PARTY_ID_COOKIE;
     private static final String SESSION_ID_COOKIE;
     
@@ -22,7 +25,7 @@ final class RecordUtil {
     }
 
     private static String getQueryParamOrMarkIncompleteIfAbsent(HttpServerExchange exchange, String paramName, IncomingRequestRecord.Builder builder) {
-        final String result = exchange.getQueryParameters().get(paramName).peekFirst();
+        final String result = exchange.getQueryParameters().getOrDefault(paramName, RecordUtil.emtpyDeque).peekFirst();
         if (result == null) {
             builder.setCompleteRequest(false);
         }
@@ -52,8 +55,8 @@ final class RecordUtil {
         final String partyId = exchange.getResponseCookies().get(PARTY_ID_COOKIE).getValue();
         final String sessionId = exchange.getResponseCookies().get(SESSION_ID_COOKIE).getValue();
         final String pageViewId = getQueryParamOrMarkIncompleteIfAbsent(exchange, "p", builder);
-        final String referer = getQueryParamOrMarkIncompleteIfAbsent(exchange, "r", builder);
-        final String location = getRequestHeaderOrMarkIncompleteIfAbsent(exchange, Headers.REFERER, builder);
+        final String referer = exchange.getQueryParameters().get("r").getFirst();
+        final String location = getQueryParamOrMarkIncompleteIfAbsent(exchange, "l", builder);
         final String remoteHost = exchange.getDestinationAddress().getHostString();
         final String userAgent = getRequestHeaderOrMarkIncompleteIfAbsent(exchange, Headers.USER_AGENT, builder);
         final Integer viewportWidth = parseIntIfParseable(getQueryParamOrMarkIncompleteIfAbsent(exchange, "w", builder));
