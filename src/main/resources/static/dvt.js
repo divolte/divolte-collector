@@ -12,6 +12,7 @@
   "use strict";
   window.console.log("Initializing DVT.");
 
+  // Find the <script> element used to load this script.
   var dvtElement = function() {
     var document = window.document,
         myElement = document.currentScript;
