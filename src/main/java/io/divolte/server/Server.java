@@ -4,6 +4,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
+import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.util.Headers;
@@ -14,9 +15,12 @@ public class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
 
+    private final String host;
+    private final int port;
+
     public Server(final Config config) {
-        final String host = config.getString("divolte.server.host");
-        final int port = config.getInt("divolte.server.port");
+        host = config.getString("divolte.server.host");
+        port = config.getInt("divolte.server.port");
 
         final DivolteEventHandler divolteEventHandler = new DivolteEventHandler(config);
 
@@ -25,10 +29,11 @@ public class Server implements Runnable {
         handler.addExactPath("/event", divolteEventHandler::handleEventRequest);
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
+        final HttpHandler rootHandler = new CanonicalPathHandler(headerHandler);
 
         undertow = Undertow.builder()
                            .addHttpListener(port, host)
-                           .setHandler(headerHandler)
+                           .setHandler(rootHandler)
                            .setServerOption(UndertowOptions.RECORD_REQUEST_START_TIME, true)
                            .build();
     }
@@ -41,7 +46,7 @@ public class Server implements Runnable {
                     undertow.stop();
                 }
         ));
-        logger.info("Starting server.");
+        logger.info("Starting server on {}:{}", host, port);
         undertow.start();
     }
 
