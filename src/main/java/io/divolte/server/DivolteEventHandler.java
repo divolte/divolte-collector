@@ -1,6 +1,5 @@
 package io.divolte.server;
 
-import com.google.common.base.Preconditions;
 import com.google.common.io.Resources;
 import com.typesafe.config.Config;
 import io.undertow.server.HttpServerExchange;
@@ -18,6 +17,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -35,10 +35,10 @@ final class DivolteEventHandler {
                                final Duration partyTimeout,
                                final String sessionCookieName,
                                final Duration sessionTimeout) {
-        this.partyCookieName = Preconditions.checkNotNull(partyCookieName);
-        this.partyTimeout = Preconditions.checkNotNull(partyTimeout);
-        this.sessionCookieName = Preconditions.checkNotNull(sessionCookieName);
-        this.sessionTimeout = Preconditions.checkNotNull(sessionTimeout);
+        this.partyCookieName =   Objects.requireNonNull(partyCookieName);
+        this.partyTimeout =      Objects.requireNonNull(partyTimeout);
+        this.sessionCookieName = Objects.requireNonNull(sessionCookieName);
+        this.sessionTimeout =    Objects.requireNonNull(sessionTimeout);
         try {
             this.transparentImage = ByteBuffer.wrap(
                 Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
