@@ -1,8 +1,5 @@
 package io.divolte.server;
 
-import com.google.common.base.Preconditions;
-import com.google.common.io.Resources;
-import com.typesafe.config.Config;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
@@ -10,8 +7,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,6 +15,13 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.google.common.io.Resources;
+import com.typesafe.config.Config;
 
 final class DivolteEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
@@ -30,11 +32,14 @@ final class DivolteEventHandler {
     private final Duration sessionTimeout;
 
     private final ByteBuffer transparentImage;
+    
+    private final IncomingRequestProcessingPool processingPool;
 
     public DivolteEventHandler(final String partyCookieName,
                                final Duration partyTimeout,
                                final String sessionCookieName,
-                               final Duration sessionTimeout) {
+                               final Duration sessionTimeout,
+                               final IncomingRequestProcessingPool processingPool) {
         this.partyCookieName = Preconditions.checkNotNull(partyCookieName);
         this.partyTimeout = Preconditions.checkNotNull(partyTimeout);
         this.sessionCookieName = Preconditions.checkNotNull(sessionCookieName);
@@ -47,13 +52,16 @@ final class DivolteEventHandler {
             // Should throw something more specific than this.
             throw new RuntimeException("Could not load transparent image resource.", e);
         }
+        
+        this.processingPool = processingPool;
     }
 
     public DivolteEventHandler(final Config config) {
         this(config.getString("divolte.tracking.party_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.party_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.session_cookie"),
-             Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)));
+             Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)),
+             new IncomingRequestProcessingPool(config));
     }
 
     public void handleEventRequest(final HttpServerExchange exchange) throws Exception {
@@ -65,11 +73,16 @@ final class DivolteEventHandler {
          * 3) Pass into our queuing system for further handling.
          */
         if (exchange.getRequestMethod().equals(Methods.GET)) {
+            // 1
             final String partyId = getTrackingIdentifier(exchange, partyCookieName, partyTimeout);
             final String sessionId = getTrackingIdentifier(exchange, sessionCookieName, sessionTimeout);
 
+            // 2
             exchange.setResponseCode(StatusCodes.ACCEPTED);
             serveImage(exchange);
+            
+            // 3
+            processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
 
             logger.info("Event received: {}/{}", partyId, sessionId);
         } else {

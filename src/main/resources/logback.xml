@@ -7,6 +7,8 @@
     </encoder>
   </appender>
 
+  <logger name="io.divolte" level="DEBUG" />
+
   <root level="info">
     <appender-ref ref="CONSOLE"/>
   </root>
