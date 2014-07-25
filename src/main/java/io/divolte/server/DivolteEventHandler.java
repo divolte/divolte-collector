@@ -107,11 +107,12 @@ final class DivolteEventHandler {
     private static String getTrackingIdentifier(final HttpServerExchange exchange,
                                                 final String cookieName,
                                                 final Duration timeout) {
-        final Cookie trackingCookie = exchange.getRequestCookies().computeIfAbsent(cookieName, (name) -> {
+        Cookie trackingCookie = exchange.getRequestCookies().get(cookieName);
+        if (null == trackingCookie) {
             final String cookieValue = UUID.randomUUID().toString();
             logger.debug("New {} cookie generated: {}", cookieName, cookieValue);
-            return new CookieImpl(name, cookieValue);
-        });
+            trackingCookie = new CookieImpl(cookieName, cookieValue);
+        }
         trackingCookie.setVersion(1);
         final long maxAge = timeout.getSeconds();
         if (maxAge <= Integer.MAX_VALUE) {
