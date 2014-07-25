@@ -75,6 +75,7 @@
       if (0 < params.length) {
         params = params.substring(0, params.length - 1);
       }
+      // TODO: Add cache-busting unique parameter.
       new Image(1,1).src = baseURL + 'event?' + params;
     }
   };
