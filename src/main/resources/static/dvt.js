@@ -12,7 +12,6 @@
   "use strict";
   window.console.log("Initializing DVT.");
 
-  // Detect the base URL for the Divolte server that served this file.
   var dvtElement = function() {
     var document = window.document,
         myElement = document.currentScript;
@@ -30,6 +29,7 @@
     }
     return myElement;
   }();
+  // Detect the base URL for the Divolte server that served this file.
   var baseURL = function(element) {
     var myUrl = element.src;
     return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
