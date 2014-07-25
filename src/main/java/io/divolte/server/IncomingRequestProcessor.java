@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 final class IncomingRequestProcessor {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
-    
+
     private final LinkedBlockingQueue<HttpServerExchange> queue;
 
     public IncomingRequestProcessor() {
@@ -23,10 +23,10 @@ final class IncomingRequestProcessor {
     public void readQueue() {
         final int maxBatchSize = 100;
         final List<HttpServerExchange> batch = new ArrayList<>(maxBatchSize);
-        
+
         while(true) {
             final int batchSize = queue.drainTo(batch, maxBatchSize);
-            
+
             batch.forEach(this::processExchange);
             batch.clear();
 
@@ -37,13 +37,13 @@ final class IncomingRequestProcessor {
             }
         }
     }
-    
+
     private void processExchange(final HttpServerExchange exchange) {
         IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange);
         AvroRecordBuffer<IncomingRequestRecord> avroBuffer = AvroRecordBuffer.fromRecord(avroRecord);
         logger.debug("Serialized Avro record: {}", avroBuffer);
     }
-    
+
     private static <E> E pollQuietly(final LinkedBlockingQueue<E> queue, long timeout, TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);
