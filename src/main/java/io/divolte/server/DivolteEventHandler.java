@@ -57,13 +57,13 @@ final class DivolteEventHandler {
     }
 
     public void handleEventRequest(final HttpServerExchange exchange) throws Exception {
-        // We only accept GET requests.
         /*
          * Our strategy is:
          * 1) Set up the cookies.
          * 2) Acknowledge the response.
          * 3) Pass into our queuing system for further handling.
          */
+        // We only accept GET requests.
         if (exchange.getRequestMethod().equals(Methods.GET)) {
             final String partyId = getTrackingIdentifier(exchange, partyCookieName, partyTimeout);
             final String sessionId = getTrackingIdentifier(exchange, sessionCookieName, sessionTimeout);
