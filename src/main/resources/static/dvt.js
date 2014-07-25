@@ -53,9 +53,11 @@
 
       var params = "";
       for (var name in event) {
-        var value = event[name];
-        if (typeof value !== 'undefined') {
-          params += name + '=' + encodeURIComponent(value) + '&';
+        if (event.hasOwnProperty(name)) {
+          var value = event[name];
+          if (typeof value !== 'undefined') {
+            params += name + '=' + encodeURIComponent(value) + '&';
+          }
         }
       }
       if (0 < params.length) {
