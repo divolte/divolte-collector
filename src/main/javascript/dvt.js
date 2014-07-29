@@ -98,9 +98,9 @@
   } else {
     window.dvt = window.$$$ = dvt;
   }
-  window.console.log("Module initialized", dvt);
+  window.console.log("Module initialized.", dvt);
 
-  window.console.log("Firing initial event");
+  window.console.log("Firing initial event.");
   dvt.signal();
 
   return dvt;

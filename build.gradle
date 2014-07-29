@@ -1,32 +1,29 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'application'
-apply plugin: 'avro-gradle-plugin'
+apply plugin: 'com.commercehub.gradle.plugin.avro'
+apply plugin: 'js'
 
 sourceCompatibility = 1.8
 version = '0.1-SNAPSHOT'
-mainClassName = "io.divolte.server.Server"
+mainClassName = 'io.divolte.server.Server'
+
+compileJava.options.encoding = 'UTF-8'
 
 repositories {
     mavenCentral()
 }
 
 buildscript {
-  repositories {
-    mavenCentral()
-    maven {
-      url 'http://repo.springsource.org/plugins-release/'
+    repositories {
+        mavenCentral()
+        jcenter()
     }
-  }
-  dependencies {
-    classpath group: 'org.apache.maven', name: 'maven-artifact', version: '2.2.1'
-    classpath group: 'org.apache.avro', name: 'avro-compiler', version: '1.7.7'
-    classpath group: 'org.apache.avro', name: 'avro-gradle-plugin', version: '1.7.2'
-  }
+    dependencies {
+        classpath group: 'com.commercehub.gradle.plugin', name: 'gradle-avro-plugin', version: '0.2.0'
+        classpath group: 'com.eriwen', name: 'gradle-js-plugin', version: '1.12.1'
+    }
 }
-
-compileAvro.source = 'src/main/avro'
-compileAvro.destinationDir = file("$buildDir/generated-sources/avro")
 
 dependencies {
     compile group: 'io.undertow', name: 'undertow-core', version: '1.0.15.Final'
@@ -43,13 +40,26 @@ dependencies {
 }
 
 sourceSets {
-  main {
-    java {
-      srcDir compileAvro.destinationDir
+    main {
+        output.dir("${buildDir}/generated-resources/javascript", builtBy: 'minifyJs')
     }
-  }
 }
 
-dependencies {
-  compileAvro
+javascript.source {
+    dev {
+        js {
+            srcDir 'src/main/javascript'
+            include 'dvt.js'
+        }
+    }
+}
+
+minifyJs {
+    source = javascript.source.dev.js.files
+    dest = file("${buildDir}/generated-resources/javascript/static/dvt.js")
+    sourceMap = file("${buildDir}/generated-resources/javascript/static/dvt.sourcemap.json")
+    closure {
+        warningLevel = 'QUIET'
+        compilationLevel = 'ADVANCED_OPTIMIZATIONS'
+    }
 }
