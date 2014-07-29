@@ -24,7 +24,7 @@ final class IncomingRequestProcessingPool {
     }
 
     public IncomingRequestProcessingPool(Config config) {
-        final int numSerializationThreads = config.getInt("divolte.server.incomingrequestprocessor.threads");
+        final int numSerializationThreads = config.getInt("divolte.incoming_request_processor.threads");
 
         processors = new ArrayList<IncomingRequestProcessor>(numSerializationThreads);
         Stream.generate(() -> new IncomingRequestProcessor())
