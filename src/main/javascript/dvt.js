@@ -47,6 +47,16 @@
   }(dvtElement);
   window.console.info("Divolte base URL detected", baseURL);
 
+  // Declare a function that can be used to generate a reasonably unique string.
+  // The string need not be globally unique, but only for this client.
+  var digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789~_',
+      generateCacheNonce = function() {
+        return new Date().getTime().toString(36)
+          + digits[Math.floor(Math.random() * digits.length)]
+          + digits[Math.floor(Math.random() * digits.length)]
+          + digits[Math.floor(Math.random() * digits.length)];
+  };
+
   // Declare our module.
   var dvt = {
     // Basic event logger.
@@ -63,18 +73,19 @@
             h: window.innerHeight || documentElement.clientHeight || bodyElement.clientHeight
           };
 
-      var params = "";
+      // Initialize with a special cache-busting parameter.
+      // (By making it different for every request, it should never come out of a cache.)
+      var params = 'n=' + encodeURIComponent(generateCacheNonce());
+      // These are the parameters relating to the event itself.
       for (var name in event) {
         if (event.hasOwnProperty(name)) {
           var value = event[name];
           if (typeof value !== 'undefined') {
-            params += name + '=' + encodeURIComponent(value) + '&';
+            params += '&' + name + '=' + encodeURIComponent(value);
           }
         }
       }
-      if (0 < params.length) {
-        params = params.substring(0, params.length - 1);
-      }
+      // Special special cache-busting parameter.
       new Image(1,1).src = baseURL + 'event?' + params;
     }
   };
@@ -87,9 +98,9 @@
   } else {
     window.dvt = window.$$$ = dvt;
   }
-  window.console.log("Module initialized", dvt);
+  window.console.log("Module initialized.", dvt);
 
-  window.console.log("Firing initial event");
+  window.console.log("Firing initial event.");
   dvt.signal();
 
   return dvt;
