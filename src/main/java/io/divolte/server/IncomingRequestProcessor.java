@@ -41,14 +41,14 @@ final class IncomingRequestProcessor {
     private void processExchange(final HttpServerExchange exchange) {
         IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange);
         AvroRecordBuffer<IncomingRequestRecord> avroBuffer = AvroRecordBuffer.fromRecord(avroRecord);
-        logger.debug("Serialized Avro record: {}", avroRecord);
+        logger.debug("Serialized Avro record: {}", avroBuffer.getBufferSlice().limit());
     }
 
     private static <E> E pollQuietly(final LinkedBlockingQueue<E> queue, long timeout, TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            return null;
         }
     }
 
