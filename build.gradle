@@ -41,6 +41,8 @@ dependencies {
 
 sourceSets {
     main {
+        // This is needed for Eclipse, and does no harm elsewhere.
+        java.srcDir "${buildDir}/generated-main-avro-java"
         output.dir("${buildDir}/generated-resources/javascript", builtBy: 'minifyJs')
     }
 }
