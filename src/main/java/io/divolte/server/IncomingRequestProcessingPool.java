@@ -7,11 +7,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -26,15 +29,18 @@ final class IncomingRequestProcessingPool {
     public IncomingRequestProcessingPool(Config config) {
         final int numSerializationThreads = config.getInt("divolte.incoming_request_processor.threads");
 
-        processors = new ArrayList<IncomingRequestProcessor>(numSerializationThreads);
-        Stream.generate(() -> new IncomingRequestProcessor())
+        final ThreadFactory factory = new ThreadFactoryBuilder()
+            .setNameFormat("Incoming Request Processor - %d")
+            .build();
+        final ExecutorService executorService = Executors.newFixedThreadPool(numSerializationThreads, factory);
+
+        processors = Stream.generate(IncomingRequestProcessor::new)
         .limit(numSerializationThreads)
-        .forEach((processor) -> {
-            processors.add(processor);
+        .collect(Collectors.toCollection(() -> new ArrayList<>(numSerializationThreads)));
+
+        processors.stream().forEach((processor) -> {
             scheduleQueueReader(
-                    Executors.newFixedThreadPool(
-                            1,
-                            (runnable) -> new Thread(runnable, "Incoming Request Processor-" + processors.size())),
+                    executorService,
                     processor);
         });
     }

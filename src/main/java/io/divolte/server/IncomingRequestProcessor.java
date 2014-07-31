@@ -24,7 +24,7 @@ final class IncomingRequestProcessor {
         final int maxBatchSize = 100;
         final List<HttpServerExchange> batch = new ArrayList<>(maxBatchSize);
 
-        while(true) {
+        while(!Thread.currentThread().isInterrupted()) {
             final int batchSize = queue.drainTo(batch, maxBatchSize);
 
             batch.forEach(this::processExchange);
@@ -48,6 +48,7 @@ final class IncomingRequestProcessor {
         try {
             return queue.poll(timeout, unit);
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return null;
         }
     }
