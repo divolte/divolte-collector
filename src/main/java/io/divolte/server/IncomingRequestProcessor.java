@@ -25,7 +25,7 @@ final class IncomingRequestProcessor {
         final List<HttpServerExchange> batch = new ArrayList<>(maxBatchSize);
 
         while(!Thread.currentThread().isInterrupted()) {
-            queue.drainTo(batch, maxBatchSize);
+            queue.drainTo(batch, maxBatchSize - 1);
             final int batchSize = batch.size();
 
             batch.forEach(this::processExchange);
