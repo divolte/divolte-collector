@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import static io.divolte.server.ConcurrentUtils.createThreadFactory;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.ArrayList;
@@ -14,7 +15,6 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -26,19 +26,20 @@ final class IncomingRequestProcessingPool {
         this(ConfigFactory.load());
     }
 
-    public IncomingRequestProcessingPool(Config config) {
+    public IncomingRequestProcessingPool(final Config config) {
         final int numSerializationThreads = config.getInt("divolte.incoming_request_processor.threads");
 
-        final ThreadFactory factory = new ThreadFactoryBuilder()
-            .setNameFormat("Incoming Request Processor - %d")
-            .build();
+        final ThreadGroup threadGroup = new ThreadGroup("Incoming Request Processing Pool");
+        final ThreadFactory factory = createThreadFactory(threadGroup, "Incoming Request Processor - %d");
         final ExecutorService executorService = Executors.newFixedThreadPool(numSerializationThreads, factory);
 
-        processors = Stream.generate(IncomingRequestProcessor::new)
+        final LocalFileFlushingPool localFlushingPool = new LocalFileFlushingPool(config);
+
+        processors = Stream.generate(() -> new IncomingRequestProcessor(localFlushingPool))
         .limit(numSerializationThreads)
         .collect(Collectors.toCollection(() -> new ArrayList<>(numSerializationThreads)));
 
-        processors.stream().forEach((processor) -> {
+        processors.forEach((processor) -> {
             scheduleQueueReader(
                     executorService,
                     processor);
@@ -47,7 +48,7 @@ final class IncomingRequestProcessingPool {
 
     private void scheduleQueueReader(final ExecutorService es, final IncomingRequestProcessor processor) {
         CompletableFuture
-        .runAsync(processor::readQueue, es)
+        .runAsync(processor.getQueueReader(), es)
         .whenComplete((voidValue, error) -> {
             // In case the reader for some reason escapes its loop with an exception,
             // log any uncaught exceptions and reschedule
@@ -58,9 +59,9 @@ final class IncomingRequestProcessingPool {
         });
     }
 
-    public void enqueueIncomingExchangeForProcessing(String partyId, HttpServerExchange exchange) {
+    public void enqueueIncomingExchangeForProcessing(final String partyId, final HttpServerExchange exchange) {
         // we assign requests with the same party ID to the same thread,
         // such that we do not re-order messages for the same party ID.
-        processors.get((partyId.hashCode() & Integer.MAX_VALUE) % processors.size()).add(exchange);
+        processors.get((partyId.hashCode() & Integer.MAX_VALUE) % processors.size()).add(partyId, exchange);
     }
 }

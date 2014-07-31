@@ -1,60 +1,49 @@
 package io.divolte.server;
 
+import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.record.IncomingRequestRecord;
+import io.divolte.server.LocalFileFlushingPool.FilePosition;
 import io.undertow.server.HttpServerExchange;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
+import org.apache.avro.specific.SpecificRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 final class IncomingRequestProcessor {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
-    private final LinkedBlockingQueue<HttpServerExchange> queue;
+    private final LinkedBlockingQueue<HttpServerExchangeWithPartyId> queue;
+    private final LocalFileFlushingPool localFlushingPool;
 
-    public IncomingRequestProcessor() {
+    public IncomingRequestProcessor(final LocalFileFlushingPool localFlushingPool) {
         this.queue = new LinkedBlockingQueue<>();
+        this.localFlushingPool = localFlushingPool;
     }
 
-    public void readQueue() {
-        final int maxBatchSize = 100;
-        final List<HttpServerExchange> batch = new ArrayList<>(maxBatchSize);
+    public Runnable getQueueReader() {
+        return microBatchingQueueDrainer(queue, this::processExchange);
+    }
 
-        while(!Thread.currentThread().isInterrupted()) {
-            queue.drainTo(batch, maxBatchSize - 1);
-            final int batchSize = batch.size();
+    private void processExchange(final HttpServerExchangeWithPartyId exchange) {
+        IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange.exchange);
+        AvroRecordBuffer<SpecificRecord> avroBuffer = AvroRecordBuffer.fromRecord(avroRecord);
 
-            batch.forEach(this::processExchange);
-            batch.clear();
+        FilePosition filePosition = localFlushingPool.enqueueRecordForFlushing(exchange.partyId, avroBuffer);
+    }
 
-            // if the batch was empty, block on the queue for some time until something is available
-            final HttpServerExchange polled;
-            if (batchSize == 0 && (polled = pollQuietly(queue, 1, TimeUnit.SECONDS)) != null) {
-                batch.add(polled);
-            }
+    public void add(String partyId, HttpServerExchange exchange) {
+        queue.add(new HttpServerExchangeWithPartyId(partyId, exchange));
+    }
+
+    private final class HttpServerExchangeWithPartyId {
+        final String partyId;
+        final HttpServerExchange exchange;
+
+        public HttpServerExchangeWithPartyId(String partyId, HttpServerExchange exchange) {
+            this.partyId = partyId;
+            this.exchange = exchange;
         }
-    }
-
-    private void processExchange(final HttpServerExchange exchange) {
-        IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange);
-        AvroRecordBuffer<IncomingRequestRecord> avroBuffer = AvroRecordBuffer.fromRecord(avroRecord);
-        logger.debug("Serialized Avro record: {}", avroBuffer.getBufferSlice().limit());
-    }
-
-    private static <E> E pollQuietly(final LinkedBlockingQueue<E> queue, long timeout, TimeUnit unit) {
-        try {
-            return queue.poll(timeout, unit);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return null;
-        }
-    }
-
-    public void add(HttpServerExchange exchange) {
-        queue.add(exchange);
     }
 }
