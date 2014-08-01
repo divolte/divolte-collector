@@ -2,6 +2,7 @@ package io.divolte.server;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
@@ -14,6 +15,7 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,12 +27,13 @@ public class Server implements Runnable {
 
     private final String host;
     private final int port;
+    private final DivolteEventHandler divolteEventHandler;
 
     public Server(final Config config) {
         host = config.getString("divolte.server.host");
         port = config.getInt("divolte.server.port");
 
-        final DivolteEventHandler divolteEventHandler = new DivolteEventHandler(config);
+        divolteEventHandler = new DivolteEventHandler(config);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/ping", PingHandler::handlePingRequest);

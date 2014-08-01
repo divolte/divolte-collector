@@ -66,6 +66,8 @@ final class LocalFileFlusher {
     }
 
     public void close() {
+        logger.debug("Close.");
+
         if (channel != null && channel.isOpen()) {
             try {
                 channel.close();

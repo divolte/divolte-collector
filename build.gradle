@@ -31,6 +31,7 @@ dependencies {
     compile group: 'com.typesafe', name: 'config', version: '1.2.1'
     compile group: 'com.google.guava', name: 'guava', version: '17.0'
     compile group: 'org.apache.avro', name: 'avro', version: '1.7.7'
+    compile group: 'org.apache.hadoop', name:'hadoop-client', version:'2.4.1'
 
     runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.2'
 
@@ -64,4 +65,8 @@ minifyJs {
         warningLevel = 'QUIET'
         compilationLevel = 'ADVANCED_OPTIMIZATIONS'
     }
+}
+
+jar {
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }

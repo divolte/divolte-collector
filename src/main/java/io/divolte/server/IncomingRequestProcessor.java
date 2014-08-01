@@ -2,24 +2,19 @@ package io.divolte.server;
 
 import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.record.IncomingRequestRecord;
-import io.divolte.server.LocalFileFlushingPool.FilePosition;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.avro.specific.SpecificRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class IncomingRequestProcessor {
-    private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
-
     private final LinkedBlockingQueue<HttpServerExchangeWithPartyId> queue;
-    private final LocalFileFlushingPool localFlushingPool;
+    private final HdfsFlushingPool hdfsFlushingPool;
 
-    public IncomingRequestProcessor(final LocalFileFlushingPool localFlushingPool) {
+    public IncomingRequestProcessor(final HdfsFlushingPool hdfsFlushingPool) {
         this.queue = new LinkedBlockingQueue<>();
-        this.localFlushingPool = localFlushingPool;
+        this.hdfsFlushingPool = hdfsFlushingPool;
     }
 
     public Runnable getQueueReader() {
@@ -30,7 +25,7 @@ final class IncomingRequestProcessor {
         IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange.exchange);
         AvroRecordBuffer<SpecificRecord> avroBuffer = AvroRecordBuffer.fromRecord(avroRecord);
 
-        FilePosition filePosition = localFlushingPool.enqueueRecordForFlushing(exchange.partyId, avroBuffer);
+        hdfsFlushingPool.enqueueRecordForFlushing(exchange.partyId, avroBuffer);
     }
 
     public void add(String partyId, HttpServerExchange exchange) {

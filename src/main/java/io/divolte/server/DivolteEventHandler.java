@@ -30,7 +30,7 @@ final class DivolteEventHandler {
     private final Duration sessionTimeout;
 
     private final ByteBuffer transparentImage;
-    
+
     private final IncomingRequestProcessingPool processingPool;
 
     public DivolteEventHandler(final String partyCookieName,
@@ -77,7 +77,7 @@ final class DivolteEventHandler {
             // 2
             exchange.setResponseCode(StatusCodes.ACCEPTED);
             serveImage(exchange);
-            
+
             // 3
             logger.debug("Enqueuing event: {}/{}", partyId, sessionId);
             processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);

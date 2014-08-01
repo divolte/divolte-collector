@@ -4,7 +4,6 @@ import static io.divolte.server.ConcurrentUtils.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -20,7 +19,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 final class LocalFileFlushingPool {
-    private static final Logger logger = LoggerFactory.getLogger(LocalFileFlushingPool.class);
+    private final static Logger logger = LoggerFactory.getLogger(LocalFileFlushingPool.class);
 
     private final AtomicInteger sequenceNumber;
     private final List<LocalFileFlusher> flushers;
@@ -43,23 +42,7 @@ final class LocalFileFlushingPool {
                 .collect(Collectors.toCollection(() -> new ArrayList<>(numFlusherThreads)));
 
         flushers.forEach((flusher) -> {
-            scheduleFlusher(executorService, flusher);
-        });
-    }
-
-    private void scheduleFlusher(final ExecutorService executorService, final LocalFileFlusher flusher) {
-        CompletableFuture
-        .runAsync(flusher.getQueueReader(), executorService)
-        .whenComplete((voidValue, error) -> {
-            // In case the reader for some reason escapes its loop with an exception,
-            // log any uncaught exceptions and reschedule
-            if (error != null) {
-                logger.warn("Uncaught exception in local file flusher thread.", error);
-                scheduleFlusher(executorService, flusher);
-            }
-
-            // on shutdown or error cleanup flusher state / open channels
-            flusher.close();
+            scheduleQueueReaderWithCleanup(executorService, flusher.getQueueReader(), flusher::close);
         });
     }
 

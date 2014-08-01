@@ -1,11 +1,10 @@
 package io.divolte.server;
 
-import static io.divolte.server.ConcurrentUtils.createThreadFactory;
+import static io.divolte.server.ConcurrentUtils.*;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -20,7 +19,11 @@ import com.typesafe.config.ConfigFactory;
 
 final class IncomingRequestProcessingPool {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
+
     private final List<IncomingRequestProcessor> processors;
+
+    private final HdfsFlushingPool hdfsFlushingPool;
+
 
     public IncomingRequestProcessingPool() {
         this(ConfigFactory.load());
@@ -33,30 +36,18 @@ final class IncomingRequestProcessingPool {
         final ThreadFactory factory = createThreadFactory(threadGroup, "Incoming Request Processor - %d");
         final ExecutorService executorService = Executors.newFixedThreadPool(numSerializationThreads, factory);
 
-        final LocalFileFlushingPool localFlushingPool = new LocalFileFlushingPool(config);
+        hdfsFlushingPool = new HdfsFlushingPool(config);
 
-        processors = Stream.generate(() -> new IncomingRequestProcessor(localFlushingPool))
+        processors = Stream.generate(() -> new IncomingRequestProcessor(hdfsFlushingPool))
         .limit(numSerializationThreads)
         .collect(Collectors.toCollection(() -> new ArrayList<>(numSerializationThreads)));
 
         processors.forEach((processor) -> {
             scheduleQueueReader(
                     executorService,
-                    processor);
+                    processor.getQueueReader());
         });
-    }
 
-    private void scheduleQueueReader(final ExecutorService es, final IncomingRequestProcessor processor) {
-        CompletableFuture
-        .runAsync(processor.getQueueReader(), es)
-        .whenComplete((voidValue, error) -> {
-            // In case the reader for some reason escapes its loop with an exception,
-            // log any uncaught exceptions and reschedule
-            if (error != null) {
-                logger.warn("Uncaught exception in incoming queue reader thread.", error);
-                scheduleQueueReader(es, processor);
-            }
-        });
     }
 
     public void enqueueIncomingExchangeForProcessing(final String partyId, final HttpServerExchange exchange) {
