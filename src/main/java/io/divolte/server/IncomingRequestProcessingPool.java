@@ -22,37 +22,31 @@ final class IncomingRequestProcessingPool {
 
     private final List<IncomingRequestProcessor> processors;
 
-    private final HdfsFlushingPool hdfsFlushingPool;
-
-
     public IncomingRequestProcessingPool() {
         this(ConfigFactory.load());
     }
 
     public IncomingRequestProcessingPool(final Config config) {
-        final int numSerializationThreads = config.getInt("divolte.incoming_request_processor.threads");
+        final int numThreads = config.getInt("divolte.incoming_request_processor.threads");
 
         final ThreadGroup threadGroup = new ThreadGroup("Incoming Request Processing Pool");
         final ThreadFactory factory = createThreadFactory(threadGroup, "Incoming Request Processor - %d");
-        final ExecutorService executorService = Executors.newFixedThreadPool(numSerializationThreads, factory);
+        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
 
-        hdfsFlushingPool = new HdfsFlushingPool(config);
+        final HdfsFlushingPool hdfsFlushingPool = new HdfsFlushingPool(config);
 
         processors = Stream.generate(() -> new IncomingRequestProcessor(hdfsFlushingPool))
-        .limit(numSerializationThreads)
-        .collect(Collectors.toCollection(() -> new ArrayList<>(numSerializationThreads)));
+        .limit(numThreads)
+        .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
         processors.forEach((processor) -> {
             scheduleQueueReader(
                     executorService,
                     processor.getQueueReader());
         });
-
     }
 
     public void enqueueIncomingExchangeForProcessing(final String partyId, final HttpServerExchange exchange) {
-        // we assign requests with the same party ID to the same thread,
-        // such that we do not re-order messages for the same party ID.
         processors.get((partyId.hashCode() & Integer.MAX_VALUE) % processors.size()).add(partyId, exchange);
     }
 }

@@ -75,14 +75,14 @@ final class ConcurrentUtils {
         CompletableFuture
         .runAsync(reader, es)
         .whenComplete((voidValue, error) -> {
+            cleanup.run();
+
             // In case the reader for some reason escapes its loop with an exception,
             // log any uncaught exceptions and reschedule
             if (error != null) {
                 logger.warn("Uncaught exception in incoming queue reader thread.", error);
                 scheduleQueueReaderWithCleanup(es, reader, cleanup);
             }
-
-            cleanup.run();
         });
     }
 
@@ -90,13 +90,5 @@ final class ConcurrentUtils {
         scheduleQueueReaderWithCleanup(es, reader, () -> {
             logger.debug("Unhandled cleanupt for thread: {}", Thread.currentThread().getName());
             });
-    }
-
-    public static void awaitTerminationQuietly(ExecutorService service) {
-        try {
-            service.awaitTermination(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 }

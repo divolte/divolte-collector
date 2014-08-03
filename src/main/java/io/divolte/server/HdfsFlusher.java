@@ -5,6 +5,8 @@ import io.divolte.record.IncomingRequestRecord;
 
 import java.io.IOException;
 import java.net.URI;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -32,7 +34,11 @@ final class HdfsFlusher {
     private final long syncEveryMillis;
     private final int syncEveryRecords;
 
+    private final static SimpleDateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmssSSS");
+
     private HadoopFile currentFile;
+    private boolean isHdfsAlive;
+    private long lastFixAttempt;
 
     public HdfsFlusher(Config config) {
         queue = new LinkedBlockingQueue<>(config.getInt("divolte.hdfs_flusher.max_write_queue"));
@@ -41,18 +47,28 @@ final class HdfsFlusher {
         syncEveryMillis = config.getDuration("divolte.hdfs_flusher.sync_file_after_duration", TimeUnit.MILLISECONDS);
         syncEveryRecords = config.getInt("divolte.hdfs_flusher.sync_file_after_records");
 
-        URI hdfsLocation;
         try {
             hdfsFileDir = config.getString("divolte.hdfs_flusher.dir");
             hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
-            hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
+            URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
             hadoopFs = FileSystem.get(hdfsLocation, new Configuration());
-
-            currentFile = new HadoopFile(new Path(hdfsFileDir, "divolte-tracking-" + hashCode() + ".avro"));
         } catch (Exception e) {
-            logger.error("Could not initialize HDFS connection.");
-            System.exit(1);
-            throw new RuntimeException();
+            /*
+             * It is possible to create a FileSystem instance when HDFS is not available (e.g. NameNode down).
+             * This exception only occurs when there is a configuration error in the URI (e.g. wrong scheme).
+             * So we fail to start up in this case. Below we create the actual HDFS connection, by opening
+             * files. If that fails, we do startup and initiate the regular retry cycle.
+             */
+            logger.error("Could not initialize HDFS filesystem.", e);
+            throw new RuntimeException(e);
+        }
+
+        try {
+            currentFile = openNewFile();
+            isHdfsAlive = true;
+        } catch (IOException e) {
+            logger.warn("HDFS flusher starting up without HDFS connection.", e);
+            isHdfsAlive = false;
         }
     }
 
@@ -61,14 +77,44 @@ final class HdfsFlusher {
     }
 
     private void doProcess(AvroRecordBuffer<SpecificRecord> record) throws IllegalArgumentException, IOException {
-        currentFile.writer.appendEncoded(record.getBufferSlice());
-        currentFile.recordsSinceLastSync += 1;
+        if (isHdfsAlive) {
+            currentFile.writer.appendEncoded(record.getBufferSlice());
+            currentFile.recordsSinceLastSync += 1;
 
-        possiblySync();
+            possiblySync();
+        } else {
+            possiblyFixHdfsConnection();
+        }
     }
 
     private void doHeartBeat() throws IOException {
-        possiblySync();
+        if (isHdfsAlive) {
+            possiblySync();
+        } else {
+            possiblyFixHdfsConnection();
+        }
+    }
+
+    private void possiblyFixHdfsConnection() {
+        // try to fix every 5 seconds.
+        long time = System.currentTimeMillis();
+        if (time - lastFixAttempt > 5000) {
+            try {
+                currentFile = openNewFile();
+                isHdfsAlive = true;
+                lastFixAttempt = 0;
+            } catch (IOException ioe) {
+                logger.warn("Could not create HDFS file.", ioe);
+                isHdfsAlive = false;
+                lastFixAttempt = time;
+            }
+        }
+    }
+
+    private HadoopFile openNewFile() throws IOException {
+        return new HadoopFile(
+                new Path(hdfsFileDir,
+                        String.format("%s-divolte-tracking-%d.avro", datePartFormat.format(new Date()), hashCode())));
     }
 
     private void possiblySync() throws IOException {
@@ -80,7 +126,7 @@ final class HdfsFlusher {
 
             // Forces the Avro file to write a block
             currentFile.writer.sync();
-            // Forces a sync on the underlying stream
+            // Forces a (HDFS) sync on the underlying stream
             currentFile.stream.hsync();
 
             currentFile.recordsSinceLastSync = 0;
@@ -97,30 +143,25 @@ final class HdfsFlusher {
 
     public void add(AvroRecordBuffer<SpecificRecord> record) {
         if (!offerQuietly(queue, record, maxEnqueueDelayMillis, TimeUnit.MILLISECONDS)) {
-            //TODO: failed to enqueue spill locally
             logger.warn("Dropping record on attempt to enqueue for HDFS flushing.");
         }
     }
 
     public void cleanup() {
-        logger.debug("Cleanup.");
         try {
             doCleanup();
         } catch (IOException e) {
-            logger.error("TODO: Handle HDFS exception.", e);
-            System.exit(1);
+            logger.warn("Failed to cleanly close HDFS file.", e);
+            isHdfsAlive = false;
         }
     }
 
     private void processRecord(AvroRecordBuffer<SpecificRecord> record) {
         try {
             doProcess(record);
-        } catch (IllegalArgumentException e) {
-            logger.error("TODO: Handle HDFS exception.", e);
-            System.exit(1);
         } catch (IOException e) {
-            logger.error("TODO: Handle HDFS exception.", e);
-            System.exit(1);
+            logger.warn("Failed to flush record to HDFS.", e);
+            isHdfsAlive = false;
         }
     }
 
@@ -128,17 +169,16 @@ final class HdfsFlusher {
         try {
             doHeartBeat();
         } catch (IOException e) {
-            logger.error("TODO: Handle HDFS exception.", e);
-            System.exit(1);
+            logger.warn("Failed to flush record to HDFS.", e);
+            isHdfsAlive = false;
         }
     }
 
-    // with the outlook of having to manage multiple HDFS files
-    // it seemed to make sense to create this structure
     private final class HadoopFile {
         final Path path;
         final FSDataOutputStream stream;
         final DataFileWriter<SpecificRecord> writer;
+        final long openTime;
 
         long lastSyncTime;
         int recordsSinceLastSync;
@@ -154,7 +194,13 @@ final class HdfsFlusher {
             this.writer.setSyncInterval(1 << 30);
             this.writer.setFlushOnEveryBlock(true);
 
-            lastSyncTime = System.currentTimeMillis();
+            // Sync the file on open to make sure the
+            // connection actually works, because
+            // HDFS allows file creation even with no
+            // datanodes available
+            this.stream.hsync();
+
+            this.openTime = lastSyncTime = System.currentTimeMillis();
             recordsSinceLastSync = 0;
         }
 

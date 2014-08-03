@@ -27,15 +27,15 @@ final class HdfsFlushingPool {
     }
 
     public HdfsFlushingPool(final Config config) {
-        final int numSerializationThreads = config.getInt("divolte.hdfs_flusher.threads");
+        final int numThreads = config.getInt("divolte.hdfs_flusher.threads");
 
         final ThreadGroup threadGroup = new ThreadGroup("Hdfs Flushing Pool");
         final ThreadFactory factory = createThreadFactory(threadGroup, "Hdfs Flusher - %d");
-        final ExecutorService executorService = Executors.newFixedThreadPool(numSerializationThreads, factory);
+        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
 
         flushers = Stream.generate(() -> new HdfsFlusher(config))
-        .limit(numSerializationThreads)
-        .collect(Collectors.toCollection(() -> new ArrayList<>(numSerializationThreads)));
+        .limit(numThreads)
+        .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
         flushers.forEach((flusher) -> {
             scheduleQueueReaderWithCleanup(
