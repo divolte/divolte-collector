@@ -61,7 +61,7 @@
   var dvt = {
     _pageViewId: pageViewId,
     // Basic event logger.
-    signal: function() {
+    'signal': function() {
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
           event = {
@@ -115,7 +115,7 @@
   } else if (typeof module !== 'undefined' && module.exports) {
     module.exports = dvt;
   } else {
-    window.dvt = window.$$$ = dvt;
+    window['$$$'] = window['dvt'] = dvt;
   }
   window.console.log("Module initialized.", dvt);
 
