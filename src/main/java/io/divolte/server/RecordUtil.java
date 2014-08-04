@@ -1,26 +1,17 @@
 package io.divolte.server;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.divolte.record.IncomingRequestRecord;
 import io.divolte.record.IncomingRequestRecord.Builder;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
+import java.util.Optional;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 final class RecordUtil {
-    private static final Logger logger = LoggerFactory.getLogger(RecordUtil.class);
-
-    private static final Deque<String> emtpyDeque = new ArrayDeque<String>();
-
     private static final String PARTY_ID_COOKIE;
     private static final String SESSION_ID_COOKIE;
     private static final String PAGE_VIEW_ID_COOKIE;
@@ -62,12 +53,11 @@ final class RecordUtil {
         builder.setCompleteRequest(true);
 
         final long timeStamp = exchange.getRequestStartTime();
-        logger.debug("Request cookies: {}", exchange.getRequestCookies());
         final boolean firstInSession = !exchange.getRequestCookies().containsKey(SESSION_ID_COOKIE);
         final String partyId = exchange.getResponseCookies().get(PARTY_ID_COOKIE).getValue();
         final String sessionId = exchange.getResponseCookies().get(SESSION_ID_COOKIE).getValue();
         final String pageViewId = exchange.getResponseCookies().get(PAGE_VIEW_ID_COOKIE).getValue();
-        final String referer = exchange.getQueryParameters().getOrDefault("r", RecordUtil.emtpyDeque).peekFirst();
+        final String referer = Optional.ofNullable(exchange.getQueryParameters().get("r")).map((dq) -> dq.getFirst()).orElse(null);
         final String location = getQueryParamOrMarkIncompleteIfAbsent(exchange, "l", builder);
         final String remoteHost = exchange.getDestinationAddress().getHostString();
         final String userAgent = getRequestHeaderOrMarkIncompleteIfAbsent(exchange, Headers.USER_AGENT, builder);
