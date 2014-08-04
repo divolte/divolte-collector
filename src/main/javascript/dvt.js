@@ -93,7 +93,7 @@
       var image = new Image(1,1);
       image.src = baseURL + 'event?' + params;
 
-      // If we don't have a pageViewId yet, we'll add a onload handler
+      // If we don't have a pageViewId yet, we'll add an onload handler
       // to the pixel request to set it after the initial event signal
       if ('undefined' === typeof dvt._pageViewId) {
         image.onload = function(e) {
