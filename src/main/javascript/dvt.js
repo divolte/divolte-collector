@@ -120,7 +120,7 @@
   window.console.log("Module initialized.", dvt);
 
   window.console.log("Firing initial event.");
-  dvt.signal();
+  dvt['signal']();
 
   return dvt;
 }));
