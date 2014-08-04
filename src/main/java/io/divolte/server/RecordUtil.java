@@ -2,6 +2,7 @@ package io.divolte.server;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,27 +23,30 @@ final class RecordUtil {
 
     private static final String PARTY_ID_COOKIE;
     private static final String SESSION_ID_COOKIE;
+    private static final String PAGE_VIEW_ID_COOKIE;
 
     static {
         Config cfg = ConfigFactory.load();
         PARTY_ID_COOKIE = cfg.getString("divolte.tracking.party_cookie");
         SESSION_ID_COOKIE = cfg.getString("divolte.tracking.session_cookie");
+        PAGE_VIEW_ID_COOKIE = cfg.getString("divolte.tracking.page_view_cookie");
     }
 
     private static String getQueryParamOrMarkIncompleteIfAbsent(HttpServerExchange exchange, String paramName, IncomingRequestRecord.Builder builder) {
-        final String result = exchange.getQueryParameters().getOrDefault(paramName, RecordUtil.emtpyDeque).peekFirst();
-        if (result == null) {
+        return Optional.ofNullable(exchange.getQueryParameters().get(paramName))
+        .map((dq) -> dq.getFirst())
+        .orElseGet(() -> {
             builder.setCompleteRequest(false);
-        }
-        return result;
+            return null;
+        });
     }
 
     private static String getRequestHeaderOrMarkIncompleteIfAbsent(HttpServerExchange exchange, HttpString headerName, IncomingRequestRecord.Builder builder) {
-        final String result = exchange.getRequestHeaders().getFirst(headerName);
-        if (result == null) {
+        return Optional.ofNullable(exchange.getRequestHeaders().getFirst(headerName))
+        .orElseGet(() -> {
             builder.setCompleteRequest(false);
-        }
-        return result;
+            return null;
+        });
     }
 
     private static Integer parseIntIfParseable(String number) {
@@ -62,7 +66,7 @@ final class RecordUtil {
         final boolean firstInSession = !exchange.getRequestCookies().containsKey(SESSION_ID_COOKIE);
         final String partyId = exchange.getResponseCookies().get(PARTY_ID_COOKIE).getValue();
         final String sessionId = exchange.getResponseCookies().get(SESSION_ID_COOKIE).getValue();
-        final String pageViewId = getQueryParamOrMarkIncompleteIfAbsent(exchange, "p", builder);
+        final String pageViewId = exchange.getResponseCookies().get(PAGE_VIEW_ID_COOKIE).getValue();
         final String referer = exchange.getQueryParameters().getOrDefault("r", RecordUtil.emtpyDeque).peekFirst();
         final String location = getQueryParamOrMarkIncompleteIfAbsent(exchange, "l", builder);
         final String remoteHost = exchange.getDestinationAddress().getHostString();
