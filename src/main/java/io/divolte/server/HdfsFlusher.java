@@ -72,7 +72,7 @@ final class HdfsFlusher {
             logger.warn("HDFS flusher starting up without HDFS connection.", e);
             isHdfsAlive = false;
             // possibly we created the file, but found it wasn't writable; hence we attempt a delete
-            throwsIoException(() -> { hadoopFs.delete(newFilePath, false); });
+            throwsIoException(() -> hadoopFs.delete(newFilePath, false));
         }
     }
 
@@ -112,7 +112,7 @@ final class HdfsFlusher {
                 logger.warn("Could not create HDFS file.", ioe);
                 isHdfsAlive = false;
                 lastFixAttempt = time;
-                throwsIoException(() -> { hadoopFs.delete(newFilePath, false); });
+                throwsIoException(() -> hadoopFs.delete(newFilePath, false));
             }
         }
     }
