@@ -11,15 +11,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.avro.specific.SpecificRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 final class HdfsFlushingPool {
-    private final static Logger logger = LoggerFactory.getLogger(HdfsFlushingPool.class);
-
     private final List<HdfsFlusher> flushers;
 
     public HdfsFlushingPool() {

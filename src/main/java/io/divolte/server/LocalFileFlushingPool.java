@@ -12,15 +12,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.avro.specific.SpecificRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 final class LocalFileFlushingPool {
-    private final static Logger logger = LoggerFactory.getLogger(LocalFileFlushingPool.class);
-
     private final AtomicInteger sequenceNumber;
     private final List<LocalFileFlusher> flushers;
 

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -25,7 +26,7 @@ import com.typesafe.config.Config;
 final class HdfsFlusher {
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
-    private final LinkedBlockingQueue<AvroRecordBuffer<SpecificRecord>> queue;
+    private final BlockingQueue<AvroRecordBuffer<SpecificRecord>> queue;
     private final long maxEnqueueDelayMillis;
 
     private final FileSystem hadoopFs;
@@ -63,12 +64,15 @@ final class HdfsFlusher {
             throw new RuntimeException(e);
         }
 
+        final Path newFilePath = newFilePath();
         try {
-            currentFile = openNewFile();
+            currentFile = openNewFile(newFilePath);
             isHdfsAlive = true;
         } catch (IOException e) {
             logger.warn("HDFS flusher starting up without HDFS connection.", e);
             isHdfsAlive = false;
+            // possibly we created the file, but found it wasn't writable; hence we attempt a delete
+            throwsIoException(() -> { hadoopFs.delete(newFilePath, false); });
         }
     }
 
@@ -96,25 +100,29 @@ final class HdfsFlusher {
     }
 
     private void possiblyFixHdfsConnection() {
-        // try to fix every 5 seconds.
+        // try to reconnect every 5 seconds.
         long time = System.currentTimeMillis();
         if (time - lastFixAttempt > 5000) {
+            final Path newFilePath = newFilePath();
             try {
-                currentFile = openNewFile();
+                currentFile = openNewFile(newFilePath);
                 isHdfsAlive = true;
                 lastFixAttempt = 0;
             } catch (IOException ioe) {
                 logger.warn("Could not create HDFS file.", ioe);
                 isHdfsAlive = false;
                 lastFixAttempt = time;
+                throwsIoException(() -> { hadoopFs.delete(newFilePath, false); });
             }
         }
     }
 
-    private HadoopFile openNewFile() throws IOException {
-        return new HadoopFile(
-                new Path(hdfsFileDir,
-                        String.format("%s-divolte-tracking-%d.avro", datePartFormat.format(new Date()), hashCode())));
+    private Path newFilePath() {
+        return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%d.avro", datePartFormat.format(new Date()), hashCode()));
+    }
+
+    private HadoopFile openNewFile(Path path) throws IOException {
+        return new HadoopFile(path);
     }
 
     private void possiblySync() throws IOException {

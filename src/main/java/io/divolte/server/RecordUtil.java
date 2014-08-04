@@ -55,6 +55,7 @@ final class RecordUtil {
 
     public static IncomingRequestRecord recordFromExchange(HttpServerExchange exchange) {
         final Builder builder = IncomingRequestRecord.newBuilder();
+        builder.setCompleteRequest(true);
 
         final long timeStamp = exchange.getRequestStartTime();
         logger.debug("Request cookies: {}", exchange.getRequestCookies());

@@ -4,12 +4,13 @@ import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.record.IncomingRequestRecord;
 import io.undertow.server.HttpServerExchange;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.avro.specific.SpecificRecord;
 
 final class IncomingRequestProcessor {
-    private final LinkedBlockingQueue<HttpServerExchangeWithPartyId> queue;
+    private final BlockingQueue<HttpServerExchangeWithPartyId> queue;
     private final HdfsFlushingPool hdfsFlushingPool;
 
     public IncomingRequestProcessor(final HdfsFlushingPool hdfsFlushingPool) {

@@ -11,15 +11,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 final class IncomingRequestProcessingPool {
-    private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
-
     private final List<IncomingRequestProcessor> processors;
 
     public IncomingRequestProcessingPool() {

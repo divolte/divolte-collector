@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,7 +28,7 @@ final class LocalFileFlusher {
     private final static SimpleDateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmssSSS");
 
     private final long maxEnqueueDelayMillis;
-    private final LinkedBlockingQueue<AvroRecordBufferWithSequenceNumber> queue;
+    private final BlockingQueue<AvroRecordBufferWithSequenceNumber> queue;
 
     private final String localFilesDirectory;
 

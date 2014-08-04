@@ -59,18 +59,22 @@
 
   // Declare our module.
   var dvt = {
+    _pageViewId: pageViewId,
     // Basic event logger.
     signal: function() {
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
           event = {
-            p: pageViewId,
-            l: window.location.href,
-            r: document.referrer || undefined,
-            i: window.screen.availWidth,
-            j: window.screen.availHeight,
-            w: window.innerWidth || documentElement.clientWidth || bodyElement.clientWidth,
-            h: window.innerHeight || documentElement.clientHeight || bodyElement.clientHeight
+            // property names as strings are required here
+            // because minifaction otherwise changes them
+            // which breaks the query params contract
+            'p': dvt._pageViewId,
+            'l': window.location.href,
+            'r': document.referrer || undefined,
+            'i': window.screen.availWidth,
+            'j': window.screen.availHeight,
+            'w': window.innerWidth || documentElement.clientWidth || bodyElement.clientWidth,
+            'h': window.innerHeight || documentElement.clientHeight || bodyElement.clientHeight
           };
 
       // Initialize with a special cache-busting parameter.
@@ -86,7 +90,22 @@
         }
       }
       // Special special cache-busting parameter.
-      new Image(1,1).src = baseURL + 'event?' + params;
+      var image = new Image(1,1);
+      image.src = baseURL + 'event?' + params;
+
+      // If we don't have a pageViewId yet, we'll add a onload handler
+      // to the pixel request to set it after the initial event signal
+      if ('undefined' === typeof dvt._pageViewId) {
+        image.onload = function(e) {
+          var cookies = document.cookie ? document.cookie.split('; ') : [];
+          for (var i = 0, l = cookies.length; i < l; i++) {
+            var parts = cookies[i].split('=');
+            if (parts.shift() == '_dvv') {
+              dvt._pageViewId = parts.shift();
+            }
+          }
+        }
+      }
     }
   };
 

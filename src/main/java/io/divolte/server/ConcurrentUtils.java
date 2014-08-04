@@ -1,10 +1,11 @@
 package io.divolte.server;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -17,7 +18,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 final class ConcurrentUtils {
     private final static Logger logger = LoggerFactory.getLogger(ConcurrentUtils.class);
 
-    public static <E> E pollQuietly(final LinkedBlockingQueue<E> queue, long timeout, TimeUnit unit) {
+    public static <E> E pollQuietly(final BlockingQueue<E> queue, long timeout, TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);
         } catch (InterruptedException e) {
@@ -26,7 +27,7 @@ final class ConcurrentUtils {
         }
     }
 
-    public static <T> boolean offerQuietly(final LinkedBlockingQueue<T> queue, T item, long timeout, TimeUnit unit) {
+    public static <T> boolean offerQuietly(final BlockingQueue<T> queue, T item, long timeout, TimeUnit unit) {
         try {
             return queue.offer(item, timeout, unit);
         } catch (InterruptedException e) {
@@ -42,7 +43,7 @@ final class ConcurrentUtils {
         .build();
     }
 
-    public static <T> Runnable microBatchingQueueDrainerWithHeartBeat(final LinkedBlockingQueue<T> queue, final Consumer<T> consumer, final Runnable heartBeatAction) {
+    public static <T> Runnable microBatchingQueueDrainerWithHeartBeat(final BlockingQueue<T> queue, final Consumer<T> consumer, final Runnable heartBeatAction) {
         return () -> {
             final int maxBatchSize = 100;
             final List<T> batch = new ArrayList<>(maxBatchSize);
@@ -67,7 +68,7 @@ final class ConcurrentUtils {
         };
     }
 
-    public static <T> Runnable microBatchingQueueDrainer(final LinkedBlockingQueue<T> queue, final Consumer<T> consumer) {
+    public static <T> Runnable microBatchingQueueDrainer(final BlockingQueue<T> queue, final Consumer<T> consumer) {
         return microBatchingQueueDrainerWithHeartBeat(queue, consumer, () -> {});
     }
 
@@ -90,5 +91,18 @@ final class ConcurrentUtils {
         scheduleQueueReaderWithCleanup(es, reader, () -> {
             logger.debug("Unhandled cleanupt for thread: {}", Thread.currentThread().getName());
             });
+    }
+
+    @FunctionalInterface
+    public interface IOExceptionThrower {
+        public abstract void run() throws IOException;
+    }
+    public static boolean throwsIoException(IOExceptionThrower r) {
+        try {
+            r.run();
+            return false;
+        } catch(IOException ioe) {
+            return true;
+        }
     }
 }
