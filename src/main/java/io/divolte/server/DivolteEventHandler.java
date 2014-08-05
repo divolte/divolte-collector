@@ -123,6 +123,7 @@ final class DivolteEventHandler {
             trackingCookie = new CookieImpl(cookieName, cookieValue);
         }
         trackingCookie.setVersion(1);
+        trackingCookie.setHttpOnly(true);
         final long maxAge = timeout.getSeconds();
         if (maxAge <= Integer.MAX_VALUE) {
             trackingCookie.setMaxAge((int) maxAge);
