@@ -184,7 +184,7 @@ final class HdfsFlusher {
         }
     }
 
-    private final class HadoopFile {
+    private final class HadoopFile implements AutoCloseable {
         final Path path;
         final FSDataOutputStream stream;
         final DataFileWriter<SpecificRecord> writer;
@@ -214,6 +214,6 @@ final class HdfsFlusher {
             recordsSinceLastSync = 0;
         }
 
-        void close() throws IOException { writer.close(); }
+        public void close() throws IOException { writer.close(); }
     }
 }
