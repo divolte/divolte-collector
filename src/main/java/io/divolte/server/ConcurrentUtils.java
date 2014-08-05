@@ -16,6 +16,9 @@ import java.util.function.Consumer;
 
 final class ConcurrentUtils {
     private final static Logger logger = LoggerFactory.getLogger(ConcurrentUtils.class);
+    private ConcurrentUtils() {
+        throw new UnsupportedOperationException("Singleton; do not instantiate.");
+    }
 
     public static <E> E pollQuietly(final BlockingQueue<E> queue, long timeout, TimeUnit unit) {
         try {
