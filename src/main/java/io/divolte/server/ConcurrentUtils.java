@@ -89,7 +89,7 @@ final class ConcurrentUtils {
 
     public static void scheduleQueueReader(final ExecutorService es, final Runnable reader) {
         scheduleQueueReaderWithCleanup(es, reader, () -> {
-            logger.debug("Unhandled cleanupt for thread: {}", Thread.currentThread().getName());
+            logger.debug("Unhandled cleanup for thread: {}", Thread.currentThread().getName());
             });
     }
 
