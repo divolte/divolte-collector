@@ -1,6 +1,7 @@
 package io.divolte.server;
 
-import static io.divolte.server.ConcurrentUtils.*;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.ArrayList;
@@ -11,8 +12,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import static io.divolte.server.ConcurrentUtils.createThreadFactory;
+import static io.divolte.server.ConcurrentUtils.scheduleQueueReader;
 
 final class IncomingRequestProcessingPool {
     private final List<IncomingRequestProcessor> processors;
