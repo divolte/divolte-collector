@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
+import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -135,7 +136,7 @@ final class DivolteEventHandler {
 
     private static String setAndReturnPageViewCookie(final HttpServerExchange exchange, final String cookieName) {
         final String cookieValue = Optional.ofNullable(exchange.getQueryParameters().get("p"))
-                .map((dq) -> dq.getFirst())
+                .map(Deque::getFirst)
                 .orElseGet(() -> UUID.randomUUID().toString());
 
         final CookieImpl pageViewCookie = new CookieImpl(cookieName, cookieValue);

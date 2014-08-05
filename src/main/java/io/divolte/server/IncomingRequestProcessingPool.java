@@ -35,11 +35,11 @@ final class IncomingRequestProcessingPool {
         .limit(numThreads)
         .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
-        processors.forEach((processor) -> {
+        processors.forEach((processor) ->
             scheduleQueueReader(
                     executorService,
-                    processor.getQueueReader());
-        });
+                    processor.getQueueReader())
+        );
     }
 
     public void enqueueIncomingExchangeForProcessing(final String partyId, final HttpServerExchange exchange) {

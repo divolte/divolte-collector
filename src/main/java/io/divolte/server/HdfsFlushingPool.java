@@ -33,12 +33,12 @@ final class HdfsFlushingPool {
         .limit(numThreads)
         .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
-        flushers.forEach((flusher) -> {
+        flushers.forEach((flusher) ->
             scheduleQueueReaderWithCleanup(
                     executorService,
                     flusher.getQueueReader(),
-                    flusher::cleanup);
-        });
+                    flusher::cleanup)
+        );
     }
 
     public void enqueueRecordForFlushing(String partyId, AvroRecordBuffer<SpecificRecord> record)  {

@@ -6,6 +6,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
+import java.util.Deque;
 import java.util.Optional;
 
 import com.typesafe.config.Config;
@@ -25,7 +26,7 @@ final class RecordUtil {
 
     private static String getQueryParamOrMarkIncompleteIfAbsent(HttpServerExchange exchange, String paramName, IncomingRequestRecord.Builder builder) {
         return Optional.ofNullable(exchange.getQueryParameters().get(paramName))
-        .map((dq) -> dq.getFirst())
+        .map(Deque::getFirst)
         .orElseGet(() -> {
             builder.setCompleteRequest(false);
             return null;
@@ -57,7 +58,7 @@ final class RecordUtil {
         final String partyId = exchange.getResponseCookies().get(PARTY_ID_COOKIE).getValue();
         final String sessionId = exchange.getResponseCookies().get(SESSION_ID_COOKIE).getValue();
         final String pageViewId = exchange.getResponseCookies().get(PAGE_VIEW_ID_COOKIE).getValue();
-        final String referer = Optional.ofNullable(exchange.getQueryParameters().get("r")).map((dq) -> dq.getFirst()).orElse(null);
+        final String referer = Optional.ofNullable(exchange.getQueryParameters().get("r")).map(Deque::getFirst).orElse(null);
         final String location = getQueryParamOrMarkIncompleteIfAbsent(exchange, "l", builder);
         final String remoteHost = exchange.getDestinationAddress().getHostString();
         final String userAgent = getRequestHeaderOrMarkIncompleteIfAbsent(exchange, Headers.USER_AGENT, builder);
