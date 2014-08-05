@@ -63,7 +63,7 @@ final class HdfsFlusher {
              * files. If that fails, we do startup and initiate the regular retry cycle.
              */
             logger.error("Could not initialize HDFS filesystem.", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Could not initialize HDFS filesystem", e);
         }
 
         final Path newFilePath = newFilePath();
