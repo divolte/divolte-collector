@@ -55,7 +55,7 @@ final class HdfsFlusher {
             hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
             URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
             hadoopFs = FileSystem.get(hdfsLocation, new Configuration());
-        } catch (Exception e) {
+        } catch (IOException|URISyntaxException e) {
             /*
              * It is possible to create a FileSystem instance when HDFS is not available (e.g. NameNode down).
              * This exception only occurs when there is a configuration error in the URI (e.g. wrong scheme).
