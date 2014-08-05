@@ -47,7 +47,7 @@ final class ConcurrentUtils {
             final int maxBatchSize = 100;
             final List<T> batch = new ArrayList<>(maxBatchSize);
 
-            while(!Thread.currentThread().isInterrupted() || !queue.isEmpty()) {
+            while(!queue.isEmpty() || !Thread.currentThread().isInterrupted()) {
                 queue.drainTo(batch, maxBatchSize - 1);
                 final int batchSize = batch.size();
 
