@@ -1,0 +1,63 @@
+{
+    "namespace": "io.divolte.record",
+    "type": "record",
+    "name": "TestRecord",
+    "fields": [
+        {
+            "name": "sessionStart",
+            "type": "boolean"
+        },
+        {
+            "name": "ts",
+            "type": "long"
+        },
+        {
+            "name": "userAgentString",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "client",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "session",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "pageview",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "viewportWidth",
+            "type": ["null", "int"]
+        },
+        {
+            "name": "viewportHeight",
+            "type": ["null", "int"]
+        },
+        {
+            "name": "customCookie",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "locationProtocol",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "refererProtocol",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "toplevelCategory",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "subCategory",
+            "type": ["null", "string"]
+        },
+        {
+            "name": "contentPage",
+            "type": ["null", "string"]
+        }        
+    ]
+}
