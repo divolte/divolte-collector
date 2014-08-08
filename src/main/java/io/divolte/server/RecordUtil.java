@@ -6,12 +6,16 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import java.util.Deque;
 import java.util.Optional;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+@ParametersAreNonnullByDefault
 final class RecordUtil {
     private static final String PARTY_ID_COOKIE;
     private static final String SESSION_ID_COOKIE;
@@ -24,6 +28,7 @@ final class RecordUtil {
         PAGE_VIEW_ID_COOKIE = cfg.getString("divolte.tracking.page_view_cookie");
     }
 
+    @Nullable
     private static String getQueryParamOrMarkIncompleteIfAbsent(HttpServerExchange exchange, String paramName, IncomingRequestRecord.Builder builder) {
         return Optional.ofNullable(exchange.getQueryParameters().get(paramName))
         .map(Deque::getFirst)
@@ -33,6 +38,7 @@ final class RecordUtil {
         });
     }
 
+    @Nullable
     private static String getRequestHeaderOrMarkIncompleteIfAbsent(HttpServerExchange exchange, HttpString headerName, IncomingRequestRecord.Builder builder) {
         return Optional.ofNullable(exchange.getRequestHeaders().getFirst(headerName))
         .orElseGet(() -> {
@@ -41,7 +47,7 @@ final class RecordUtil {
         });
     }
 
-    private static Integer parseIntIfParseable(String number) {
+    private static Integer parseIntIfParseable(@Nullable String number) {
         try {
             return Integer.parseInt(number);
         } catch (NumberFormatException nfe) {

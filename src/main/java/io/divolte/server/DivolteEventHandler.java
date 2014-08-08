@@ -13,6 +13,7 @@ import io.undertow.util.StatusCodes;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+@ParametersAreNonnullByDefault
 final class DivolteEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 

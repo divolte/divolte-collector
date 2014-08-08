@@ -18,9 +18,11 @@ import io.undertow.util.Headers;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.time.Duration;
 
+@ParametersAreNonnullByDefault
 public class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
