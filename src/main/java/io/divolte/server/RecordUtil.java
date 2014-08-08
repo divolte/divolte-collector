@@ -49,7 +49,7 @@ final class RecordUtil {
 
     private static Integer parseIntIfParseable(@Nullable String number) {
         try {
-            return Integer.parseInt(number);
+            return Integer.valueOf(number);
         } catch (NumberFormatException nfe) {
             return null;
         }
