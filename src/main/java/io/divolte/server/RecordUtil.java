@@ -22,7 +22,7 @@ final class RecordUtil {
     private static final String PAGE_VIEW_ID_COOKIE;
 
     static {
-        Config cfg = ConfigFactory.load();
+        final Config cfg = ConfigFactory.load();
         PARTY_ID_COOKIE = cfg.getString("divolte.tracking.party_cookie");
         SESSION_ID_COOKIE = cfg.getString("divolte.tracking.session_cookie");
         PAGE_VIEW_ID_COOKIE = cfg.getString("divolte.tracking.page_view_cookie");
