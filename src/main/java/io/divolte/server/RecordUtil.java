@@ -82,19 +82,19 @@ final class RecordUtil {
         final Integer screenHeight = parseIntIfParseable(getQueryParamOrMarkIncompleteIfAbsent(exchange, "j", builder));
 
         return builder
-        .setTimestamp(timeStamp)
-        .setFirstInSession(firstInSession)
-        .setPartyId(partyId)
-        .setSessionId(sessionId)
-        .setPageViewId(pageViewId)
-        .setLocation(location)
-        .setReferer(referer)
-        .setRemoteHost(remoteHost)
-        .setUserAgent(userAgent)
-        .setViewportWidth(viewportWidth)
-        .setViewportHeight(viewportHeight)
-        .setScreenWidth(screenWidth)
-        .setScreenHeight(screenHeight)
-        .build();
+            .setTimestamp(timeStamp)
+            .setFirstInSession(firstInSession)
+            .setPartyId(partyId)
+            .setSessionId(sessionId)
+            .setPageViewId(pageViewId)
+            .setLocation(location)
+            .setReferer(referer)
+            .setRemoteHost(remoteHost)
+            .setUserAgent(userAgent)
+            .setViewportWidth(viewportWidth)
+            .setViewportHeight(viewportHeight)
+            .setScreenWidth(screenWidth)
+            .setScreenHeight(screenHeight)
+            .build();
     }
 }
