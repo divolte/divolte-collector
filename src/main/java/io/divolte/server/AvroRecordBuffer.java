@@ -22,7 +22,7 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
         final byte[] buffer = new byte[bufferSize.get()];
 
         /*
-         * We avoid ByteArryOutpuStream as it is fully synchronized and performs
+         * We avoid ByteArrayOutputStream as it is fully synchronized and performs
          * a lot of copying. Instead, we create a byte array and point a
          * ByteBuffer to it and create a custom OutputStream implementation that
          * writes directly to the ByteBuffer. If we under-allocate, we recreate
