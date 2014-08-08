@@ -28,23 +28,31 @@ final class RecordUtil {
         PAGE_VIEW_ID_COOKIE = cfg.getString("divolte.tracking.page_view_cookie");
     }
 
-    @Nullable
-    private static String getQueryParamOrMarkIncompleteIfAbsent(HttpServerExchange exchange, String paramName, IncomingRequestRecord.Builder builder) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(paramName))
-        .map(Deque::getFirst)
-        .orElseGet(() -> {
+    private static void markIncompleteIfAbsent(final IncomingRequestRecord.Builder builder,
+                                               final Optional<?> optionalValue) {
+        if (!optionalValue.isPresent()) {
             builder.setCompleteRequest(false);
-            return null;
-        });
+        }
     }
 
     @Nullable
-    private static String getRequestHeaderOrMarkIncompleteIfAbsent(HttpServerExchange exchange, HttpString headerName, IncomingRequestRecord.Builder builder) {
-        return Optional.ofNullable(exchange.getRequestHeaders().getFirst(headerName))
-        .orElseGet(() -> {
-            builder.setCompleteRequest(false);
-            return null;
-        });
+    private static String getQueryParamOrMarkIncompleteIfAbsent(final HttpServerExchange exchange,
+                                                                final String paramName,
+                                                                final IncomingRequestRecord.Builder builder) {
+        final Optional<String> value =
+            Optional.ofNullable(exchange.getQueryParameters().get(paramName))
+                    .map(Deque::getFirst);
+        markIncompleteIfAbsent(builder, value);
+        return value.orElse(null);
+    }
+
+    @Nullable
+    private static String getRequestHeaderOrMarkIncompleteIfAbsent(final HttpServerExchange exchange,
+                                                                   final HttpString headerName,
+                                                                   final IncomingRequestRecord.Builder builder) {
+        final Optional<String> value = Optional.ofNullable(exchange.getRequestHeaders().getFirst(headerName));
+        markIncompleteIfAbsent(builder, value);
+        return value.orElse(null);
     }
 
     private static Integer parseIntIfParseable(@Nullable String number) {
