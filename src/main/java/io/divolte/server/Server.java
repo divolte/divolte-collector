@@ -27,13 +27,12 @@ public class Server implements Runnable {
 
     private final String host;
     private final int port;
-    private final DivolteEventHandler divolteEventHandler;
 
     public Server(final Config config) {
         host = config.getString("divolte.server.host");
         port = config.getInt("divolte.server.port");
 
-        divolteEventHandler = new DivolteEventHandler(config);
+        final DivolteEventHandler divolteEventHandler = new DivolteEventHandler(config);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
