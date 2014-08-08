@@ -2,13 +2,13 @@ package io.divolte.server;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.nio.charset.StandardCharsets;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @ParametersAreNonnullByDefault
 final class PingHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);

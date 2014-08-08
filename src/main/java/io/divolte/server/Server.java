@@ -1,8 +1,5 @@
 package io.divolte.server;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
@@ -16,11 +13,15 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.time.Duration;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ParametersAreNonnullByDefault
 public class Server implements Runnable {

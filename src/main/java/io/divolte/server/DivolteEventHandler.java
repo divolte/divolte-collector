@@ -1,8 +1,5 @@
 package io.divolte.server;
 
-import com.google.common.io.Resources;
-import com.typesafe.config.Config;
-
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
@@ -11,8 +8,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.io.IOException;
@@ -26,6 +21,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.io.Resources;
+import com.typesafe.config.Config;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @ParametersAreNonnullByDefault
 final class DivolteEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
