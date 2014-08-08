@@ -47,7 +47,7 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
     }
 
     public static <T extends SpecificRecord> AvroRecordBuffer<T> fromRecord(final T record) {
-        while (true) {
+        for ( ; ; ) {
             try {
                 return new AvroRecordBuffer<T>(record);
             } catch (BufferOverflowException boe) {
