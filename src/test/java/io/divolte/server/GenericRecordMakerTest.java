@@ -5,6 +5,7 @@ import io.divolte.server.GenericRecordMaker.SchemaMappingException;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.CookieImpl;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -38,8 +39,6 @@ public class GenericRecordMakerTest {
         GenericRecordMaker maker = new GenericRecordMaker(schema, config);
 
         setupExchange(
-                "some_party_id",
-                "some_session_id",
                 "p=the_page_view_id",
                 "l=https://example.com/",
                 "r=http://example.com/",
@@ -51,12 +50,12 @@ public class GenericRecordMakerTest {
 
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
 
-        assertEquals(false, record.get("sessionStart"));
+        assertEquals(true, record.get("sessionStart"));
         assertEquals(theExchange.getRequestStartTime(), record.get("ts"));
         assertEquals("Divolte/Test", record.get("userAgentString"));
-        assertEquals("some_party_id", record.get("client"));
-        assertEquals("some_session_id", record.get("session"));
-        assertEquals("the_page_view_id", record.get("pageview"));
+        assertEquals("party_id_cookie_value", record.get("client"));
+        assertEquals("session_id_cookie_value", record.get("session"));
+        assertEquals("page_view_id_cookie_value", record.get("pageview"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
     }
@@ -76,7 +75,7 @@ public class GenericRecordMakerTest {
         Config config = ConfigFactory.load("schema-test-customcookie");
         GenericRecordMaker maker = new GenericRecordMaker(schema, config);
 
-        setupExchange("some_party_id", "some_session_id");
+        setupExchange();
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
 
         assertEquals("custom_cookie_value", record.get("customCookie"));
@@ -88,7 +87,7 @@ public class GenericRecordMakerTest {
         Config config = ConfigFactory.load("schema-test-matchingregex");
         GenericRecordMaker maker = new GenericRecordMaker(schema, config);
 
-        setupExchange("some_party_id", "some_session_id", "l=http://example.com/", "r=https://www.example.com/bla/");
+        setupExchange("l=http://example.com/", "r=https://www.example.com/bla/");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
 
         assertEquals("http", record.get("locationProtocol"));
@@ -102,8 +101,6 @@ public class GenericRecordMakerTest {
         GenericRecordMaker maker = new GenericRecordMaker(schema, config);
 
         setupExchange(
-                "some_party_id",
-                "some_session_id",
                 "l=http://example.com/part1/part2/part3/ABA_C12_X3B",
                 "r=https://www.example.com/about.html");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
@@ -128,8 +125,6 @@ public class GenericRecordMakerTest {
     private static HttpServerExchange theExchange;
     private static Undertow server;
     private void setupExchange(
-            String party,
-            String session,
             String... query
             ) throws UnirestException {
 
@@ -141,9 +136,8 @@ public class GenericRecordMakerTest {
         Unirest.get(
                 String.format("http://localhost:1234/whatever/happens/is/fine%s", "".equals(queryString) ? "" : "?" + queryString))
                 .header("accept", "text/plain")
-                .header("Cookie",
-                        String.format("_dvp=%s; _dvs=%s;custom_cookie=custom_cookie_value", party, session))
                 .header("User-Agent", "Divolte/Test")
+                .header("Cookie", "custom_cookie=custom_cookie_value;")
                 .asString();
     }
 
@@ -163,6 +157,9 @@ public class GenericRecordMakerTest {
                 .setServerOption(UndertowOptions.RECORD_REQUEST_START_TIME, true)
                 .addHttpListener(1234, "localhost")
                 .setHandler((exchange) -> {
+                    exchange.getResponseCookies().put("_dvp", new CookieImpl("_dvp", "party_id_cookie_value"));
+                    exchange.getResponseCookies().put("_dvs", new CookieImpl("_dvs", "session_id_cookie_value"));
+                    exchange.getResponseCookies().put("_dvv", new CookieImpl("_dvv", "page_view_id_cookie_value"));
                     exchange.getResponseSender().send("OK");
                     theExchange = exchange;
                 })

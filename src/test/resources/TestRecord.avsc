@@ -13,51 +13,63 @@
         },
         {
             "name": "userAgentString",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "client",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "session",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "pageview",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "viewportWidth",
-            "type": ["null", "int"]
+            "type": ["null", "int"],
+            "default": null
         },
         {
             "name": "viewportHeight",
-            "type": ["null", "int"]
+            "type": ["null", "int"],
+            "default": null
         },
         {
             "name": "customCookie",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "locationProtocol",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "refererProtocol",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "toplevelCategory",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "subCategory",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "contentPage",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         }        
     ]
 }
