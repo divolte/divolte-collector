@@ -128,6 +128,7 @@ final class DivolteEventHandler {
         trackingCookie.setVersion(1);
         trackingCookie.setHttpOnly(true);
         final long maxAge = timeout.getSeconds();
+        // Some clients (e.g. netty) choke if max-age is large than an Integer can represent.
         if (maxAge <= Integer.MAX_VALUE) {
             trackingCookie.setMaxAge((int) maxAge);
         }
