@@ -26,6 +26,26 @@ import com.typesafe.config.Config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+/**
+ * Event handler for Divolte signalling events.
+ *
+ * This handler deals with requests aimed at our signalling endpoint. The signalling
+ * endpoint responds to GET requests with a small transparent 1x1 image, allowing it
+ * to be invoked using image requests.
+ *
+ * Handling consists of:
+ * <ul>
+ *   <li>Ensures the tracking cookies are set. We have a long-lived 'party' cookie,
+ *     that tracks a client across sessions, and a short-lived 'session' cookie that
+ *     tracks a client for the duration of a single session.</li>
+ *   <li>Issues a page-view ID if one was not supplied with the request.</li>
+ *   <li>Responds (immediately) to the request with an small transparent 1x1 image.
+ *     Headers are set to try to ensure that the request <em>cannot</em> be cached.
+ *   </li>
+ *   <li>Hands off the request (via the processing pool) for further processing.</li>
+ * </ul>
+ */
 @ParametersAreNonnullByDefault
 final class DivolteEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);

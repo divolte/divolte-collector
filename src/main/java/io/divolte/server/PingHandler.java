@@ -9,6 +9,12 @@ import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+/**
+ * Event handler for ping requests.
+ *
+ * Ping requests are immediately and always responded to with a "pong" text response.
+ */
 @ParametersAreNonnullByDefault
 final class PingHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
