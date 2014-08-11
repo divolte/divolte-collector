@@ -14,12 +14,12 @@ import org.apache.avro.specific.SpecificRecord;
 
 final class AvroRecordBuffer<T extends SpecificRecord> {
     private final static int INITIAL_BUFFER_SIZE = 100;
-    private static final AtomicInteger bufferSize = new AtomicInteger(INITIAL_BUFFER_SIZE);
+    private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
 
     private final ByteBuffer byteBuffer;
 
     private AvroRecordBuffer(final T record) throws IOException {
-        final byte[] buffer = new byte[bufferSize.get()];
+        final byte[] buffer = new byte[BUFFER_SIZE.get()];
 
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
@@ -55,8 +55,8 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
                 // Because we only ever increase the buffer size, we discard the
                 // scenario where this thread fails to set the new size,
                 // as we can assume another thread increased it.
-                int currentSize = bufferSize.get();
-                bufferSize.compareAndSet(currentSize, (int) (currentSize * 1.1));
+                int currentSize = BUFFER_SIZE.get();
+                BUFFER_SIZE.compareAndSet(currentSize, (int) (currentSize * 1.1));
             } catch (IOException ioe) {
                 throw new RuntimeException("Serialization error.", ioe);
             }
