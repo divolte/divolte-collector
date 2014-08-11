@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 final class ConcurrentUtils {
-    private final static Logger logger = LoggerFactory.getLogger(ConcurrentUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConcurrentUtils.class);
     private ConcurrentUtils() {
         throw new UnsupportedOperationException("Singleton; do not instantiate.");
     }
