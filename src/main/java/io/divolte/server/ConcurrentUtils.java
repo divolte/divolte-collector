@@ -85,7 +85,7 @@ final class ConcurrentUtils {
 
     public static <T> Runnable microBatchingQueueDrainer(final BlockingQueue<T> queue,
                                                          final Consumer<T> consumer) {
-        return microBatchingQueueDrainerWithHeartBeat(queue, consumer, null);
+        return microBatchingQueueDrainerWithHeartBeat(queue, consumer, () -> {});
     }
 
     public static void scheduleQueueReaderWithCleanup(final ExecutorService es,
