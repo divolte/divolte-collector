@@ -21,6 +21,8 @@ import org.slf4j.LoggerFactory;
 @ParametersAreNonnullByDefault
 final class ConcurrentUtils {
     private static final Logger logger = LoggerFactory.getLogger(ConcurrentUtils.class);
+    private static final int MAX_BATCH_SIZE = 128;
+
     private ConcurrentUtils() {
         throw new UnsupportedOperationException("Singleton; do not instantiate.");
     }
@@ -58,11 +60,10 @@ final class ConcurrentUtils {
                                                                       final Consumer<T> consumer,
                                                                       @Nullable final Runnable heartBeatAction) {
         return () -> {
-            final int maxBatchSize = 100;
-            final List<T> batch = new ArrayList<>(maxBatchSize);
+            final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
 
             while(!queue.isEmpty() || !Thread.currentThread().isInterrupted()) {
-                queue.drainTo(batch, maxBatchSize - 1);
+                queue.drainTo(batch, MAX_BATCH_SIZE - 1);
                 final int batchSize = batch.size();
 
                 batch.forEach(consumer);
