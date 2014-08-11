@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.undertow.server.HttpServerExchange;
 

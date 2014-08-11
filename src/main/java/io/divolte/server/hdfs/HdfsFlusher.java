@@ -1,6 +1,7 @@
-package io.divolte.server;
+package io.divolte.server.hdfs;
 
 import io.divolte.record.IncomingRequestRecord;
+import io.divolte.server.AvroRecordBuffer;
 
 import java.io.IOException;
 import java.net.URI;

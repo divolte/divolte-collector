@@ -23,7 +23,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @ParametersAreNonnullByDefault
-final class ConcurrentUtils {
+public final class ConcurrentUtils {
     private static final Logger logger = LoggerFactory.getLogger(ConcurrentUtils.class);
     private static final int MAX_BATCH_SIZE = 128;
 
