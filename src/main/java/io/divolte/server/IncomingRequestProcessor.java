@@ -38,7 +38,7 @@ final class IncomingRequestProcessor {
     }
 
     @ParametersAreNonnullByDefault
-    private final class HttpServerExchangeWithPartyId {
+    private static final class HttpServerExchangeWithPartyId {
         final String partyId;
         final HttpServerExchange exchange;
 
