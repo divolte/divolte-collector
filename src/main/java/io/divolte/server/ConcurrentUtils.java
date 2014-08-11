@@ -71,7 +71,7 @@ final class ConcurrentUtils {
                 if (batchSize == 0) {
                     if ((polled = pollQuietly(queue, 1, TimeUnit.SECONDS)) != null) {
                         batch.add(polled);
-                    } else {
+                    } else if (null != heartBeatAction) {
                         heartBeatAction.run();
                     }
                 }
@@ -81,7 +81,7 @@ final class ConcurrentUtils {
 
     public static <T> Runnable microBatchingQueueDrainer(final BlockingQueue<T> queue,
                                                          final Consumer<T> consumer) {
-        return microBatchingQueueDrainerWithHeartBeat(queue, consumer, () -> {});
+        return microBatchingQueueDrainerWithHeartBeat(queue, consumer, null);
     }
 
     public static void scheduleQueueReaderWithCleanup(final ExecutorService es,
