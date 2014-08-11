@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import io.divolte.server.kafka.KafkaFlushingPool;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.ArrayList;
@@ -29,9 +30,10 @@ final class IncomingRequestProcessingPool {
         final ThreadFactory factory = createThreadFactory(threadGroup, "Incoming Request Processor - %d");
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
 
+        final KafkaFlushingPool kafkaFlushingPool = new KafkaFlushingPool(config);
         final HdfsFlushingPool hdfsFlushingPool = new HdfsFlushingPool(config);
 
-        processors = Stream.generate(() -> new IncomingRequestProcessor(hdfsFlushingPool))
+        processors = Stream.generate(() -> new IncomingRequestProcessor(kafkaFlushingPool, hdfsFlushingPool))
                            .limit(numThreads)
                            .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 

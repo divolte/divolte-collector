@@ -1,6 +1,7 @@
 package io.divolte.server;
 
 import io.divolte.record.IncomingRequestRecord;
+import io.divolte.server.kafka.KafkaFlushingPool;
 import io.undertow.server.HttpServerExchange;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -16,10 +17,12 @@ import static io.divolte.server.ConcurrentUtils.*;
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor {
     private final BlockingQueue<HttpServerExchangeWithPartyId> queue;
+    private final KafkaFlushingPool kafkaFlushingPool;
     private final HdfsFlushingPool hdfsFlushingPool;
 
-    public IncomingRequestProcessor(final HdfsFlushingPool hdfsFlushingPool) {
+    public IncomingRequestProcessor(final KafkaFlushingPool kafkaFlushingPool, final HdfsFlushingPool hdfsFlushingPool) {
         this.queue = new LinkedBlockingQueue<>();
+        this.kafkaFlushingPool = Objects.requireNonNull(kafkaFlushingPool);
         this.hdfsFlushingPool = Objects.requireNonNull(hdfsFlushingPool);
     }
 
@@ -30,6 +33,7 @@ final class IncomingRequestProcessor {
     private void processExchange(final HttpServerExchangeWithPartyId exchange) {
         final IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange.exchange);
         final AvroRecordBuffer<SpecificRecord> avroBuffer = AvroRecordBuffer.fromRecord(exchange.partyId, avroRecord);
+        kafkaFlushingPool.enqueueRecord(avroBuffer);
         hdfsFlushingPool.enqueueRecordsForFlushing(avroBuffer);
     }
 

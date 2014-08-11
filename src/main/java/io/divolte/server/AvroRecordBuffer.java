@@ -16,7 +16,7 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
 
 @ParametersAreNonnullByDefault
-final class AvroRecordBuffer<T extends SpecificRecord> {
+public final class AvroRecordBuffer<T extends SpecificRecord> {
     private static final int INITIAL_BUFFER_SIZE = 100;
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
 

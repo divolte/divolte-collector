@@ -34,6 +34,7 @@ dependencies {
     compile group: 'org.apache.hadoop', name:'hadoop-client', version: '2.4.1'
     compile group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.18'
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.06'
+    compile group: 'org.apache.kafka', name:'kafka_2.10', version:'0.8.1.1'
 
     runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.2'
 
