@@ -1,6 +1,5 @@
 package io.divolte.server;
 
-import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.record.IncomingRequestRecord;
 import io.undertow.server.HttpServerExchange;
 
@@ -11,6 +10,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.avro.specific.SpecificRecord;
+
+import static io.divolte.server.ConcurrentUtils.*;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor {

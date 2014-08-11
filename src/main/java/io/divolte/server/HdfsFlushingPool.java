@@ -1,7 +1,5 @@
 package io.divolte.server;
 
-import static io.divolte.server.ConcurrentUtils.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -10,10 +8,12 @@ import java.util.concurrent.ThreadFactory;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.avro.specific.SpecificRecord;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import org.apache.avro.specific.SpecificRecord;
+
+import static io.divolte.server.ConcurrentUtils.*;
 
 final class HdfsFlushingPool {
     private final List<HdfsFlusher> flushers;
