@@ -30,8 +30,8 @@ final class HdfsFlushingPool {
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
 
         flushers = Stream.generate(() -> new HdfsFlusher(config))
-        .limit(numThreads)
-        .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
+                         .limit(numThreads)
+                         .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
         flushers.forEach((flusher) ->
             scheduleQueueReaderWithCleanup(
@@ -42,7 +42,7 @@ final class HdfsFlushingPool {
     }
 
     public void enqueueRecordsForFlushing(final AvroRecordBuffer<SpecificRecord> record)  {
-        final int bucket = (record.getPartyId().hashCode() & Integer.MAX_VALUE) % flushers.size();
+        final int bucket = record.getPartyId().hashCode() % flushers.size();
         flushers.get(bucket).add(record);
     }
 }

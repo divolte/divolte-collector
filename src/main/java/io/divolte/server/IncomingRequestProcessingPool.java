@@ -32,8 +32,8 @@ final class IncomingRequestProcessingPool {
         final HdfsFlushingPool hdfsFlushingPool = new HdfsFlushingPool(config);
 
         processors = Stream.generate(() -> new IncomingRequestProcessor(hdfsFlushingPool))
-        .limit(numThreads)
-        .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
+                           .limit(numThreads)
+                           .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
         processors.forEach((processor) ->
             scheduleQueueReader(

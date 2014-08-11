@@ -47,9 +47,9 @@ final class ConcurrentUtils {
 
     public static ThreadFactory createThreadFactory(final ThreadGroup group, final String nameFormat) {
         return new ThreadFactoryBuilder()
-        .setNameFormat(nameFormat)
-        .setThreadFactory((runnable) -> new Thread(group, runnable))
-        .build();
+            .setNameFormat(nameFormat)
+            .setThreadFactory((runnable) -> new Thread(group, runnable))
+            .build();
     }
 
     public static <T> Runnable microBatchingQueueDrainerWithHeartBeat(final BlockingQueue<T> queue,
@@ -79,23 +79,26 @@ final class ConcurrentUtils {
         };
     }
 
-    public static <T> Runnable microBatchingQueueDrainer(final BlockingQueue<T> queue, final Consumer<T> consumer) {
+    public static <T> Runnable microBatchingQueueDrainer(final BlockingQueue<T> queue,
+                                                         final Consumer<T> consumer) {
         return microBatchingQueueDrainerWithHeartBeat(queue, consumer, () -> {});
     }
 
-    public static void scheduleQueueReaderWithCleanup(final ExecutorService es, final Runnable reader, final Runnable cleanup) {
+    public static void scheduleQueueReaderWithCleanup(final ExecutorService es,
+                                                      final Runnable reader,
+                                                      final Runnable cleanup) {
         CompletableFuture
-        .runAsync(reader, es)
-        .whenComplete((voidValue, error) -> {
-            cleanup.run();
+            .runAsync(reader, es)
+            .whenComplete((voidValue, error) -> {
+                cleanup.run();
 
-            // In case the reader for some reason escapes its loop with an exception,
-            // log any uncaught exceptions and reschedule
-            if (error != null) {
-                logger.warn("Uncaught exception in incoming queue reader thread.", error);
-                scheduleQueueReaderWithCleanup(es, reader, cleanup);
-            }
-        });
+                // In case the reader for some reason escapes its loop with an exception,
+                // log any uncaught exceptions and reschedule
+                if (error != null) {
+                    logger.warn("Uncaught exception in incoming queue reader thread.", error);
+                    scheduleQueueReaderWithCleanup(es, reader, cleanup);
+                }
+            });
     }
 
     public static void scheduleQueueReader(final ExecutorService es, final Runnable reader) {
