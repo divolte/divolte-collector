@@ -1,7 +1,5 @@
 package io.divolte.server;
 
-import static io.divolte.server.ConcurrentUtils.*;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -15,12 +13,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.primitives.Ints;
+import com.typesafe.config.Config;
+
 import org.apache.avro.specific.SpecificRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.primitives.Ints;
-import com.typesafe.config.Config;
+import static io.divolte.server.ConcurrentUtils.*;
 
 final class LocalFileFlusher {
     private final static Logger logger = LoggerFactory.getLogger(LocalFileFlusher.class);

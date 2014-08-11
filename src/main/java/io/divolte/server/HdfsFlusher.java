@@ -1,16 +1,6 @@
 package io.divolte.server;
 
-import com.typesafe.config.Config;
 import io.divolte.record.IncomingRequestRecord;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.avro.specific.SpecificRecord;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -21,9 +11,19 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static io.divolte.server.ConcurrentUtils.microBatchingQueueDrainerWithHeartBeat;
-import static io.divolte.server.ConcurrentUtils.offerQuietly;
-import static io.divolte.server.ConcurrentUtils.throwsIoException;
+import com.typesafe.config.Config;
+
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.specific.SpecificDatumWriter;
+import org.apache.avro.specific.SpecificRecord;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static io.divolte.server.ConcurrentUtils.*;
 
 final class HdfsFlusher {
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
