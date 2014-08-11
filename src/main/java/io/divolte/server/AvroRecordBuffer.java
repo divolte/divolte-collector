@@ -19,8 +19,6 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
     private final ByteBuffer byteBuffer;
 
     private AvroRecordBuffer(final T record) throws IOException {
-        final byte[] buffer = new byte[BUFFER_SIZE.get()];
-
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
          * a lot of copying. Instead, we create a byte array and point a
@@ -29,7 +27,7 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
          * the entire object using a larger byte array. All subsequent instances
          * will also allocate the larger size array from that point onward.
          */
-        byteBuffer = ByteBuffer.wrap(buffer);
+        byteBuffer = ByteBuffer.wrap(new byte[BUFFER_SIZE.get()]);
         final DatumWriter<T> writer = new SpecificDatumWriter<>(record.getSchema());
         final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
 
