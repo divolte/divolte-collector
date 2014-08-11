@@ -1,8 +1,5 @@
 package io.divolte.server;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,11 +9,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @ParametersAreNonnullByDefault
 final class ConcurrentUtils {
@@ -58,7 +62,7 @@ final class ConcurrentUtils {
 
     public static <T> Runnable microBatchingQueueDrainerWithHeartBeat(final BlockingQueue<T> queue,
                                                                       final Consumer<T> consumer,
-                                                                      @Nullable final Runnable heartBeatAction) {
+                                                                      final Runnable heartBeatAction) {
         return () -> {
             final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
             while (!queue.isEmpty() || !Thread.currentThread().isInterrupted()) {
@@ -68,7 +72,7 @@ final class ConcurrentUtils {
                     final T polled;
                     if (null != (polled = pollQuietly(queue, 1, TimeUnit.SECONDS))) {
                         consumer.accept(polled);
-                    } else if (null != heartBeatAction) {
+                    } else {
                         heartBeatAction.run();
                     }
                 } else {
@@ -104,6 +108,19 @@ final class ConcurrentUtils {
     public static void scheduleQueueReader(final ExecutorService es, final Runnable reader) {
         scheduleQueueReaderWithCleanup(es, reader, () ->
             logger.debug("Unhandled cleanup for thread: {}", Thread.currentThread().getName()));
+    }
+
+    public static <K,V> Cache<K, V> buildSizeBoundCacheFromLoadingFunction(Function<K, V> loader, int size) {
+        return CacheBuilder
+                .newBuilder()
+                .maximumSize(size)
+                .initialCapacity(size)
+                .build(new CacheLoader<K, V>() {
+                    @Override
+                    public V load(K key) throws Exception {
+                        return loader.apply(key);
+                    }
+                });
     }
 
     @FunctionalInterface
