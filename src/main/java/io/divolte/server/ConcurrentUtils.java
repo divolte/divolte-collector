@@ -99,9 +99,8 @@ final class ConcurrentUtils {
     }
 
     public static void scheduleQueueReader(final ExecutorService es, final Runnable reader) {
-        scheduleQueueReaderWithCleanup(es, reader, () -> {
-            logger.debug("Unhandled cleanup for thread: {}", Thread.currentThread().getName());
-            });
+        scheduleQueueReaderWithCleanup(es, reader, () ->
+            logger.debug("Unhandled cleanup for thread: {}", Thread.currentThread().getName()));
     }
 
     @FunctionalInterface
