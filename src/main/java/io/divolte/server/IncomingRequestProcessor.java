@@ -27,10 +27,9 @@ final class IncomingRequestProcessor {
     }
 
     private void processExchange(final HttpServerExchangeWithPartyId exchange) {
-        IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange.exchange);
-        AvroRecordBuffer<SpecificRecord> avroBuffer = AvroRecordBuffer.fromRecord(exchange.partyId, avroRecord);
-
-        hdfsFlushingPool.enqueueRecordForFlushing(avroBuffer);
+        final IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange.exchange);
+        final AvroRecordBuffer<SpecificRecord> avroBuffer = AvroRecordBuffer.fromRecord(exchange.partyId, avroRecord);
+        hdfsFlushingPool.enqueueRecordsForFlushing(avroBuffer);
     }
 
     public void add(String partyId, HttpServerExchange exchange) {
@@ -42,7 +41,8 @@ final class IncomingRequestProcessor {
         final String partyId;
         final HttpServerExchange exchange;
 
-        public HttpServerExchangeWithPartyId(String partyId, HttpServerExchange exchange) {
+        public HttpServerExchangeWithPartyId(final String partyId,
+                                             final HttpServerExchange exchange) {
             this.partyId = Objects.requireNonNull(partyId);
             this.exchange = Objects.requireNonNull(exchange);
         }

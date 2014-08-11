@@ -24,7 +24,7 @@ final class ConcurrentUtils {
     }
 
     @Nullable
-    public static <E> E pollQuietly(final BlockingQueue<E> queue, long timeout, TimeUnit unit) {
+    public static <E> E pollQuietly(final BlockingQueue<E> queue, final long timeout, final TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);
         } catch (InterruptedException e) {
@@ -33,7 +33,10 @@ final class ConcurrentUtils {
         }
     }
 
-    public static <T> boolean offerQuietly(final BlockingQueue<T> queue, T item, long timeout, TimeUnit unit) {
+    public static <T> boolean offerQuietly(final BlockingQueue<T> queue,
+                                           final T item,
+                                           final long timeout,
+                                           final TimeUnit unit) {
         try {
             return queue.offer(item, timeout, unit);
         } catch (InterruptedException e) {
@@ -42,7 +45,7 @@ final class ConcurrentUtils {
         }
     }
 
-    public static ThreadFactory createThreadFactory(ThreadGroup group, String nameFormat) {
+    public static ThreadFactory createThreadFactory(final ThreadGroup group, final String nameFormat) {
         return new ThreadFactoryBuilder()
         .setNameFormat(nameFormat)
         .setThreadFactory((runnable) -> new Thread(group, runnable))
@@ -105,11 +108,12 @@ final class ConcurrentUtils {
     public interface IOExceptionThrower {
         public abstract void run() throws IOException;
     }
-    public static boolean throwsIoException(IOExceptionThrower r) {
+
+    public static boolean throwsIoException(final IOExceptionThrower r) {
         try {
             r.run();
             return false;
-        } catch(IOException ioe) {
+        } catch (final IOException ioe) {
             return true;
         }
     }

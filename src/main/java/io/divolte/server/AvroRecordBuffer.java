@@ -65,7 +65,7 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
                 // as we can assume another thread increased it.
                 int currentSize = BUFFER_SIZE.get();
                 BUFFER_SIZE.compareAndSet(currentSize, (int) (currentSize * 1.1));
-            } catch (IOException ioe) {
+            } catch (final IOException ioe) {
                 throw new RuntimeException("Serialization error.", ioe);
             }
         }
@@ -87,12 +87,12 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
     private final class ByteBufferOutputStream extends OutputStream {
         private final ByteBuffer underlying;
 
-        public ByteBufferOutputStream(ByteBuffer underlying) {
+        public ByteBufferOutputStream(final ByteBuffer underlying) {
             this.underlying = Objects.requireNonNull(underlying);
         }
 
         @Override
-        public void write(int b) throws IOException {
+        public void write(final int b) throws IOException {
             underlying.put((byte) b);
         }
 
