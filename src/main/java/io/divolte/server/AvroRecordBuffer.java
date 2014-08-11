@@ -1,9 +1,12 @@
 package io.divolte.server;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.avro.io.DatumWriter;
@@ -12,6 +15,7 @@ import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
 
+@ParametersAreNonnullByDefault
 final class AvroRecordBuffer<T extends SpecificRecord> {
     private static final int INITIAL_BUFFER_SIZE = 100;
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
@@ -73,11 +77,12 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
         return byteBuffer.limit();
     }
 
+    @ParametersAreNonnullByDefault
     private final class ByteBufferOutputStream extends OutputStream {
         private final ByteBuffer underlying;
 
         public ByteBufferOutputStream(ByteBuffer underlying) {
-            this.underlying = underlying;
+            this.underlying = Objects.requireNonNull(underlying);
         }
 
         @Override

@@ -4,18 +4,22 @@ import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.record.IncomingRequestRecord;
 import io.undertow.server.HttpServerExchange;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.avro.specific.SpecificRecord;
 
+@ParametersAreNonnullByDefault
 final class IncomingRequestProcessor {
     private final BlockingQueue<HttpServerExchangeWithPartyId> queue;
     private final HdfsFlushingPool hdfsFlushingPool;
 
     public IncomingRequestProcessor(final HdfsFlushingPool hdfsFlushingPool) {
         this.queue = new LinkedBlockingQueue<>();
-        this.hdfsFlushingPool = hdfsFlushingPool;
+        this.hdfsFlushingPool = Objects.requireNonNull(hdfsFlushingPool);
     }
 
     public Runnable getQueueReader() {
@@ -33,13 +37,14 @@ final class IncomingRequestProcessor {
         queue.add(new HttpServerExchangeWithPartyId(partyId, exchange));
     }
 
+    @ParametersAreNonnullByDefault
     private final class HttpServerExchangeWithPartyId {
         final String partyId;
         final HttpServerExchange exchange;
 
         public HttpServerExchangeWithPartyId(String partyId, HttpServerExchange exchange) {
-            this.partyId = partyId;
-            this.exchange = exchange;
+            this.partyId = Objects.requireNonNull(partyId);
+            this.exchange = Objects.requireNonNull(exchange);
         }
     }
 }

@@ -3,6 +3,8 @@ package io.divolte.server;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -14,12 +16,14 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+@ParametersAreNonnullByDefault
 final class ConcurrentUtils {
     private static final Logger logger = LoggerFactory.getLogger(ConcurrentUtils.class);
     private ConcurrentUtils() {
         throw new UnsupportedOperationException("Singleton; do not instantiate.");
     }
 
+    @Nullable
     public static <E> E pollQuietly(final BlockingQueue<E> queue, long timeout, TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);
@@ -45,7 +49,9 @@ final class ConcurrentUtils {
         .build();
     }
 
-    public static <T> Runnable microBatchingQueueDrainerWithHeartBeat(final BlockingQueue<T> queue, final Consumer<T> consumer, final Runnable heartBeatAction) {
+    public static <T> Runnable microBatchingQueueDrainerWithHeartBeat(final BlockingQueue<T> queue,
+                                                                      final Consumer<T> consumer,
+                                                                      @Nullable final Runnable heartBeatAction) {
         return () -> {
             final int maxBatchSize = 100;
             final List<T> batch = new ArrayList<>(maxBatchSize);
