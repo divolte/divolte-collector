@@ -20,9 +20,11 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
     private static final int INITIAL_BUFFER_SIZE = 100;
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
 
+    private final String partyId;
     private final ByteBuffer byteBuffer;
 
-    private AvroRecordBuffer(final T record) throws IOException {
+    private AvroRecordBuffer(final String partyId, final T record) throws IOException {
+        this.partyId = Objects.requireNonNull(partyId);
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
          * a lot of copying. Instead, we create a byte array and point a
@@ -48,10 +50,14 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
          */
     }
 
-    public static <T extends SpecificRecord> AvroRecordBuffer<T> fromRecord(final T record) {
+    public String getPartyId() {
+        return partyId;
+    }
+
+    public static <T extends SpecificRecord> AvroRecordBuffer<T> fromRecord(final String partyId, final T record) {
         for ( ; ; ) {
             try {
-                return new AvroRecordBuffer<T>(record);
+                return new AvroRecordBuffer<T>(partyId, record);
             } catch (BufferOverflowException boe) {
                 // Increase the buffer size by about 10%
                 // Because we only ever increase the buffer size, we discard the
