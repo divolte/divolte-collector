@@ -86,5 +86,10 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
         public void write(int b) throws IOException {
             underlying.put((byte) b);
         }
+
+        @Override
+        public void write(final byte[] b, final int off, final int len) throws IOException {
+            underlying.put(b, off, len);
+        }
     }
 }
