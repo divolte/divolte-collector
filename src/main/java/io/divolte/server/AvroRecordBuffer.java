@@ -79,7 +79,6 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
         private final ByteBuffer underlying;
 
         public ByteBufferOutputStream(ByteBuffer underlying) {
-            super();
             this.underlying = underlying;
         }
 
