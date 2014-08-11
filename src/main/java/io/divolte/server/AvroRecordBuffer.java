@@ -33,21 +33,15 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
          * the entire object using a larger byte array. All subsequent instances
          * will also allocate the larger size array from that point onward.
          */
-        byteBuffer = ByteBuffer.wrap(new byte[BUFFER_SIZE.get()]);
+        final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[BUFFER_SIZE.get()]);
         final DatumWriter<T> writer = new SpecificDatumWriter<>(record.getSchema());
         final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
 
         writer.write(record, encoder);
 
-        // prepare buffer for reading
+        // Prepare buffer for reading, and store it (read-only).
         byteBuffer.flip();
-
-        /*
-         * NOTE: changing the internal byte buffer to byteBuffer.asReadOnlyBuffer() causes the byteBuffer.getSlice().array()
-         * call to throw an exception. Clients may need the backing array instead of the ByteBuffer in some cases
-         * and getting the backing array is the only zero-copy means of getting to the array. Hence, we leave the
-         * internal ByteBuffer writable and trust clients not to tamper with it.
-         */
+        this.byteBuffer = byteBuffer.asReadOnlyBuffer();
     }
 
     public String getPartyId() {
@@ -58,7 +52,7 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
         for (;;) {
             try {
                 return new AvroRecordBuffer<>(partyId, record);
-            } catch (BufferOverflowException boe) {
+            } catch (final BufferOverflowException boe) {
                 // Increase the buffer size by about 10%
                 // Because we only ever increase the buffer size, we discard the
                 // scenario where this thread fails to set the new size,
@@ -71,7 +65,7 @@ final class AvroRecordBuffer<T extends SpecificRecord> {
         }
     }
 
-    public ByteBuffer getBufferSlice() {
+    public ByteBuffer getByteBuffer() {
         return byteBuffer.slice();
     }
 

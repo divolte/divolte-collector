@@ -57,7 +57,7 @@ final class LocalFileFlusher {
             final ByteBuffer[] buffersToWrite = {
                     ByteBuffer.wrap(Ints.toByteArray(record.sequenceNumber)),
                     ByteBuffer.wrap(Ints.toByteArray(record.record.size())),
-                    record.record.getBufferSlice()
+                    record.record.getByteBuffer()
                     };
 
             channel.write(buffersToWrite);

@@ -84,7 +84,7 @@ final class HdfsFlusher {
 
     private void doProcess(AvroRecordBuffer<SpecificRecord> record) throws IllegalArgumentException, IOException {
         if (isHdfsAlive) {
-            currentFile.writer.appendEncoded(record.getBufferSlice());
+            currentFile.writer.appendEncoded(record.getByteBuffer());
             currentFile.recordsSinceLastSync += 1;
 
             possiblySync();
