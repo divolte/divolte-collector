@@ -61,22 +61,19 @@ final class ConcurrentUtils {
                                                                       @Nullable final Runnable heartBeatAction) {
         return () -> {
             final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
-
-            while(!queue.isEmpty() || !Thread.currentThread().isInterrupted()) {
-                queue.drainTo(batch, MAX_BATCH_SIZE - 1);
-                final int batchSize = batch.size();
-
-                batch.forEach(consumer);
-                batch.clear();
-
-                // if the batch was empty, block on the queue for some time until something is available
-                final T polled;
-                if (batchSize == 0) {
-                    if ((polled = pollQuietly(queue, 1, TimeUnit.SECONDS)) != null) {
-                        batch.add(polled);
+            while (!queue.isEmpty() || !Thread.currentThread().isInterrupted()) {
+                queue.drainTo(batch, MAX_BATCH_SIZE);
+                if (batch.isEmpty()) {
+                    // If the batch was empty, block on the queue for some time until something is available.
+                    final T polled;
+                    if (null != (polled = pollQuietly(queue, 1, TimeUnit.SECONDS))) {
+                        consumer.accept(polled);
                     } else if (null != heartBeatAction) {
                         heartBeatAction.run();
                     }
+                } else {
+                    batch.forEach(consumer);
+                    batch.clear();
                 }
             }
         };
