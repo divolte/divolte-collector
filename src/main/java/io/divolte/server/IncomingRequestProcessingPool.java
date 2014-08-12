@@ -46,8 +46,8 @@ final class IncomingRequestProcessingPool {
 
         final Schema schema = schemaFromConfig(config);
 
-        final KafkaFlushingPool kafkaFlushingPool = new KafkaFlushingPool(config);
-        final HdfsFlushingPool hdfsFlushingPool = new HdfsFlushingPool(config, schema);
+        final KafkaFlushingPool kafkaFlushingPool = config.getBoolean("divolte.kafka_flusher.enabled") ? new KafkaFlushingPool(config) : null;
+        final HdfsFlushingPool hdfsFlushingPool = config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schema) : null;
 
         final Config schemaMappingConfig;
         if (config.hasPath("divolte.tracking.schema_mapping")) {

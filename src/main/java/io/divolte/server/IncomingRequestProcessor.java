@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.Schema;
@@ -24,10 +25,10 @@ final class IncomingRequestProcessor {
 
     private final GenericRecordMaker maker;
 
-    public IncomingRequestProcessor(final Config schemaMappingConfig, final KafkaFlushingPool kafkaFlushingPool, final HdfsFlushingPool hdfsFlushingPool, final Schema schema) {
+    public IncomingRequestProcessor(final Config schemaMappingConfig, @Nullable final KafkaFlushingPool kafkaFlushingPool, @Nullable final HdfsFlushingPool hdfsFlushingPool, final Schema schema) {
         this.queue = new LinkedBlockingQueue<>();
-        this.kafkaFlushingPool = Objects.requireNonNull(kafkaFlushingPool);
-        this.hdfsFlushingPool = Objects.requireNonNull(hdfsFlushingPool);
+        this.kafkaFlushingPool = kafkaFlushingPool;
+        this.hdfsFlushingPool = hdfsFlushingPool;
 
         this.maker = new GenericRecordMaker(schema, schemaMappingConfig);
     }
@@ -39,8 +40,13 @@ final class IncomingRequestProcessor {
     private void processExchange(final HttpServerExchangeWithPartyId exchange) {
         final GenericRecord avroRecord = maker.makeRecordFromExchange(exchange.exchange);
         final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(exchange.partyId, avroRecord);
-        kafkaFlushingPool.enqueueRecord(avroBuffer);
-        hdfsFlushingPool.enqueueRecordsForFlushing(avroBuffer);
+
+        if (null != kafkaFlushingPool) {
+            kafkaFlushingPool.enqueueRecord(avroBuffer);
+        }
+        if (null != hdfsFlushingPool) {
+            hdfsFlushingPool.enqueueRecordsForFlushing(avroBuffer);
+        }
     }
 
     public void add(String partyId, HttpServerExchange exchange) {
