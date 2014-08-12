@@ -30,7 +30,7 @@ final class IncomingRequestProcessor {
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
 
-        this.maker = new GenericRecordMaker(schema, schemaMappingConfig);
+        this.maker = new GenericRecordMaker(Objects.requireNonNull(schema), Objects.requireNonNull(schemaMappingConfig));
     }
 
     public Runnable getQueueReader() {

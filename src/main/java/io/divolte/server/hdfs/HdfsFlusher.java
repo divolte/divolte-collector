@@ -8,6 +8,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +30,8 @@ import com.typesafe.config.Config;
 
 @ParametersAreNonnullByDefault
 final class HdfsFlusher {
+    private static final int HDFS_RECONNECT_DELAY = 5000;
+
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
     private final BlockingQueue<AvroRecordBuffer> queue;
@@ -49,7 +52,8 @@ final class HdfsFlusher {
     private long lastFixAttempt;
 
     public HdfsFlusher(final Config config, final Schema schema) {
-        this.schema = schema;
+        Objects.requireNonNull(config);
+        this.schema = Objects.requireNonNull(schema);
 
         queue = new LinkedBlockingQueue<>(config.getInt("divolte.hdfs_flusher.max_write_queue"));
         maxEnqueueDelayMillis = config.getDuration("divolte.hdfs_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS);
@@ -111,7 +115,7 @@ final class HdfsFlusher {
     private void possiblyFixHdfsConnection() {
         // try to reconnect every 5 seconds.
         long time = System.currentTimeMillis();
-        if (time - lastFixAttempt > 5000) {
+        if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
             final Path newFilePath = newFilePath();
             try {
                 currentFile = openNewFile(newFilePath);

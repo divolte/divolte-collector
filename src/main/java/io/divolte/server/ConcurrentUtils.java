@@ -1,8 +1,5 @@
 package io.divolte.server;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,13 +11,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @ParametersAreNonnullByDefault
 public final class ConcurrentUtils {
@@ -31,7 +30,6 @@ public final class ConcurrentUtils {
         throw new UnsupportedOperationException("Singleton; do not instantiate.");
     }
 
-    @Nullable
     public static <E> E pollQuietly(final BlockingQueue<E> queue, final long timeout, final TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);

@@ -10,11 +10,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -29,6 +32,7 @@ import com.typesafe.config.ConfigValueType;
 /*
  * This class is called maker, because builder was already taken by Avro itself.
  */
+@ParametersAreNonnullByDefault
 final class GenericRecordMaker {
     private static final String PARTY_ID_COOKIE;
     private static final String SESSION_ID_COOKIE;
@@ -52,7 +56,7 @@ final class GenericRecordMaker {
         regexes = regexMapFromConfig(config);
         setters = setterListFromConfig(config);
 
-        this.schema = schema;
+        this.schema = Objects.requireNonNull(schema);
     }
 
     private FieldSetter fieldSetterFromConfig(final Entry<String, ConfigValue> entry) {
