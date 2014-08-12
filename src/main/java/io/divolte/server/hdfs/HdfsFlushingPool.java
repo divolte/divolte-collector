@@ -49,6 +49,7 @@ public final class HdfsFlushingPool {
     }
 
     public void enqueueRecordsForFlushing(final AvroRecordBuffer record)  {
+        // We mask the hash-code to ensure we always get a positive bucket index.
         final int bucket = (record.getPartyId().hashCode() & Integer.MAX_VALUE) % flushers.size();
         flushers.get(bucket).add(record);
     }
