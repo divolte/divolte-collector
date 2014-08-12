@@ -20,7 +20,9 @@ import com.typesafe.config.Config;
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor {
     private final BlockingQueue<HttpServerExchangeWithPartyId> queue;
+    @Nullable
     private final KafkaFlushingPool kafkaFlushingPool;
+    @Nullable
     private final HdfsFlushingPool hdfsFlushingPool;
 
     private final GenericRecordMaker maker;
