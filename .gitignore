@@ -15,3 +15,5 @@
 /.settings
 /.cache
 /bin
+
+/target/
