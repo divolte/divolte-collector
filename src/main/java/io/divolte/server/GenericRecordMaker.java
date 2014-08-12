@@ -59,6 +59,7 @@ final class GenericRecordMaker {
         final String name = entry.getKey();
         final ConfigValue value = entry.getValue();
 
+
         switch (value.valueType()) {
         case STRING:
             return simpleFieldSetterForConfig(name, value);
@@ -142,7 +143,7 @@ final class GenericRecordMaker {
         case "userAgent":
             return (b, e, c) -> fieldExtractorForName("userAgent").extract(e).ifPresent((ua) -> b.set(name, ua) );
         case "remoteHost":
-            return (b, e, c) -> fieldExtractorForName("remoteHost").extract(e).get();
+            return (b, e, c) -> fieldExtractorForName("remoteHost").extract(e).ifPresent((rh) -> b.set(name, rh));
         case "referer":
             return (b, e, c) -> fieldExtractorForName("referer").extract(e).ifPresent((ref) -> b.set(name, ref));
         case "location":

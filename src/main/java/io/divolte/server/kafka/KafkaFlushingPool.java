@@ -1,21 +1,20 @@
 package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 
+import kafka.javaapi.producer.Producer;
+import kafka.producer.KeyedMessage;
+import kafka.producer.ProducerConfig;
+
 import com.google.common.base.Joiner;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
-
-import org.apache.avro.specific.SpecificRecord;
 
 public class KafkaFlushingPool {
     private final String topic;
@@ -31,11 +30,11 @@ public class KafkaFlushingPool {
              new ProducerConfig(getProperties(config, "divolte.kafka_flusher.producer")));
     }
 
-    public void enqueueRecord(final AvroRecordBuffer<SpecificRecord> record) {
+    public void enqueueRecord(final AvroRecordBuffer record) {
         producer.send(buildMessage(record));
     }
 
-    private KeyedMessage<byte[], byte[]> buildMessage(final AvroRecordBuffer<SpecificRecord> record) {
+    private KeyedMessage<byte[], byte[]> buildMessage(final AvroRecordBuffer record) {
         // Extract the AVRO record as a byte array.
         // (There's no way to do this without copying the array.)
         final ByteBuffer avroBuffer = record.getByteBuffer();

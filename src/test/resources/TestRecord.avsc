@@ -17,6 +17,20 @@
             "default": null
         },
         {
+            "name": "remoteHost",
+            "type": "string"
+        },
+        {
+            "name": "referer",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "location",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
             "name": "client",
             "type": ["null", "string"],
             "default": null

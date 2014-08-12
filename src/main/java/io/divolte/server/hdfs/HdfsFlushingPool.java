@@ -1,5 +1,6 @@
 package io.divolte.server.hdfs;
 
+import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.server.AvroRecordBuffer;
 
 import java.util.ArrayList;
@@ -10,28 +11,26 @@ import java.util.concurrent.ThreadFactory;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.avro.Schema;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-
-import org.apache.avro.specific.SpecificRecord;
-
-import static io.divolte.server.ConcurrentUtils.*;
 
 public final class HdfsFlushingPool {
     private final List<HdfsFlusher> flushers;
 
-    public HdfsFlushingPool() {
-        this(ConfigFactory.load());
+    public HdfsFlushingPool(final Schema schema) {
+        this(ConfigFactory.load(), schema);
     }
 
-    public HdfsFlushingPool(final Config config) {
+    public HdfsFlushingPool(final Config config, final Schema schema) {
         final int numThreads = config.getInt("divolte.hdfs_flusher.threads");
 
         final ThreadGroup threadGroup = new ThreadGroup("Hdfs Flushing Pool");
         final ThreadFactory factory = createThreadFactory(threadGroup, "Hdfs Flusher - %d");
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
 
-        flushers = Stream.generate(() -> new HdfsFlusher(config))
+        flushers = Stream.generate(() -> new HdfsFlusher(config, schema))
                          .limit(numThreads)
                          .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
@@ -43,7 +42,7 @@ public final class HdfsFlushingPool {
         );
     }
 
-    public void enqueueRecordsForFlushing(final AvroRecordBuffer<SpecificRecord> record)  {
+    public void enqueueRecordsForFlushing(final AvroRecordBuffer record)  {
         final int bucket = (record.getPartyId().hashCode() & Integer.MAX_VALUE) % flushers.size();
         flushers.get(bucket).add(record);
     }

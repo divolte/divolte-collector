@@ -1,5 +1,7 @@
 package io.divolte.server;
 
+import static io.divolte.server.ConcurrentUtils.*;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -13,14 +15,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.primitives.Ints;
-import com.typesafe.config.Config;
-
-import org.apache.avro.specific.SpecificRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static io.divolte.server.ConcurrentUtils.*;
+import com.google.common.primitives.Ints;
+import com.typesafe.config.Config;
 
 final class LocalFileFlusher {
     private final static Logger logger = LoggerFactory.getLogger(LocalFileFlusher.class);
@@ -80,7 +79,7 @@ final class LocalFileFlusher {
         channel = null;
     }
 
-    public long add(int sequenceNumber, AvroRecordBuffer<SpecificRecord> record) {
+    public long add(int sequenceNumber, AvroRecordBuffer record) {
         final long currentPosition = position.get();
 
         if (offerQuietly(queue, new AvroRecordBufferWithSequenceNumber(sequenceNumber, record), maxEnqueueDelayMillis, TimeUnit.MILLISECONDS)) {
@@ -112,10 +111,10 @@ final class LocalFileFlusher {
     }
 
     private final class AvroRecordBufferWithSequenceNumber {
-        final AvroRecordBuffer<SpecificRecord> record;
+        final AvroRecordBuffer record;
         final int sequenceNumber;
 
-        public AvroRecordBufferWithSequenceNumber(int sequenceNumber, AvroRecordBuffer<SpecificRecord> record) {
+        public AvroRecordBufferWithSequenceNumber(int sequenceNumber, AvroRecordBuffer record) {
             this.record = record;
             this.sequenceNumber = sequenceNumber;
         }

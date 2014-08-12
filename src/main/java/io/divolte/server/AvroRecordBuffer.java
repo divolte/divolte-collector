@@ -1,7 +1,5 @@
 package io.divolte.server;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
@@ -9,21 +7,23 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.avro.specific.SpecificRecord;
 
 @ParametersAreNonnullByDefault
-public final class AvroRecordBuffer<T extends SpecificRecord> {
+public final class AvroRecordBuffer {
     private static final int INITIAL_BUFFER_SIZE = 100;
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
 
     private final String partyId;
     private final ByteBuffer byteBuffer;
 
-    private AvroRecordBuffer(final String partyId, final T record) throws IOException {
+    private AvroRecordBuffer(final String partyId, final GenericRecord record) throws IOException {
         this.partyId = Objects.requireNonNull(partyId);
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
@@ -34,7 +34,7 @@ public final class AvroRecordBuffer<T extends SpecificRecord> {
          * will also allocate the larger size array from that point onward.
          */
         final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[BUFFER_SIZE.get()]);
-        final DatumWriter<T> writer = new SpecificDatumWriter<>(record.getSchema());
+        final DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(record.getSchema());
         final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
 
         writer.write(record, encoder);
@@ -48,10 +48,10 @@ public final class AvroRecordBuffer<T extends SpecificRecord> {
         return partyId;
     }
 
-    public static <T extends SpecificRecord> AvroRecordBuffer<T> fromRecord(final String partyId, final T record) {
+    public static AvroRecordBuffer fromRecord(final String partyId, final GenericRecord record) {
         for (;;) {
             try {
-                return new AvroRecordBuffer<>(partyId, record);
+                return new AvroRecordBuffer(partyId, record);
             } catch (final BufferOverflowException boe) {
                 // Increase the buffer size by about 10%
                 // Because we only ever increase the buffer size, we discard the

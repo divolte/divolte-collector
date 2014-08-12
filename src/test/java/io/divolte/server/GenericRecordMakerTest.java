@@ -52,6 +52,8 @@ public class GenericRecordMakerTest {
 
         assertEquals(true, record.get("sessionStart"));
         assertEquals(theExchange.getRequestStartTime(), record.get("ts"));
+        assertEquals("https://example.com/", record.get("location"));
+        assertEquals("http://example.com/", record.get("referer"));
         assertEquals("Divolte/Test", record.get("userAgentString"));
         assertEquals("party_id_cookie_value", record.get("client"));
         assertEquals("session_id_cookie_value", record.get("session"));

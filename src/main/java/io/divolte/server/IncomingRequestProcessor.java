@@ -1,19 +1,20 @@
 package io.divolte.server;
 
-import io.divolte.record.IncomingRequestRecord;
+import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.undertow.server.HttpServerExchange;
-
-import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.avro.specific.SpecificRecord;
+import javax.annotation.ParametersAreNonnullByDefault;
 
-import static io.divolte.server.ConcurrentUtils.*;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+
+import com.typesafe.config.Config;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor {
@@ -21,10 +22,14 @@ final class IncomingRequestProcessor {
     private final KafkaFlushingPool kafkaFlushingPool;
     private final HdfsFlushingPool hdfsFlushingPool;
 
-    public IncomingRequestProcessor(final KafkaFlushingPool kafkaFlushingPool, final HdfsFlushingPool hdfsFlushingPool) {
+    private final GenericRecordMaker maker;
+
+    public IncomingRequestProcessor(final Config schemaMappingConfig, final KafkaFlushingPool kafkaFlushingPool, final HdfsFlushingPool hdfsFlushingPool, final Schema schema) {
         this.queue = new LinkedBlockingQueue<>();
         this.kafkaFlushingPool = Objects.requireNonNull(kafkaFlushingPool);
         this.hdfsFlushingPool = Objects.requireNonNull(hdfsFlushingPool);
+
+        this.maker = new GenericRecordMaker(schema, schemaMappingConfig);
     }
 
     public Runnable getQueueReader() {
@@ -32,8 +37,8 @@ final class IncomingRequestProcessor {
     }
 
     private void processExchange(final HttpServerExchangeWithPartyId exchange) {
-        final IncomingRequestRecord avroRecord = RecordUtil.recordFromExchange(exchange.exchange);
-        final AvroRecordBuffer<SpecificRecord> avroBuffer = AvroRecordBuffer.fromRecord(exchange.partyId, avroRecord);
+        final GenericRecord avroRecord = maker.makeRecordFromExchange(exchange.exchange);
+        final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(exchange.partyId, avroRecord);
         kafkaFlushingPool.enqueueRecord(avroBuffer);
         hdfsFlushingPool.enqueueRecordsForFlushing(avroBuffer);
     }

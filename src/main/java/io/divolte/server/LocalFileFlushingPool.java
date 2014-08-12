@@ -11,8 +11,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.avro.specific.SpecificRecord;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -42,7 +40,7 @@ final class LocalFileFlushingPool {
         });
     }
 
-    public FilePosition enqueueRecordForFlushing(final String partyId, final AvroRecordBuffer<SpecificRecord> record) {
+    public FilePosition enqueueRecordForFlushing(final String partyId, final AvroRecordBuffer record) {
         final int seq = this.sequenceNumber.incrementAndGet();
         final int bucket = (partyId.hashCode() & Integer.MAX_VALUE) % flushers.size();
         final long position = flushers.get(bucket).add(seq, record);

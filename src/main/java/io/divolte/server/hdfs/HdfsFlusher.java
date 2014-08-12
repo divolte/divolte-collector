@@ -1,6 +1,6 @@
 package io.divolte.server.hdfs;
 
-import io.divolte.record.IncomingRequestRecord;
+import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.server.AvroRecordBuffer;
 
 import java.io.IOException;
@@ -12,11 +12,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import com.typesafe.config.Config;
+import javax.annotation.ParametersAreNonnullByDefault;
 
+import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.avro.specific.SpecificRecord;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -24,12 +25,13 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static io.divolte.server.ConcurrentUtils.*;
+import com.typesafe.config.Config;
 
+@ParametersAreNonnullByDefault
 final class HdfsFlusher {
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
-    private final BlockingQueue<AvroRecordBuffer<SpecificRecord>> queue;
+    private final BlockingQueue<AvroRecordBuffer> queue;
     private final long maxEnqueueDelayMillis;
 
     private final FileSystem hadoopFs;
@@ -40,11 +42,15 @@ final class HdfsFlusher {
 
     private final static SimpleDateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmssSSS");
 
+    private final Schema schema;
+
     private HadoopFile currentFile;
     private boolean isHdfsAlive;
     private long lastFixAttempt;
 
-    public HdfsFlusher(Config config) {
+    public HdfsFlusher(final Config config, final Schema schema) {
+        this.schema = schema;
+
         queue = new LinkedBlockingQueue<>(config.getInt("divolte.hdfs_flusher.max_write_queue"));
         maxEnqueueDelayMillis = config.getDuration("divolte.hdfs_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS);
 
@@ -83,7 +89,7 @@ final class HdfsFlusher {
         return microBatchingQueueDrainerWithHeartBeat(queue, this::processRecord, this::heartBeat);
     }
 
-    private void doProcess(AvroRecordBuffer<SpecificRecord> record) throws IllegalArgumentException, IOException {
+    private void doProcess(AvroRecordBuffer record) throws IllegalArgumentException, IOException {
         if (isHdfsAlive) {
             currentFile.writer.appendEncoded(record.getByteBuffer());
             currentFile.recordsSinceLastSync += 1;
@@ -152,7 +158,7 @@ final class HdfsFlusher {
         currentFile.close();
     }
 
-    public void add(AvroRecordBuffer<SpecificRecord> record) {
+    public void add(AvroRecordBuffer record) {
         if (!offerQuietly(queue, record, maxEnqueueDelayMillis, TimeUnit.MILLISECONDS)) {
             logger.warn("Dropping record on attempt to enqueue for HDFS flushing.");
         }
@@ -167,7 +173,7 @@ final class HdfsFlusher {
         }
     }
 
-    private void processRecord(AvroRecordBuffer<SpecificRecord> record) {
+    private void processRecord(AvroRecordBuffer record) {
         try {
             doProcess(record);
         } catch (IOException e) {
@@ -188,8 +194,7 @@ final class HdfsFlusher {
     private final class HadoopFile implements AutoCloseable {
         final Path path;
         final FSDataOutputStream stream;
-        final DataFileWriter<SpecificRecord> writer;
-        final long openTime;
+        final DataFileWriter<GenericRecord> writer;
 
         long lastSyncTime;
         int recordsSinceLastSync;
@@ -199,9 +204,9 @@ final class HdfsFlusher {
             this.path = path;
             this.stream = hadoopFs.create(path, hdfsReplication);
 
-            this.writer = new DataFileWriter<SpecificRecord>(
-                    new SpecificDatumWriter<>(IncomingRequestRecord.SCHEMA$)).create(IncomingRequestRecord.SCHEMA$,
-                            stream);
+            this.writer =
+                    new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema))
+                    .create(schema, stream);
             this.writer.setSyncInterval(1 << 30);
             this.writer.setFlushOnEveryBlock(true);
 
@@ -211,8 +216,8 @@ final class HdfsFlusher {
             // datanodes available
             this.stream.hsync();
 
-            this.openTime = lastSyncTime = System.currentTimeMillis();
-            recordsSinceLastSync = 0;
+            this.lastSyncTime = System.currentTimeMillis();
+            this.recordsSinceLastSync = 0;
         }
 
         public void close() throws IOException { writer.close(); }
