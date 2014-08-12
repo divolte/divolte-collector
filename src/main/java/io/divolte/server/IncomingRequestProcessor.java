@@ -27,7 +27,9 @@ final class IncomingRequestProcessor {
 
     private final GenericRecordMaker maker;
 
-    public IncomingRequestProcessor(final Config schemaMappingConfig, @Nullable final KafkaFlushingPool kafkaFlushingPool, @Nullable final HdfsFlushingPool hdfsFlushingPool, final Schema schema) {
+    public IncomingRequestProcessor(final Config schemaMappingConfig,
+                                    @Nullable final KafkaFlushingPool kafkaFlushingPool,
+                                    @Nullable final HdfsFlushingPool hdfsFlushingPool, final Schema schema) {
         this.queue = new LinkedBlockingQueue<>();
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
