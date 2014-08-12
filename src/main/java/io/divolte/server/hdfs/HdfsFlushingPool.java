@@ -44,7 +44,7 @@ public final class HdfsFlushingPool {
     }
 
     public void enqueueRecordsForFlushing(final AvroRecordBuffer<SpecificRecord> record)  {
-        final int bucket = record.getPartyId().hashCode() % flushers.size();
+        final int bucket = (record.getPartyId().hashCode() & Integer.MAX_VALUE) % flushers.size();
         flushers.get(bucket).add(record);
     }
 }
