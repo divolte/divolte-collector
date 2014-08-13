@@ -42,17 +42,22 @@ final class GenericRecordMaker {
     private final List<FieldSetter> setters;
 
     public GenericRecordMaker(Schema schema, Config config) {
-        Objects.requireNonNull(config);
+        this (schema, config, config);
+    }
 
-        this.partyIdCookie = config.getString("divolte.tracking.party_cookie");
-        this.sessionIdCookie = config.getString("divolte.tracking.session_cookie");
-        this.pageViewIdCookie = config.getString("divolte.tracking.page_view_cookie");
+    public GenericRecordMaker(Schema schema, Config schemaConfig, Config globalConfig) {
+        Objects.requireNonNull(schemaConfig);
+        Objects.requireNonNull(globalConfig);
 
-        final int version = config.getInt("divolte.tracking.schema_mapping.version");
+        this.partyIdCookie = globalConfig.getString("divolte.tracking.party_cookie");
+        this.sessionIdCookie = globalConfig.getString("divolte.tracking.session_cookie");
+        this.pageViewIdCookie = globalConfig.getString("divolte.tracking.page_view_cookie");
+
+        final int version = schemaConfig.getInt("divolte.tracking.schema_mapping.version");
         checkVersion(version);
 
-        this.regexes = regexMapFromConfig(config);
-        this.setters = setterListFromConfig(config);
+        this.regexes = regexMapFromConfig(schemaConfig);
+        this.setters = setterListFromConfig(schemaConfig);
 
         this.schema = Objects.requireNonNull(schema);
     }

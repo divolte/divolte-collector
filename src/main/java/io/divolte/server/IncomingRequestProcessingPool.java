@@ -49,16 +49,7 @@ final class IncomingRequestProcessingPool {
         final KafkaFlushingPool kafkaFlushingPool = config.getBoolean("divolte.kafka_flusher.enabled") ? new KafkaFlushingPool(config) : null;
         final HdfsFlushingPool hdfsFlushingPool = config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schema) : null;
 
-        final Config schemaMappingConfig;
-        if (config.hasPath("divolte.tracking.schema_mapping")) {
-            logger.info("Using schema mapping from configuration.");
-            schemaMappingConfig = config;
-        } else {
-            logger.info("Using built in default schema mapping.");
-            schemaMappingConfig = ConfigFactory.load("default-schema-mapping");
-        }
-
-        this.processors = Stream.generate(() -> new IncomingRequestProcessor(schemaMappingConfig, kafkaFlushingPool, hdfsFlushingPool, schema))
+        this.processors = Stream.generate(() -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, schema))
                            .limit(numThreads)
                            .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 

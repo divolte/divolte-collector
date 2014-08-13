@@ -14,11 +14,16 @@ import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor {
+    private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
+
     private final BlockingQueue<HttpServerExchangeWithPartyId> queue;
     @Nullable
     private final KafkaFlushingPool kafkaFlushingPool;
@@ -27,14 +32,28 @@ final class IncomingRequestProcessor {
 
     private final GenericRecordMaker maker;
 
-    public IncomingRequestProcessor(final Config schemaMappingConfig,
+    public IncomingRequestProcessor(final Config config,
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
-                                    @Nullable final HdfsFlushingPool hdfsFlushingPool, final Schema schema) {
+                                    @Nullable final HdfsFlushingPool hdfsFlushingPool,
+                                    final Schema schema) {
         this.queue = new LinkedBlockingQueue<>();
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
 
-        this.maker = new GenericRecordMaker(Objects.requireNonNull(schema), Objects.requireNonNull(schemaMappingConfig));
+        final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));
+        this.maker = new GenericRecordMaker(Objects.requireNonNull(schema), schemaMappingConfig, config);
+    }
+
+    private Config schemaMappingConfigFromConfig(final Config config) {
+        final Config schemaMappingConfig;
+        if (config.hasPath("divolte.tracking.schema_mapping")) {
+            logger.info("Using schema mapping from configuration.");
+            schemaMappingConfig = config;
+        } else {
+            logger.info("Using built in default schema mapping.");
+            schemaMappingConfig = ConfigFactory.load("default-schema-mapping");
+        }
+        return schemaMappingConfig;
     }
 
     public Runnable getQueueReader() {
