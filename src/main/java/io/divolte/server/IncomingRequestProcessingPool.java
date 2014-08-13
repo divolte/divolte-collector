@@ -1,21 +1,18 @@
 package io.divolte.server;
 
-import static io.divolte.server.ConcurrentUtils.*;
+import io.divolte.server.IncomingRequestProcessingPool.HttpServerExchangeWithPartyId;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
+import io.divolte.server.processing.ProcessingPool;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.Schema;
@@ -28,39 +25,42 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
-final class IncomingRequestProcessingPool {
+final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, HttpServerExchangeWithPartyId> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
-
-    private final List<IncomingRequestProcessor> processors;
 
     public IncomingRequestProcessingPool() {
         this(ConfigFactory.load());
     }
 
     public IncomingRequestProcessingPool(final Config config) {
-        final int numThreads = config.getInt("divolte.incoming_request_processor.threads");
-
-        final ThreadGroup threadGroup = new ThreadGroup("Incoming Request Processing Pool");
-        final ThreadFactory factory = createThreadFactory(threadGroup, "Incoming Request Processor - %d");
-        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
-
-        final Schema schema = schemaFromConfig(config);
-
-        final KafkaFlushingPool kafkaFlushingPool = config.getBoolean("divolte.kafka_flusher.enabled") ? new KafkaFlushingPool(config) : null;
-        final HdfsFlushingPool hdfsFlushingPool = config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schema) : null;
-
-        this.processors = Stream.generate(() -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, schema))
-                           .limit(numThreads)
-                           .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
-
-        this.processors.forEach((processor) ->
-            scheduleQueueReader(
-                    executorService,
-                    processor.getQueueReader())
-        );
+        this (
+                config.getInt("divolte.incoming_request_processor.threads"),
+                config.getInt("divolte.incoming_request_processor.max_write_queue"),
+                config.getDuration("divolte.incoming_request_processor.max_enqueue_delay", TimeUnit.MILLISECONDS),
+                config,
+                schemaFromConfig(config),
+                config.getBoolean("divolte.kafka_flusher.enabled") ? new KafkaFlushingPool(config) : null,
+                config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schemaFromConfig(config)) : null
+                );
     }
 
-    private Schema schemaFromConfig(final Config config) {
+    public IncomingRequestProcessingPool(
+            final int numThreads,
+            final int maxQueueSize,
+            final long maxEnqueueDelay,
+            final Config config,
+            final Schema schema,
+            @Nullable final KafkaFlushingPool kafkaFlushingPool,
+            @Nullable final HdfsFlushingPool hdfsFlushingPool) {
+        super(
+                numThreads,
+                maxQueueSize,
+                maxEnqueueDelay,
+                "Incoming Request Processor",
+                () -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, schema));
+    }
+
+    private static Schema schemaFromConfig(final Config config) {
         try {
             final Parser parser = new Schema.Parser();
             if (config.hasPath("divolte.tracking.schema_file")) {
@@ -78,6 +78,18 @@ final class IncomingRequestProcessingPool {
     }
 
     public void enqueueIncomingExchangeForProcessing(final String partyId, final HttpServerExchange exchange) {
-        processors.get((partyId.hashCode() & Integer.MAX_VALUE) % processors.size()).add(partyId, exchange);
+        enqueue(partyId, new IncomingRequestProcessingPool.HttpServerExchangeWithPartyId(partyId, exchange));
+    }
+
+    @ParametersAreNonnullByDefault
+    static final class HttpServerExchangeWithPartyId {
+        final String partyId;
+        final HttpServerExchange exchange;
+
+        public HttpServerExchangeWithPartyId(final String partyId,
+                final HttpServerExchange exchange) {
+            this.partyId = Objects.requireNonNull(partyId);
+            this.exchange = Objects.requireNonNull(exchange);
+        }
     }
 }

@@ -1,16 +1,10 @@
 package io.divolte.server.hdfs;
 
-import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.processing.ProcessingPool;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -20,37 +14,31 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
-public final class HdfsFlushingPool {
-    private final List<HdfsFlusher> flushers;
-
+public final class HdfsFlushingPool extends ProcessingPool<HdfsFlusher, AvroRecordBuffer>{
     public HdfsFlushingPool(final Schema schema) {
         this(ConfigFactory.load(), schema);
     }
 
     public HdfsFlushingPool(final Config config, final Schema schema) {
-        Objects.requireNonNull(config);
+        this(
+                Objects.requireNonNull(config),
+                Objects.requireNonNull(schema),
+                config.getInt("divolte.hdfs_flusher.threads"),
+                config.getInt("divolte.hdfs_flusher.max_write_queue"),
+                config.getDuration("divolte.hdfs_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS)
+                );
+    }
 
-        final int numThreads = config.getInt("divolte.hdfs_flusher.threads");
-
-        final ThreadGroup threadGroup = new ThreadGroup("Hdfs Flushing Pool");
-        final ThreadFactory factory = createThreadFactory(threadGroup, "Hdfs Flusher - %d");
-        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
-
-        flushers = Stream.generate(() -> new HdfsFlusher(config, Objects.requireNonNull(schema)))
-                         .limit(numThreads)
-                         .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
-
-        flushers.forEach((flusher) ->
-            scheduleQueueReaderWithCleanup(
-                    executorService,
-                    flusher.getQueueReader(),
-                    flusher::cleanup)
-        );
+    public HdfsFlushingPool(final Config config, final Schema schema, final int numThreads, final int maxQueueSize, final long maxEnqueueDelay) {
+        super(
+                numThreads,
+                maxQueueSize,
+                maxEnqueueDelay,
+                "Hdfs Flusher",
+                () -> new HdfsFlusher(config, schema));
     }
 
     public void enqueueRecordsForFlushing(final AvroRecordBuffer record)  {
-        // We mask the hash-code to ensure we always get a positive bucket index.
-        final int bucket = (record.getPartyId().hashCode() & Integer.MAX_VALUE) % flushers.size();
-        flushers.get(bucket).add(record);
+        enqueue(record.getPartyId(), record);
     }
 }

@@ -2,6 +2,7 @@ package io.divolte.server.hdfs;
 
 import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.processing.ItemProcessor;
 
 import java.io.IOException;
 import java.net.URI;
@@ -9,8 +10,6 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -29,13 +28,10 @@ import org.slf4j.LoggerFactory;
 import com.typesafe.config.Config;
 
 @ParametersAreNonnullByDefault
-final class HdfsFlusher {
+final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     private static final int HDFS_RECONNECT_DELAY = 5000;
 
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
-
-    private final BlockingQueue<AvroRecordBuffer> queue;
-    private final long maxEnqueueDelayMillis;
 
     private final FileSystem hadoopFs;
     private final String hdfsFileDir;
@@ -54,9 +50,6 @@ final class HdfsFlusher {
     public HdfsFlusher(final Config config, final Schema schema) {
         Objects.requireNonNull(config);
         this.schema = Objects.requireNonNull(schema);
-
-        queue = new ArrayBlockingQueue<>(config.getInt("divolte.hdfs_flusher.max_write_queue"));
-        maxEnqueueDelayMillis = config.getDuration("divolte.hdfs_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS);
 
         syncEveryMillis = config.getDuration("divolte.hdfs_flusher.sync_file_after_duration", TimeUnit.MILLISECONDS);
         syncEveryRecords = config.getInt("divolte.hdfs_flusher.sync_file_after_records");
@@ -89,10 +82,6 @@ final class HdfsFlusher {
         }
     }
 
-    public Runnable getQueueReader() {
-        return microBatchingQueueDrainerWithHeartBeat(queue, this::processRecord, this::heartBeat);
-    }
-
     private void doProcess(AvroRecordBuffer record) throws IllegalArgumentException, IOException {
         if (isHdfsAlive) {
             currentFile.writer.appendEncoded(record.getByteBuffer());
@@ -104,7 +93,7 @@ final class HdfsFlusher {
         }
     }
 
-    private void doHeartBeat() throws IOException {
+    private void doHeartbeat() throws IOException {
         if (isHdfsAlive) {
             possiblySync();
         } else {
@@ -162,12 +151,7 @@ final class HdfsFlusher {
         currentFile.close();
     }
 
-    public void add(AvroRecordBuffer record) {
-        if (!offerQuietly(queue, record, maxEnqueueDelayMillis, TimeUnit.MILLISECONDS)) {
-            logger.warn("Dropping record on attempt to enqueue for HDFS flushing.");
-        }
-    }
-
+    @Override
     public void cleanup() {
         try {
             doCleanup();
@@ -177,7 +161,8 @@ final class HdfsFlusher {
         }
     }
 
-    private void processRecord(AvroRecordBuffer record) {
+    @Override
+    public void process(AvroRecordBuffer record) {
         try {
             doProcess(record);
         } catch (IOException e) {
@@ -186,9 +171,10 @@ final class HdfsFlusher {
         }
     }
 
-    private void heartBeat() {
+    @Override
+    public void heartbeat() {
         try {
-            doHeartBeat();
+            doHeartbeat();
         } catch (IOException e) {
             logger.warn("Failed to flush record to HDFS.", e);
             isHdfsAlive = false;
