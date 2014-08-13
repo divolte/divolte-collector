@@ -24,7 +24,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
@@ -34,27 +33,26 @@ import com.typesafe.config.ConfigValueType;
  */
 @ParametersAreNonnullByDefault
 final class GenericRecordMaker {
-    private static final String PARTY_ID_COOKIE;
-    private static final String SESSION_ID_COOKIE;
-    private static final String PAGE_VIEW_ID_COOKIE;
-
-    static {
-        Config cfg = ConfigFactory.load();
-        PARTY_ID_COOKIE = cfg.getString("divolte.tracking.party_cookie");
-        SESSION_ID_COOKIE = cfg.getString("divolte.tracking.session_cookie");
-        PAGE_VIEW_ID_COOKIE = cfg.getString("divolte.tracking.page_view_cookie");
-    }
+    private final String partyIdCookie;
+    private final String sessionIdCookie;
+    private final String pageViewIdCookie;
 
     private final Schema schema;
     private final Map<String, Pattern> regexes;
     private final List<FieldSetter> setters;
 
     public GenericRecordMaker(Schema schema, Config config) {
+        Objects.requireNonNull(config);
+
+        this.partyIdCookie = config.getString("divolte.tracking.party_cookie");
+        this.sessionIdCookie = config.getString("divolte.tracking.session_cookie");
+        this.pageViewIdCookie = config.getString("divolte.tracking.page_view_cookie");
+
         final int version = config.getInt("divolte.tracking.schema_mapping.version");
         checkVersion(version);
 
-        regexes = regexMapFromConfig(config);
-        setters = setterListFromConfig(config);
+        this.regexes = regexMapFromConfig(config);
+        this.setters = setterListFromConfig(config);
 
         this.schema = Objects.requireNonNull(schema);
     }
@@ -141,7 +139,7 @@ final class GenericRecordMaker {
     private FieldSetter simpleFieldSetterForConfig(final String name, final ConfigValue value) {
         switch ((String) value.unwrapped()) {
         case "firstInSession":
-            return (b, e, c) -> b.set(name, !e.getRequestCookies().containsKey(SESSION_ID_COOKIE));
+            return (b, e, c) -> b.set(name, !e.getRequestCookies().containsKey(sessionIdCookie));
         case "timestamp":
             return (b, e, c) -> b.set(name, e.getRequestStartTime());
         case "userAgent":
@@ -161,11 +159,11 @@ final class GenericRecordMaker {
         case "screenPixelHeight":
             return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("j")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((sh) -> b.set(name, sh));
         case "partyId":
-            return (b, e, c) -> b.set(name, e.getResponseCookies().get(PARTY_ID_COOKIE).getValue());
+            return (b, e, c) -> b.set(name, e.getResponseCookies().get(partyIdCookie).getValue());
         case "sessionId":
-            return (b, e, c) -> b.set(name, e.getResponseCookies().get(SESSION_ID_COOKIE).getValue());
+            return (b, e, c) -> b.set(name, e.getResponseCookies().get(sessionIdCookie).getValue());
         case "pageViewId":
-            return (b, e, c) -> b.set(name, e.getResponseCookies().get(PAGE_VIEW_ID_COOKIE).getValue());
+            return (b, e, c) -> b.set(name, e.getResponseCookies().get(pageViewIdCookie).getValue());
         default:
             throw new SchemaMappingException("Unknown field in schema mapping: %s", value);
         }
@@ -220,10 +218,12 @@ final class GenericRecordMaker {
         return matcher.matches() ? Optional.of(matcher.group(group)) : Optional.empty();
     }
 
+    @FunctionalInterface
     private interface FieldSetter {
         void setFields(GenericRecordBuilder builder, HttpServerExchange exchange, Map<String, Matcher> context);
     }
 
+    @FunctionalInterface
     private interface StringValueExtractor {
         Optional<String> extract(HttpServerExchange exchange);
     }
@@ -235,6 +235,7 @@ final class GenericRecordMaker {
         return builder.build();
     }
 
+    @ParametersAreNonnullByDefault
     public class SchemaMappingException extends RuntimeException {
         private static final long serialVersionUID = 5856826064089770832L;
 

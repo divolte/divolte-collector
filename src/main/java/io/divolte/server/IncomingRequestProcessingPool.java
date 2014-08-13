@@ -58,11 +58,11 @@ final class IncomingRequestProcessingPool {
             schemaMappingConfig = ConfigFactory.load("default-schema-mapping");
         }
 
-        processors = Stream.generate(() -> new IncomingRequestProcessor(schemaMappingConfig, kafkaFlushingPool, hdfsFlushingPool, schema))
+        this.processors = Stream.generate(() -> new IncomingRequestProcessor(schemaMappingConfig, kafkaFlushingPool, hdfsFlushingPool, schema))
                            .limit(numThreads)
                            .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
-        processors.forEach((processor) ->
+        this.processors.forEach((processor) ->
             scheduleQueueReader(
                     executorService,
                     processor.getQueueReader())

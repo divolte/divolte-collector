@@ -16,6 +16,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
+@Deprecated
 final class RecordUtil {
     private static final String PARTY_ID_COOKIE;
     private static final String SESSION_ID_COOKIE;

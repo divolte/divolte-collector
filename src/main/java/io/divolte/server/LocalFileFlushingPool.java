@@ -29,13 +29,13 @@ final class LocalFileFlushingPool {
         final ThreadFactory factory = createThreadFactory(threadGroup, "Local File Flusher - %d");
         final ExecutorService executorService = Executors.newFixedThreadPool(numFlusherThreads, factory);
 
-        sequenceNumber = new AtomicInteger();
+        this.sequenceNumber = new AtomicInteger();
 
-        flushers = Stream.generate(() -> new LocalFileFlusher(config))
+        this.flushers = Stream.generate(() -> new LocalFileFlusher(config))
                 .limit(numFlusherThreads)
                 .collect(Collectors.toCollection(() -> new ArrayList<>(numFlusherThreads)));
 
-        flushers.forEach((flusher) -> {
+        this.flushers.forEach((flusher) -> {
             scheduleQueueReaderWithCleanup(executorService, flusher.getQueueReader(), flusher::close);
         });
     }

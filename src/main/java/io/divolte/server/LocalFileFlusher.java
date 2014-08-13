@@ -36,12 +36,12 @@ final class LocalFileFlusher {
 
 
     public LocalFileFlusher(Config config) {
-        queue = new LinkedBlockingQueue<>(config.getInt("divolte.local_file_flusher.max_write_queue"));
-        maxEnqueueDelayMillis = config.getDuration("divolte.local_file_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS);
+        this.queue = new LinkedBlockingQueue<>(config.getInt("divolte.local_file_flusher.max_write_queue"));
+        this.maxEnqueueDelayMillis = config.getDuration("divolte.local_file_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS);
 
-        position = new AtomicLong();
+        this.position = new AtomicLong();
 
-        localFilesDirectory = config.getString("divolte.local_file_flusher.dir");
+        this.localFilesDirectory = config.getString("divolte.local_file_flusher.dir");
         closeExistingAndCreateNewFileChannel();
     }
 
