@@ -1,7 +1,5 @@
 package io.divolte.server.processing;
 
-import static io.divolte.server.ConcurrentUtils.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -17,6 +15,8 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ProcessingPool<T extends ItemProcessor<E>, E> {
     private static final Logger logger = LoggerFactory.getLogger(ProcessingPool.class);
@@ -122,4 +122,10 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         }
     }
 
+    private static ThreadFactory createThreadFactory(final ThreadGroup group, final String nameFormat) {
+        return new ThreadFactoryBuilder()
+            .setNameFormat(nameFormat)
+            .setThreadFactory((runnable) -> new Thread(group, runnable))
+            .build();
+    }
 }
