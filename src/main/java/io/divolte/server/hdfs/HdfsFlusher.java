@@ -9,8 +9,8 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -55,7 +55,7 @@ final class HdfsFlusher {
         Objects.requireNonNull(config);
         this.schema = Objects.requireNonNull(schema);
 
-        queue = new LinkedBlockingQueue<>(config.getInt("divolte.hdfs_flusher.max_write_queue"));
+        queue = new ArrayBlockingQueue<>(config.getInt("divolte.hdfs_flusher.max_write_queue"));
         maxEnqueueDelayMillis = config.getDuration("divolte.hdfs_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS);
 
         syncEveryMillis = config.getDuration("divolte.hdfs_flusher.sync_file_after_duration", TimeUnit.MILLISECONDS);

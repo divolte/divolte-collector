@@ -6,8 +6,8 @@ import io.divolte.server.kafka.KafkaFlushingPool;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -36,7 +36,7 @@ final class IncomingRequestProcessor {
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
                                     @Nullable final HdfsFlushingPool hdfsFlushingPool,
                                     final Schema schema) {
-        this.queue = new LinkedBlockingQueue<>();
+        this.queue = new ArrayBlockingQueue<>(config.getInt("divolte.incoming_request_processor.max_write_queue"));
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
 
