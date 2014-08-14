@@ -113,7 +113,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         };
     }
 
-    private E pollQuietly(final BlockingQueue<E> queue, final long timeout, final TimeUnit unit) {
+    private static <E> E pollQuietly(final BlockingQueue<E> queue, final long timeout, final TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);
         } catch (InterruptedException e) {
@@ -122,7 +122,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         }
     }
 
-    private boolean offerQuietly(final BlockingQueue<E> queue, final E item, final long timeout, final TimeUnit unit) {
+    private static <E> boolean offerQuietly(final BlockingQueue<E> queue, final E item, final long timeout, final TimeUnit unit) {
         try {
             return queue.offer(item, timeout, unit);
         } catch (InterruptedException e) {
