@@ -78,7 +78,7 @@ final class GenericRecordMaker {
         this.schema = Objects.requireNonNull(schema);
 
         final UserAgentStringParser parser = parserBasedOnTypeConfig(globalConfig.getString("divolte.tracking.ua_parser.type"));
-        this.uaLookupCache = sizeBoundCacheFromLoadingFunction((ua) -> parser.parse(ua), globalConfig.getInt("divolte.tracking.ua_parser.cache_size"));
+        this.uaLookupCache = sizeBoundCacheFromLoadingFunction(parser::parse, globalConfig.getInt("divolte.tracking.ua_parser.cache_size"));
 
         logger.info("User agent parser data version: {}", parser.getDataVersion());
     }
@@ -250,7 +250,7 @@ final class GenericRecordMaker {
         return config.hasPath("divolte.tracking.schema_mapping.regexes") ?
         config.getConfig("divolte.tracking.schema_mapping.regexes").root().entrySet().stream().collect(
                 Collectors.<Entry<String,ConfigValue>, String, Pattern>toMap(
-                (e) -> e.getKey(),
+                Entry::getKey,
                 (e) -> {
                     if (e.getValue().valueType() != ConfigValueType.STRING) {
                         throw new SchemaMappingException("Regexes config elements must be of type STRING. Found %s of type %s.", e.getKey(), e.getValue().valueType());
