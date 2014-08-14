@@ -8,6 +8,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.CookieImpl;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.stream.Collectors;
@@ -138,7 +139,9 @@ public class GenericRecordMakerTest {
     }
 
     private Schema schemaFromClassPath(final String resource) throws IOException {
-        return new Schema.Parser().parse(this.getClass().getResourceAsStream(resource));
+        try (final InputStream resourceStream = this.getClass().getResourceAsStream(resource)) {
+            return new Schema.Parser().parse(resourceStream);
+        }
     }
 
 

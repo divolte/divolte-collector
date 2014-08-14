@@ -131,7 +131,7 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
         final long time = System.currentTimeMillis();
         if (
                 currentFile.recordsSinceLastSync > syncEveryRecords ||
-                (time - currentFile.lastSyncTime > syncEveryMillis && currentFile.recordsSinceLastSync > 0)) {
+                time - currentFile.lastSyncTime > syncEveryMillis && currentFile.recordsSinceLastSync > 0) {
             logger.debug("Syncing HDFS file: {}", currentFile.path.getName());
 
             // Forces the Avro file to write a block

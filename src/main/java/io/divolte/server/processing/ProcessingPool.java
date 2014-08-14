@@ -37,10 +37,12 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final String threadBaseName,
             final Supplier<T> processorSupplier) {
 
-        this.threadGroup = new ThreadGroup(threadBaseName + " group");
+        @SuppressWarnings("PMD.AvoidThreadGroup")
+        final ThreadGroup threadGroup = new ThreadGroup(threadBaseName + " group");
         final ThreadFactory factory = createThreadFactory(threadGroup, threadBaseName + " - %d");
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
 
+        this.threadGroup = threadGroup;
         this.maxEnqueueDelay = maxEnqueueDelay;
 
         this.queues = Stream.<ArrayBlockingQueue<E>>
