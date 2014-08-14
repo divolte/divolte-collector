@@ -5,10 +5,13 @@ apply plugin: 'com.commercehub.gradle.plugin.avro'
 apply plugin: 'js'
 apply plugin: 'findbugs'
 apply plugin: 'pmd'
+apply plugin: 'application'
 
 sourceCompatibility = 1.8
 version = '0.1-SNAPSHOT'
 mainClassName = 'io.divolte.server.Server'
+
+applicationDefaultJvmArgs = ["-XX:+UseG1GC"]
 
 compileJava.options.encoding = 'UTF-8'
 
