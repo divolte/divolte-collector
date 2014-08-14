@@ -13,15 +13,15 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import java.time.Duration;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
 public class Server implements Runnable {

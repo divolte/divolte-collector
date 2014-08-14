@@ -1,12 +1,12 @@
 package io.divolte.server.hdfs;
 
-import static io.divolte.server.ConcurrentUtils.*;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.processing.ItemProcessor;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
@@ -26,6 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
+
+import static io.divolte.server.ConcurrentUtils.*;
 
 @ParametersAreNonnullByDefault
 final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {

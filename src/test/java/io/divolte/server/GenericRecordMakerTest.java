@@ -1,6 +1,5 @@
 package io.divolte.server;
 
-import static org.junit.Assert.*;
 import io.divolte.server.GenericRecordMaker.SchemaMappingException;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
@@ -14,6 +13,11 @@ import java.net.URLEncoder;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.junit.AfterClass;
@@ -22,10 +26,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import static org.junit.Assert.*;
 
 public class GenericRecordMakerTest {
     @Rule

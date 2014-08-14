@@ -2,6 +2,9 @@ package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.processing.ItemProcessor;
+import kafka.javaapi.producer.Producer;
+import kafka.producer.KeyedMessage;
+import kafka.producer.ProducerConfig;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -10,10 +13,6 @@ import java.util.Objects;
 import java.util.Properties;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
 
 import com.google.common.base.Joiner;
 import com.typesafe.config.Config;

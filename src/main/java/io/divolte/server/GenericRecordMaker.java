@@ -2,6 +2,9 @@ package io.divolte.server;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import net.sf.uadetector.ReadableUserAgent;
+import net.sf.uadetector.UserAgentStringParser;
+import net.sf.uadetector.service.UADetectorServiceFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,10 +23,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-
-import net.sf.uadetector.ReadableUserAgent;
-import net.sf.uadetector.UserAgentStringParser;
-import net.sf.uadetector.service.UADetectorServiceFactory;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;

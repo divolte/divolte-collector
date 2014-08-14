@@ -8,8 +8,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -21,11 +19,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.io.Resources;
-import com.typesafe.config.Config;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.io.Resources;
+import com.typesafe.config.Config;
 
 /**
  * Event handler for Divolte signalling events.

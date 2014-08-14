@@ -3,9 +3,9 @@ package io.divolte.server;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import java.nio.charset.StandardCharsets;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
