@@ -78,7 +78,7 @@ public final class AvroRecordBuffer {
     }
 
     @ParametersAreNonnullByDefault
-    private final class ByteBufferOutputStream extends OutputStream {
+    private static final class ByteBufferOutputStream extends OutputStream {
         private final ByteBuffer underlying;
 
         public ByteBufferOutputStream(final ByteBuffer underlying) {

@@ -301,7 +301,7 @@ final class GenericRecordMaker {
     }
 
     @ParametersAreNonnullByDefault
-    public class SchemaMappingException extends RuntimeException {
+    public static class SchemaMappingException extends RuntimeException {
         private static final long serialVersionUID = 5856826064089770832L;
 
         public SchemaMappingException(String message) {
