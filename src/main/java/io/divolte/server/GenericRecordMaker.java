@@ -243,7 +243,7 @@ final class GenericRecordMaker {
 
         return entrySet.stream()
         .map(this::fieldSetterFromConfig)
-        .collect(Collectors.toCollection(() -> new ArrayList<FieldSetter>(entrySet.size())));
+        .collect(Collectors.toCollection(() -> new ArrayList<>(entrySet.size())));
     }
 
     private Map<String,Pattern> regexMapFromConfig(final Config config) {
