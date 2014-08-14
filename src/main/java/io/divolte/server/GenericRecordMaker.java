@@ -13,16 +13,27 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import net.sf.uadetector.ReadableUserAgent;
+import net.sf.uadetector.UserAgentStringParser;
+import net.sf.uadetector.service.UADetectorServiceFactory;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
@@ -33,6 +44,8 @@ import com.typesafe.config.ConfigValueType;
  */
 @ParametersAreNonnullByDefault
 final class GenericRecordMaker {
+    private final static Logger logger = LoggerFactory.getLogger(GenericRecordMaker.class);
+
     private final String partyIdCookie;
     private final String sessionIdCookie;
     private final String pageViewIdCookie;
@@ -40,6 +53,9 @@ final class GenericRecordMaker {
     private final Schema schema;
     private final Map<String, Pattern> regexes;
     private final List<FieldSetter> setters;
+
+    private final LoadingCache<String,ReadableUserAgent> uaLookupCache;
+
 
     public GenericRecordMaker(Schema schema, Config config) {
         this (schema, config, config);
@@ -60,6 +76,27 @@ final class GenericRecordMaker {
         this.setters = setterListFromConfig(schemaConfig);
 
         this.schema = Objects.requireNonNull(schema);
+
+        final UserAgentStringParser parser = parserBasedOnTypeConfig(globalConfig.getString("divolte.tracking.ua_parser.type"));
+        this.uaLookupCache = sizeBoundCacheFromLoadingFunction((ua) -> parser.parse(ua), globalConfig.getInt("divolte.tracking.ua_parser.cache_size"));
+
+        logger.info("User agent parser data version: {}", parser.getDataVersion());
+    }
+
+    private UserAgentStringParser parserBasedOnTypeConfig(String type) {
+        switch (type) {
+        case "caching_and_updating":
+            logger.info("Using caching and updating user agent parser.");
+            return UADetectorServiceFactory.getCachingAndUpdatingParser();
+        case "online_updating":
+            logger.info("Using online updating user agent parser.");
+            return UADetectorServiceFactory.getOnlineUpdatingParser();
+        case "non_updating":
+            logger.info("Using non-updating (resource module based) user agent parser.");
+            return UADetectorServiceFactory.getResourceModuleParser();
+        default:
+            throw new RuntimeException("Invalid user agent parser type. Valid values are: caching_and_updating, online_updating, non_updating.");
+        }
     }
 
     private FieldSetter fieldSetterFromConfig(final Entry<String, ConfigValue> entry) {
@@ -142,19 +179,42 @@ final class GenericRecordMaker {
     }
 
     private FieldSetter simpleFieldSetterForConfig(final String name, final ConfigValue value) {
+        final StringValueExtractor uaExtractor = fieldExtractorForName("userAgent");
+        final StringValueExtractor remoteHostExtractor = fieldExtractorForName("remoteHost");
+        final StringValueExtractor refererExtractor = fieldExtractorForName("referer");
+        final StringValueExtractor locationExtractor = fieldExtractorForName("location");
+
         switch ((String) value.unwrapped()) {
         case "firstInSession":
             return (b, e, c) -> b.set(name, !e.getRequestCookies().containsKey(sessionIdCookie));
         case "timestamp":
             return (b, e, c) -> b.set(name, e.getRequestStartTime());
         case "userAgent":
-            return (b, e, c) -> fieldExtractorForName("userAgent").extract(e).ifPresent((ua) -> b.set(name, ua) );
+            return (b, e, c) -> uaExtractor.extract(e).ifPresent((ua) -> b.set(name, ua) );
+        case "userAgentName":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getName()));
+        case "userAgentFamily":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getFamily().getName()));
+        case "userAgentVendor":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getProducer()));
+        case "userAgentType":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getType().getName()));
+        case "userAgentVersion":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getVersionNumber().toVersionString()));
+        case "userAgentDeviceCategory":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getDeviceCategory().getName()));
+        case "userAgentOsFamily":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getOperatingSystem().getFamily().getName()));
+        case "userAgentOsVersion":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getOperatingSystem().getVersionNumber().toVersionString()));
+        case "userAgentOsVendor":
+            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getOperatingSystem().getProducer()));
         case "remoteHost":
-            return (b, e, c) -> fieldExtractorForName("remoteHost").extract(e).ifPresent((rh) -> b.set(name, rh));
+            return (b, e, c) -> remoteHostExtractor.extract(e).ifPresent((rh) -> b.set(name, rh));
         case "referer":
-            return (b, e, c) -> fieldExtractorForName("referer").extract(e).ifPresent((ref) -> b.set(name, ref));
+            return (b, e, c) -> refererExtractor.extract(e).ifPresent((ref) -> b.set(name, ref));
         case "location":
-            return (b, e, c) -> fieldExtractorForName("location").extract(e).ifPresent((loc) -> b.set(name, loc));
+            return (b, e, c) -> locationExtractor.extract(e).ifPresent((loc) -> b.set(name, loc));
         case "viewportPixelWidth":
             return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("w")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((vw) -> b.set(name, vw));
         case "viewportPixelHeight":
@@ -250,6 +310,28 @@ final class GenericRecordMaker {
 
         public SchemaMappingException(String message, Object... args) {
             this(String.format(message, args));
+        }
+    }
+
+    private <K,V> LoadingCache<K, V> sizeBoundCacheFromLoadingFunction(Function<K, V> loader, int size) {
+        return CacheBuilder
+                .newBuilder()
+                .maximumSize(size)
+                .initialCapacity(size)
+                .build(new CacheLoader<K, V>() {
+                    @Override
+                    public V load(K key) throws Exception {
+                        return loader.apply(key);
+                    }
+                });
+    }
+
+    private ReadableUserAgent parseUnchecked(String key) {
+        try {
+            return uaLookupCache.get(key);
+        } catch (ExecutionException e) {
+            logger.warn("Failed to parse user agent string for: {}", key);
+            return null;
         }
     }
 }

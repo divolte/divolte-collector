@@ -12,11 +12,6 @@
             "type": "long"
         },
         {
-            "name": "userAgentString",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
             "name": "remoteHost",
             "type": "string"
         },
@@ -61,6 +56,56 @@
         {
             "name": "pageViewId",
             "type": "string"
+        },
+        {
+            "name": "userAgentString",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentName",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentFamily",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentVendor",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentType",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentVersion",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentDeviceCategory",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentOsFamily",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentOsVersion",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
+            "name": "userAgentOsVendor",
+            "type": ["null", "string"],
+            "default": null
         }
     ]
 }

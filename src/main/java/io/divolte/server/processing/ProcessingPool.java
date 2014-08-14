@@ -13,11 +13,14 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+@ParametersAreNonnullByDefault
 public class ProcessingPool<T extends ItemProcessor<E>, E> {
     private static final Logger logger = LoggerFactory.getLogger(ProcessingPool.class);
 
@@ -64,6 +67,10 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
                 TimeUnit.MILLISECONDS)) {
             logger.warn("Failed to enqueue item for {} ms. Dropping event.", maxEnqueueDelay);
         }
+    }
+
+    public void stop() {
+        threadGroup.interrupt();
     }
 
     private void scheduleQueueReader(final ExecutorService es, final BlockingQueue<E> queue, final ItemProcessor<E> processor) {

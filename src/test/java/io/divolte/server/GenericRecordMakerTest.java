@@ -36,9 +36,10 @@ public class GenericRecordMakerTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-flatfields");
 
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config);
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
 
         setupExchange(
+                "Divolte/Test",
                 "p=the_page_view_id",
                 "l=https://example.com/",
                 "r=http://example.com/",
@@ -63,21 +64,44 @@ public class GenericRecordMakerTest {
     }
 
     @Test
+    public void shouldParseUserAgentString() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-useragent");
+
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
+
+        String ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36";
+
+        setupExchange(ua);
+        GenericRecord record = maker.makeRecordFromExchange(theExchange);
+
+        assertEquals("Chrome", record.get("userAgentName"));
+        assertEquals("Chrome", record.get("userAgentFamily"));
+        assertEquals("Google Inc.", record.get("userAgentVendor"));
+        assertEquals("Browser", record.get("userAgentType"));
+        assertEquals("36.0.1985.125", record.get("userAgentVersion"));
+        assertEquals("Personal computer", record.get("userAgentDeviceCategory"));
+        assertEquals("OS X", record.get("userAgentOsFamily"));
+        assertEquals("10.9.4", record.get("userAgentOsVersion"));
+        assertEquals("Apple Computer, Inc.", record.get("userAgentOsVendor"));
+    }
+
+    @Test
     public void shouldFailOnUnsupportedVersion() throws IOException {
         expected.expect(SchemaMappingException.class);
         expected.expectMessage("Unsupported schema mapping configuration version: 42");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-version");
-        new GenericRecordMaker(schema, config);
+        new GenericRecordMaker(schema, config, ConfigFactory.load());
     }
 
     @Test
     public void shouldSetCustomCookieValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-customcookie");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config);
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
 
-        setupExchange();
+        setupExchange("Divolte/Test");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
 
         assertEquals("custom_cookie_value", record.get("customCookie"));
@@ -87,9 +111,9 @@ public class GenericRecordMakerTest {
     public void shouldSetFieldWithMatchingRegexName() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-matchingregex");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config);
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
 
-        setupExchange("l=http://example.com/", "r=https://www.example.com/bla/");
+        setupExchange("Divolte/Test", "l=http://example.com/", "r=https://www.example.com/bla/");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
 
         assertEquals("http", record.get("locationProtocol"));
@@ -100,9 +124,10 @@ public class GenericRecordMakerTest {
     public void shouldSetFieldWithCaptureGroupFromRegex() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-regex");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config);
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
 
         setupExchange(
+                "Divolte/Test",
                 "l=http://example.com/part1/part2/part3/ABA_C12_X3B",
                 "r=https://www.example.com/about.html");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
@@ -127,6 +152,7 @@ public class GenericRecordMakerTest {
     private static HttpServerExchange theExchange;
     private static Undertow server;
     private void setupExchange(
+            String userAgent,
             String... query
             ) throws UnirestException {
 
@@ -138,7 +164,7 @@ public class GenericRecordMakerTest {
         Unirest.get(
                 String.format("http://localhost:1234/whatever/happens/is/fine%s", "".equals(queryString) ? "" : "?" + queryString))
                 .header("accept", "text/plain")
-                .header("User-Agent", "Divolte/Test")
+                .header("User-Agent", userAgent)
                 .header("Cookie", "custom_cookie=custom_cookie_value;")
                 .asString();
     }
