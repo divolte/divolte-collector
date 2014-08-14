@@ -33,13 +33,13 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
+    private final DateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmssSSS");
+
     private final FileSystem hadoopFs;
     private final String hdfsFileDir;
     private final short hdfsReplication;
     private final long syncEveryMillis;
     private final int syncEveryRecords;
-
-    private final static SimpleDateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmssSSS");
 
     private final Schema schema;
 
