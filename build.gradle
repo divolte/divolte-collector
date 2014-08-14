@@ -70,7 +70,3 @@ minifyJs {
         compilationLevel = 'ADVANCED_OPTIMIZATIONS'
     }
 }
-
-jar {
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-}
