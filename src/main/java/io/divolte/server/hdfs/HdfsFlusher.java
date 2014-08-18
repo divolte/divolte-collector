@@ -27,8 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 
-import static io.divolte.server.ConcurrentUtils.*;
-
 @ParametersAreNonnullByDefault
 final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     private static final int HDFS_RECONNECT_DELAY = 5000;
@@ -131,6 +129,7 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     private void possiblySync() throws IOException {
         final long time = System.currentTimeMillis();
+
         if (
                 currentFile.recordsSinceLastSync > syncEveryRecords ||
                 time - currentFile.lastSyncTime > syncEveryMillis && currentFile.recordsSinceLastSync > 0) {
@@ -213,5 +212,19 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
         }
 
         public void close() throws IOException { writer.close(); }
+    }
+
+    @FunctionalInterface
+    public interface IOExceptionThrower {
+        public abstract void run() throws IOException;
+    }
+
+    private static boolean throwsIoException(final IOExceptionThrower r) {
+        try {
+            r.run();
+            return false;
+        } catch (final IOException ioe) {
+            return true;
+        }
     }
 }
