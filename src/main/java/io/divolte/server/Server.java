@@ -5,6 +5,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
@@ -43,7 +44,9 @@ public class Server implements Runnable {
         handler.addPrefixPath("/", createStaticResourceHandler());
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
-        final HttpHandler rootHandler = new CanonicalPathHandler(headerHandler);
+        final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
+        final HttpHandler rootHandler = config.getBoolean("divolte.server.use_x_forwarded_for") ?
+                new ProxyPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler;
 
         undertow = Undertow.builder()
                            .addHttpListener(port, host)
