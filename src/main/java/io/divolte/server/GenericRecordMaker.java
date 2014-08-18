@@ -279,7 +279,7 @@ final class GenericRecordMaker {
     }
 
     private Optional<String> groupFromMatcher(final Matcher matcher, final String group) {
-        return matcher.matches() ? Optional.of(matcher.group(group)) : Optional.empty();
+        return matcher.matches() ? Optional.ofNullable(matcher.group(group)) : Optional.empty();
     }
 
     @FunctionalInterface
