@@ -196,12 +196,13 @@ final class DivolteEventHandler {
         return cookieValue;
     }
 
-    private static String prepareAndReturnPageViewId(final HttpServerExchange exchange, final String cookieName, final long currentTime) {
+    private String prepareAndReturnPageViewId(final HttpServerExchange exchange, final String cookieName, final long currentTime) {
         final String pageViewId = Optional.ofNullable(exchange.getQueryParameters().get("p"))
                 .map(Deque::getFirst)
                 .orElseGet(() -> CookieValues.generate(currentTime).value);
 
         final CookieImpl pageViewCookie = new CookieImpl(cookieName, pageViewId);
+        cookieDomain.ifPresent(pageViewCookie::setDomain);
         pageViewCookie
         .setVersion(1)
         .setHttpOnly(false);
