@@ -55,6 +55,8 @@ final class DivolteEventHandler {
     private final String sessionCookieName;
     private final Duration sessionTimeout;
     private final String pageViewCookieName;
+    private final OptionalConfig<String> cookieDomain;
+
 
     private final ByteBuffer transparentImage;
 
@@ -66,12 +68,14 @@ final class DivolteEventHandler {
                                final String sessionCookieName,
                                final Duration sessionTimeout,
                                final String pageViewCookieName,
+                               final OptionalConfig<String> cookieDomain,
                                final IncomingRequestProcessingPool processingPool) {
         this.partyCookieName =    Objects.requireNonNull(partyCookieName);
         this.partyTimeout =       Objects.requireNonNull(partyTimeout);
         this.sessionCookieName =  Objects.requireNonNull(sessionCookieName);
         this.sessionTimeout =     Objects.requireNonNull(sessionTimeout);
         this.pageViewCookieName = Objects.requireNonNull(pageViewCookieName);
+        this.cookieDomain = cookieDomain;
         this.processingPool =     Objects.requireNonNull(processingPool);
         try {
             this.transparentImage = ByteBuffer.wrap(
@@ -89,6 +93,7 @@ final class DivolteEventHandler {
              config.getString("divolte.tracking.session_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.page_view_cookie"),
+             OptionalConfig.of(config::getString, "divolte.tracking.cookie_domain"),
              new IncomingRequestProcessingPool(config));
     }
 
@@ -102,8 +107,8 @@ final class DivolteEventHandler {
         // We only accept GET requests.
         if (exchange.getRequestMethod().equals(Methods.GET)) {
             // 1
-            final String partyId = getTrackingIdentifier(exchange, partyCookieName, partyTimeout);
-            final String sessionId = getTrackingIdentifier(exchange, sessionCookieName, sessionTimeout);
+            final String partyId = getTrackingIdentifier(exchange, partyCookieName, cookieDomain, partyTimeout);
+            final String sessionId = getTrackingIdentifier(exchange, sessionCookieName, cookieDomain, sessionTimeout);
             final String pageViewId = setAndReturnPageViewCookie(exchange, pageViewCookieName);
 
             // 2
@@ -138,6 +143,7 @@ final class DivolteEventHandler {
 
     private static String getTrackingIdentifier(final HttpServerExchange exchange,
                                                 final String cookieName,
+                                                final OptionalConfig<String> cookieDomain,
                                                 final Duration timeout) {
         Cookie trackingCookie = exchange.getRequestCookies().get(cookieName);
         if (null == trackingCookie) {
@@ -147,6 +153,7 @@ final class DivolteEventHandler {
         }
         trackingCookie.setVersion(1);
         trackingCookie.setHttpOnly(true);
+        cookieDomain.ifPresent(trackingCookie::setDomain);
         final long maxAge = timeout.getSeconds();
         // Some clients (e.g. netty) choke if max-age is large than an Integer can represent.
         if (maxAge <= Integer.MAX_VALUE) {
