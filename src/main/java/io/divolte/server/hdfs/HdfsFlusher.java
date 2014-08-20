@@ -4,13 +4,16 @@ import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.processing.ItemProcessor;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -33,13 +36,17 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
-    private final DateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmssSSS");
+    private final static AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
+    private final int instanceNumber;
+    private final String hostString;
+    private final DateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmss");
 
     private final FileSystem hadoopFs;
     private final String hdfsFileDir;
     private final short hdfsReplication;
     private final long syncEveryMillis;
     private final int syncEveryRecords;
+    private final long newFileEveryMillis;
 
     private final Schema schema;
 
@@ -53,11 +60,15 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
 
         syncEveryMillis = config.getDuration("divolte.hdfs_flusher.sync_file_after_duration", TimeUnit.MILLISECONDS);
         syncEveryRecords = config.getInt("divolte.hdfs_flusher.sync_file_after_records");
+        newFileEveryMillis = config.getDuration("divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every", TimeUnit.MILLISECONDS);
+
+        instanceNumber = INSTANCE_COUNTER.incrementAndGet();
+        hostString = findLocalHostName();
 
         try {
             hdfsFileDir = config.getString("divolte.hdfs_flusher.dir");
             hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
-            URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
+            final URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
             hadoopFs = FileSystem.get(hdfsLocation, new Configuration());
         } catch (IOException|URISyntaxException e) {
             /*
@@ -82,6 +93,15 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
         }
     }
 
+    private String findLocalHostName() {
+        // we should use the bind address from the divolte.server config to figure out the actual hostname we are listening on
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            return "localhost";
+        }
+    }
+
     private void doProcess(AvroRecordBuffer record) throws IllegalArgumentException, IOException {
         if (isHdfsAlive) {
             currentFile.writer.appendEncoded(record.getByteBuffer());
@@ -102,7 +122,6 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     private void possiblyFixHdfsConnection() {
-        // try to reconnect every 5 seconds.
         long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
             final Path newFilePath = newFilePath();
@@ -120,7 +139,7 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     private Path newFilePath() {
-        return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%d.avro", datePartFormat.format(new Date()), hashCode()));
+        return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%s-%d.avro", datePartFormat.format(new Date()), hostString, instanceNumber));
     }
 
     private HadoopFile openNewFile(Path path) throws IOException {
@@ -131,9 +150,9 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
         final long time = System.currentTimeMillis();
 
         if (
-                currentFile.recordsSinceLastSync > syncEveryRecords ||
-                time - currentFile.lastSyncTime > syncEveryMillis && currentFile.recordsSinceLastSync > 0) {
-            logger.debug("Syncing HDFS file: {}", currentFile.path.getName());
+                currentFile.recordsSinceLastSync >= syncEveryRecords ||
+                time - currentFile.lastSyncTime >= syncEveryMillis && currentFile.recordsSinceLastSync > 0) {
+            logger.debug("Syncing HDFS file: {}", currentFile.path.toString());
 
             // Forces the Avro file to write a block
             currentFile.writer.sync();
@@ -142,8 +161,24 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
 
             currentFile.recordsSinceLastSync = 0;
             currentFile.lastSyncTime = time;
+            possiblyRollFile(time);
         } else if (currentFile.recordsSinceLastSync == 0) {
             currentFile.lastSyncTime = time;
+            possiblyRollFile(time);
+        }
+    }
+
+    private void possiblyRollFile(final long time) throws IOException {
+        if (time > currentFile.projectedCloseTime) {
+            currentFile.close();
+
+            final Path newFilePath = newFilePath();
+            try {
+                currentFile = openNewFile(newFilePath);
+            } catch (IOException e) {
+                throwsIoException(() -> hadoopFs.delete(newFilePath, false));
+                throw e;
+            }
         }
     }
 
@@ -183,6 +218,8 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     private final class HadoopFile implements AutoCloseable {
+        final long openTime;
+        final long projectedCloseTime;
         final Path path;
         final FSDataOutputStream stream;
         final DataFileWriter<GenericRecord> writer;
@@ -207,8 +244,9 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
             // datanodes available
             this.stream.hsync();
 
-            this.lastSyncTime = System.currentTimeMillis();
+            this.openTime = this.lastSyncTime = System.currentTimeMillis();
             this.recordsSinceLastSync = 0;
+            this.projectedCloseTime = openTime + newFileEveryMillis;
         }
 
         public void close() throws IOException { writer.close(); }

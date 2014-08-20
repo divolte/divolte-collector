@@ -1,0 +1,15 @@
+{
+    "namespace": "io.divolte.record",
+    "type": "record",
+    "name": "MinimalRecord",
+    "fields": [
+        {
+            "name": "ts",
+            "type": "long"
+        },
+        {
+            "name": "remoteHost",
+            "type": "string"
+        }
+    ]
+}

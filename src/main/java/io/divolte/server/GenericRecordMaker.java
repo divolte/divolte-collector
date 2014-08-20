@@ -167,7 +167,8 @@ final class GenericRecordMaker {
         case "userAgent":
             return (e) -> Optional.ofNullable(e.getRequestHeaders().getFirst(Headers.USER_AGENT));
         case "remoteHost":
-            return (e) -> Optional.of(e.getSourceAddress().getHostString());
+            return (e) -> Optional.ofNullable(e.getSourceAddress())
+                                  .flatMap((a) -> Optional.ofNullable(a.getHostString()));
         case "referer":
             return (e) -> Optional.ofNullable(e.getQueryParameters().get("r")).map(Deque::getFirst);
         case "location":

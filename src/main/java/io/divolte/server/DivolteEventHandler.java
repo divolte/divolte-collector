@@ -101,8 +101,9 @@ final class DivolteEventHandler {
         /*
          * Our strategy is:
          * 1) Set up the cookies.
-         * 2) Acknowledge the response.
-         * 3) Pass into our queuing system for further handling.
+         * 2) Materialize the source address, so we can safely get it later.
+         * 3) Acknowledge the response.
+         * 4) Pass into our queuing system for further handling.
          */
         // We only accept GET requests.
         if (exchange.getRequestMethod().equals(Methods.GET)) {
@@ -112,10 +113,18 @@ final class DivolteEventHandler {
             final String pageViewId = setAndReturnPageViewCookie(exchange, pageViewCookieName);
 
             // 2
+            /*
+             * The source address can be fetched on-demand from the peer connection, which may
+             * no longer be available after the response has been sent. So we materialize it here
+             * to ensure it's available further down the chain.
+             */
+            exchange.setSourceAddress(exchange.getSourceAddress());
+
+            // 3
             exchange.setResponseCode(StatusCodes.ACCEPTED);
             serveImage(exchange);
 
-            // 3
+            // 4
             logger.debug("Enqueuing event: {}/{}/{}", partyId, sessionId, pageViewId);
             processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
         } else {
