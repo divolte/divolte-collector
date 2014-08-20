@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -42,6 +43,7 @@ import com.typesafe.config.ConfigValueType;
  * This class is called maker, because builder was already taken by Avro itself.
  */
 @ParametersAreNonnullByDefault
+@NotThreadSafe
 final class GenericRecordMaker {
     private final static Logger logger = LoggerFactory.getLogger(GenericRecordMaker.class);
 

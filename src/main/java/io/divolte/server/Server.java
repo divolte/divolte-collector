@@ -1,7 +1,6 @@
 package io.divolte.server;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -51,7 +50,6 @@ public class Server implements Runnable {
         undertow = Undertow.builder()
                            .addHttpListener(port, host)
                            .setHandler(rootHandler)
-                           .setServerOption(UndertowOptions.RECORD_REQUEST_START_TIME, true)
                            .build();
     }
 

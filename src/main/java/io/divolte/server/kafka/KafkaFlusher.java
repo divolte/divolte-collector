@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Properties;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 
 import com.google.common.base.Joiner;
 import com.typesafe.config.Config;
@@ -20,6 +21,7 @@ import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
 
 @ParametersAreNonnullByDefault
+@NotThreadSafe
 final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     private final String topic;
     private final Producer<byte[], byte[]> producer;

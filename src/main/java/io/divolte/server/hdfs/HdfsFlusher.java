@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.typesafe.config.Config;
 
 @ParametersAreNonnullByDefault
+@NotThreadSafe
 final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     private static final int HDFS_RECONNECT_DELAY = 5000;
 
