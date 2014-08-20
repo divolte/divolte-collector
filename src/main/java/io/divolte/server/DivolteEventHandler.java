@@ -61,6 +61,8 @@ final class DivolteEventHandler {
     private final String sessionCookieName;
     private final Duration sessionTimeout;
     private final String pageViewCookieName;
+    private final OptionalConfig<String> cookieDomain;
+
 
     private final ByteBuffer transparentImage;
 
@@ -72,12 +74,14 @@ final class DivolteEventHandler {
                                final String sessionCookieName,
                                final Duration sessionTimeout,
                                final String pageViewCookieName,
+                               final OptionalConfig<String> cookieDomain,
                                final IncomingRequestProcessingPool processingPool) {
         this.partyCookieName =    Objects.requireNonNull(partyCookieName);
         this.partyTimeout =       Objects.requireNonNull(partyTimeout);
         this.sessionCookieName =  Objects.requireNonNull(sessionCookieName);
         this.sessionTimeout =     Objects.requireNonNull(sessionTimeout);
         this.pageViewCookieName = Objects.requireNonNull(pageViewCookieName);
+        this.cookieDomain = cookieDomain;
         this.processingPool =     Objects.requireNonNull(processingPool);
         try {
             this.transparentImage = ByteBuffer.wrap(
@@ -95,6 +99,7 @@ final class DivolteEventHandler {
              config.getString("divolte.tracking.session_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.page_view_cookie"),
+             OptionalConfig.of(config::getString, "divolte.tracking.cookie_domain"),
              new IncomingRequestProcessingPool(config));
     }
 
@@ -102,8 +107,9 @@ final class DivolteEventHandler {
         /*
          * Our strategy is:
          * 1) Set up the cookies.
-         * 2) Acknowledge the response.
-         * 3) Pass into our queuing system for further handling.
+         * 2) Materialize the source address, so we can safely get it later.
+         * 3) Acknowledge the response.
+         * 4) Pass into our queuing system for further handling.
          */
         // We only accept GET requests.
         if (exchange.getRequestMethod().equals(Methods.GET)) {
@@ -116,11 +122,19 @@ final class DivolteEventHandler {
             final String pageViewId = prepareAndReturnPageViewId(exchange, pageViewCookieName, requestTime);
 
             // 2
+            /*
+             * The source address can be fetched on-demand from the peer connection, which may
+             * no longer be available after the response has been sent. So we materialize it here
+             * to ensure it's available further down the chain.
+             */
+            exchange.setSourceAddress(exchange.getSourceAddress());
+
+            // 3
             exchange.setResponseCode(StatusCodes.ACCEPTED);
             serveImage(exchange);
 
-            // 3
-            logger.debug("Enqueuing event: {}/{}/{}", partyId.value, sessionId.value, pageViewId);
+            // 4
+            logger.debug("Enqueuing event: {}/{}/{}", partyId, sessionId, pageViewId);
             processingPool.enqueueIncomingExchangeForProcessing(partyId.value, exchange);
         } else {
             methodNotAllowed(exchange);
@@ -148,7 +162,7 @@ final class DivolteEventHandler {
         exchange.getResponseSender().send(transparentImage.slice());
     }
 
-    private static CookieValue prepareTrackingIdentifierAndReturnCookieValue(final HttpServerExchange exchange,
+    private CookieValue prepareTrackingIdentifierAndReturnCookieValue(final HttpServerExchange exchange,
                                                 final String cookieName,
                                                 final AttachmentKey<CookieValue> key,
                                                 final Duration timeout,
@@ -162,6 +176,7 @@ final class DivolteEventHandler {
         .orElseGet(() -> CookieValues.generate(currentTime));
 
         final Cookie newCookie = new CookieImpl(cookieName, cookieValue.value);
+        cookieDomain.ifPresent(newCookie::setDomain);
 
         final long maxAge = timeout.getSeconds();
         // Some clients (e.g. netty) choke if max-age is large than an Integer can represent.
