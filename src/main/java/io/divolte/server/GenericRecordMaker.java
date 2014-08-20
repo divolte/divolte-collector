@@ -1,10 +1,8 @@
 package io.divolte.server;
 
+import static io.divolte.server.DivolteEventHandler.*;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import net.sf.uadetector.ReadableUserAgent;
-import net.sf.uadetector.UserAgentStringParser;
-import net.sf.uadetector.service.UADetectorServiceFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +22,10 @@ import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
+
+import net.sf.uadetector.ReadableUserAgent;
+import net.sf.uadetector.UserAgentStringParser;
+import net.sf.uadetector.service.UADetectorServiceFactory;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -47,9 +49,7 @@ import com.typesafe.config.ConfigValueType;
 final class GenericRecordMaker {
     private final static Logger logger = LoggerFactory.getLogger(GenericRecordMaker.class);
 
-    private final String partyIdCookie;
     private final String sessionIdCookie;
-    private final String pageViewIdCookie;
 
     private final Schema schema;
     private final Map<String, Pattern> regexes;
@@ -66,9 +66,7 @@ final class GenericRecordMaker {
         Objects.requireNonNull(schemaConfig);
         Objects.requireNonNull(globalConfig);
 
-        this.partyIdCookie = globalConfig.getString("divolte.tracking.party_cookie");
         this.sessionIdCookie = globalConfig.getString("divolte.tracking.session_cookie");
-        this.pageViewIdCookie = globalConfig.getString("divolte.tracking.page_view_cookie");
 
         final int version = schemaConfig.getInt("divolte.tracking.schema_mapping.version");
         checkVersion(version);
@@ -189,7 +187,7 @@ final class GenericRecordMaker {
         case "firstInSession":
             return (b, e, c) -> b.set(name, !e.getRequestCookies().containsKey(sessionIdCookie));
         case "timestamp":
-            return (b, e, c) -> b.set(name, e.getRequestStartTime());
+            return (b, e, c) -> b.set(name, e.getAttachment(REQUEST_START_TIME_KEY));
         case "userAgent":
             return (b, e, c) -> uaExtractor.extract(e).ifPresent((ua) -> b.set(name, ua) );
         case "userAgentName":
@@ -225,11 +223,11 @@ final class GenericRecordMaker {
         case "screenPixelHeight":
             return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("j")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((sh) -> b.set(name, sh));
         case "partyId":
-            return (b, e, c) -> b.set(name, e.getResponseCookies().get(partyIdCookie).getValue());
+            return (b, e, c) -> b.set(name, e.getAttachment(PARTY_COOKIE_KEY).value);
         case "sessionId":
-            return (b, e, c) -> b.set(name, e.getResponseCookies().get(sessionIdCookie).getValue());
+            return (b, e, c) -> b.set(name, e.getAttachment(SESSION_COOKIE_KEY).value);
         case "pageViewId":
-            return (b, e, c) -> b.set(name, e.getResponseCookies().get(pageViewIdCookie).getValue());
+            return (b, e, c) -> b.set(name, e.getAttachment(PAGE_VIEW_ID_KEY));
         default:
             throw new SchemaMappingException("Unknown field in schema mapping: %s", value);
         }

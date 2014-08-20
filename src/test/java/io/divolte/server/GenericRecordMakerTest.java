@@ -1,8 +1,10 @@
 package io.divolte.server;
 
+import static io.divolte.server.DivolteEventHandler.*;
+import static org.junit.Assert.*;
+import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.GenericRecordMaker.SchemaMappingException;
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.CookieImpl;
 
@@ -13,11 +15,6 @@ import java.net.URLEncoder;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.junit.AfterClass;
@@ -26,7 +23,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import static org.junit.Assert.*;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 public class GenericRecordMakerTest {
     @Rule
@@ -54,13 +54,13 @@ public class GenericRecordMakerTest {
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
 
         assertEquals(true, record.get("sessionStart"));
-        assertEquals(theExchange.getRequestStartTime(), record.get("ts"));
+        assertEquals(theExchange.getAttachment(REQUEST_START_TIME_KEY), record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
         assertEquals("Divolte/Test", record.get("userAgentString"));
-        assertEquals("party_id_cookie_value", record.get("client"));
-        assertEquals("session_id_cookie_value", record.get("session"));
-        assertEquals("page_view_id_cookie_value", record.get("pageview"));
+        assertEquals(theExchange.getAttachment(PARTY_COOKIE_KEY).value, record.get("client"));
+        assertEquals(theExchange.getAttachment(SESSION_COOKIE_KEY).value, record.get("session"));
+        assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
     }
@@ -186,12 +186,22 @@ public class GenericRecordMakerTest {
         server = Undertow.builder()
                 .setIoThreads(2)
                 .setWorkerThreads(1)
-                .setServerOption(UndertowOptions.RECORD_REQUEST_START_TIME, true)
                 .addHttpListener(1234, "localhost")
                 .setHandler((exchange) -> {
-                    exchange.getResponseCookies().put("_dvp", new CookieImpl("_dvp", "party_id_cookie_value"));
-                    exchange.getResponseCookies().put("_dvs", new CookieImpl("_dvs", "session_id_cookie_value"));
-                    exchange.getResponseCookies().put("_dvv", new CookieImpl("_dvv", "page_view_id_cookie_value"));
+                    final long theTime = 42;
+                    CookieValue party = CookieValues.generate(theTime);
+                    CookieValue session = CookieValues.generate(theTime);
+                    CookieValue page = CookieValues.generate(theTime);
+
+                    exchange.putAttachment(REQUEST_START_TIME_KEY, theTime);
+                    exchange.putAttachment(PARTY_COOKIE_KEY, party);
+                    exchange.putAttachment(SESSION_COOKIE_KEY, session);
+                    exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
+
+                    exchange.getResponseCookies().put("_dvp", new CookieImpl("_dvp", party.value));
+                    exchange.getResponseCookies().put("_dvs", new CookieImpl("_dvs", session.value));
+                    exchange.getResponseCookies().put("_dvv", new CookieImpl("_dvv", page.value));
+
                     exchange.getResponseSender().send("OK");
                     theExchange = exchange;
                 })

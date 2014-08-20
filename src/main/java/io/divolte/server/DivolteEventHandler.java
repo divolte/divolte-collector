@@ -51,10 +51,10 @@ import com.typesafe.config.Config;
 final class DivolteEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
-    private final static AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    private final static AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    private final static AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
-    private final static AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
+    public final static AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
+    public final static AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
+    public final static AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
+    public final static AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
 
     private final String partyCookieName;
     private final Duration partyTimeout;
