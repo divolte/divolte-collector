@@ -1,5 +1,7 @@
 package io.divolte.server;
 
+import io.divolte.server.CookieValues.CookieValue;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
@@ -20,10 +22,10 @@ public final class AvroRecordBuffer {
     private static final int INITIAL_BUFFER_SIZE = 100;
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
 
-    private final String partyId;
+    private final CookieValue partyId;
     private final ByteBuffer byteBuffer;
 
-    private AvroRecordBuffer(final String partyId, final GenericRecord record) throws IOException {
+    private AvroRecordBuffer(final CookieValue partyId, final GenericRecord record) throws IOException {
         this.partyId = Objects.requireNonNull(partyId);
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
@@ -44,11 +46,11 @@ public final class AvroRecordBuffer {
         this.byteBuffer = byteBuffer.asReadOnlyBuffer();
     }
 
-    public String getPartyId() {
+    public CookieValue getPartyId() {
         return partyId;
     }
 
-    public static AvroRecordBuffer fromRecord(final String partyId, final GenericRecord record) {
+    public static AvroRecordBuffer fromRecord(final CookieValue partyId, final GenericRecord record) {
         for (;;) {
             try {
                 return new AvroRecordBuffer(partyId, record);

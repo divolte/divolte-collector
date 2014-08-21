@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import io.divolte.server.IncomingRequestProcessingPool.HttpServerExchangeWithPartyId;
+import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ProcessingPool;
@@ -25,7 +25,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
-final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, HttpServerExchangeWithPartyId> {
+final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, HttpServerExchange> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
 
     public IncomingRequestProcessingPool() {
@@ -77,16 +77,16 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
         }
     }
 
-    public void enqueueIncomingExchangeForProcessing(final String partyId, final HttpServerExchange exchange) {
-        enqueue(partyId, new IncomingRequestProcessingPool.HttpServerExchangeWithPartyId(partyId, exchange));
+    public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
+        enqueue(partyId.value, exchange);
     }
 
     @ParametersAreNonnullByDefault
     static final class HttpServerExchangeWithPartyId {
-        final String partyId;
+        final CookieValue partyId;
         final HttpServerExchange exchange;
 
-        public HttpServerExchangeWithPartyId(final String partyId,
+        public HttpServerExchangeWithPartyId(final CookieValue partyId,
                 final HttpServerExchange exchange) {
             this.partyId = Objects.requireNonNull(partyId);
             this.exchange = Objects.requireNonNull(exchange);

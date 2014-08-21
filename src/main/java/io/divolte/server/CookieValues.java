@@ -13,7 +13,7 @@ import org.apache.commons.codec.binary.Hex;
 /**
  * A generator for cookies that encode a timestamp in their value.
  */
-final class CookieValues {
+public final class CookieValues {
     // Some sources mention it's a good idea to avoid contention on SecureRandom instances...
     private final static ThreadLocal<SecureRandom> localRandom = new ThreadLocal<SecureRandom> () {
         protected SecureRandom initialValue() {

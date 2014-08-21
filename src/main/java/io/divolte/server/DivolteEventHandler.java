@@ -135,7 +135,7 @@ final class DivolteEventHandler {
 
             // 4
             logger.debug("Enqueuing event: {}/{}/{}", partyId, sessionId, pageViewId);
-            processingPool.enqueueIncomingExchangeForProcessing(partyId.value, exchange);
+            processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
         } else {
             methodNotAllowed(exchange);
         }
@@ -203,6 +203,7 @@ final class DivolteEventHandler {
 
         final CookieImpl pageViewCookie = new CookieImpl(cookieName, pageViewId);
         cookieDomain.ifPresent(pageViewCookie::setDomain);
+
         pageViewCookie
         .setVersion(1)
         .setHttpOnly(false);

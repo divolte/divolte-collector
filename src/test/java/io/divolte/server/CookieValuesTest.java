@@ -33,5 +33,7 @@ public class CookieValuesTest {
 
         assertTrue(left.equals(right));
         assertEquals(left.hashCode(), right.hashCode());
+
+        assertNotEquals(CookieValues.generate(42), CookieValues.generate(42));
     }
 }

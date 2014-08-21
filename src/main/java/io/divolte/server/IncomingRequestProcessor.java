@@ -1,9 +1,10 @@
 package io.divolte.server;
 
-import io.divolte.server.IncomingRequestProcessingPool.HttpServerExchangeWithPartyId;
+import static io.divolte.server.DivolteEventHandler.*;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
+import io.undertow.server.HttpServerExchange;
 
 import java.util.Objects;
 
@@ -19,7 +20,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
-final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchangeWithPartyId> {
+final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
     @Nullable
@@ -54,9 +55,9 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
     }
 
     @Override
-    public void process(final HttpServerExchangeWithPartyId exchange) {
-        final GenericRecord avroRecord = maker.makeRecordFromExchange(exchange.exchange);
-        final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(exchange.partyId, avroRecord);
+    public void process(final HttpServerExchange exchange) {
+        final GenericRecord avroRecord = maker.makeRecordFromExchange(exchange);
+        final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(exchange.getAttachment(PARTY_COOKIE_KEY), avroRecord);
 
         if (null != kafkaFlushingPool) {
             kafkaFlushingPool.enqueueRecord(avroBuffer);
