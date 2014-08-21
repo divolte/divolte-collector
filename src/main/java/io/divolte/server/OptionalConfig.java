@@ -77,7 +77,8 @@ public abstract class OptionalConfig<T> {
 
     public abstract T get();
 
-    public abstract int hashcode();
+    @Override
+    public abstract int hashCode();
 
     public abstract void ifPresent(Consumer<? super T> consumer);
 
@@ -151,7 +152,7 @@ public abstract class OptionalConfig<T> {
         }
 
         @Override
-        public int hashcode() {
+        public int hashCode() {
             return Objects.hashCode(this.exception);
         }
 
@@ -242,7 +243,7 @@ public abstract class OptionalConfig<T> {
         }
 
         @Override
-        public int hashcode() {
+        public int hashCode() {
             return Objects.hashCode(this.value);
         }
 
