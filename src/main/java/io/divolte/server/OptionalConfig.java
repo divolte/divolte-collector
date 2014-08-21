@@ -96,7 +96,7 @@ public abstract class OptionalConfig<T> {
     //Non abstract subclasses
     protected final static class ConfigAbsent<T> extends OptionalConfig<T> {
 
-        private RuntimeException exception;
+        private final RuntimeException exception;
 
         public ConfigAbsent() {
             this.exception = null;
@@ -191,7 +191,7 @@ public abstract class OptionalConfig<T> {
 
     protected final static class ConfigPresent<T> extends OptionalConfig<T> {
 
-        private T value;
+        private final T value;
 
         public ConfigPresent(T value) {
             this.value = value;
