@@ -22,11 +22,15 @@ import org.apache.avro.io.DatumReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class HdfsFlusherTest {
+    private static final Logger logger = LoggerFactory.getLogger(HdfsFlusherTest.class);
+
     @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     private static final String ARBITRARY_IP = "8.8.8.8";
 
@@ -112,7 +116,9 @@ public class HdfsFlusherTest {
     private void deleteQuietly(Path p) {
         try {
             Files.delete(p);
-        } catch (Exception e) {}
+        } catch (final Exception e) {
+            logger.debug("Ignoring failure while deleting file: " + p, e);
+        }
     }
 
     private void verifyAvroFile(List<Record> expected, Schema schema, Path avroFile) {
