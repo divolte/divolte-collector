@@ -189,9 +189,9 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
             final Path newFilePath = newFilePath();
-            return throwsIoException(() -> {
-                currentFile = openNewFile(newFilePath);
-            }).map((ioe) -> {
+            return throwsIoException(() ->
+                currentFile = openNewFile(newFilePath)
+            ).map((ioe) -> {
                 isHdfsAlive = false;
                 lastFixAttempt = time;
                 // possibly we created the file, so silently attempt a delete
