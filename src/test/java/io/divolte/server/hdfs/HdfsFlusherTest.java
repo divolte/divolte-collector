@@ -124,7 +124,7 @@ public class HdfsFlusherTest {
     private DataFileReader<Record> readAvroFile(Schema schema, File file) {
         DatumReader<Record> dr = new GenericDatumReader<>(schema);
         try {
-            return new DataFileReader<Record>(file, dr);
+            return new DataFileReader<>(file, dr);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
