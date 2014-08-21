@@ -1,11 +1,14 @@
 package io.divolte.server;
 
+import io.divolte.server.geo2ip.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import net.sf.uadetector.ReadableUserAgent;
 import net.sf.uadetector.UserAgentStringParser;
 import net.sf.uadetector.service.UADetectorServiceFactory;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
@@ -32,7 +35,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.maxmind.geoip2.model.CityResponse;
+import com.maxmind.geoip2.record.City;
+import com.maxmind.geoip2.record.Continent;
+import com.maxmind.geoip2.record.Country;
+import com.maxmind.geoip2.record.Location;
+import com.maxmind.geoip2.record.Subdivision;
+import com.maxmind.geoip2.record.Traits;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
@@ -54,10 +65,12 @@ final class GenericRecordMaker {
     private final List<FieldSetter> setters;
 
     private final LoadingCache<String,ReadableUserAgent> uaLookupCache;
+    private final Optional<LookupService> geoipService;
 
-
-
-    public GenericRecordMaker(Schema schema, Config schemaConfig, Config globalConfig) {
+    public GenericRecordMaker(final Schema schema,
+                              final Config schemaConfig,
+                              final Config globalConfig,
+                              final Optional<LookupService> geoipService) {
         Objects.requireNonNull(schemaConfig);
         Objects.requireNonNull(globalConfig);
 
@@ -75,6 +88,8 @@ final class GenericRecordMaker {
 
         final UserAgentStringParser parser = parserBasedOnTypeConfig(globalConfig.getString("divolte.tracking.ua_parser.type"));
         this.uaLookupCache = sizeBoundCacheFromLoadingFunction(parser::parse, globalConfig.getInt("divolte.tracking.ua_parser.cache_size"));
+
+        this.geoipService = Objects.requireNonNull(geoipService);
 
         logger.info("User agent parser data version: {}", parser.getDataVersion());
     }
@@ -184,6 +199,76 @@ final class GenericRecordMaker {
         switch ((String) value.unwrapped()) {
         case "firstInSession":
             return (b, e, c) -> b.set(name, !e.getRequestCookies().containsKey(sessionIdCookie));
+        case "geoCityId":
+            return (b, e, c) -> c.getCity().ifPresent((city) -> b.set(name, city.getGeoNameId()));
+        case "geoCityName":
+            return (b, e, c) -> c.getCity().ifPresent((city) -> b.set(name, city.getName()));
+        case "geoContinentCode":
+            return (b, e, c) -> c.getContinent().ifPresent((continent) -> b.set(name, continent.getCode()));
+        case "geoContinentId":
+            return (b, e, c) -> c.getContinent().ifPresent((continent) -> b.set(name, continent.getGeoNameId()));
+        case "geoContinentName":
+            return (b, e, c) -> c.getContinent().ifPresent((continent) -> b.set(name, continent.getName()));
+        case "geoCountryCode":
+            return (b, e, c) -> c.getCountry().ifPresent((country) -> b.set(name, country.getIsoCode()));
+        case "geoCountryId":
+            return (b, e, c) -> c.getCountry().ifPresent((country) -> b.set(name, country.getGeoNameId()));
+        case "geoCountryName":
+            return (b, e, c) -> c.getCountry().ifPresent((country) -> b.set(name, country.getName()));
+        case "geoLatitude":
+            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getLatitude()));
+        case "geoLongitude":
+            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getLongitude()));
+        case "geoMetroCode":
+            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getMetroCode()));
+        case "geoTimeZone":
+            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getTimeZone()));
+        case "geoMostSpecificSubdivisionCode":
+            return (b, e, c) -> c.getMostSpecificSubdivision().ifPresent((subdivision) -> b.set(name, subdivision.getIsoCode()));
+        case "geoMostSpecificSubdivisionId":
+            return (b, e, c) -> c.getMostSpecificSubdivision().ifPresent((subdivision) -> b.set(name, subdivision.getGeoNameId()));
+        case "geoMostSpecificSubdivisionName":
+            return (b, e, c) -> c.getMostSpecificSubdivision().ifPresent((subdivision) -> b.set(name, subdivision.getName()));
+        case "geoPostalCode":
+            return (b, e, c) -> c.getGeoField((r) -> r.getPostal()).ifPresent((postal) -> b.set(name, postal.getCode()));
+        case "geoRegisteredCountryCode":
+            return (b, e, c) -> c.getRegisteredCountry().ifPresent((country) -> b.set(name, country.getIsoCode()));
+        case "geoRegisteredCountryId":
+            return (b, e, c) -> c.getRegisteredCountry().ifPresent((country) -> b.set(name, country.getGeoNameId()));
+        case "geoRegisteredCountryName":
+            return (b, e, c) -> c.getRegisteredCountry().ifPresent((country) -> b.set(name, country.getName()));
+        case "geoRepresentedCountryCode":
+            return (b, e, c) -> c.getRepresentedCountry().ifPresent((country) -> b.set(name, country.getIsoCode()));
+        case "geoRepresentedCountryId":
+            return (b, e, c) -> c.getRepresentedCountry().ifPresent((country) -> b.set(name, country.getGeoNameId()));
+        case "geoRepresentedCountryName":
+            return (b, e, c) -> c.getRepresentedCountry().ifPresent((country) -> b.set(name, country.getName()));
+        case "geoSubdivisionCodes":
+            return (b, e, c) -> c.getSubdivisions()
+                                 .map((s) -> Lists.transform(s, Subdivision::getIsoCode))
+                                 .ifPresent((names) -> b.set(name, names));
+        case "geoSubdivisionIds":
+            return (b, e, c) -> c.getSubdivisions()
+                                 .map((s) -> Lists.transform(s, Subdivision::getGeoNameId))
+                                 .ifPresent((names) -> b.set(name, names));
+        case "geoSubdivisionNames":
+            return (b, e, c) -> c.getSubdivisions()
+                                 .map((s) -> Lists.transform(s, Subdivision::getName))
+                                 .ifPresent((names) -> b.set(name, names));
+        case "geoAutonomousSystemNumber":
+            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getAutonomousSystemNumber()));
+        case "geoAutonomousSystemOrganization":
+            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getAutonomousSystemOrganization()));
+        case "geoDomain":
+            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getDomain()));
+        case "geoIsp":
+            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getIsp()));
+        case "geoOrganisation":
+            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getOrganization()));
+        case "geoAnonymousProxy":
+            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.isAnonymousProxy()));
+        case "geoSatelliteProvider":
+            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.isSatelliteProvider()));
         case "timestamp":
             return (b, e, c) -> b.set(name, e.getRequestStartTime());
         case "userAgent":
@@ -286,7 +371,7 @@ final class GenericRecordMaker {
 
     public GenericRecord makeRecordFromExchange(final HttpServerExchange exchange) {
         final GenericRecordBuilder builder = new GenericRecordBuilder(schema);
-        final Context context = new Context();
+        final Context context = new Context(exchange);
         setters.forEach((s) -> s.setFields(builder, exchange, context));
         return builder.build();
     }
@@ -332,8 +417,60 @@ final class GenericRecordMaker {
         // In general a regular expression is used against a single value, but it can be used more than once.
         private final Map<String, Matcher> matchers = Maps.newHashMapWithExpectedSize(regexes.size() * 2);
 
+        private final LazyReference<Optional<CityResponse>> geoLookup;
+
+        private Context(final HttpServerExchange serverExchange) {
+            Objects.requireNonNull(serverExchange);
+            this.geoLookup = new LazyReference<>(() -> geoipService.flatMap((service) -> {
+                final InetSocketAddress sourceAddress = serverExchange.getSourceAddress();
+                final InetAddress ipAddress = null != sourceAddress ? sourceAddress.getAddress() : null;
+                return null != ipAddress ? service.lookup(ipAddress) : Optional.empty();
+            }));
+        }
+
         public Matcher matcher(final String regex, final String field, final String value) {
             final String key = regex + field;
             return matchers.computeIfAbsent(key, (ignored) -> regexes.get(regex).matcher(value));
         }
+
+        private <T> Optional<T> getGeoField(Function<CityResponse, T> getter) {
+            return geoLookup.get().flatMap((g) -> Optional.ofNullable(getter.apply(g)));
+        }
+
+        public Optional<City> getCity() {
+            return getGeoField((g) -> g.getCity());
+        }
+
+        public Optional<Continent> getContinent() {
+            return getGeoField((g) -> g.getContinent());
+        }
+
+        public Optional<Country> getCountry() {
+            return getGeoField((g) -> g.getCountry());
+        }
+
+        public Optional<Location> getLocation() {
+            return getGeoField((g) -> g.getLocation());
+        }
+
+        public Optional<Subdivision> getMostSpecificSubdivision() {
+            return getGeoField((g) -> g.getMostSpecificSubdivision());
+        }
+
+        public Optional<Country> getRegisteredCountry() {
+            return getGeoField((g) -> g.getRegisteredCountry());
+        }
+
+        public Optional<Country> getRepresentedCountry() {
+            return getGeoField((g) -> g.getRepresentedCountry());
+        }
+
+        public Optional<List<Subdivision>> getSubdivisions() {
+            return getGeoField((g) -> g.getSubdivisions());
+        }
+
+        public Optional<Traits> getTraits() {
+            return getGeoField((g) -> g.getTraits());
+        }
+    }
 }

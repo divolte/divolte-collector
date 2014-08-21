@@ -38,6 +38,11 @@ dependencies {
     compile group: 'org.apache.hadoop', name:'hadoop-client', version: '2.4.1'
     compile group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.19'
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.07'
+    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'0.8.0') {
+        // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
+        // client which conflicts with the version via Hadoop.
+        exclude group: 'com.google.http-client', module: 'google-http-client'
+    }
     compile group: 'org.apache.kafka', name:'kafka_2.10', version:'0.8.1.1'
 
     // We use the SLF4J API. At runtime, this is LogBack.

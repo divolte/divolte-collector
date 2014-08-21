@@ -1,11 +1,13 @@
 package io.divolte.server;
 
 import io.divolte.server.IncomingRequestProcessingPool.HttpServerExchangeWithPartyId;
+import io.divolte.server.geo2ip.LookupService;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -32,13 +34,16 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
     public IncomingRequestProcessor(final Config config,
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
                                     @Nullable final HdfsFlushingPool hdfsFlushingPool,
+                                    @Nullable final LookupService geoipLookupService,
                                     final Schema schema) {
 
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
 
         final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));
-        maker = new GenericRecordMaker(Objects.requireNonNull(schema), schemaMappingConfig, config);
+        maker = new GenericRecordMaker(Objects.requireNonNull(schema),
+                                       schemaMappingConfig, config,
+                                       Optional.ofNullable(geoipLookupService));
     }
 
     private Config schemaMappingConfigFromConfig(final Config config) {

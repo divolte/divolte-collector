@@ -1,6 +1,7 @@
 package io.divolte.server;
 
 import io.divolte.server.GenericRecordMaker.SchemaMappingException;
+import io.divolte.server.geo2ip.LookupService;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
@@ -10,13 +11,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -26,8 +28,21 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import static org.junit.Assert.*;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
+import com.maxmind.geoip2.model.CityResponse;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+@ParametersAreNonnullByDefault
 public class GenericRecordMakerTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
@@ -38,7 +53,7 @@ public class GenericRecordMakerTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-flatfields");
 
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -70,7 +85,7 @@ public class GenericRecordMakerTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-useragent");
 
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
 
         String ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36";
 
@@ -94,14 +109,14 @@ public class GenericRecordMakerTest {
         expected.expectMessage("Unsupported schema mapping configuration version: 42");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-version");
-        new GenericRecordMaker(schema, config, ConfigFactory.load());
+        new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     @Test
     public void shouldSetCustomCookieValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-customcookie");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
@@ -113,7 +128,7 @@ public class GenericRecordMakerTest {
     public void shouldSetFieldWithMatchingRegexName() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-matchingregex");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test", "l=http://example.com/", "r=https://www.example.com/bla/");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
@@ -126,7 +141,7 @@ public class GenericRecordMakerTest {
     public void shouldSetFieldWithCaptureGroupFromRegex() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-regex");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load());
+        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -139,12 +154,101 @@ public class GenericRecordMakerTest {
         assertEquals("about", record.get("contentPage"));
     }
 
+    private void testMapping(final Optional<CityResponse> response,
+                             final Map<String,Object> expectedMapping)
+            throws IOException, UnirestException {
+        // Set up the test.
+        final Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        final Config config = ConfigFactory.load("schema-test-geo");
+        final LookupService mockLookupService = mock(LookupService.class);
+        when(mockLookupService.lookup(any())).thenReturn(response);
+        setupExchange("Arbitrary User Agent");
+
+        // Perform a mapping.
+        final GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+        final GenericRecord record = maker.makeRecordFromExchange(theExchange);
+
+        // Validate the results.
+        verify(mockLookupService).lookup(any());
+        verifyNoMoreInteractions(mockLookupService);
+        expectedMapping.forEach((k, v) -> {
+            final Object recordValue = record.get(k);
+            assertEquals("Property " + k + " not mapped correctly.", v, recordValue);
+        });
+    }
+
+    @Test
+    public void shouldMapAllGeoIpFields() throws IOException, UnirestException {
+        final CityResponse mockResponseWithEverything = loadFromClassPath("/city-response-with-everything.json",
+                                                                          new TypeReference<CityResponse>(){});
+        final Map<String,Object> expectedMapping = loadFromClassPath("/city-response-expected-mapping.json",
+                                                                     new TypeReference<Map<String,Object>>(){});
+        testMapping(Optional.of(mockResponseWithEverything), expectedMapping);
+    }
+
+    private Map<String,Object> buildEmptyMapping(@Nullable final Boolean nullBoolean,
+                                                 @Nullable final List<?> nullList) throws IOException {
+        // The empty mapping is the same as the full one, except that all values should be null.
+        final Map<String,Object> mapping = loadFromClassPath("/city-response-expected-mapping.json",
+                                                             new TypeReference<Map<String,Object>>(){});
+        for (final Map.Entry<String,Object> entry : mapping.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof Boolean) {
+                value = nullBoolean;
+            } else if (value instanceof List<?>) {
+                value = nullList;
+            } else {
+                value = null;
+            }
+            entry.setValue(value);
+        }
+        return mapping;
+    }
+
+    @Test
+    public void shouldMapMissingGeoIpFields() throws IOException, UnirestException {
+        final CityResponse mockResponseWithNothing = MAPPER.readValue("{}",CityResponse.class);
+        final Map<String,Object> expectedMapping = buildEmptyMapping(false, ImmutableList.of());
+        testMapping(Optional.of(mockResponseWithNothing), expectedMapping);
+    }
+
+    @Test
+    public void shouldNotPerformGeoLookupIfMappingsDoNotUseIt() throws IOException, UnirestException {
+        // Set up the test.
+        final Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        final Config config = ConfigFactory.load("schema-test-no-geo");
+        final LookupService mockLookupService = mock(LookupService.class);
+        when(mockLookupService.lookup(any())).thenReturn(Optional.empty());
+        setupExchange("Arbitrary User Agent");
+
+        // Perform a mapping.
+        new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+
+        // Verify the lookup service was not invoked.
+        verify(mockLookupService, never()).lookup(any());
+    }
+
+    @Test
+    public void shouldNotSetAnyGeoFieldsWhenLookupYieldsNoResult() throws IOException, UnirestException {
+        testMapping(Optional.empty(), buildEmptyMapping(null, null));
+    }
+
     private Schema schemaFromClassPath(final String resource) throws IOException {
         try (final InputStream resourceStream = this.getClass().getResourceAsStream(resource)) {
             return new Schema.Parser().parse(resourceStream);
         }
     }
 
+    private static final ObjectMapper MAPPER =
+            new ObjectMapper()
+                    .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
+                    .setInjectableValues(new InjectableValues.Std().addValue("locales", ImmutableList.of("en")));
+
+    private <T> T loadFromClassPath(final String resource, final TypeReference typeReference) throws IOException {
+        try (final InputStream resourceStream = this.getClass().getResourceAsStream(resource)) {
+            return MAPPER.readValue(resourceStream, typeReference);
+        }
+    }
 
     /*
      * HttpServerExchange is final. In order to construct one, we actually start Undertow,
