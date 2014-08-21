@@ -153,7 +153,7 @@ public class OptionalConfigTest {
         Config config = ConfigFactory.load("config-test-optionals-absent");
 
         OptionalConfig<List<String>> cfgArr = OptionalConfig.of(config::getStringList, "some.non.existing.obj.array");
-        OptionalConfig<List<String>> filtered = cfgArr.filter(v -> v.contains('1'));
+        OptionalConfig<List<String>> filtered = cfgArr.filter(v -> v.contains("1"));
         checkAbsentNess(filtered);
     }
 
