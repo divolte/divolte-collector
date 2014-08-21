@@ -5,7 +5,7 @@ import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.Nonnull;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
@@ -54,12 +54,12 @@ public final class CookieValues {
         }
     }
 
-    @ParametersAreNonnullByDefault
     public final static class CookieValue {
+        @Nonnull
         public final String value;
         public final long timestamp;
 
-        private CookieValue(byte[] valueBytes, long timestamp) {
+        private CookieValue(@Nonnull final byte[] valueBytes, final long timestamp) {
             this.value = Hex.encodeHexString(Objects.requireNonNull(valueBytes));
             this.timestamp = timestamp;
         }
