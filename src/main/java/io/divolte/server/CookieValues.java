@@ -18,7 +18,7 @@ public final class CookieValues {
     private final static ThreadLocal<SecureRandom> localRandom = new ThreadLocal<SecureRandom> () {
         protected SecureRandom initialValue() {
             return new SecureRandom();
-        };
+        }
     };
 
     private CookieValues() {
