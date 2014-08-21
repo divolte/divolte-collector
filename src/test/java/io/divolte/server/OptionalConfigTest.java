@@ -118,10 +118,7 @@ public class OptionalConfigTest {
         Config config = ConfigFactory.load("config-test-optionals-present");
 
         OptionalConfig<String> cfgStr = OptionalConfig.of(config::getString, "some.existing.str");
-        OptionalConfig<Integer> map = cfgStr.map(value -> {
-                    return value.hashCode();
-                }
-        );
+        OptionalConfig<Integer> map = cfgStr.map(String::hashCode);
         checkPresentNess(map, Integer.class);
         assertEquals(-2058053205, map.get().intValue());
     }
@@ -131,10 +128,7 @@ public class OptionalConfigTest {
         Config config = ConfigFactory.load("config-test-optionals-absent");
 
         OptionalConfig<String> cfgStr = OptionalConfig.of(config::getString, "some.non.existing.str");
-        OptionalConfig<Integer> map = cfgStr.map(value -> {
-                    return value.hashCode();
-                }
-        );
+        OptionalConfig<Integer> map = cfgStr.map(String::hashCode);
         checkAbsentNess(map);
     }
 
