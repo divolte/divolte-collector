@@ -58,8 +58,8 @@ public class OptionalConfigTest {
 
         OptionalConfig<Object> cfgObjObject = OptionalConfig.of(config::getAnyRef, "some.existing.obj.obj");
         checkPresentNess(cfgObjObject, Map.class);
-        assertEquals("val1", ((Map<String, Object>) cfgObjObject.get()).get("key1"));
-        assertEquals("val2", ((Map<String, Object>) cfgObjObject.get()).get("key2"));
+        assertEquals("val1", ((Map<?,?>) cfgObjObject.get()).get("key1"));
+        assertEquals("val2", ((Map<?,?>) cfgObjObject.get()).get("key2"));
 
         OptionalConfig<Object> cfgObjBool = OptionalConfig.of(config::getAnyRef, "some.existing.obj.bool");
         checkPresentNess(cfgObjBool, Boolean.class);
@@ -84,8 +84,8 @@ public class OptionalConfigTest {
         OptionalConfig<ConfigValue> cfgValObject = OptionalConfig.of(config::getValue, "some.existing.obj.obj");
         checkPresentNess(cfgValObject, ConfigObject.class);
         assertTrue(cfgValObject.get().unwrapped() instanceof Map);
-        assertEquals("val1", ((Map<String, Object>) cfgValObject.get().unwrapped()).get("key1"));
-        assertEquals("val2", ((Map<String, Object>) cfgValObject.get().unwrapped()).get("key2"));
+        assertEquals("val1", ((Map<?,?>) cfgValObject.get().unwrapped()).get("key1"));
+        assertEquals("val2", ((Map<?,?>) cfgValObject.get().unwrapped()).get("key2"));
 
         OptionalConfig<ConfigValue> cfgValBool = OptionalConfig.of(config::getValue, "some.existing.obj.bool");
         checkPresentNess(cfgValBool, ConfigValue.class);
