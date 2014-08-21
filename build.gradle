@@ -1,7 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'application'
-apply plugin: 'com.commercehub.gradle.plugin.avro'
 apply plugin: 'js'
 apply plugin: 'findbugs'
 apply plugin: 'pmd'
@@ -25,7 +24,6 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath group: 'com.commercehub.gradle.plugin', name: 'gradle-avro-plugin', version: '0.2.0'
         classpath group: 'com.eriwen', name: 'gradle-js-plugin', version: '1.12.1'
     }
 }
@@ -53,8 +51,6 @@ dependencies {
 
 sourceSets {
     main {
-        // This is needed for Eclipse, and does no harm elsewhere.
-        java.srcDir "${buildDir}/generated-main-avro-java"
         output.dir("${buildDir}/generated-resources/javascript", builtBy: 'minifyJs')
     }
 }
