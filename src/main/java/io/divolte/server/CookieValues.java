@@ -75,11 +75,9 @@ public final class CookieValues {
         }
 
         @Override
-        public boolean equals(Object other) {
-            if (other == null)
-                return false;
+        public boolean equals(final Object other) {
             return this == other ||
-                        getClass() == other.getClass() && value.equals(((CookieValue) other).value);
+                   null != other && getClass() == other.getClass() && value.equals(((CookieValue) other).value);
         }
     }
 }
