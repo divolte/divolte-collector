@@ -9,7 +9,6 @@ import net.sf.uadetector.service.UADetectorServiceFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
@@ -141,7 +141,7 @@ final class GenericRecordMaker {
         return (b, e, c) ->
             fieldExtractor.extract(e).ifPresent((val) ->
             regexNames.stream()
-            .filter((nm) -> matcherFromContext(nm, fieldName, val, c).matches())
+            .filter((nm) -> c.matcher(nm, fieldName, val).matches())
             .findFirst()
             .ifPresent((nm) -> b.set(name, nm)
             ));
@@ -156,7 +156,7 @@ final class GenericRecordMaker {
         return (b, e, c) ->
             fieldExtractor.extract(e)
             .ifPresent((val) ->
-                groupFromMatcher(matcherFromContext(regexName, fieldName, val, c), groupName)
+                groupFromMatcher(c.matcher(regexName, fieldName, val), groupName)
                 .ifPresent((match) ->
                     b.set(name, match))
             );
@@ -273,19 +273,13 @@ final class GenericRecordMaker {
         }
     }
 
-    private Matcher matcherFromContext(final String regex, final String field, final String value, final Map<String, Matcher> context) {
-        return context.computeIfAbsent(
-                regex + field,
-                (ignored) -> regexes.get(regex).matcher(value));
-    }
-
     private Optional<String> groupFromMatcher(final Matcher matcher, final String group) {
         return matcher.matches() ? Optional.ofNullable(matcher.group(group)) : Optional.empty();
     }
 
     @FunctionalInterface
     private interface FieldSetter {
-        void setFields(GenericRecordBuilder builder, HttpServerExchange exchange, Map<String, Matcher> context);
+        void setFields(GenericRecordBuilder builder, HttpServerExchange exchange, Context context);
     }
 
     @FunctionalInterface
@@ -294,8 +288,8 @@ final class GenericRecordMaker {
     }
 
     public GenericRecord makeRecordFromExchange(final HttpServerExchange exchange) {
-        GenericRecordBuilder builder = new GenericRecordBuilder(schema);
-        Map<String, Matcher> context = new HashMap<>();
+        final GenericRecordBuilder builder = new GenericRecordBuilder(schema);
+        final Context context = new Context();
         setters.forEach((s) -> s.setFields(builder, exchange, context));
         return builder.build();
     }
@@ -334,4 +328,15 @@ final class GenericRecordMaker {
             return null;
         }
     }
+
+    @ParametersAreNonnullByDefault
+    private final class Context {
+
+        // In general a regular expression is used against a single value, but it can be used more than once.
+        private final Map<String, Matcher> matchers = Maps.newHashMapWithExpectedSize(regexes.size() * 2);
+
+        public Matcher matcher(final String regex, final String field, final String value) {
+            final String key = regex + field;
+            return matchers.computeIfAbsent(key, (ignored) -> regexes.get(regex).matcher(value));
+        }
 }
