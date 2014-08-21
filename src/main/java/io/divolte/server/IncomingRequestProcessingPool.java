@@ -12,7 +12,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -100,17 +99,5 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
 
     public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
         enqueue(partyId.value, exchange);
-    }
-
-    @ParametersAreNonnullByDefault
-    static final class HttpServerExchangeWithPartyId {
-        final CookieValue partyId;
-        final HttpServerExchange exchange;
-
-        public HttpServerExchangeWithPartyId(final CookieValue partyId,
-                final HttpServerExchange exchange) {
-            this.partyId = Objects.requireNonNull(partyId);
-            this.exchange = Objects.requireNonNull(exchange);
-        }
     }
 }
