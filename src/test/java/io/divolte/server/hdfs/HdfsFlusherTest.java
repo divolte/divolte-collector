@@ -63,9 +63,7 @@ public class HdfsFlusherTest {
         .build())
         .collect(Collectors.toList());
 
-        records.forEach((record) -> {
-            flusher.process(AvroRecordBuffer.fromRecord("party", record));
-        });
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord("party", record)));
 
         flusher.cleanup();
 
@@ -91,18 +89,14 @@ public class HdfsFlusherTest {
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
-        records.forEach((record) -> {
-            flusher.process(AvroRecordBuffer.fromRecord("party", record));
-        });
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord("party", record)));
 
         for (int c = 0; c < 3; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> {
-            flusher.process(AvroRecordBuffer.fromRecord("party", record));
-        });
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord("party", record)));
 
         flusher.cleanup();
 
