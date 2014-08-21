@@ -78,11 +78,8 @@ public final class CookieValues {
         public boolean equals(Object other) {
             if (other == null)
                 return false;
-
             return this == other ||
-                    (
-                        getClass() == other.getClass() && value.equals(((CookieValue) other).value)
-                    );
+                        getClass() == other.getClass() && value.equals(((CookieValue) other).value);
         }
     }
 }

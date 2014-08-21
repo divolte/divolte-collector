@@ -123,7 +123,7 @@ public class OptionalConfigTest {
                 }
         );
         checkPresentNess(map, Integer.class);
-        assertEquals(-2058053205, (map.get()).intValue());
+        assertEquals(-2058053205, map.get().intValue());
     }
 
     @Test
