@@ -2,6 +2,7 @@ package io.divolte.server.hdfs;
 
 import static org.junit.Assert.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.CookieValues;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.io.DatumReader;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +54,7 @@ public class HdfsFlusherTest {
         Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         Config config = ConfigFactory.parseResources("hdfs-flusher-test.conf").withFallback(ConfigFactory.parseString(
                 "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 day\n"
-                + "divolte.hdfs_flusher.dir = \"" + tempDir.toString() + "\""));
+                + "divolte.hdfs_flusher.simple_rolling_file_strategy.dir = \"" + tempDir.toString() + "\""));
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
@@ -63,7 +65,7 @@ public class HdfsFlusherTest {
         .build())
         .collect(Collectors.toList());
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord("party", record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), record)));
 
         flusher.cleanup();
 
@@ -78,7 +80,7 @@ public class HdfsFlusherTest {
         Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         Config config = ConfigFactory.parseResources("hdfs-flusher-test.conf").withFallback(ConfigFactory.parseString(
                 "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 second\n"
-                + "divolte.hdfs_flusher.dir = \"" + tempDir.toString() + "\""));
+                + "divolte.hdfs_flusher.simple_rolling_file_strategy.dir = \"" + tempDir.toString() + "\""));
 
         List<Record> records = LongStream.range(0, 5)
         .mapToObj((time) -> new GenericRecordBuilder(schema)
@@ -89,21 +91,26 @@ public class HdfsFlusherTest {
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord("party", record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), record)));
 
-        for (int c = 0; c < 3; c++) {
+        for (int c = 0; c < 2; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord("party", record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), record)));
 
         flusher.cleanup();
 
+        final MutableInt count = new MutableInt(0);
         Files.walk(tempDir)
         .filter((p) -> p.toString().endsWith(".avro"))
-        .findFirst()
-        .ifPresent((p) -> verifyAvroFile(records, schema, p));
+        .forEach((p) -> {
+            verifyAvroFile(records, schema, p);
+            count.increment();
+        });
+
+        assertEquals(2, count.intValue());
     }
 
 

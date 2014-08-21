@@ -26,6 +26,6 @@ public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBu
     }
 
     public void enqueueRecord(final AvroRecordBuffer record) {
-        enqueue(record.getPartyId(), record);
+        enqueue(record.getPartyId().value, record);
     }
 }

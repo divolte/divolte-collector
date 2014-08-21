@@ -1,8 +1,10 @@
 package io.divolte.server;
 
+import io.divolte.server.CookieValues.CookieValue;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
@@ -16,7 +18,6 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -50,11 +51,18 @@ import com.typesafe.config.Config;
 final class DivolteEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
+    public final static AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
+    public final static AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
+    public final static AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
+    public final static AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
+
     private final String partyCookieName;
     private final Duration partyTimeout;
     private final String sessionCookieName;
     private final Duration sessionTimeout;
     private final String pageViewCookieName;
+    private final OptionalConfig<String> cookieDomain;
+
 
     private final ByteBuffer transparentImage;
 
@@ -66,12 +74,14 @@ final class DivolteEventHandler {
                                final String sessionCookieName,
                                final Duration sessionTimeout,
                                final String pageViewCookieName,
+                               final OptionalConfig<String> cookieDomain,
                                final IncomingRequestProcessingPool processingPool) {
         this.partyCookieName =    Objects.requireNonNull(partyCookieName);
         this.partyTimeout =       Objects.requireNonNull(partyTimeout);
         this.sessionCookieName =  Objects.requireNonNull(sessionCookieName);
         this.sessionTimeout =     Objects.requireNonNull(sessionTimeout);
         this.pageViewCookieName = Objects.requireNonNull(pageViewCookieName);
+        this.cookieDomain = cookieDomain;
         this.processingPool =     Objects.requireNonNull(processingPool);
         try {
             this.transparentImage = ByteBuffer.wrap(
@@ -89,6 +99,7 @@ final class DivolteEventHandler {
              config.getString("divolte.tracking.session_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.page_view_cookie"),
+             OptionalConfig.of(config::getString, "divolte.tracking.cookie_domain"),
              new IncomingRequestProcessingPool(config));
     }
 
@@ -103,9 +114,12 @@ final class DivolteEventHandler {
         // We only accept GET requests.
         if (exchange.getRequestMethod().equals(Methods.GET)) {
             // 1
-            final String partyId = getTrackingIdentifier(exchange, partyCookieName, partyTimeout);
-            final String sessionId = getTrackingIdentifier(exchange, sessionCookieName, sessionTimeout);
-            final String pageViewId = setAndReturnPageViewCookie(exchange, pageViewCookieName);
+            final long requestTime = System.currentTimeMillis();
+            exchange.putAttachment(REQUEST_START_TIME_KEY, requestTime);
+
+            final CookieValue partyId = prepareTrackingIdentifierAndReturnCookieValue(exchange, partyCookieName, PARTY_COOKIE_KEY, partyTimeout, requestTime);
+            final CookieValue sessionId = prepareTrackingIdentifierAndReturnCookieValue(exchange, sessionCookieName, SESSION_COOKIE_KEY, sessionTimeout, requestTime);
+            final String pageViewId = prepareAndReturnPageViewId(exchange, pageViewCookieName, requestTime);
 
             // 2
             /*
@@ -128,54 +142,76 @@ final class DivolteEventHandler {
     }
 
     private void methodNotAllowed(final HttpServerExchange exchange) {
-        final HeaderMap responseHeaders = exchange.getResponseHeaders();
-        responseHeaders.put(Headers.ALLOW, Methods.GET_STRING);
-        responseHeaders.put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-        exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED);
-        exchange.getResponseSender()
+        exchange.getResponseHeaders()
+        .put(Headers.ALLOW, Methods.GET_STRING)
+        .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
+
+        exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED)
+        .getResponseSender()
                 .send("HTTP method " + exchange.getRequestMethod() + " not allowed.", StandardCharsets.UTF_8);
     }
 
     private void serveImage(final HttpServerExchange exchange) {
         final HeaderMap responseHeaders = exchange.getResponseHeaders();
-        responseHeaders.put(Headers.CONTENT_TYPE, "image/gif");
-        responseHeaders.put(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
-        responseHeaders.put(Headers.PRAGMA, "no-cache");
-        responseHeaders.put(Headers.EXPIRES, 0);
+        responseHeaders
+        .put(Headers.CONTENT_TYPE, "image/gif")
+        .put(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+        .put(Headers.PRAGMA, "no-cache")
+        .put(Headers.EXPIRES, 0);
+
         exchange.getResponseSender().send(transparentImage.slice());
     }
 
-    private static String getTrackingIdentifier(final HttpServerExchange exchange,
+    private CookieValue prepareTrackingIdentifierAndReturnCookieValue(final HttpServerExchange exchange,
                                                 final String cookieName,
-                                                final Duration timeout) {
-        Cookie trackingCookie = exchange.getRequestCookies().get(cookieName);
-        if (null == trackingCookie) {
-            final String cookieValue = UUID.randomUUID().toString();
-            logger.debug("New {} cookie generated: {}", cookieName, cookieValue);
-            trackingCookie = new CookieImpl(cookieName, cookieValue);
-        }
-        trackingCookie.setVersion(1);
-        trackingCookie.setHttpOnly(true);
+                                                final AttachmentKey<CookieValue> key,
+                                                final Duration timeout,
+                                                final long currentTime) {
+
+        final Cookie existingCookie = exchange.getRequestCookies().get(cookieName);
+
+        final CookieValue cookieValue = Optional.ofNullable(existingCookie)
+        .map(Cookie::getValue)
+        .flatMap(CookieValues::tryParse)
+        .orElseGet(() -> CookieValues.generate(currentTime));
+
+        final Cookie newCookie = new CookieImpl(cookieName, cookieValue.value);
+        cookieDomain.ifPresent(newCookie::setDomain);
+
         final long maxAge = timeout.getSeconds();
         // Some clients (e.g. netty) choke if max-age is large than an Integer can represent.
         if (maxAge <= Integer.MAX_VALUE) {
-            trackingCookie.setMaxAge((int) maxAge);
+            newCookie.setMaxAge((int) maxAge);
         }
-        trackingCookie.setExpires(new Date(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(maxAge)));
-        exchange.setResponseCookie(trackingCookie);
-        return trackingCookie.getValue();
-    }
 
-    private static String setAndReturnPageViewCookie(final HttpServerExchange exchange, final String cookieName) {
-        final String cookieValue = Optional.ofNullable(exchange.getQueryParameters().get("p"))
-                .map(Deque::getFirst)
-                .orElseGet(() -> UUID.randomUUID().toString());
+        newCookie
+        .setVersion(1)
+        .setHttpOnly(true)
+        .setExpires(new Date(currentTime + TimeUnit.SECONDS.toMillis(maxAge)));
 
-        final CookieImpl pageViewCookie = new CookieImpl(cookieName, cookieValue);
-        pageViewCookie.setVersion(1);
-        pageViewCookie.setHttpOnly(false);
-        exchange.setResponseCookie(pageViewCookie);
+        exchange
+        .setResponseCookie(newCookie)
+        .putAttachment(key, cookieValue);
 
         return cookieValue;
+    }
+
+    private String prepareAndReturnPageViewId(final HttpServerExchange exchange, final String cookieName, final long currentTime) {
+        final String pageViewId = Optional.ofNullable(exchange.getQueryParameters().get("p"))
+                .map(Deque::getFirst)
+                .orElseGet(() -> CookieValues.generate(currentTime).value);
+
+        final CookieImpl pageViewCookie = new CookieImpl(cookieName, pageViewId);
+        cookieDomain.ifPresent(pageViewCookie::setDomain);
+
+        pageViewCookie
+        .setVersion(1)
+        .setHttpOnly(false);
+
+        exchange
+        .setResponseCookie(pageViewCookie)
+        .putAttachment(PAGE_VIEW_ID_KEY, pageViewId);
+
+        return pageViewId;
     }
 }

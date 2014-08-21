@@ -1,72 +1,41 @@
 package io.divolte.server.hdfs;
 
+import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
 import io.divolte.server.processing.ItemProcessor;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 
 import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 
 @ParametersAreNonnullByDefault
+@NotThreadSafe
 final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
-    private static final int HDFS_RECONNECT_DELAY = 5000;
-
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
-    private final static AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
-    private final int instanceNumber;
-    private final String hostString;
-    private final DateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmss");
-
     private final FileSystem hadoopFs;
-    private final String hdfsFileDir;
     private final short hdfsReplication;
-    private final long syncEveryMillis;
-    private final int syncEveryRecords;
-    private final long newFileEveryMillis;
 
-    private final Schema schema;
-
-    private HadoopFile currentFile;
-    private boolean isHdfsAlive;
-    private long lastFixAttempt;
+    private final FileCreateAndSyncStrategy fileStrategy;
+    private HdfsOperationResult lastHdfsResult;
 
     public HdfsFlusher(final Config config, final Schema schema) {
         Objects.requireNonNull(config);
-        this.schema = Objects.requireNonNull(schema);
-
-        syncEveryMillis = config.getDuration("divolte.hdfs_flusher.sync_file_after_duration", TimeUnit.MILLISECONDS);
-        syncEveryRecords = config.getInt("divolte.hdfs_flusher.sync_file_after_records");
-        newFileEveryMillis = config.getDuration("divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every", TimeUnit.MILLISECONDS);
-
-        instanceNumber = INSTANCE_COUNTER.incrementAndGet();
-        hostString = findLocalHostName();
 
         try {
-            hdfsFileDir = config.getString("divolte.hdfs_flusher.dir");
             hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
             final URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
             hadoopFs = FileSystem.get(hdfsLocation, new Configuration());
@@ -81,188 +50,24 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
             throw new RuntimeException("Could not initialize HDFS filesystem", e);
         }
 
-        final Path newFilePath = newFilePath();
-        try {
-            currentFile = openNewFile(newFilePath);
-            isHdfsAlive = true;
-        } catch (IOException e) {
-            logger.warn("HDFS flusher starting up without HDFS connection.", e);
-            isHdfsAlive = false;
-            // possibly we created the file, but found it wasn't writable; hence we attempt a delete
-            throwsIoException(() -> hadoopFs.delete(newFilePath, false));
-        }
-    }
-
-    private String findLocalHostName() {
-        // we should use the bind address from the divolte.server config to figure out the actual hostname we are listening on
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            return "localhost";
-        }
-    }
-
-    private void doProcess(AvroRecordBuffer record) throws IllegalArgumentException, IOException {
-        if (isHdfsAlive) {
-            currentFile.writer.appendEncoded(record.getByteBuffer());
-            currentFile.recordsSinceLastSync += 1;
-
-            possiblySync();
-        } else {
-            possiblyFixHdfsConnection();
-        }
-    }
-
-    private void doHeartbeat() throws IOException {
-        if (isHdfsAlive) {
-            possiblySync();
-        } else {
-            possiblyFixHdfsConnection();
-        }
-    }
-
-    private void possiblyFixHdfsConnection() {
-        long time = System.currentTimeMillis();
-        if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
-            final Path newFilePath = newFilePath();
-            try {
-                currentFile = openNewFile(newFilePath);
-                isHdfsAlive = true;
-                lastFixAttempt = 0;
-            } catch (IOException ioe) {
-                logger.warn("Could not create HDFS file.", ioe);
-                isHdfsAlive = false;
-                lastFixAttempt = time;
-                throwsIoException(() -> hadoopFs.delete(newFilePath, false));
-            }
-        }
-    }
-
-    private Path newFilePath() {
-        return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%s-%d.avro", datePartFormat.format(new Date()), hostString, instanceNumber));
-    }
-
-    private HadoopFile openNewFile(Path path) throws IOException {
-        return new HadoopFile(path);
-    }
-
-    private void possiblySync() throws IOException {
-        final long time = System.currentTimeMillis();
-
-        if (
-                currentFile.recordsSinceLastSync >= syncEveryRecords ||
-                time - currentFile.lastSyncTime >= syncEveryMillis && currentFile.recordsSinceLastSync > 0) {
-            logger.debug("Syncing HDFS file: {}", currentFile.path.toString());
-
-            // Forces the Avro file to write a block
-            currentFile.writer.sync();
-            // Forces a (HDFS) sync on the underlying stream
-            currentFile.stream.hsync();
-
-            currentFile.recordsSinceLastSync = 0;
-            currentFile.lastSyncTime = time;
-            possiblyRollFile(time);
-        } else if (currentFile.recordsSinceLastSync == 0) {
-            currentFile.lastSyncTime = time;
-            possiblyRollFile(time);
-        }
-    }
-
-    private void possiblyRollFile(final long time) throws IOException {
-        if (time > currentFile.projectedCloseTime) {
-            currentFile.close();
-
-            final Path newFilePath = newFilePath();
-            try {
-                currentFile = openNewFile(newFilePath);
-            } catch (IOException e) {
-                throwsIoException(() -> hadoopFs.delete(newFilePath, false));
-                throw e;
-            }
-        }
-    }
-
-    private void doCleanup() throws IOException {
-        logger.debug("Closing HDFS file for cleanup: {}", currentFile.path.getName());
-        currentFile.close();
+        fileStrategy = FileCreateAndSyncStrategy.create(config, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
+        lastHdfsResult = fileStrategy.setup();
     }
 
     @Override
     public void cleanup() {
-        try {
-            doCleanup();
-        } catch (IOException e) {
-            logger.warn("Failed to cleanly close HDFS file.", e);
-            isHdfsAlive = false;
-        }
+        fileStrategy.cleanup();
     }
 
     @Override
     public void process(AvroRecordBuffer record) {
-        try {
-            doProcess(record);
-        } catch (IOException e) {
-            logger.warn("Failed to flush record to HDFS.", e);
-            isHdfsAlive = false;
+        if (lastHdfsResult == SUCCESS) {
+            lastHdfsResult = fileStrategy.append(record);
         }
     }
 
     @Override
     public void heartbeat() {
-        try {
-            doHeartbeat();
-        } catch (IOException e) {
-            logger.warn("Failed to flush record to HDFS.", e);
-            isHdfsAlive = false;
-        }
-    }
-
-    private final class HadoopFile implements AutoCloseable {
-        final long openTime;
-        final long projectedCloseTime;
-        final Path path;
-        final FSDataOutputStream stream;
-        final DataFileWriter<GenericRecord> writer;
-
-        long lastSyncTime;
-        int recordsSinceLastSync;
-
-        @SuppressWarnings("resource")
-        public HadoopFile(Path path) throws IOException {
-            this.path = path;
-            this.stream = hadoopFs.create(path, hdfsReplication);
-
-            this.writer =
-                    new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema))
-                    .create(schema, stream);
-            this.writer.setSyncInterval(1 << 30);
-            this.writer.setFlushOnEveryBlock(true);
-
-            // Sync the file on open to make sure the
-            // connection actually works, because
-            // HDFS allows file creation even with no
-            // datanodes available
-            this.stream.hsync();
-
-            this.openTime = this.lastSyncTime = System.currentTimeMillis();
-            this.recordsSinceLastSync = 0;
-            this.projectedCloseTime = openTime + newFileEveryMillis;
-        }
-
-        public void close() throws IOException { writer.close(); }
-    }
-
-    @FunctionalInterface
-    public interface IOExceptionThrower {
-        public abstract void run() throws IOException;
-    }
-
-    private static boolean throwsIoException(final IOExceptionThrower r) {
-        try {
-            r.run();
-            return false;
-        } catch (final IOException ioe) {
-            return true;
-        }
+        lastHdfsResult = fileStrategy.heartbeat();
     }
 }
