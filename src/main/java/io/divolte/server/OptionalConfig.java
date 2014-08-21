@@ -8,6 +8,7 @@ import java.util.function.*;
 public abstract class OptionalConfig<T> {
 
     private OptionalConfig() {
+        // Prevent external extension.
     }
 
     private static final OptionalConfig<?> EMPTY = new ConfigAbsent();
