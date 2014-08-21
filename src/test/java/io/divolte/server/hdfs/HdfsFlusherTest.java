@@ -27,6 +27,9 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class HdfsFlusherTest {
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
+    private static final String ARBITRARY_IP = "8.8.8.8";
+
     private Path tempDir;
 
     @Before
@@ -52,7 +55,7 @@ public class HdfsFlusherTest {
         List<Record> records = LongStream.range(0, 10)
         .mapToObj((time) -> new GenericRecordBuilder(schema)
         .set("ts", time)
-        .set("remoteHost", "8.8.8.8")
+        .set("remoteHost", ARBITRARY_IP)
         .build())
         .collect(Collectors.toList());
 
@@ -78,7 +81,7 @@ public class HdfsFlusherTest {
         List<Record> records = LongStream.range(0, 5)
         .mapToObj((time) -> new GenericRecordBuilder(schema)
         .set("ts", time)
-        .set("remoteHost", "8.8.8.8")
+        .set("remoteHost", ARBITRARY_IP)
         .build())
         .collect(Collectors.toList());
 
