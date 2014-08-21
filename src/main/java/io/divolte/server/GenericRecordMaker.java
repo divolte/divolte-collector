@@ -56,9 +56,6 @@ final class GenericRecordMaker {
     private final LoadingCache<String,ReadableUserAgent> uaLookupCache;
 
 
-    public GenericRecordMaker(Schema schema, Config config) {
-        this (schema, config, config);
-    }
 
     public GenericRecordMaker(Schema schema, Config schemaConfig, Config globalConfig) {
         Objects.requireNonNull(schemaConfig);
