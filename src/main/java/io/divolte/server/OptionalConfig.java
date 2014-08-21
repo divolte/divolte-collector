@@ -80,6 +80,9 @@ public abstract class OptionalConfig<T> {
     @Override
     public abstract int hashCode();
 
+    @Override
+    public abstract boolean equals(Object obj);
+
     public abstract void ifPresent(Consumer<? super T> consumer);
 
     public abstract <U> OptionalConfig<U> map(Function<? super T,? extends U> mapper);
@@ -154,6 +157,12 @@ public abstract class OptionalConfig<T> {
         @Override
         public int hashCode() {
             return Objects.hashCode(this.exception);
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            return this == other ||
+                   null != other && getClass() == other.getClass() && Objects.equals(exception, ((ConfigAbsent)other).exception);
         }
 
         @Override
@@ -245,6 +254,12 @@ public abstract class OptionalConfig<T> {
         @Override
         public int hashCode() {
             return Objects.hashCode(this.value);
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            return this == other ||
+                   null != other && getClass() == other.getClass() && Objects.equals(value, ((ConfigPresent)other).value);
         }
 
         @Override
