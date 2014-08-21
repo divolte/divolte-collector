@@ -94,22 +94,18 @@ public abstract class OptionalConfig<T> {
         private RuntimeException exception;
 
         public ConfigAbsent() {
-            super();
             this.exception = null;
         }
 
         public ConfigAbsent(String message) {
-            super();
             this.exception = new IllegalStateException(message);
         }
 
         public ConfigAbsent(String message, Exception e) {
-            super();
             this.exception = new IllegalStateException(message, e);
         }
 
         public ConfigAbsent(Exception e) {
-            super();
             this.exception = new IllegalStateException(e);
         }
 
@@ -187,7 +183,6 @@ public abstract class OptionalConfig<T> {
         private T value;
 
         public ConfigPresent(T value) {
-            super();
             this.value = value;
         }
 
