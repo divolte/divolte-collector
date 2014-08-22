@@ -114,6 +114,15 @@ public class GenericRecordMakerTest {
     }
 
     @Test
+    public void shouldFailOnStartupIfMappingMissingField() throws IOException {
+        expected.expect(SchemaMappingException.class);
+        expected.expectMessage("Schema missing mapped field: fieldThatIsMissingFromSchema");
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-wrong-field");
+        new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+    }
+
+    @Test
     public void shouldSetCustomCookieValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-customcookie");

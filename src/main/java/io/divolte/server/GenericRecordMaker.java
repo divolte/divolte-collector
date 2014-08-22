@@ -88,7 +88,7 @@ final class GenericRecordMaker {
         checkVersion(version);
 
         this.regexes = regexMapFromConfig(schemaConfig);
-        this.setters = setterListFromConfig(schemaConfig);
+        this.setters = setterListFromConfig(schema, schemaConfig);
 
         this.schema = Objects.requireNonNull(schema);
 
@@ -116,9 +116,14 @@ final class GenericRecordMaker {
         }
     }
 
-    private static FieldSetter fieldSetterFromConfig(final Entry<String, ConfigValue> entry) {
+    private static FieldSetter fieldSetterFromConfig(final Schema schema, final Entry<String, ConfigValue> entry) {
+        final String fieldName = entry.getKey();
+        final Schema.Field field = schema.getField(fieldName);
+        if (null == field) {
+            throw new SchemaMappingException("Schema missing mapped field: %s", fieldName);
+        }
         final FieldProducer<?> fieldProducer = fieldGetterFromConfig(entry);
-        return (b, e, c) -> fieldProducer.get(c).ifPresent((v) -> b.set(entry.getKey(), v));
+        return (b, e, c) -> fieldProducer.get(c).ifPresent((v) -> b.set(field, v));
     }
 
     private static FieldProducer<?> fieldGetterFromConfig(final Entry<String, ConfigValue> entry) {
@@ -313,7 +318,7 @@ final class GenericRecordMaker {
         }
     }
 
-    private static List<FieldSetter> setterListFromConfig(final Config config) {
+    private static List<FieldSetter> setterListFromConfig(final Schema schema, final Config config) {
         if (!config.hasPath("divolte.tracking.schema_mapping.fields")) {
             throw new SchemaMappingException("Schema mapping configuration has no field mappings.");
         }
@@ -321,8 +326,8 @@ final class GenericRecordMaker {
         final Set<Entry<String, ConfigValue>> entrySet = config.getConfig("divolte.tracking.schema_mapping.fields").root().entrySet();
 
         return entrySet.stream()
-        .map(GenericRecordMaker::fieldSetterFromConfig)
-        .collect(Collectors.toCollection(() -> new ArrayList<>(entrySet.size())));
+            .map((e) -> fieldSetterFromConfig(schema, e))
+            .collect(Collectors.toCollection(() -> new ArrayList<>(entrySet.size())));
     }
 
     private static Map<String,Pattern> regexMapFromConfig(final Config config) {
