@@ -22,6 +22,7 @@ public final class CookieValues {
     };
 
     private CookieValues() {
+        // Prevent external instantiation.
     }
 
     public static CookieValue generate(final long ts) {
