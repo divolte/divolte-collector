@@ -26,12 +26,11 @@ public final class CookieValues {
     }
 
     public static CookieValue generate(final long ts) {
-        final byte[] randomBytes = new byte[8];
         final byte[] valueBytes = new byte[16];
-
         final ByteBuffer buf = ByteBuffer.wrap(valueBytes);
         buf.putLong(ts);
 
+        final byte[] randomBytes = new byte[8];
         localRandom.get().nextBytes(randomBytes);
         buf.put(randomBytes);
 
