@@ -3,6 +3,7 @@ package io.divolte.server;
 import io.divolte.server.geo2ip.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import net.sf.uadetector.OperatingSystem;
 import net.sf.uadetector.ReadableUserAgent;
 import net.sf.uadetector.UserAgentStringParser;
 import net.sf.uadetector.service.UADetectorServiceFactory;
@@ -191,7 +192,6 @@ final class GenericRecordMaker {
     }
 
     private FieldSetter simpleFieldSetterForConfig(final String name, final ConfigValue value) {
-        final StringValueExtractor uaExtractor = fieldExtractorForName("userAgent");
         final StringValueExtractor remoteHostExtractor = fieldExtractorForName("remoteHost");
         final StringValueExtractor refererExtractor = fieldExtractorForName("referer");
         final StringValueExtractor locationExtractor = fieldExtractorForName("location");
@@ -273,25 +273,25 @@ final class GenericRecordMaker {
         case "timestamp":
             return (b, e, c) -> b.set(name, e.getAttachment(REQUEST_START_TIME_KEY));
         case "userAgent":
-            return (b, e, c) -> uaExtractor.extract(e).ifPresent((ua) -> b.set(name, ua) );
+            return (b, e, c) -> c.getUserAgent().ifPresent((ua) -> b.set(name, ua) );
         case "userAgentName":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getName()));
+            return (b, e, c) -> c.getUserAgentLookup().map(ReadableUserAgent::getName).ifPresent((uan) -> b.set(name, uan));
         case "userAgentFamily":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getFamily().getName()));
+            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getFamily().getName()).ifPresent((uaf) -> b.set(name, uaf));
         case "userAgentVendor":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getProducer()));
+            return (b, e, c) -> c.getUserAgentLookup().map(ReadableUserAgent::getProducer).ifPresent((uap) -> b.set(name, uap));
         case "userAgentType":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getType().getName()));
+            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getType().getName()).ifPresent((uat) -> b.set(name, uat));
         case "userAgentVersion":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getVersionNumber().toVersionString()));
+            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getVersionNumber().toVersionString()).ifPresent((uav) -> b.set(name, uav));
         case "userAgentDeviceCategory":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getDeviceCategory().getName()));
+            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getDeviceCategory().getName()).ifPresent((uac) -> b.set(name, uac));
         case "userAgentOsFamily":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getOperatingSystem().getFamily().getName()));
+            return (b, e, c) -> c.getUserAgentOperatingSystem().map((os) -> os.getFamily().getName()).ifPresent((uaf) -> b.set(name, uaf));
         case "userAgentOsVersion":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getOperatingSystem().getVersionNumber().toVersionString()));
+            return (b, e, c) -> c.getUserAgentOperatingSystem().map((os) -> os.getVersionNumber().toVersionString()).ifPresent((uav) -> b.set(name, uav));
         case "userAgentOsVendor":
-            return (b, e, c) -> uaExtractor.extract(e).map(this::parseUnchecked).ifPresent((uan) -> b.set(name, uan.getOperatingSystem().getProducer()));
+            return (b, e, c) -> c.getUserAgentOperatingSystem().map(OperatingSystem::getProducer).ifPresent((uav) -> b.set(name, uav));
         case "remoteHost":
             return (b, e, c) -> remoteHostExtractor.extract(e).ifPresent((rh) -> b.set(name, rh));
         case "referer":
@@ -403,12 +403,12 @@ final class GenericRecordMaker {
                 });
     }
 
-    private ReadableUserAgent parseUnchecked(String key) {
+    private Optional<ReadableUserAgent> parseUserAgent(final String userAgentString) {
         try {
-            return uaLookupCache.get(key);
-        } catch (ExecutionException e) {
-            logger.warn("Failed to parse user agent string for: {}", key);
-            return null;
+            return Optional.of(uaLookupCache.get(userAgentString));
+        } catch (final ExecutionException e) {
+            logger.warn("Failed to parse user agent string for: " + userAgentString, e);
+            return Optional.empty();
         }
     }
 
@@ -418,10 +418,16 @@ final class GenericRecordMaker {
         // In general a regular expression is used against a single value, but it can be used more than once.
         private final Map<String, Matcher> matchers = Maps.newHashMapWithExpectedSize(regexes.size() * 2);
 
+        private final LazyReference<Optional<String>> userAgent;
+        private final LazyReference<Optional<ReadableUserAgent>> userAgentLookup;
         private final LazyReference<Optional<CityResponse>> geoLookup;
 
         private Context(final HttpServerExchange serverExchange) {
             Objects.requireNonNull(serverExchange);
+            this.userAgent = new LazyReference<>(() ->
+                Optional.ofNullable(serverExchange.getRequestHeaders().getFirst(Headers.USER_AGENT)));
+            this.userAgentLookup = new LazyReference<>(() ->
+                getUserAgent().flatMap(GenericRecordMaker.this::parseUserAgent));
             this.geoLookup = new LazyReference<>(() -> geoipService.flatMap((service) -> {
                 final InetSocketAddress sourceAddress = serverExchange.getSourceAddress();
                 final InetAddress ipAddress = null != sourceAddress ? sourceAddress.getAddress() : null;
@@ -432,6 +438,18 @@ final class GenericRecordMaker {
         public Matcher matcher(final String regex, final String field, final String value) {
             final String key = regex + field;
             return matchers.computeIfAbsent(key, (ignored) -> regexes.get(regex).matcher(value));
+        }
+
+        public Optional<String> getUserAgent() {
+            return userAgent.get();
+        }
+
+        public Optional<ReadableUserAgent> getUserAgentLookup() {
+            return userAgentLookup.get();
+        }
+
+        public Optional<OperatingSystem> getUserAgentOperatingSystem() {
+            return getUserAgentLookup().map(ReadableUserAgent::getOperatingSystem);
         }
 
         private <T> Optional<T> getGeoField(Function<CityResponse, T> getter) {
