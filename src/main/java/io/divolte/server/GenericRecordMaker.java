@@ -122,19 +122,19 @@ final class GenericRecordMaker {
     }
 
     private static FieldProducer<?> fieldGetterFromConfig(final Entry<String, ConfigValue> entry) {
-        final String name = entry.getKey();
         final ConfigValue value = entry.getValue();
 
         switch (value.valueType()) {
         case STRING:
             return simpleFieldGetter((String) value.unwrapped());
         case OBJECT:
+            final String fieldName = entry.getKey();
             final Config subConfig = ((ConfigObject) value).toConfig();
             if (!subConfig.hasPath("type")) {
-                throw new SchemaMappingException("Missing type property on configuration for field %s.", name);
+                throw new SchemaMappingException("Missing type property on configuration for field %s.", fieldName);
             }
             final String type = subConfig.getString("type");
-            return complexFieldGetterForConfig(name, type, subConfig);
+            return complexFieldGetterForConfig(fieldName, type, subConfig);
         default:
             throw new SchemaMappingException("Schema mapping for fields can only be of type STRING or OBJECT. Found %s.", value.valueType());
         }
