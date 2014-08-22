@@ -4,6 +4,7 @@ apply plugin: 'application'
 apply plugin: 'js'
 apply plugin: 'findbugs'
 apply plugin: 'pmd'
+apply plugin: 'jacoco'
 apply plugin: 'application'
 
 sourceCompatibility = 1.8
@@ -96,6 +97,10 @@ findbugs {
 
 pmd {
     toolVersion = "5.1.2"
+}
+
+jacoco {
+    toolVersion = "0.7.1.201405082137"
 }
 
 // For now we prefer to have a HTML report instead of XML.
