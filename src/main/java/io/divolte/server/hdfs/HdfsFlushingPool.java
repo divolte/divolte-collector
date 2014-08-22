@@ -39,6 +39,6 @@ public final class HdfsFlushingPool extends ProcessingPool<HdfsFlusher, AvroReco
     }
 
     public void enqueueRecordsForFlushing(final AvroRecordBuffer record)  {
-        enqueue(record.getPartyId().value, record);
+        enqueue(record.getPartyId().getValue(), record);
     }
 }

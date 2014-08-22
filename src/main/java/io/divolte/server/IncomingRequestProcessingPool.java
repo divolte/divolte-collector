@@ -98,6 +98,6 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     }
 
     public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
-        enqueue(partyId.value, exchange);
+        enqueue(partyId.getValue(), exchange);
     }
 }

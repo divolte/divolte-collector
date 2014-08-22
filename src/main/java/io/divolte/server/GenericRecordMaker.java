@@ -307,9 +307,9 @@ final class GenericRecordMaker {
         case "screenPixelHeight":
             return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("j")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((sh) -> b.set(name, sh));
         case "partyId":
-            return (b, e, c) -> b.set(name, e.getAttachment(PARTY_COOKIE_KEY).value);
+            return (b, e, c) -> b.set(name, e.getAttachment(PARTY_COOKIE_KEY).getValue());
         case "sessionId":
-            return (b, e, c) -> b.set(name, e.getAttachment(SESSION_COOKIE_KEY).value);
+            return (b, e, c) -> b.set(name, e.getAttachment(SESSION_COOKIE_KEY).getValue());
         case "pageViewId":
             return (b, e, c) -> b.set(name, e.getAttachment(PAGE_VIEW_ID_KEY));
         default:
