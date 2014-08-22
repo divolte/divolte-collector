@@ -2,6 +2,8 @@ package io.divolte.server;
 
 import io.divolte.server.geo2ip.LookupService;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 import net.sf.uadetector.OperatingSystem;
 import net.sf.uadetector.ReadableUserAgent;
@@ -24,6 +26,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -45,6 +48,7 @@ import com.maxmind.geoip2.record.City;
 import com.maxmind.geoip2.record.Continent;
 import com.maxmind.geoip2.record.Country;
 import com.maxmind.geoip2.record.Location;
+import com.maxmind.geoip2.record.Postal;
 import com.maxmind.geoip2.record.Subdivision;
 import com.maxmind.geoip2.record.Traits;
 import com.typesafe.config.Config;
@@ -113,208 +117,199 @@ final class GenericRecordMaker {
     }
 
     private FieldSetter fieldSetterFromConfig(final Entry<String, ConfigValue> entry) {
+        final FieldProducer<?> fieldProducer = fieldGetterFromConfig(entry);
+        return (b, e, c) -> fieldProducer.get(c).ifPresent((v) -> b.set(entry.getKey(), v));
+    }
+
+    private FieldProducer<?> fieldGetterFromConfig(final Entry<String, ConfigValue> entry) {
         final String name = entry.getKey();
         final ConfigValue value = entry.getValue();
 
-
         switch (value.valueType()) {
         case STRING:
-            return simpleFieldSetterForConfig(name, value);
+            return simpleFieldGetter((String) value.unwrapped());
         case OBJECT:
-            Config subConfig = ((ConfigObject) value).toConfig();
+            final Config subConfig = ((ConfigObject) value).toConfig();
             if (!subConfig.hasPath("type")) {
                 throw new SchemaMappingException("Missing type property on configuration for field %s.", name);
             }
-
             final String type = subConfig.getString("type");
-
-            return complexFieldSetterForConfig(name, type, subConfig);
+            return complexFieldGetterForConfig(name, type, subConfig);
         default:
             throw new SchemaMappingException("Schema mapping for fields can only be of type STRING or OBJECT. Found %s.", value.valueType());
         }
     }
 
-    private FieldSetter complexFieldSetterForConfig(final String name, final String type, final Config config) {
+    private FieldProducer<?> complexFieldGetterForConfig(final String name, final String type, final Config config) {
         switch (type) {
         case "cookie":
-            return (b,e,c) -> Optional.ofNullable(e.getRequestCookies().get(config.getString("name"))).ifPresent((val) -> b.set(name, val.getValue()));
+            return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(config.getString("name")))
+                                  .map(Cookie::getValue);
         case "regex_group":
-            return regexGroupFieldSetter(name, config);
+            return regexGroupFieldGetter(config);
         case "regex_name":
-            return regexNameFieldSetter(name, config);
+            return regexNameFieldGetter(config);
         default:
             throw new SchemaMappingException("Unknown mapping type: %s for field %s.", type, name);
         }
     }
 
-    private FieldSetter regexNameFieldSetter(final String name, final Config config) {
-        final List<String> regexNames = config.getStringList("regexes");
+    private FieldProducer<String> regexNameFieldGetter(final Config config) {
+        final Stream<String> regexNames = config.getStringList("regexes").stream();
         final String fieldName = config.getString("field");
-        final StringValueExtractor fieldExtractor = fieldExtractorForName(fieldName);
+        final FieldProducer<String> fieldProducer = regexFieldGetterForName(fieldName);
 
-        return (b, e, c) ->
-            fieldExtractor.extract(e).ifPresent((val) ->
-            regexNames.stream()
-            .filter((nm) -> c.matcher(nm, fieldName, val).matches())
-            .findFirst()
-            .ifPresent((nm) -> b.set(name, nm)
-            ));
+        return (c) -> fieldProducer.get(c)
+                                 .flatMap((s) -> regexNames.filter((rn) -> c.matcher(rn, fieldName, s).matches())
+                                                           .findFirst());
     }
 
-    private FieldSetter regexGroupFieldSetter(final String name, final Config config) {
+    private FieldProducer<String> regexGroupFieldGetter(final Config config) {
         final String regexName = config.getString("regex");
         final String fieldName = config.getString("field");
         final String groupName = config.getString("group");
-        final StringValueExtractor fieldExtractor = fieldExtractorForName(fieldName);
+        final FieldProducer<String> fieldProducer = regexFieldGetterForName(fieldName);
 
-        return (b, e, c) ->
-            fieldExtractor.extract(e)
-            .ifPresent((val) ->
-                groupFromMatcher(c.matcher(regexName, fieldName, val), groupName)
-                .ifPresent((match) ->
-                    b.set(name, match))
-            );
+        return (c) -> fieldProducer.get(c)
+                                 .flatMap((s) -> groupFromMatcher(c.matcher(regexName, fieldName, s), groupName));
     }
 
-    private StringValueExtractor fieldExtractorForName(final String name) {
+    private static final FieldProducer<String> REMOTE_HOST_FIELD_PRODUCER =
+            (c) -> Optional.ofNullable(c.getServerExchange().getSourceAddress())
+                           .flatMap((a) -> Optional.ofNullable(a.getHostString()));
+    private static final FieldProducer<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
+    private static final FieldProducer<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
+    private static final FieldProducer<String> USERAGENT_FIELD_PRODUCER = Context::getUserAgent;
+    private static final FieldProducer<Long> TIMESTAMP_FIELD_PRODUCER = (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
+    private static final FieldProducer<String> PAGE_VIEW_ID_PRODUCER = (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
+
+    private FieldProducer<String> regexFieldGetterForName(final String name) {
         switch (name) {
         case "userAgent":
-            return (e) -> Optional.ofNullable(e.getRequestHeaders().getFirst(Headers.USER_AGENT));
+            return USERAGENT_FIELD_PRODUCER;
         case "remoteHost":
-            return (e) -> Optional.ofNullable(e.getSourceAddress())
-                                  .flatMap((a) -> Optional.ofNullable(a.getHostString()));
+            return REMOTE_HOST_FIELD_PRODUCER;
         case "referer":
-            return (e) -> Optional.ofNullable(e.getQueryParameters().get("r")).map(Deque::getFirst);
+            return REFERER_FIELD_PRODUCER;
         case "location":
-            return (e) -> Optional.ofNullable(e.getQueryParameters().get("l")).map(Deque::getFirst);
+            return LOCATION_FIELD_PRODUCER;
         default:
             throw new SchemaMappingException("Only userAgent, remoteHost, referer and location fields can be used for regex matchers. Found %s.", name);
         }
     }
 
-    private FieldSetter simpleFieldSetterForConfig(final String name, final ConfigValue value) {
-        final StringValueExtractor remoteHostExtractor = fieldExtractorForName("remoteHost");
-        final StringValueExtractor refererExtractor = fieldExtractorForName("referer");
-        final StringValueExtractor locationExtractor = fieldExtractorForName("location");
-
-        switch ((String) value.unwrapped()) {
+    private FieldProducer<?> simpleFieldGetter(final String name) {
+        switch (name) {
         case "firstInSession":
-            return (b, e, c) -> b.set(name, !e.getRequestCookies().containsKey(sessionIdCookie));
+            return (c) -> Optional.of(!c.getServerExchange().getRequestCookies().containsKey(sessionIdCookie));
         case "geoCityId":
-            return (b, e, c) -> c.getCity().ifPresent((city) -> b.set(name, city.getGeoNameId()));
+            return (c) -> c.getCity().map(City::getGeoNameId);
         case "geoCityName":
-            return (b, e, c) -> c.getCity().ifPresent((city) -> b.set(name, city.getName()));
+            return (c) -> c.getCity().map(City::getName);
         case "geoContinentCode":
-            return (b, e, c) -> c.getContinent().ifPresent((continent) -> b.set(name, continent.getCode()));
+            return (c) -> c.getContinent().map(Continent::getCode);
         case "geoContinentId":
-            return (b, e, c) -> c.getContinent().ifPresent((continent) -> b.set(name, continent.getGeoNameId()));
+            return (c) -> c.getContinent().map(Continent::getGeoNameId);
         case "geoContinentName":
-            return (b, e, c) -> c.getContinent().ifPresent((continent) -> b.set(name, continent.getName()));
+            return (c) -> c.getContinent().map(Continent::getName);
         case "geoCountryCode":
-            return (b, e, c) -> c.getCountry().ifPresent((country) -> b.set(name, country.getIsoCode()));
+            return (c) -> c.getCountry().map(Country::getIsoCode);
         case "geoCountryId":
-            return (b, e, c) -> c.getCountry().ifPresent((country) -> b.set(name, country.getGeoNameId()));
+            return (c) -> c.getCountry().map(Country::getGeoNameId);
         case "geoCountryName":
-            return (b, e, c) -> c.getCountry().ifPresent((country) -> b.set(name, country.getName()));
+            return (c) -> c.getCountry().map(Country::getName);
         case "geoLatitude":
-            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getLatitude()));
+            return (c) -> c.getLocation().map(Location::getLatitude);
         case "geoLongitude":
-            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getLongitude()));
+            return (c) -> c.getLocation().map(Location::getLongitude);
         case "geoMetroCode":
-            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getMetroCode()));
+            return (c) -> c.getLocation().map(Location::getMetroCode);
         case "geoTimeZone":
-            return (b, e, c) -> c.getLocation().ifPresent((location) -> b.set(name, location.getTimeZone()));
+            return (c) -> c.getLocation().map(Location::getTimeZone);
         case "geoMostSpecificSubdivisionCode":
-            return (b, e, c) -> c.getMostSpecificSubdivision().ifPresent((subdivision) -> b.set(name, subdivision.getIsoCode()));
+            return (c) -> c.getMostSpecificSubdivision().map(Subdivision::getIsoCode);
         case "geoMostSpecificSubdivisionId":
-            return (b, e, c) -> c.getMostSpecificSubdivision().ifPresent((subdivision) -> b.set(name, subdivision.getGeoNameId()));
+            return (c) -> c.getMostSpecificSubdivision().map(Subdivision::getGeoNameId);
         case "geoMostSpecificSubdivisionName":
-            return (b, e, c) -> c.getMostSpecificSubdivision().ifPresent((subdivision) -> b.set(name, subdivision.getName()));
+            return (c) -> c.getMostSpecificSubdivision().map(Subdivision::getName);
         case "geoPostalCode":
-            return (b, e, c) -> c.getGeoField((r) -> r.getPostal()).ifPresent((postal) -> b.set(name, postal.getCode()));
+            return (c) -> c.getGeoField((r) -> r.getPostal()).map(Postal::getCode);
         case "geoRegisteredCountryCode":
-            return (b, e, c) -> c.getRegisteredCountry().ifPresent((country) -> b.set(name, country.getIsoCode()));
+            return (c) -> c.getRegisteredCountry().map(Country::getIsoCode);
         case "geoRegisteredCountryId":
-            return (b, e, c) -> c.getRegisteredCountry().ifPresent((country) -> b.set(name, country.getGeoNameId()));
+            return (c) -> c.getRegisteredCountry().map(Country::getGeoNameId);
         case "geoRegisteredCountryName":
-            return (b, e, c) -> c.getRegisteredCountry().ifPresent((country) -> b.set(name, country.getName()));
+            return (c) -> c.getRegisteredCountry().map(Country::getName);
         case "geoRepresentedCountryCode":
-            return (b, e, c) -> c.getRepresentedCountry().ifPresent((country) -> b.set(name, country.getIsoCode()));
+            return (c) -> c.getRepresentedCountry().map(Country::getIsoCode);
         case "geoRepresentedCountryId":
-            return (b, e, c) -> c.getRepresentedCountry().ifPresent((country) -> b.set(name, country.getGeoNameId()));
+            return (c) -> c.getRepresentedCountry().map(Country::getGeoNameId);
         case "geoRepresentedCountryName":
-            return (b, e, c) -> c.getRepresentedCountry().ifPresent((country) -> b.set(name, country.getName()));
+            return (c) -> c.getRepresentedCountry().map(Country::getName);
         case "geoSubdivisionCodes":
-            return (b, e, c) -> c.getSubdivisions()
-                                 .map((s) -> Lists.transform(s, Subdivision::getIsoCode))
-                                 .ifPresent((names) -> b.set(name, names));
+            return (c) -> c.getSubdivisions().map((s) -> Lists.transform(s, Subdivision::getIsoCode));
         case "geoSubdivisionIds":
-            return (b, e, c) -> c.getSubdivisions()
-                                 .map((s) -> Lists.transform(s, Subdivision::getGeoNameId))
-                                 .ifPresent((names) -> b.set(name, names));
+            return (c) -> c.getSubdivisions().map((s) -> Lists.transform(s, Subdivision::getGeoNameId));
         case "geoSubdivisionNames":
-            return (b, e, c) -> c.getSubdivisions()
-                                 .map((s) -> Lists.transform(s, Subdivision::getName))
-                                 .ifPresent((names) -> b.set(name, names));
+            return (c) -> c.getSubdivisions().map((s) -> Lists.transform(s, Subdivision::getName));
         case "geoAutonomousSystemNumber":
-            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getAutonomousSystemNumber()));
+            return (c) -> c.getTraits().map(Traits::getAutonomousSystemNumber);
         case "geoAutonomousSystemOrganization":
-            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name,
-                                                                          traits.getAutonomousSystemOrganization()));
+            return (c) -> c.getTraits().map(Traits::getAutonomousSystemOrganization);
         case "geoDomain":
-            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getDomain()));
+            return (c) -> c.getTraits().map(Traits::getDomain);
         case "geoIsp":
-            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getIsp()));
+            return (c) -> c.getTraits().map(Traits::getIsp);
         case "geoOrganisation":
-            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.getOrganization()));
+            return (c) -> c.getTraits().map(Traits::getOrganization);
         case "geoAnonymousProxy":
-            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.isAnonymousProxy()));
+            return (c) -> c.getTraits().map(Traits::isAnonymousProxy);
         case "geoSatelliteProvider":
-            return (b, e, c) -> c.getTraits().ifPresent((traits) -> b.set(name, traits.isSatelliteProvider()));
+            return (c) -> c.getTraits().map(Traits::isSatelliteProvider);
         case "timestamp":
-            return (b, e, c) -> b.set(name, e.getAttachment(REQUEST_START_TIME_KEY));
+            return TIMESTAMP_FIELD_PRODUCER;
         case "userAgent":
-            return (b, e, c) -> c.getUserAgent().ifPresent((ua) -> b.set(name, ua) );
+            return USERAGENT_FIELD_PRODUCER;
         case "userAgentName":
-            return (b, e, c) -> c.getUserAgentLookup().map(ReadableUserAgent::getName).ifPresent((uan) -> b.set(name, uan));
+            return (c) -> c.getUserAgentLookup().map(ReadableUserAgent::getName);
         case "userAgentFamily":
-            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getFamily().getName()).ifPresent((uaf) -> b.set(name, uaf));
+            return (c) -> c.getUserAgentLookup().map((ua) -> ua.getFamily().getName());
         case "userAgentVendor":
-            return (b, e, c) -> c.getUserAgentLookup().map(ReadableUserAgent::getProducer).ifPresent((uap) -> b.set(name, uap));
+            return (c) -> c.getUserAgentLookup().map(ReadableUserAgent::getProducer);
         case "userAgentType":
-            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getType().getName()).ifPresent((uat) -> b.set(name, uat));
+            return (c) -> c.getUserAgentLookup().map((ua) -> ua.getType().getName());
         case "userAgentVersion":
-            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getVersionNumber().toVersionString()).ifPresent((uav) -> b.set(name, uav));
+            return (c) -> c.getUserAgentLookup().map((ua) -> ua.getVersionNumber().toVersionString());
         case "userAgentDeviceCategory":
-            return (b, e, c) -> c.getUserAgentLookup().map((ua) -> ua.getDeviceCategory().getName()).ifPresent((uac) -> b.set(name, uac));
+            return (c) -> c.getUserAgentLookup().map((ua) -> ua.getDeviceCategory().getName());
         case "userAgentOsFamily":
-            return (b, e, c) -> c.getUserAgentOperatingSystem().map((os) -> os.getFamily().getName()).ifPresent((uaf) -> b.set(name, uaf));
+            return (c) -> c.getUserAgentOperatingSystem().map((os) -> os.getFamily().getName());
         case "userAgentOsVersion":
-            return (b, e, c) -> c.getUserAgentOperatingSystem().map((os) -> os.getVersionNumber().toVersionString()).ifPresent((uav) -> b.set(name, uav));
+            return (c) -> c.getUserAgentOperatingSystem().map((os) -> os.getVersionNumber().toVersionString());
         case "userAgentOsVendor":
-            return (b, e, c) -> c.getUserAgentOperatingSystem().map(OperatingSystem::getProducer).ifPresent((uav) -> b.set(name, uav));
+            return (c) -> c.getUserAgentOperatingSystem().map(OperatingSystem::getProducer);
         case "remoteHost":
-            return (b, e, c) -> remoteHostExtractor.extract(e).ifPresent((rh) -> b.set(name, rh));
+            return REMOTE_HOST_FIELD_PRODUCER;
         case "referer":
-            return (b, e, c) -> refererExtractor.extract(e).ifPresent((ref) -> b.set(name, ref));
+            return REFERER_FIELD_PRODUCER;
         case "location":
-            return (b, e, c) -> locationExtractor.extract(e).ifPresent((loc) -> b.set(name, loc));
+            return LOCATION_FIELD_PRODUCER;
         case "viewportPixelWidth":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("w")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((vw) -> b.set(name, vw));
+            return (c) -> c.getQueryParameter("w").map(Ints::tryParse);
         case "viewportPixelHeight":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("h")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((vh) -> b.set(name, vh));
+            return (c) -> c.getQueryParameter("h").map(Ints::tryParse);
         case "screenPixelWidth":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("i")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((sw) -> b.set(name, sw));
+            return (c) -> c.getQueryParameter("i").map(Ints::tryParse);
         case "screenPixelHeight":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("j")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((sh) -> b.set(name, sh));
+            return (c) -> c.getQueryParameter("j").map(Ints::tryParse);
         case "partyId":
-            return (b, e, c) -> b.set(name, e.getAttachment(PARTY_COOKIE_KEY).getValue());
+            return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map(CookieValues.CookieValue::getValue);
         case "sessionId":
-            return (b, e, c) -> b.set(name, e.getAttachment(SESSION_COOKIE_KEY).getValue());
+            return (c) -> c.getAttachment(SESSION_COOKIE_KEY).map(CookieValues.CookieValue::getValue);
         case "pageViewId":
-            return (b, e, c) -> b.set(name, e.getAttachment(PAGE_VIEW_ID_KEY));
+            return PAGE_VIEW_ID_PRODUCER;
         default:
-            throw new SchemaMappingException("Unknown field in schema mapping: %s", value);
+            throw new SchemaMappingException("Unknown field in schema mapping: %s", name);
         }
     }
 
@@ -343,13 +338,13 @@ final class GenericRecordMaker {
                 })) : Collections.emptyMap();
     }
 
-    private void checkVersion(final int version) {
+    private static void checkVersion(final int version) {
         if (version != 1) {
             throw new SchemaMappingException("Unsupported schema mapping configuration version: %d", version);
         }
     }
 
-    private Optional<String> groupFromMatcher(final Matcher matcher, final String group) {
+    private static Optional<String> groupFromMatcher(final Matcher matcher, final String group) {
         return matcher.matches() ? Optional.ofNullable(matcher.group(group)) : Optional.empty();
     }
 
@@ -359,8 +354,8 @@ final class GenericRecordMaker {
     }
 
     @FunctionalInterface
-    private interface StringValueExtractor {
-        Optional<String> extract(HttpServerExchange exchange);
+    private interface FieldProducer<T> {
+        Optional<T> get(Context context);
     }
 
     public GenericRecord makeRecordFromExchange(final HttpServerExchange exchange) {
@@ -411,12 +406,14 @@ final class GenericRecordMaker {
         // In general a regular expression is used against a single value, but it can be used more than once.
         private final Map<String, Matcher> matchers = Maps.newHashMapWithExpectedSize(regexes.size() * 2);
 
+        private final HttpServerExchange serverExchange;
+
         private final LazyReference<Optional<String>> userAgent;
         private final LazyReference<Optional<ReadableUserAgent>> userAgentLookup;
         private final LazyReference<Optional<CityResponse>> geoLookup;
 
         private Context(final HttpServerExchange serverExchange) {
-            Objects.requireNonNull(serverExchange);
+            this.serverExchange = Objects.requireNonNull(serverExchange);
             this.userAgent = new LazyReference<>(() ->
                 Optional.ofNullable(serverExchange.getRequestHeaders().getFirst(Headers.USER_AGENT)));
             this.userAgentLookup = new LazyReference<>(() ->
@@ -431,6 +428,18 @@ final class GenericRecordMaker {
         public Matcher matcher(final String regex, final String field, final String value) {
             final String key = regex + field;
             return matchers.computeIfAbsent(key, (ignored) -> regexes.get(regex).matcher(value));
+        }
+
+        public HttpServerExchange getServerExchange() {
+            return serverExchange;
+        }
+
+        public Optional<String> getQueryParameter(final String parameterName) {
+            return Optional.ofNullable(serverExchange.getQueryParameters().get(parameterName)).map(Deque::getFirst);
+        }
+
+        public <T> Optional<T> getAttachment(final AttachmentKey<T> key) {
+            return Optional.of(serverExchange.getAttachment(key));
         }
 
         public Optional<String> getUserAgent() {
