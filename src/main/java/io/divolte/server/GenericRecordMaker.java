@@ -39,6 +39,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 import com.maxmind.geoip2.model.CityResponse;
 import com.maxmind.geoip2.record.City;
 import com.maxmind.geoip2.record.Continent;
@@ -299,13 +300,13 @@ final class GenericRecordMaker {
         case "location":
             return (b, e, c) -> locationExtractor.extract(e).ifPresent((loc) -> b.set(name, loc));
         case "viewportPixelWidth":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("w")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((vw) -> b.set(name, vw));
+            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("w")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((vw) -> b.set(name, vw));
         case "viewportPixelHeight":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("h")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((vh) -> b.set(name, vh));
+            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("h")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((vh) -> b.set(name, vh));
         case "screenPixelWidth":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("i")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((sw) -> b.set(name, sw));
+            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("i")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((sw) -> b.set(name, sw));
         case "screenPixelHeight":
-            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("j")).map(Deque::getFirst).map(this::parseIntOrNull).ifPresent((sh) -> b.set(name, sh));
+            return (b, e, c) -> Optional.ofNullable(e.getQueryParameters().get("j")).map(Deque::getFirst).map(Ints::tryParse).ifPresent((sh) -> b.set(name, sh));
         case "partyId":
             return (b, e, c) -> b.set(name, e.getAttachment(PARTY_COOKIE_KEY).getValue());
         case "sessionId":
@@ -345,14 +346,6 @@ final class GenericRecordMaker {
     private void checkVersion(final int version) {
         if (version != 1) {
             throw new SchemaMappingException("Unsupported schema mapping configuration version: %d", version);
-        }
-    }
-
-    private Integer parseIntOrNull(final String s) {
-        try {
-            return Integer.valueOf(s);
-        } catch(NumberFormatException nfe) {
-            return null;
         }
     }
 
