@@ -100,7 +100,7 @@ final class GenericRecordMaker {
         logger.info("User agent parser data version: {}", parser.getDataVersion());
     }
 
-    private UserAgentStringParser parserBasedOnTypeConfig(String type) {
+    private static UserAgentStringParser parserBasedOnTypeConfig(String type) {
         switch (type) {
         case "caching_and_updating":
             logger.info("Using caching and updating user agent parser.");
@@ -116,12 +116,12 @@ final class GenericRecordMaker {
         }
     }
 
-    private FieldSetter fieldSetterFromConfig(final Entry<String, ConfigValue> entry) {
+    private static FieldSetter fieldSetterFromConfig(final Entry<String, ConfigValue> entry) {
         final FieldProducer<?> fieldProducer = fieldGetterFromConfig(entry);
         return (b, e, c) -> fieldProducer.get(c).ifPresent((v) -> b.set(entry.getKey(), v));
     }
 
-    private FieldProducer<?> fieldGetterFromConfig(final Entry<String, ConfigValue> entry) {
+    private static FieldProducer<?> fieldGetterFromConfig(final Entry<String, ConfigValue> entry) {
         final String name = entry.getKey();
         final ConfigValue value = entry.getValue();
 
@@ -140,7 +140,7 @@ final class GenericRecordMaker {
         }
     }
 
-    private FieldProducer<?> complexFieldGetterForConfig(final String name, final String type, final Config config) {
+    private static FieldProducer<?> complexFieldGetterForConfig(final String name, final String type, final Config config) {
         switch (type) {
         case "cookie":
             return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(config.getString("name")))
@@ -154,7 +154,7 @@ final class GenericRecordMaker {
         }
     }
 
-    private FieldProducer<String> regexNameFieldGetter(final Config config) {
+    private static FieldProducer<String> regexNameFieldGetter(final Config config) {
         final Stream<String> regexNames = config.getStringList("regexes").stream();
         final String fieldName = config.getString("field");
         final FieldProducer<String> fieldProducer = regexFieldGetterForName(fieldName);
@@ -164,7 +164,7 @@ final class GenericRecordMaker {
                                                            .findFirst());
     }
 
-    private FieldProducer<String> regexGroupFieldGetter(final Config config) {
+    private static FieldProducer<String> regexGroupFieldGetter(final Config config) {
         final String regexName = config.getString("regex");
         final String fieldName = config.getString("field");
         final String groupName = config.getString("group");
@@ -183,7 +183,7 @@ final class GenericRecordMaker {
     private static final FieldProducer<Long> TIMESTAMP_FIELD_PRODUCER = (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
     private static final FieldProducer<String> PAGE_VIEW_ID_PRODUCER = (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
 
-    private FieldProducer<String> regexFieldGetterForName(final String name) {
+    private static FieldProducer<String> regexFieldGetterForName(final String name) {
         switch (name) {
         case "userAgent":
             return USERAGENT_FIELD_PRODUCER;
@@ -198,10 +198,10 @@ final class GenericRecordMaker {
         }
     }
 
-    private FieldProducer<?> simpleFieldGetter(final String name) {
+    private static FieldProducer<?> simpleFieldGetter(final String name) {
         switch (name) {
         case "firstInSession":
-            return (c) -> Optional.of(!c.getServerExchange().getRequestCookies().containsKey(sessionIdCookie));
+            return (c) -> Optional.of(c.isFirstInSession());
         case "geoCityId":
             return (c) -> c.getCity().map(City::getGeoNameId);
         case "geoCityName":
@@ -313,7 +313,7 @@ final class GenericRecordMaker {
         }
     }
 
-    private List<FieldSetter> setterListFromConfig(final Config config) {
+    private static List<FieldSetter> setterListFromConfig(final Config config) {
         if (!config.hasPath("divolte.tracking.schema_mapping.fields")) {
             throw new SchemaMappingException("Schema mapping configuration has no field mappings.");
         }
@@ -321,11 +321,11 @@ final class GenericRecordMaker {
         final Set<Entry<String, ConfigValue>> entrySet = config.getConfig("divolte.tracking.schema_mapping.fields").root().entrySet();
 
         return entrySet.stream()
-        .map(this::fieldSetterFromConfig)
+        .map(GenericRecordMaker::fieldSetterFromConfig)
         .collect(Collectors.toCollection(() -> new ArrayList<>(entrySet.size())));
     }
 
-    private Map<String,Pattern> regexMapFromConfig(final Config config) {
+    private static Map<String,Pattern> regexMapFromConfig(final Config config) {
         return config.hasPath("divolte.tracking.schema_mapping.regexes") ?
         config.getConfig("divolte.tracking.schema_mapping.regexes").root().entrySet().stream().collect(
                 Collectors.<Entry<String,ConfigValue>, String, Pattern>toMap(
@@ -378,7 +378,7 @@ final class GenericRecordMaker {
         }
     }
 
-    private <K,V> LoadingCache<K, V> sizeBoundCacheFromLoadingFunction(Function<K, V> loader, int size) {
+    private static <K,V> LoadingCache<K, V> sizeBoundCacheFromLoadingFunction(Function<K, V> loader, int size) {
         return CacheBuilder
                 .newBuilder()
                 .maximumSize(size)
@@ -440,6 +440,10 @@ final class GenericRecordMaker {
 
         public <T> Optional<T> getAttachment(final AttachmentKey<T> key) {
             return Optional.of(serverExchange.getAttachment(key));
+        }
+
+        public boolean isFirstInSession() {
+            return !serverExchange.getRequestCookies().containsKey(sessionIdCookie);
         }
 
         public Optional<String> getUserAgent() {
