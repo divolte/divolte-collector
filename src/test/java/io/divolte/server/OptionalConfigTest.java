@@ -1,6 +1,7 @@
 package io.divolte.server;
 
 import com.typesafe.config.*;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -36,6 +37,7 @@ public class OptionalConfigTest {
 
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldProcessPresentPathsForAllTypes() {
         Config config = ConfigFactory.load("config-test-optionals-present");
@@ -218,11 +220,14 @@ public class OptionalConfigTest {
     }
 
 
+    @SuppressWarnings("rawtypes")
     private void checkAbsentNess(OptionalConfig optional) {
         assertTrue(optional.isAbsent());
         assertFalse(optional.isPresent());
         assertTrue(optional instanceof OptionalConfig.ConfigAbsent);
     }
+
+    @SuppressWarnings("rawtypes")
     private void checkPresentNess(OptionalConfig optional, Class valueType) {
         assertFalse(optional.isAbsent());
         assertTrue(optional.isPresent());

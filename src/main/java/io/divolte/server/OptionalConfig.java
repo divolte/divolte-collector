@@ -10,6 +10,7 @@ public abstract class OptionalConfig<T> {
     private OptionalConfig() {
     }
 
+    @SuppressWarnings("rawtypes")
     private static final OptionalConfig<?> EMPTY = new ConfigAbsent();
 
     //Constructors

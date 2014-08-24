@@ -1,16 +1,14 @@
 package io.divolte.server.hdfs;
 
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
+import static io.divolte.server.hdfs.HdfsFileUtils.*;
 import io.divolte.server.AvroRecordBuffer;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -19,7 +17,6 @@ import javax.annotation.concurrent.NotThreadSafe;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -70,15 +67,6 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         this.hdfsReplication = hdfsReplication;
 
         hdfsFileDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.dir");
-    }
-
-    private String findLocalHostName() {
-        // we should use the bind address from the divolte.server config to figure out the actual hostname we are listening on
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            return "localhost";
-        }
     }
 
     private Path newFilePath() {
@@ -218,16 +206,11 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         long lastSyncTime;
         int recordsSinceLastSync;
 
-        @SuppressWarnings("resource")
         public HadoopFile(Path path) throws IOException {
             this.path = path;
             this.stream = hadoopFs.create(path, hdfsReplication);
 
-            this.writer =
-                    new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema))
-                    .create(schema, stream);
-            this.writer.setSyncInterval(1 << 30);
-            this.writer.setFlushOnEveryBlock(true);
+            this.writer = setupAvroWriter(stream, schema);
 
             // Sync the file on open to make sure the
             // connection actually works, because
@@ -241,19 +224,5 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         }
 
         public void close() throws IOException { writer.close(); }
-    }
-
-    @FunctionalInterface
-    public interface IOExceptionThrower {
-        public abstract void run() throws IOException;
-    }
-
-    private static Optional<IOException> throwsIoException(final IOExceptionThrower r) {
-        try {
-            r.run();
-            return Optional.empty();
-        } catch (final IOException ioe) {
-            return Optional.of(ioe);
-        }
     }
 }
