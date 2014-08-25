@@ -400,7 +400,7 @@ final class RecordMapper {
         try {
             return Optional.of(uaLookupCache.get(userAgentString));
         } catch (final ExecutionException e) {
-            logger.warn("Failed to parse user agent string for: " + userAgentString, e);
+            logger.debug("Failed to parse user agent string for: " + userAgentString);
             return Optional.empty();
         }
     }
