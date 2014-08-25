@@ -1,6 +1,8 @@
 package io.divolte.server;
 
 import io.divolte.server.CookieValues.CookieValue;
+import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
+import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ProcessingPool;
@@ -9,7 +11,7 @@ import io.undertow.server.HttpServerExchange;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
+import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -40,7 +42,8 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                 config,
                 schemaFromConfig(config),
                 config.getBoolean("divolte.kafka_flusher.enabled") ? new KafkaFlushingPool(config) : null,
-                config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schemaFromConfig(config)) : null
+                config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schemaFromConfig(config)) : null,
+                lookupServiceFromConfig(config)
                 );
     }
 
@@ -51,13 +54,14 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             final Config config,
             final Schema schema,
             @Nullable final KafkaFlushingPool kafkaFlushingPool,
-            @Nullable final HdfsFlushingPool hdfsFlushingPool) {
+            @Nullable final HdfsFlushingPool hdfsFlushingPool,
+            @Nullable final LookupService geoipLookupService) {
         super(
                 numThreads,
                 maxQueueSize,
                 maxEnqueueDelay,
                 "Incoming Request Processor",
-                () -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, schema));
+                () -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema));
     }
 
     private static Schema schemaFromConfig(final Config config) {
@@ -77,19 +81,23 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
         }
     }
 
-    public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
-        enqueue(partyId.value, exchange);
+    private static LookupService lookupServiceFromConfig(final Config config) {
+        final LookupService service;
+        if (config.hasPath("divolte.geodb")) {
+            final String externalLocation = config.getString("divolte.geodb");
+            try {
+                service = new ExternalDatabaseLookupService(Paths.get(externalLocation));
+            } catch (final IOException e) {
+                logger.error("Failed to configure GeoIP database: " + externalLocation, e);
+                throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
+            }
+        } else {
+            service = null;
+        }
+        return service;
     }
 
-    @ParametersAreNonnullByDefault
-    static final class HttpServerExchangeWithPartyId {
-        final CookieValue partyId;
-        final HttpServerExchange exchange;
-
-        public HttpServerExchangeWithPartyId(final CookieValue partyId,
-                final HttpServerExchange exchange) {
-            this.partyId = Objects.requireNonNull(partyId);
-            this.exchange = Objects.requireNonNull(exchange);
-        }
+    public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
+        enqueue(partyId.getValue(), exchange);
     }
 }

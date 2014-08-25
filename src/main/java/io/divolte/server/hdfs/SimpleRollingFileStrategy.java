@@ -110,7 +110,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     @Override
     public HdfsOperationResult heartbeat() {
         if (isHdfsAlive) {
-            return throwsIoException(() -> possiblySync()).map((ioe) -> {
+            return throwsIoException(this::possiblySync).map((ioe) -> {
                 isHdfsAlive = false;
                 return FAILURE;
             }).orElse(SUCCESS);
@@ -138,7 +138,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
 
     @Override
     public void cleanup() {
-        throwsIoException(() -> currentFile.close())
+        throwsIoException(currentFile::close)
         .ifPresent((ioe) -> logger.warn("Failed to close HDFS file on flusher cleanup.", ioe));
     }
 
@@ -189,9 +189,9 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
             final Path newFilePath = newFilePath();
-            return throwsIoException(() -> {
-                currentFile = openNewFile(newFilePath);
-            }).map((ioe) -> {
+            return throwsIoException(() ->
+                currentFile = openNewFile(newFilePath)
+            ).map((ioe) -> {
                 isHdfsAlive = false;
                 lastFixAttempt = time;
                 // possibly we created the file, so silently attempt a delete

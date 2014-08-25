@@ -5,7 +5,7 @@ import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.Nonnull;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
@@ -18,19 +18,19 @@ public final class CookieValues {
     private final static ThreadLocal<SecureRandom> localRandom = new ThreadLocal<SecureRandom> () {
         protected SecureRandom initialValue() {
             return new SecureRandom();
-        };
+        }
     };
 
     private CookieValues() {
+        // Prevent external instantiation.
     }
 
     public static CookieValue generate(final long ts) {
-        final byte[] randomBytes = new byte[8];
         final byte[] valueBytes = new byte[16];
-
         final ByteBuffer buf = ByteBuffer.wrap(valueBytes);
         buf.putLong(ts);
 
+        final byte[] randomBytes = new byte[8];
         localRandom.get().nextBytes(randomBytes);
         buf.put(randomBytes);
 
@@ -54,14 +54,23 @@ public final class CookieValues {
         }
     }
 
-    @ParametersAreNonnullByDefault
     public final static class CookieValue {
-        public final String value;
-        public final long timestamp;
+        @Nonnull
+        private final String value;
+        private final long timestamp;
 
-        private CookieValue(byte[] valueBytes, long timestamp) {
+        private CookieValue(@Nonnull final byte[] valueBytes, final long timestamp) {
             this.value = Hex.encodeHexString(Objects.requireNonNull(valueBytes));
             this.timestamp = timestamp;
+        }
+
+        @Nonnull
+        public String getValue() {
+            return value;
+        }
+
+        public long getTimestamp() {
+            return timestamp;
         }
 
         @Override
@@ -75,14 +84,9 @@ public final class CookieValues {
         }
 
         @Override
-        public boolean equals(Object other) {
-            if (other == null)
-                return false;
-
+        public boolean equals(final Object other) {
             return this == other ||
-                    (
-                        getClass() == other.getClass() && value.equals(((CookieValue) other).value)
-                    );
+                   null != other && getClass() == other.getClass() && value.equals(((CookieValue) other).value);
         }
     }
 }

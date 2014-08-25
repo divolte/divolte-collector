@@ -8,6 +8,7 @@ import java.util.function.*;
 public abstract class OptionalConfig<T> {
 
     private OptionalConfig() {
+        // Prevent external extension.
     }
 
     private static final OptionalConfig<?> EMPTY = new ConfigAbsent();
@@ -76,7 +77,11 @@ public abstract class OptionalConfig<T> {
 
     public abstract T get();
 
-    public abstract int hashcode();
+    @Override
+    public abstract int hashCode();
+
+    @Override
+    public abstract boolean equals(Object obj);
 
     public abstract void ifPresent(Consumer<? super T> consumer);
 
@@ -91,25 +96,21 @@ public abstract class OptionalConfig<T> {
     //Non abstract subclasses
     protected final static class ConfigAbsent<T> extends OptionalConfig<T> {
 
-        private RuntimeException exception;
+        private final RuntimeException exception;
 
         public ConfigAbsent() {
-            super();
             this.exception = null;
         }
 
         public ConfigAbsent(String message) {
-            super();
             this.exception = new IllegalStateException(message);
         }
 
         public ConfigAbsent(String message, Exception e) {
-            super();
             this.exception = new IllegalStateException(message, e);
         }
 
         public ConfigAbsent(Exception e) {
-            super();
             this.exception = new IllegalStateException(e);
         }
 
@@ -154,8 +155,14 @@ public abstract class OptionalConfig<T> {
         }
 
         @Override
-        public int hashcode() {
+        public int hashCode() {
             return Objects.hashCode(this.exception);
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            return this == other ||
+                   null != other && getClass() == other.getClass() && Objects.equals(exception, ((ConfigAbsent)other).exception);
         }
 
         @Override
@@ -184,10 +191,9 @@ public abstract class OptionalConfig<T> {
 
     protected final static class ConfigPresent<T> extends OptionalConfig<T> {
 
-        private T value;
+        private final T value;
 
         public ConfigPresent(T value) {
-            super();
             this.value = value;
         }
 
@@ -246,8 +252,14 @@ public abstract class OptionalConfig<T> {
         }
 
         @Override
-        public int hashcode() {
+        public int hashCode() {
             return Objects.hashCode(this.value);
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            return this == other ||
+                   null != other && getClass() == other.getClass() && Objects.equals(value, ((ConfigPresent)other).value);
         }
 
         @Override
