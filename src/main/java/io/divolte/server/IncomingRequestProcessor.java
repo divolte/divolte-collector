@@ -62,7 +62,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
 
     @Override
     public void process(final HttpServerExchange exchange) {
-        final GenericRecord avroRecord = mapper.makeRecordFromExchange(exchange);
+        final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
         final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(exchange.getAttachment(PARTY_COOKIE_KEY), avroRecord);
 
         if (null != kafkaFlushingPool) {

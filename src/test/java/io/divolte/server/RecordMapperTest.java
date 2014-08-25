@@ -67,7 +67,7 @@ public class RecordMapperTest {
                 "h=480"
                 );
 
-        GenericRecord record = maker.makeRecordFromExchange(theExchange);
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals(true, record.get("sessionStart"));
         assertEquals(theExchange.getAttachment(REQUEST_START_TIME_KEY), record.get("ts"));
@@ -91,7 +91,7 @@ public class RecordMapperTest {
         String ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36";
 
         setupExchange(ua);
-        GenericRecord record = maker.makeRecordFromExchange(theExchange);
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals("Chrome", record.get("userAgentName"));
         assertEquals("Chrome", record.get("userAgentFamily"));
@@ -129,7 +129,7 @@ public class RecordMapperTest {
         RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test");
-        GenericRecord record = maker.makeRecordFromExchange(theExchange);
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals("custom_cookie_value", record.get("customCookie"));
     }
@@ -141,7 +141,7 @@ public class RecordMapperTest {
         RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test", "l=http://example.com/", "r=https://www.example.com/bla/");
-        GenericRecord record = maker.makeRecordFromExchange(theExchange);
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals("http", record.get("locationProtocol"));
         assertEquals("https", record.get("refererProtocol"));
@@ -157,7 +157,7 @@ public class RecordMapperTest {
                 "Divolte/Test",
                 "l=http://example.com/part1/part2/part3/ABA_C12_X3B",
                 "r=https://www.example.com/about.html");
-        GenericRecord record = maker.makeRecordFromExchange(theExchange);
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals("ABA", record.get("toplevelCategory"));
         assertEquals("C12", record.get("subCategory"));
@@ -176,7 +176,7 @@ public class RecordMapperTest {
 
         // Perform a mapping.
         final RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
-        final GenericRecord record = maker.makeRecordFromExchange(theExchange);
+        final GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         // Validate the results.
         verify(mockLookupService).lookup(any());

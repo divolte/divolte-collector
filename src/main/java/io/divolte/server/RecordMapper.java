@@ -363,7 +363,7 @@ final class RecordMapper {
         Optional<T> get(Context context);
     }
 
-    public GenericRecord makeRecordFromExchange(final HttpServerExchange exchange) {
+    public GenericRecord newRecordFromExchange(final HttpServerExchange exchange) {
         final GenericRecordBuilder builder = new GenericRecordBuilder(schema);
         final Context context = new Context(exchange);
         setters.forEach((s) -> s.setFields(builder, exchange, context));
