@@ -122,16 +122,16 @@ final class GenericRecordMaker {
         if (null == field) {
             throw new SchemaMappingException("Schema missing mapped field: %s", fieldName);
         }
-        final FieldProducer<?> fieldProducer = fieldGetterFromConfig(entry);
-        return (b, e, c) -> fieldProducer.get(c).ifPresent((v) -> b.set(field, v));
+        final FieldSupplier<?> fieldSupplier = fieldSupplierFromConfig(entry);
+        return (b, e, c) -> fieldSupplier.get(c).ifPresent((v) -> b.set(field, v));
     }
 
-    private static FieldProducer<?> fieldGetterFromConfig(final Entry<String, ConfigValue> entry) {
+    private static FieldSupplier<?> fieldSupplierFromConfig(final Entry<String, ConfigValue> entry) {
         final ConfigValue value = entry.getValue();
 
         switch (value.valueType()) {
         case STRING:
-            return simpleFieldGetter((String) value.unwrapped());
+            return simpleFieldSupplier((String) value.unwrapped());
         case OBJECT:
             final String fieldName = entry.getKey();
             final Config subConfig = ((ConfigObject) value).toConfig();
@@ -139,56 +139,56 @@ final class GenericRecordMaker {
                 throw new SchemaMappingException("Missing type property on configuration for field %s.", fieldName);
             }
             final String type = subConfig.getString("type");
-            return complexFieldGetterForConfig(fieldName, type, subConfig);
+            return complexFieldSupplierFromConfig(fieldName, type, subConfig);
         default:
             throw new SchemaMappingException("Schema mapping for fields can only be of type STRING or OBJECT. Found %s.", value.valueType());
         }
     }
 
-    private static FieldProducer<?> complexFieldGetterForConfig(final String name, final String type, final Config config) {
+    private static FieldSupplier<?> complexFieldSupplierFromConfig(final String name, final String type, final Config config) {
         switch (type) {
         case "cookie":
             return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(config.getString("name")))
                                   .map(Cookie::getValue);
         case "regex_group":
-            return regexGroupFieldGetter(config);
+            return regexGroupFieldSupplier(config);
         case "regex_name":
-            return regexNameFieldGetter(config);
+            return regexNameFieldSupplier(config);
         default:
             throw new SchemaMappingException("Unknown mapping type: %s for field %s.", type, name);
         }
     }
 
-    private static FieldProducer<String> regexNameFieldGetter(final Config config) {
+    private static FieldSupplier<String> regexNameFieldSupplier(final Config config) {
         final Stream<String> regexNames = config.getStringList("regexes").stream();
         final String fieldName = config.getString("field");
-        final FieldProducer<String> fieldProducer = regexFieldGetterForName(fieldName);
+        final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(fieldName);
 
-        return (c) -> fieldProducer.get(c)
+        return (c) -> fieldSupplier.get(c)
                                  .flatMap((s) -> regexNames.filter((rn) -> c.matcher(rn, fieldName, s).matches())
                                                            .findFirst());
     }
 
-    private static FieldProducer<String> regexGroupFieldGetter(final Config config) {
+    private static FieldSupplier<String> regexGroupFieldSupplier(final Config config) {
         final String regexName = config.getString("regex");
         final String fieldName = config.getString("field");
         final String groupName = config.getString("group");
-        final FieldProducer<String> fieldProducer = regexFieldGetterForName(fieldName);
+        final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(fieldName);
 
-        return (c) -> fieldProducer.get(c)
+        return (c) -> fieldSupplier.get(c)
                                  .flatMap((s) -> groupFromMatcher(c.matcher(regexName, fieldName, s), groupName));
     }
 
-    private static final FieldProducer<String> REMOTE_HOST_FIELD_PRODUCER =
+    private static final FieldSupplier<String> REMOTE_HOST_FIELD_PRODUCER =
             (c) -> Optional.ofNullable(c.getServerExchange().getSourceAddress())
                            .flatMap((a) -> Optional.ofNullable(a.getHostString()));
-    private static final FieldProducer<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
-    private static final FieldProducer<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
-    private static final FieldProducer<String> USERAGENT_FIELD_PRODUCER = Context::getUserAgent;
-    private static final FieldProducer<Long> TIMESTAMP_FIELD_PRODUCER = (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
-    private static final FieldProducer<String> PAGE_VIEW_ID_PRODUCER = (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
+    private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
+    private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
+    private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = Context::getUserAgent;
+    private static final FieldSupplier<Long> TIMESTAMP_FIELD_PRODUCER = (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
+    private static final FieldSupplier<String> PAGE_VIEW_ID_PRODUCER = (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
 
-    private static FieldProducer<String> regexFieldGetterForName(final String name) {
+    private static FieldSupplier<String> regexFieldSupplierForName(final String name) {
         switch (name) {
         case "userAgent":
             return USERAGENT_FIELD_PRODUCER;
@@ -203,7 +203,7 @@ final class GenericRecordMaker {
         }
     }
 
-    private static FieldProducer<?> simpleFieldGetter(final String name) {
+    private static FieldSupplier<?> simpleFieldSupplier(final String name) {
         switch (name) {
         case "firstInSession":
             return (c) -> Optional.of(c.isFirstInSession());
@@ -359,7 +359,7 @@ final class GenericRecordMaker {
     }
 
     @FunctionalInterface
-    private interface FieldProducer<T> {
+    private interface FieldSupplier<T> {
         Optional<T> get(Context context);
     }
 
