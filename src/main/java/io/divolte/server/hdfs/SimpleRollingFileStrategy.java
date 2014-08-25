@@ -1,14 +1,16 @@
 package io.divolte.server.hdfs;
 
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
-import static io.divolte.server.hdfs.HdfsFileUtils.*;
 import io.divolte.server.AvroRecordBuffer;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -17,6 +19,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -71,6 +74,14 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
 
     private Path newFilePath() {
         return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%s-%d.avro", datePartFormat.format(new Date()), hostString, instanceNumber));
+    }
+
+    private static String findLocalHostName() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            return "localhost";
+        }
     }
 
     private HadoopFile openNewFile(final Path path) throws IOException {
@@ -206,11 +217,14 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         long lastSyncTime;
         int recordsSinceLastSync;
 
+        @SuppressWarnings("resource")
         public HadoopFile(Path path) throws IOException {
             this.path = path;
             this.stream = hadoopFs.create(path, hdfsReplication);
 
-            this.writer = setupAvroWriter(stream, schema);
+            writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, stream);
+            writer.setSyncInterval(1 << 30);
+            writer.setFlushOnEveryBlock(true);
 
             // Sync the file on open to make sure the
             // connection actually works, because
@@ -224,5 +238,19 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         }
 
         public void close() throws IOException { writer.close(); }
+    }
+
+    @FunctionalInterface
+    private interface IOExceptionThrower {
+        public abstract void run() throws IOException;
+    }
+
+    private static Optional<IOException> throwsIoException(final IOExceptionThrower r) {
+        try {
+            r.run();
+            return Optional.empty();
+        } catch (final IOException ioe) {
+            return Optional.of(ioe);
+        }
     }
 }
