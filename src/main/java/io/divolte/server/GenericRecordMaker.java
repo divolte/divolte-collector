@@ -181,7 +181,7 @@ final class GenericRecordMaker {
 
     private static final FieldSupplier<String> REMOTE_HOST_FIELD_PRODUCER =
             (c) -> Optional.ofNullable(c.getServerExchange().getSourceAddress())
-                           .flatMap((a) -> Optional.ofNullable(a.getHostString()));
+                           .map(InetSocketAddress::getHostString);
     private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
     private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
     private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = Context::getUserAgent;
@@ -464,7 +464,7 @@ final class GenericRecordMaker {
         }
 
         private <T> Optional<T> getGeoField(Function<CityResponse, T> getter) {
-            return geoLookup.get().flatMap((g) -> Optional.ofNullable(getter.apply(g)));
+            return geoLookup.get().map(getter::apply);
         }
 
         public Optional<City> getCity() {
