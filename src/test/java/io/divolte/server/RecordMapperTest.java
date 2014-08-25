@@ -1,7 +1,7 @@
 package io.divolte.server;
 
 import io.divolte.server.CookieValues.CookieValue;
-import io.divolte.server.GenericRecordMaker.SchemaMappingException;
+import io.divolte.server.RecordMapper.SchemaMappingException;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
@@ -44,7 +44,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @ParametersAreNonnullByDefault
-public class GenericRecordMakerTest {
+public class RecordMapperTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
@@ -54,7 +54,7 @@ public class GenericRecordMakerTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-flatfields");
 
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -86,7 +86,7 @@ public class GenericRecordMakerTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-useragent");
 
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         String ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36";
 
@@ -110,7 +110,7 @@ public class GenericRecordMakerTest {
         expected.expectMessage("Unsupported schema mapping configuration version: 42");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-version");
-        new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     @Test
@@ -119,14 +119,14 @@ public class GenericRecordMakerTest {
         expected.expectMessage("Schema missing mapped field: fieldThatIsMissingFromSchema");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-field");
-        new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     @Test
     public void shouldSetCustomCookieValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-customcookie");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
@@ -138,7 +138,7 @@ public class GenericRecordMakerTest {
     public void shouldSetFieldWithMatchingRegexName() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-matchingregex");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test", "l=http://example.com/", "r=https://www.example.com/bla/");
         GenericRecord record = maker.makeRecordFromExchange(theExchange);
@@ -151,7 +151,7 @@ public class GenericRecordMakerTest {
     public void shouldSetFieldWithCaptureGroupFromRegex() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-regex");
-        GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.empty());
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -175,7 +175,7 @@ public class GenericRecordMakerTest {
         setupExchange("Arbitrary User Agent");
 
         // Perform a mapping.
-        final GenericRecordMaker maker = new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+        final RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
         final GenericRecord record = maker.makeRecordFromExchange(theExchange);
 
         // Validate the results.
@@ -232,7 +232,7 @@ public class GenericRecordMakerTest {
         setupExchange("Arbitrary User Agent");
 
         // Perform a mapping.
-        new GenericRecordMaker(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+        new RecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
 
         // Verify the lookup service was not invoked.
         verify(mockLookupService, never()).lookup(any());

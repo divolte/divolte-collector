@@ -31,7 +31,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
     @Nullable
     private final HdfsFlushingPool hdfsFlushingPool;
 
-    private final GenericRecordMaker maker;
+    private final RecordMapper mapper;
 
     public IncomingRequestProcessor(final Config config,
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
@@ -43,9 +43,9 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         this.hdfsFlushingPool = hdfsFlushingPool;
 
         final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));
-        maker = new GenericRecordMaker(Objects.requireNonNull(schema),
-                                       schemaMappingConfig, config,
-                                       Optional.ofNullable(geoipLookupService));
+        mapper = new RecordMapper(Objects.requireNonNull(schema),
+                                  schemaMappingConfig, config,
+                                  Optional.ofNullable(geoipLookupService));
     }
 
     private Config schemaMappingConfigFromConfig(final Config config) {
@@ -62,7 +62,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
 
     @Override
     public void process(final HttpServerExchange exchange) {
-        final GenericRecord avroRecord = maker.makeRecordFromExchange(exchange);
+        final GenericRecord avroRecord = mapper.makeRecordFromExchange(exchange);
         final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(exchange.getAttachment(PARTY_COOKIE_KEY), avroRecord);
 
         if (null != kafkaFlushingPool) {

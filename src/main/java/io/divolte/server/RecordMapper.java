@@ -63,8 +63,8 @@ import static io.divolte.server.DivolteEventHandler.*;
  */
 @ParametersAreNonnullByDefault
 @NotThreadSafe
-final class GenericRecordMaker {
-    private final static Logger logger = LoggerFactory.getLogger(GenericRecordMaker.class);
+final class RecordMapper {
+    private final static Logger logger = LoggerFactory.getLogger(RecordMapper.class);
 
     private final String sessionIdCookie;
 
@@ -75,10 +75,10 @@ final class GenericRecordMaker {
     private final LoadingCache<String,ReadableUserAgent> uaLookupCache;
     private final Optional<LookupService> geoipService;
 
-    public GenericRecordMaker(final Schema schema,
-                              final Config schemaConfig,
-                              final Config globalConfig,
-                              final Optional<LookupService> geoipService) {
+    public RecordMapper(final Schema schema,
+                        final Config schemaConfig,
+                        final Config globalConfig,
+                        final Optional<LookupService> geoipService) {
         Objects.requireNonNull(schemaConfig);
         Objects.requireNonNull(globalConfig);
 
@@ -422,7 +422,7 @@ final class GenericRecordMaker {
             this.userAgent = new LazyReference<>(() ->
                 Optional.ofNullable(serverExchange.getRequestHeaders().getFirst(Headers.USER_AGENT)));
             this.userAgentLookup = new LazyReference<>(() ->
-                getUserAgent().flatMap(GenericRecordMaker.this::parseUserAgent));
+                getUserAgent().flatMap(RecordMapper.this::parseUserAgent));
             this.geoLookup = new LazyReference<>(() -> geoipService.flatMap((service) -> {
                 final InetSocketAddress sourceAddress = serverExchange.getSourceAddress();
                 final InetAddress ipAddress = null != sourceAddress ? sourceAddress.getAddress() : null;
