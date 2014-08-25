@@ -1,4 +1,4 @@
-package io.divolte.server.geo2ip;
+package io.divolte.server.ip2geo;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;

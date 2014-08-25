@@ -1,4 +1,4 @@
-package io.divolte.server.geo2ip;
+package io.divolte.server.ip2geo;
 
 import java.net.InetAddress;
 import java.util.Optional;

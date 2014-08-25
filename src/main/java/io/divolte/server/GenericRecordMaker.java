@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import io.divolte.server.geo2ip.LookupService;
+import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;

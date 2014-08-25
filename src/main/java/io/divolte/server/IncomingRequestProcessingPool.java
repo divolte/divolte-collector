@@ -1,8 +1,8 @@
 package io.divolte.server;
 
 import io.divolte.server.CookieValues.CookieValue;
-import io.divolte.server.geo2ip.ExternalDatabaseLookupService;
-import io.divolte.server.geo2ip.LookupService;
+import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
+import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ProcessingPool;
