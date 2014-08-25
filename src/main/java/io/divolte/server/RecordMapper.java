@@ -184,7 +184,7 @@ final class RecordMapper {
                            .map(InetSocketAddress::getHostString);
     private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
     private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
-    private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = Context::getUserAgent;
+    private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = (c) -> c.userAgent.get();
     private static final FieldSupplier<Long> TIMESTAMP_FIELD_PRODUCER = (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
     private static final FieldSupplier<String> PAGE_VIEW_ID_PRODUCER = (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
 
@@ -238,7 +238,7 @@ final class RecordMapper {
         case "geoMostSpecificSubdivisionName":
             return (c) -> c.getMostSpecificSubdivision().map(Subdivision::getName);
         case "geoPostalCode":
-            return (c) -> c.getGeoField((r) -> r.getPostal()).map(Postal::getCode);
+            return (c) -> c.geoLookup.get().map((r) -> r.getPostal()).map(Postal::getCode);
         case "geoRegisteredCountryCode":
             return (c) -> c.getRegisteredCountry().map(Country::getIsoCode);
         case "geoRegisteredCountryId":
@@ -421,8 +421,7 @@ final class RecordMapper {
             this.serverExchange = Objects.requireNonNull(serverExchange);
             this.userAgent = new LazyReference<>(() ->
                 Optional.ofNullable(serverExchange.getRequestHeaders().getFirst(Headers.USER_AGENT)));
-            this.userAgentLookup = new LazyReference<>(() ->
-                getUserAgent().flatMap(RecordMapper.this::parseUserAgent));
+            this.userAgentLookup = new LazyReference<>(() -> userAgent.get().flatMap(RecordMapper.this::parseUserAgent));
             this.geoLookup = new LazyReference<>(() -> geoipService.flatMap((service) -> {
                 final InetSocketAddress sourceAddress = serverExchange.getSourceAddress();
                 final InetAddress ipAddress = null != sourceAddress ? sourceAddress.getAddress() : null;
@@ -451,10 +450,6 @@ final class RecordMapper {
             return !serverExchange.getRequestCookies().containsKey(sessionIdCookie);
         }
 
-        public Optional<String> getUserAgent() {
-            return userAgent.get();
-        }
-
         public Optional<ReadableUserAgent> getUserAgentLookup() {
             return userAgentLookup.get();
         }
@@ -463,44 +458,40 @@ final class RecordMapper {
             return getUserAgentLookup().map(ReadableUserAgent::getOperatingSystem);
         }
 
-        private <T> Optional<T> getGeoField(Function<CityResponse, T> getter) {
-            return geoLookup.get().map(getter::apply);
-        }
-
         public Optional<City> getCity() {
-            return getGeoField((g) -> g.getCity());
+            return geoLookup.get().map((g) -> g.getCity());
         }
 
         public Optional<Continent> getContinent() {
-            return getGeoField((g) -> g.getContinent());
+            return geoLookup.get().map((g) -> g.getContinent());
         }
 
         public Optional<Country> getCountry() {
-            return getGeoField((g) -> g.getCountry());
+            return geoLookup.get().map((g) -> g.getCountry());
         }
 
         public Optional<Location> getLocation() {
-            return getGeoField((g) -> g.getLocation());
+            return geoLookup.get().map((g) -> g.getLocation());
         }
 
         public Optional<Subdivision> getMostSpecificSubdivision() {
-            return getGeoField((g) -> g.getMostSpecificSubdivision());
+            return geoLookup.get().map((g) -> g.getMostSpecificSubdivision());
         }
 
         public Optional<Country> getRegisteredCountry() {
-            return getGeoField((g) -> g.getRegisteredCountry());
+            return geoLookup.get().map((g) -> g.getRegisteredCountry());
         }
 
         public Optional<Country> getRepresentedCountry() {
-            return getGeoField((g) -> g.getRepresentedCountry());
+            return geoLookup.get().map((g) -> g.getRepresentedCountry());
         }
 
         public Optional<List<Subdivision>> getSubdivisions() {
-            return getGeoField((g) -> g.getSubdivisions());
+            return geoLookup.get().map((g) -> g.getSubdivisions());
         }
 
         public Optional<Traits> getTraits() {
-            return getGeoField((g) -> g.getTraits());
+            return geoLookup.get().map((g) -> g.getTraits());
         }
     }
 }
