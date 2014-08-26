@@ -30,6 +30,12 @@
     }
     return myElement;
   }();
+  // Detect the base URL for the Divolte server that served this file.
+  var baseURL = function(element) {
+    var myUrl = element.src;
+    return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
+  }(dvtElement);
+  window.console.info("Divolte base URL detected", baseURL);
   // Figure out the pageview ID, if one is present.
   var pageViewId = function(element) {
     var myUrl = element.src,
@@ -40,12 +46,6 @@
     }
     return anchor;
   }(dvtElement);
-  // Detect the base URL for the Divolte server that served this file.
-  var baseURL = function(element) {
-    var myUrl = element.src;
-    return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
-  }(dvtElement);
-  window.console.info("Divolte base URL detected", baseURL);
 
   // Declare a function that can be used to generate a reasonably unique string.
   // The string need not be globally unique, but only for this client.
