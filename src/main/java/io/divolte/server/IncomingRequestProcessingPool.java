@@ -81,6 +81,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
         }
     }
 
+    @Nullable
     private static LookupService lookupServiceFromConfig(final Config config) {
         final LookupService service;
         if (config.hasPath("divolte.geodb")) {
