@@ -185,8 +185,6 @@ final class RecordMapper {
     private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
     private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
     private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = (c) -> c.userAgent.get();
-    private static final FieldSupplier<Long> TIMESTAMP_FIELD_PRODUCER = (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
-    private static final FieldSupplier<String> PAGE_VIEW_ID_PRODUCER = (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
 
     private static FieldSupplier<String> regexFieldSupplierForName(final String name) {
         switch (name) {
@@ -272,7 +270,7 @@ final class RecordMapper {
         case "geoSatelliteProvider":
             return (c) -> c.getTraits().map(Traits::isSatelliteProvider);
         case "timestamp":
-            return TIMESTAMP_FIELD_PRODUCER;
+            return (FieldSupplier<Long>) (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
         case "userAgent":
             return USERAGENT_FIELD_PRODUCER;
         case "userAgentName":
@@ -312,7 +310,7 @@ final class RecordMapper {
         case "sessionId":
             return (c) -> c.getAttachment(SESSION_COOKIE_KEY).map(CookieValues.CookieValue::getValue);
         case "pageViewId":
-            return PAGE_VIEW_ID_PRODUCER;
+            return (FieldSupplier<String>) (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
         default:
             throw new SchemaMappingException("Unknown field in schema mapping: %s", name);
         }
