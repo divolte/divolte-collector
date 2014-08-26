@@ -67,7 +67,24 @@
     '_pageViewId': pageViewId
   };
 
-  var signal = function() {
+  /**
+   * Event logger.
+   *
+   * Invoking this method will cause an event to be logged with the Divolte
+   * server. This function returns immediately, the event itself is logged
+   * asynchronously.
+   *
+   * @param {!string} type The type of event to log.
+   * @param {object=} [customParameters] Optional object containing custom parameters to log alongside the event.
+   */
+  var signal = function(type, customParameters) {
+    // Only proceed if we have an event type.
+    if (type) {
+      if ('undefined' === typeof customParameters) {
+        window.console.info("Signalling event: " + type);
+      } else {
+        window.console.info("Signalling event: " + type, customParameters);
+      }
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
           event = {
@@ -80,20 +97,47 @@
             'i': window.screen.availWidth,
             'j': window.screen.availHeight,
             'w': window.innerWidth || documentElement.clientWidth || bodyElement.clientWidth,
-            'h': window.innerHeight || documentElement.clientHeight || bodyElement.clientHeight
+            'h': window.innerHeight || documentElement.clientHeight || bodyElement.clientHeight,
+            't': type
           };
 
       // Initialize with a special cache-busting parameter.
       // (By making it different for every request, it should never come out of a cache.)
-      var params = 'n=' + encodeURIComponent(generateCacheNonce());
+      var params = 'n=' + encodeURIComponent(generateCacheNonce()),
+          addParam = function(name,value) {
+            // Value can safely contain '&' and '=' without any problems.
+            params += '&' + name + '=' + encodeURIComponent(value);
+          };
+
       // These are the parameters relating to the event itself.
       for (var name in event) {
         if (event.hasOwnProperty(name)) {
           var value = event[name];
-          if (typeof value !== 'undefined') {
-            params += '&' + name + '=' + encodeURIComponent(value);
+          if ('undefined' !== typeof value) {
+            addParam(name, value);
           }
         }
+      }
+      // These are the custom parameters that may have been supplied.
+      switch (typeof customParameters) {
+        case 'undefined':
+          // No custom parameters were supplied.
+          break;
+        case 'object':
+          for (var customName in customParameters) {
+            if (customParameters.hasOwnProperty(customName)) {
+              var customParameter = customParameters[customName];
+              switch (typeof customParameter) {
+                case 'string':
+                case 'number':
+                case 'boolean':
+                  addParam('t.' + customName, customParameter);
+              }
+            }
+          }
+          break;
+        default:
+          window.console.error("Ignoring non-object custom event parameters", customParameters);
       }
       // Special special cache-busting parameter.
       var image = new Image(1,1);
@@ -115,6 +159,8 @@
           }
         }
       }
+    } else {
+      window.console.warn("Ignoring event with no type.");
     }
   };
   dvt['signal'] = signal;
@@ -129,8 +175,8 @@
   }
   window.console.log("Module initialized.", dvt);
 
-  window.console.log("Firing initial event.");
-  signal();
+  // On load we always signal the 'pageView' event.
+  signal('pageView');
 
   return dvt;
 }));
