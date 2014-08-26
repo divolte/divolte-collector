@@ -1,8 +1,8 @@
-/*!
+/**
  * Divolte JavaScript Library
  * http://github.com/divolte/divolte
  *
- * Copyright 2014 GoDataDriven.
+ * @license Copyright 2014 GoDataDriven.
  * Released under the Apache License, Version 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.txt
  */
