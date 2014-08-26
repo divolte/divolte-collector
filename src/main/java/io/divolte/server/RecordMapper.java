@@ -148,7 +148,9 @@ final class RecordMapper {
     private static FieldSupplier<?> complexFieldSupplierFromConfig(final String name, final String type, final Config config) {
         switch (type) {
         case "cookie":
-            return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(config.getString("name")))
+            final String cookieName = OptionalConfig.of(config::getString, "name")
+                .orElseThrow(() -> new SchemaMappingException("Cookie mapping for field %s requires a string 'name' property.", name));
+            return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(cookieName))
                                   .map(Cookie::getValue);
         case "regex_group":
             return regexGroupFieldSupplier(config);

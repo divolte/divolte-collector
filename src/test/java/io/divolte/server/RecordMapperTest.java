@@ -137,6 +137,15 @@ public class RecordMapperTest {
     }
 
     @Test
+    public void shouldFailOnStartupIfCustomCookieMappingMissingName() throws IOException, UnirestException {
+        expected.expect(SchemaMappingException.class);
+        expected.expectMessage("Cookie mapping for field customCookie requires a string 'name' property.");
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-missing-cookie-name");
+        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+    }
+
+    @Test
     public void shouldSetFieldWithMatchingRegexName() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-matchingregex");
