@@ -83,19 +83,15 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
 
     @Nullable
     private static LookupService lookupServiceFromConfig(final Config config) {
-        final LookupService service;
-        if (config.hasPath("divolte.geodb")) {
-            final String externalLocation = config.getString("divolte.geodb");
-            try {
-                service = new ExternalDatabaseLookupService(Paths.get(externalLocation));
-            } catch (final IOException e) {
-                logger.error("Failed to configure GeoIP database: " + externalLocation, e);
-                throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
-            }
-        } else {
-            service = null;
-        }
-        return service;
+        return OptionalConfig.of(config::getString, "divolte.geodb")
+                .map((path) -> {
+                    try {
+                        return new ExternalDatabaseLookupService(Paths.get(path));
+                    } catch (final IOException e) {
+                        logger.error("Failed to configure GeoIP database: " + path, e);
+                        throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
+                    }
+                }).orElse(null);
     }
 
     public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
