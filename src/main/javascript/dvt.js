@@ -62,11 +62,12 @@
           + digits[Math.floor(Math.random() * digits.length)];
   };
 
-  // Declare our module.
+  // Declare the namespace our module will export.
   var dvt = {
-    _pageViewId: pageViewId,
-    // Basic event logger.
-    'signal': function() {
+    '_pageViewId': pageViewId
+  };
+
+  var signal = function() {
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
           event = {
@@ -116,6 +117,7 @@
       }
     }
   };
+  dvt['signal'] = signal;
 
   // Expose dvt and $$$ identifiers.
   if (typeof define === "function" && define.amd) {
@@ -128,7 +130,7 @@
   window.console.log("Module initialized.", dvt);
 
   window.console.log("Firing initial event.");
-  dvt['signal']();
+  signal();
 
   return dvt;
 }));
