@@ -185,7 +185,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             throw new IllegalStateException("HDFS connection repair attempt while not broken.");
         }
 
-        long time = System.currentTimeMillis();
+        final long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
             final Path newFilePath = newFilePath();
             return throwsIoException(() -> {

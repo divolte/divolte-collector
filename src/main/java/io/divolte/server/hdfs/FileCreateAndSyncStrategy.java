@@ -22,7 +22,10 @@ interface FileCreateAndSyncStrategy {
     void cleanup();
 
     public static FileCreateAndSyncStrategy create(final Config config, final FileSystem fs, final short hdfsReplication, final Schema schema) {
-        if (config.hasPath("divolte.hdfs_flusher.simple_rolling_file_strategy")) {
+        if (config.hasPath("divolte.hdfs_flusher.session_binning_file_strategy")) {
+            return new SessionBinningFileStrategy(config, fs, hdfsReplication, schema);
+        } else if (config.hasPath("divolte.hdfs_flusher.simple_rolling_file_strategy")) {
+            // always make sure that this config has the lowest prio, as it is present in the reference.conf
             return new SimpleRollingFileStrategy(config, fs, hdfsReplication, schema);
         } else {
             throw new RuntimeException("No valid HDFS file flushing strategy was configured.");
