@@ -56,21 +56,12 @@ public final class CookieValues {
 
     public final static class CookieValue {
         @Nonnull
-        private final String value;
-        private final long timestamp;
+        public final String value;
+        public final long timestamp;
 
         private CookieValue(@Nonnull final byte[] valueBytes, final long timestamp) {
             this.value = Hex.encodeHexString(Objects.requireNonNull(valueBytes));
             this.timestamp = timestamp;
-        }
-
-        @Nonnull
-        public String getValue() {
-            return value;
-        }
-
-        public long getTimestamp() {
-            return timestamp;
         }
 
         @Override

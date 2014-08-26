@@ -44,7 +44,7 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
         final ByteBuffer avroBuffer = record.getByteBuffer();
         final byte[] avroBytes = new byte[avroBuffer.remaining()];
         avroBuffer.get(avroBytes);
-        return new KeyedMessage<>(topic, record.getPartyId().getValue().getBytes(StandardCharsets.UTF_8), avroBytes);
+        return new KeyedMessage<>(topic, record.getPartyId().value.getBytes(StandardCharsets.UTF_8), avroBytes);
     }
 
     private static final Joiner COMMA_JOINER = Joiner.on(',');

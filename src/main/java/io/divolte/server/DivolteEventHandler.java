@@ -175,7 +175,7 @@ final class DivolteEventHandler {
         .flatMap(CookieValues::tryParse)
         .orElseGet(() -> CookieValues.generate(currentTime));
 
-        final Cookie newCookie = new CookieImpl(cookieName, cookieValue.getValue());
+        final Cookie newCookie = new CookieImpl(cookieName, cookieValue.value);
         cookieDomain.ifPresent(newCookie::setDomain);
 
         final long maxAge = timeout.getSeconds();
@@ -199,7 +199,7 @@ final class DivolteEventHandler {
     private String prepareAndReturnPageViewId(final HttpServerExchange exchange, final String cookieName, final long currentTime) {
         final String pageViewId = Optional.ofNullable(exchange.getQueryParameters().get("p"))
                 .map(Deque::getFirst)
-                .orElseGet(() -> CookieValues.generate(currentTime).getValue());
+                .orElseGet(() -> CookieValues.generate(currentTime).value);
 
         final CookieImpl pageViewCookie = new CookieImpl(cookieName, pageViewId);
         cookieDomain.ifPresent(pageViewCookie::setDomain);
