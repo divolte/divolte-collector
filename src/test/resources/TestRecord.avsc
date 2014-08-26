@@ -16,6 +16,7 @@
         { "name": "viewportWidth",                   "type": ["null","int"],     "default": null },
         { "name": "viewportHeight",                  "type": ["null","int"],     "default": null },
         { "name": "customCookie",                    "type": ["null","string"],  "default": null },
+        { "name": "customEventParameter",            "type": ["null","string"],  "default": null },
         { "name": "locationProtocol",                "type": ["null","string"],  "default": null },
         { "name": "refererProtocol",                 "type": ["null","string"],  "default": null },
         { "name": "toplevelCategory",                "type": ["null","string"],  "default": null },

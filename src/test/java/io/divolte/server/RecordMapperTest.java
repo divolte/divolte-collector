@@ -175,6 +175,29 @@ public class RecordMapperTest {
         assertEquals("about", record.get("contentPage"));
     }
 
+    @Test
+    public void shouldSetFieldFromCustomEventParameter() throws IOException, UnirestException {
+        final Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        final Config config = ConfigFactory.load("schema-test-customparameter");
+        final RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "t.abba=Honey, Honey");
+        final GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals("Honey, Honey", record.get("customEventParameter"));
+    }
+
+    @Test
+    public void shouldFailOnStartupIfCustomEventParameterMappingMissingName() throws IOException, UnirestException {
+        expected.expect(SchemaMappingException.class);
+        expected.expectMessage("Event parameter mapping for field customEventParameter requires a string 'name' property.");
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-missing-customparameter-name");
+        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+    }
+
     private void testMapping(final Optional<CityResponse> response,
                              final Map<String,Object> expectedMapping)
             throws IOException, UnirestException {

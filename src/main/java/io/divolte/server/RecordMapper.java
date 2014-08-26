@@ -152,6 +152,11 @@ final class RecordMapper {
                 .orElseThrow(() -> new SchemaMappingException("Cookie mapping for field %s requires a string 'name' property.", name));
             return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(cookieName))
                                   .map(Cookie::getValue);
+        case "event_parameter":
+            final String parameterName = OptionalConfig.of(config::getString, "name")
+                                                       .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", name));
+            final String queryParameterName = "t." + parameterName;
+            return (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
         case "regex_group":
             return regexGroupFieldSupplier(config);
         case "regex_name":
