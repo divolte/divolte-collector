@@ -74,8 +74,8 @@ public class RecordMapperTest {
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
         assertEquals("Divolte/Test", record.get("userAgentString"));
-        assertEquals(theExchange.getAttachment(PARTY_COOKIE_KEY).getValue(), record.get("client"));
-        assertEquals(theExchange.getAttachment(SESSION_COOKIE_KEY).getValue(), record.get("session"));
+        assertEquals(theExchange.getAttachment(PARTY_COOKIE_KEY).value, record.get("client"));
+        assertEquals(theExchange.getAttachment(SESSION_COOKIE_KEY).value, record.get("session"));
         assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
@@ -310,11 +310,11 @@ public class RecordMapperTest {
                     exchange.putAttachment(REQUEST_START_TIME_KEY, theTime);
                     exchange.putAttachment(PARTY_COOKIE_KEY, party);
                     exchange.putAttachment(SESSION_COOKIE_KEY, session);
-                    exchange.putAttachment(PAGE_VIEW_ID_KEY, page.getValue());
+                    exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
 
-                    exchange.getResponseCookies().put("_dvp", new CookieImpl("_dvp", party.getValue()));
-                    exchange.getResponseCookies().put("_dvs", new CookieImpl("_dvs", session.getValue()));
-                    exchange.getResponseCookies().put("_dvv", new CookieImpl("_dvv", page.getValue()));
+                    exchange.getResponseCookies().put("_dvp", new CookieImpl("_dvp", party.value));
+                    exchange.getResponseCookies().put("_dvs", new CookieImpl("_dvs", session.value));
+                    exchange.getResponseCookies().put("_dvv", new CookieImpl("_dvv", page.value));
 
                     exchange.getResponseSender().send("OK");
                     theExchange = exchange;

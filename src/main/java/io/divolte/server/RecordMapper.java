@@ -308,9 +308,9 @@ final class RecordMapper {
         case "screenPixelHeight":
             return (c) -> c.getQueryParameter("j").map(Ints::tryParse);
         case "partyId":
-            return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map(CookieValues.CookieValue::getValue);
+            return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map((cv) -> cv.value);
         case "sessionId":
-            return (c) -> c.getAttachment(SESSION_COOKIE_KEY).map(CookieValues.CookieValue::getValue);
+            return (c) -> c.getAttachment(SESSION_COOKIE_KEY).map((cv) -> cv.value);
         case "pageViewId":
             return PAGE_VIEW_ID_PRODUCER;
         default:
