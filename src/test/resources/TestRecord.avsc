@@ -5,6 +5,7 @@
     "fields": [
         { "name": "sessionStart",                    "type": "boolean" },
         { "name": "ts",                              "type": "long" },
+        { "name": "eventType",                       "type": ["null","string"],  "default": null },
         { "name": "userAgentString",                 "type": ["null","string"],  "default": null },
         { "name": "remoteHost",                      "type": "string" },
         { "name": "referer",                         "type": ["null","string"],  "default": null },

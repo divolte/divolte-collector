@@ -203,6 +203,8 @@ final class RecordMapper {
 
     private static FieldSupplier<?> simpleFieldSupplier(final String name) {
         switch (name) {
+        case "eventType":
+            return (FieldSupplier<String>) (c) -> c.getQueryParameter("t");
         case "firstInSession":
             return (c) -> Optional.of(c.isFirstInSession());
         case "geoCityId":

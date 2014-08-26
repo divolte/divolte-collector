@@ -64,7 +64,8 @@ public class RecordMapperTest {
                 "i=1024",
                 "j=768",
                 "w=640",
-                "h=480"
+                "h=480",
+                "t=pageView"
                 );
 
         GenericRecord record = maker.newRecordFromExchange(theExchange);
@@ -79,6 +80,7 @@ public class RecordMapperTest {
         assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
+        assertEquals("pageView", record.get("eventType"));
     }
 
     @Test
