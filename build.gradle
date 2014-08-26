@@ -88,6 +88,8 @@ minifyJs {
     closure {
         warningLevel = 'DEFAULT'
         compilationLevel = 'ADVANCED_OPTIMIZATIONS'
+        compilerOptions.languageIn = 'ECMASCRIPT5_STRICT'
+        compilerOptions.languageOut = 'ECMASCRIPT5_STRICT'
     }
 }
 
