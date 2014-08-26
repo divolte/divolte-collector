@@ -101,7 +101,7 @@
           for (var i = 0, l = cookies.length; i < l; i++) {
             var parts = cookies[i].split('=');
             if (parts.shift() == '_dvv') {
-              dvt._pageViewId = parts.shift();
+              dvt.['_pageViewId'] = parts.shift();
             }
           }
         }
