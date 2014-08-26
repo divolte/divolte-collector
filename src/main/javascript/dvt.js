@@ -102,6 +102,7 @@
             var parts = cookies[i].split('=');
             if (parts.shift() == '_dvv') {
               dvt.['_pageViewId'] = parts.shift();
+              break;
             }
           }
         }
