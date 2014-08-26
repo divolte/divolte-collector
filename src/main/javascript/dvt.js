@@ -41,8 +41,13 @@
     var myUrl = element.src,
         anchorIndex = myUrl.indexOf("#"),
         anchor = -1 !== anchorIndex ? myUrl.substring(anchorIndex + 1) : undefined;
-    if ('undefined' !== typeof anchor && -1 !== anchor.indexOf('/')) {
-      throw "DVT not initialized correctly; page view ID may not contain a slash ('/').";
+    if ('undefined' !== typeof anchor) {
+      if (-1 !== anchor.indexOf('/')) {
+        throw "DVT not initialized correctly; page view ID may not contain a slash ('/').";
+      }
+      window.console.info("Page view ID: " + anchor);
+    } else {
+      window.console.log("Page view ID deferred until after first event.");
     }
     return anchor;
   }(dvtElement);
@@ -101,7 +106,9 @@
           for (var i = 0, l = cookies.length; i < l; i++) {
             var parts = cookies[i].split('=');
             if (parts.shift() == '_dvv') {
-              dvt.['_pageViewId'] = parts.shift();
+              var pageViewId = parts.shift();
+              dvt['_pageViewId'] = pageViewId;
+              window.console.info("Divolte-generated page view ID: " + pageViewId);
               break;
             }
           }
