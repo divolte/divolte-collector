@@ -3,133 +3,32 @@
     "type": "record",
     "name": "TestRecord",
     "fields": [
-        {
-            "name": "sessionStart",
-            "type": "boolean"
-        },
-        {
-            "name": "ts",
-            "type": "long"
-        },
-        {
-            "name": "userAgentString",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "remoteHost",
-            "type": "string"
-        },
-        {
-            "name": "referer",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "location",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "client",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "session",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "pageview",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "viewportWidth",
-            "type": ["null", "int"],
-            "default": null
-        },
-        {
-            "name": "viewportHeight",
-            "type": ["null", "int"],
-            "default": null
-        },
-        {
-            "name": "customCookie",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "locationProtocol",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "refererProtocol",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "toplevelCategory",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "subCategory",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "contentPage",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentName",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentFamily",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentVendor",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentType",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentVersion",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentDeviceCategory",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentOsFamily",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentOsVersion",
-            "type": ["null", "string"],
-            "default": null
-        },
-        {
-            "name": "userAgentOsVendor",
-            "type": ["null", "string"],
-            "default": null
-        },
+        { "name": "sessionStart",                    "type": "boolean" },
+        { "name": "ts",                              "type": "long" },
+        { "name": "userAgentString",                 "type": ["null","string"],  "default": null },
+        { "name": "remoteHost",                      "type": "string" },
+        { "name": "referer",                         "type": ["null","string"],  "default": null },
+        { "name": "location",                        "type": ["null","string"],  "default": null },
+        { "name": "client",                          "type": ["null","string"],  "default": null },
+        { "name": "session",                         "type": ["null","string"],  "default": null },
+        { "name": "pageview",                        "type": ["null","string"],  "default": null },
+        { "name": "viewportWidth",                   "type": ["null","int"],     "default": null },
+        { "name": "viewportHeight",                  "type": ["null","int"],     "default": null },
+        { "name": "customCookie",                    "type": ["null","string"],  "default": null },
+        { "name": "locationProtocol",                "type": ["null","string"],  "default": null },
+        { "name": "refererProtocol",                 "type": ["null","string"],  "default": null },
+        { "name": "toplevelCategory",                "type": ["null","string"],  "default": null },
+        { "name": "subCategory",                     "type": ["null","string"],  "default": null },
+        { "name": "contentPage",                     "type": ["null","string"],  "default": null },
+        { "name": "userAgentName",                   "type": ["null","string"],  "default": null },
+        { "name": "userAgentFamily",                 "type": ["null","string"],  "default": null },
+        { "name": "userAgentVendor",                 "type": ["null","string"],  "default": null },
+        { "name": "userAgentType",                   "type": ["null","string"],  "default": null },
+        { "name": "userAgentVersion",                "type": ["null","string"],  "default": null },
+        { "name": "userAgentDeviceCategory",         "type": ["null","string"],  "default": null },
+        { "name": "userAgentOsFamily",               "type": ["null","string"],  "default": null },
+        { "name": "userAgentOsVersion",              "type": ["null","string"],  "default": null },
+        { "name": "userAgentOsVendor",               "type": ["null","string"],  "default": null },
         { "name": "geoCityId",                       "type": ["null","int"],     "default": null },
         { "name": "geoCityName",                     "type": ["null","string"],  "default": null },
         { "name": "geoContinentCode",                "type": ["null","string"],  "default": null },
