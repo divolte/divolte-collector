@@ -13,7 +13,8 @@
   </head>
   <body>
     <h1 style="text-align: center">Divolte</h1>
-    <p style="text-align: center">What would you like to know today?</p>
+    <p style="text-align: center"
+       onclick="dvt.signal('question',{text:this.innerText})">What would you like to know today?</p>
 
     <script id='divolte' src="dvt.js" defer async></script>
   </body>
