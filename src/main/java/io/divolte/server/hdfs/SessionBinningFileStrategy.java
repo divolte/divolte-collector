@@ -11,12 +11,13 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -30,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
 
@@ -77,9 +77,11 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private final int syncEveryRecords;
 
     private boolean isHdfsAlive;
-    private Long failedRound;
     private long lastFixAttempt;
     private long timeSignal;
+
+    private long lastSyncTime;
+    private int recordsSinceLastSync;
 
 
     public SessionBinningFileStrategy(final Config config, final FileSystem hdfs, final short hdfsReplication, final Schema schema) {
@@ -116,8 +118,11 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
          * events are used as a clock signal.
          */
         isHdfsAlive = true;
-        failedRound = null;
         lastFixAttempt = 0;
+
+        lastSyncTime = 0;
+        recordsSinceLastSync = 0;
+
         return SUCCESS;
     }
 
@@ -126,20 +131,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         if (isHdfsAlive) {
             // queue is empty, so logical time == current system time
             timeSignal = System.currentTimeMillis();
-            return throwsIoException(() -> {
-                    ImmutableMap.copyOf(openFiles) // defend against concurrent modification of the map by the file closing code
-                    .values()
-                    .stream()
-                    .distinct()
-                    .forEach((f) -> {
-                        throwsIoException(() -> possiblySyncAndOrClose(f))
-                        .ifPresent((ioe) -> {
-                            failedRound = f.round;
-                            throw new WrappedIOException(ioe);
-                        });
-                    });
-                }
-            )
+            return throwsIoException(() -> possiblySyncAndOrClose())
             .map((ioe) -> {
                 logger.warn("Failed to sync HDFS file.", ioe);
                 hdfsDied();
@@ -167,11 +159,11 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
             RoundHdfsFile file = fileForSessionStartTime(record.getSessionId().timestamp);
             file.writer.appendEncoded(record.getByteBuffer());
             file.recordsSinceLastSync += 1;
-            possiblySyncAndOrClose(file);
+            recordsSinceLastSync += 1;
+            possiblySyncAndOrClose();
         })
         .map((ioe) -> {
             logger.warn("Error while flushing event to HDFS.", ioe);
-            failedRound = record.getSessionId().timestamp / sessionTimeoutMillis;
             hdfsDied();
             return FAILURE;
         })
@@ -189,49 +181,62 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         openFiles.clear();
     }
 
-    private void possiblySyncAndOrClose(RoundHdfsFile file) {
+    private void possiblySyncAndOrClose() {
         try {
             final long time = System.currentTimeMillis();
 
             if (
-                    file.recordsSinceLastSync >= syncEveryRecords ||
-                    time - file.lastSyncTime >= syncEveryMillis && file.recordsSinceLastSync > 0) {
-                logger.debug("Syncing HDFS file: {}", file.path.toString());
+                    recordsSinceLastSync >= syncEveryRecords ||
+                    time - lastSyncTime >= syncEveryMillis && recordsSinceLastSync > 0) {
 
-                // Forces the Avro file to write a block
-                file.writer.sync();
-                // Forces a (HDFS) sync on the underlying stream
-                file.stream.hsync();
+                openFiles
+                .values()
+                .stream()
+                .filter((f) -> f.recordsSinceLastSync > 0) // only sync files that have pending records
+                .forEach((file) -> {
+                    try {
+                        logger.debug("Syncing file: {}", file.path);
+                        file.writer.sync();   // Forces the Avro file to write a block
+                        file.stream.hsync();  // Forces a (HDFS) sync on the underlying stream
+                        file.recordsSinceLastSync = 0;
+                    } catch (IOException e) {
+                        throw new WrappedIOException(e);
+                    }
+                });
 
-                file.recordsSinceLastSync = 0;
-                file.lastSyncTime = time;
-
-                possiblyCloseAndCleanup(file);
-            } else if (file.recordsSinceLastSync == 0) {
-                file.lastSyncTime = time;
-                possiblyCloseAndCleanup(file);
+                recordsSinceLastSync = 0;
+                lastSyncTime = time;
+            } else if (recordsSinceLastSync == 0) {
+                lastSyncTime = time;
             }
-        } catch (IOException e) {
-            throw new WrappedIOException(e);
+        } finally {
+            possiblyCloseAndCleanup();
         }
     }
 
-    private void possiblyCloseAndCleanup(RoundHdfsFile file) {
+    private void possiblyCloseAndCleanup() {
         final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
-        if (file.round < oldestAllowedRound) {
+
+        List<Entry<Long, RoundHdfsFile>> entriesToBeClosed = openFiles
+        .entrySet()
+        .stream()
+        .filter((e) -> e.getValue().round < oldestAllowedRound)
+        .collect(Collectors.toList());
+
+        entriesToBeClosed
+        .stream()
+        .map(Entry::getValue)
+        .distinct()
+        .forEach((file) -> {
             logger.debug("Closing HDFS file: {}", file.path);
             throwsIoException(file::close)
             .ifPresent((ioe) -> {
                 logger.warn("Failed to cleanly close HDFS file: " + file.path, ioe);
             });
+        });
 
-            for (Iterator<Entry<Long,RoundHdfsFile>> itr = openFiles.entrySet().iterator(); itr.hasNext(); ) {
-                final Entry<Long, RoundHdfsFile> e = itr.next();
-                if (e.getValue() == file) {
-                    itr.remove();
-                }
-            }
-        }
+        entriesToBeClosed
+        .forEach((e) -> openFiles.remove(e.getKey()));
     }
 
     private HdfsOperationResult possiblyFixHdfsConnection() {
@@ -242,7 +247,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         final long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
             return throwsIoException(() -> {
-                openFiles.put(failedRound, new RoundHdfsFile(failedRound * sessionTimeoutMillis));
+                openFiles.put(timeSignal / sessionTimeoutMillis, new RoundHdfsFile(timeSignal));
             })
             .map((ioe) -> {
                 logger.warn("Could not reconnect to HDFS after failure.");
@@ -252,7 +257,6 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
             .orElseGet(() -> {
                 logger.info("Recovered HDFS connection.");
                 isHdfsAlive = true;
-                failedRound = null;
                 lastFixAttempt = 0;
                 return SUCCESS;
             });
@@ -278,7 +282,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
     private RoundHdfsFile fileForSessionStartTime(final long sessionStartTime) {
         final long requestedRound = sessionStartTime / sessionTimeoutMillis;
-        return openFiles.computeIfAbsent(requestedRound, (startTime) -> {
+        return openFiles.computeIfAbsent(requestedRound, (ignored) -> {
             // return the first open file for which the round >= the requested round
             // or create a new file if no such file is present
             return openFiles
@@ -287,7 +291,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
                 .sorted((left, right) -> Long.compare(left.round, right.round))
                 .filter((f) -> f.round >= requestedRound)
                 .findFirst()
-                .orElse(new RoundHdfsFile(sessionStartTime));
+                .orElseGet(() -> new RoundHdfsFile(sessionStartTime));
         });
     }
 
@@ -300,7 +304,6 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         final FSDataOutputStream stream;
         final DataFileWriter<GenericRecord> writer;
 
-        long lastSyncTime;
         int recordsSinceLastSync;
 
         RoundHdfsFile(final long time) {
@@ -327,8 +330,6 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
                 // HDFS allows file creation even with no
                 // datanodes available
                 stream.hsync();
-
-                lastSyncTime = System.currentTimeMillis();
                 recordsSinceLastSync = 0;
 
                 logger.debug("Created new HDFS file: {}", path);
@@ -358,7 +359,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
             return String.format("%d%02d%02d-%02d",
                     gc.get(YEAR),
-                    gc.get(MONTH),
+                    gc.get(MONTH) + 1,
                     gc.get(DAY_OF_MONTH),
                     (roundStartTime - gc.getTimeInMillis()) / sessionTimeoutMillis);
         }

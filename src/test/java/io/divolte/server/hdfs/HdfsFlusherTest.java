@@ -45,7 +45,9 @@ public class HdfsFlusherTest {
 
     @After
     public void cleanupTempDir() throws IOException {
-        Files.walk(tempDir).forEach(this::deleteQuietly);
+        Files.walk(tempDir)
+        .filter((p) -> !p.equals(tempDir))
+        .forEach(this::deleteQuietly);
         deleteQuietly(tempDir);
     }
 

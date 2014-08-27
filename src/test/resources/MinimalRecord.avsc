@@ -8,6 +8,11 @@
             "type": "long"
         },
         {
+            "name": "session",
+            "type": "string",
+            "default": ""
+        },
+        {
             "name": "remoteHost",
             "type": "string"
         }
