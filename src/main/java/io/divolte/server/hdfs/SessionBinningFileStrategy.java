@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
 
-@NotThreadSafe
 /*
  * The general idea of this file strategy is to provide a best effort to put events that belong to the same session in the same file.
  *
@@ -53,6 +52,7 @@ import com.typesafe.config.Config;
  *
  * In case of failure, we close all open files. This means that files that were closed as a result of such a failure *DO NOT* provide above guarantee.
  */
+@NotThreadSafe
 public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private final static Logger logger = LoggerFactory.getLogger(SessionBinningFileStrategy.class);
 
