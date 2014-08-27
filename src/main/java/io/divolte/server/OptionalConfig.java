@@ -11,6 +11,7 @@ public abstract class OptionalConfig<T> {
         // Prevent external extension.
     }
 
+    @SuppressWarnings("rawtypes")
     private static final OptionalConfig<?> EMPTY = new ConfigAbsent();
 
     //Constructors

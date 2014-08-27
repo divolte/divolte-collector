@@ -72,17 +72,16 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         hdfsFileDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.dir");
     }
 
-    private String findLocalHostName() {
-        // we should use the bind address from the divolte.server config to figure out the actual hostname we are listening on
+    private Path newFilePath() {
+        return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%s-%d.avro", datePartFormat.format(new Date()), hostString, instanceNumber));
+    }
+
+    private static String findLocalHostName() {
         try {
             return InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
             return "localhost";
         }
-    }
-
-    private Path newFilePath() {
-        return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%s-%d.avro", datePartFormat.format(new Date()), hostString, instanceNumber));
     }
 
     private HadoopFile openNewFile(final Path path) throws IOException {
@@ -186,7 +185,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             throw new IllegalStateException("HDFS connection repair attempt while not broken.");
         }
 
-        long time = System.currentTimeMillis();
+        final long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
             final Path newFilePath = newFilePath();
             return throwsIoException(() ->
@@ -223,11 +222,9 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             this.path = path;
             this.stream = hadoopFs.create(path, hdfsReplication);
 
-            this.writer =
-                    new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema))
-                    .create(schema, stream);
-            this.writer.setSyncInterval(1 << 30);
-            this.writer.setFlushOnEveryBlock(true);
+            writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, stream);
+            writer.setSyncInterval(1 << 30);
+            writer.setFlushOnEveryBlock(true);
 
             // Sync the file on open to make sure the
             // connection actually works, because
@@ -244,7 +241,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     }
 
     @FunctionalInterface
-    public interface IOExceptionThrower {
+    private interface IOExceptionThrower {
         public abstract void run() throws IOException;
     }
 

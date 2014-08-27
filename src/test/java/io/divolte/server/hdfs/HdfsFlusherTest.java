@@ -65,7 +65,7 @@ public class HdfsFlusherTest {
         .build())
         .collect(Collectors.toList());
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record)));
 
         flusher.cleanup();
 
@@ -91,14 +91,14 @@ public class HdfsFlusherTest {
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record)));
 
         for (int c = 0; c < 2; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record)));
 
         flusher.cleanup();
 
