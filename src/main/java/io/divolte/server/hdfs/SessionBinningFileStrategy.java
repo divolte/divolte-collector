@@ -7,6 +7,9 @@ import io.divolte.server.AvroRecordBuffer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.Map;
@@ -124,7 +127,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
             // queue is empty, so logical time == current system time
             timeSignal = System.currentTimeMillis();
             return throwsIoException(() -> {
-                    ImmutableMap.copyOf(openFiles)
+                    ImmutableMap.copyOf(openFiles) // defend against concurrent modification of the map by the file closing code
                     .values()
                     .stream()
                     .distinct()
@@ -238,7 +241,9 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
         final long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
-            return throwsIoException(() -> new RoundHdfsFile(failedRound * sessionTimeoutMillis))
+            return throwsIoException(() -> {
+                openFiles.put(failedRound, new RoundHdfsFile(failedRound * sessionTimeoutMillis));
+            })
             .map((ioe) -> {
                 logger.warn("Could not reconnect to HDFS after failure.");
                 lastFixAttempt = time;
@@ -272,10 +277,10 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     }
 
     private RoundHdfsFile fileForSessionStartTime(final long sessionStartTime) {
-        return openFiles.computeIfAbsent(sessionStartTime / sessionTimeoutMillis, (startTime) -> {
+        final long requestedRound = sessionStartTime / sessionTimeoutMillis;
+        return openFiles.computeIfAbsent(requestedRound, (startTime) -> {
             // return the first open file for which the round >= the requested round
             // or create a new file if no such file is present
-            final long requestedRound = sessionStartTime / sessionTimeoutMillis;
             return openFiles
                 .values()
                 .stream()
@@ -287,6 +292,9 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     }
 
     private final class RoundHdfsFile implements AutoCloseable {
+        private static final int MAX_AVRO_SYNC_INTERVAL = 1 << 30;
+        private final DateFormat format = new SimpleDateFormat("HH.mm.ss.SSS");
+
         final Path path;
         final long round;
         final FSDataOutputStream stream;
@@ -296,17 +304,22 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         int recordsSinceLastSync;
 
         RoundHdfsFile(final long time) {
+
             final long requestedRound = time / sessionTimeoutMillis;
             final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
             this.round = Math.max(requestedRound, oldestAllowedRound);
 
-            this.path = new Path(hdfsFileDir, String.format("%s-divolte-tracking-%s-%d.avro", hostString, roundString(round * sessionTimeoutMillis), instanceNumber));
+            this.path = new Path(hdfsFileDir,
+                    String.format("%s-divolte-tracking-%s-%s-%d.avro",
+                            hostString, // add host name, differentiates when deploying multiple collector instances
+                            roundString(round * sessionTimeoutMillis), // composed of the round start date + round number within the day
+                            format.format(new Date()), // additionally, we add a timestamp, because after failures, a file for a round can be created multiple times
+                            instanceNumber)); // add instance number, so different threads cannot try to create the exact same file
 
             try {
-
                 stream = hdfs.create(path, hdfsReplication);
                 writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, stream);
-                writer.setSyncInterval(1 << 30);
+                writer.setSyncInterval(MAX_AVRO_SYNC_INTERVAL); // since we manually sync at chosen intervals
                 writer.setFlushOnEveryBlock(true);
 
                 // Sync the file on open to make sure the
@@ -334,7 +347,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
              * in the form YYYYmmdd-RR. Where RR is the 0-padded number of session length
              * intervals since midnight on the current day. This uses the system timezone.
              * Note that if the system is in a timezone that supports DST, the number of
-             * session lengths intervals per day is not the same for all days.
+             * session length intervals per day is not equal for all days.
              */
             final GregorianCalendar gc = new GregorianCalendar();
             gc.setTimeInMillis(roundStartTime);
@@ -353,8 +366,8 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         public void close() { try { writer.close(); } catch (IOException e) { throw new WrappedIOException(e); } }
     }
 
+    @SuppressWarnings("serial")
     private final class WrappedIOException extends RuntimeException {
-        private static final long serialVersionUID = -4052372882422830902L;
         final IOException wrappedIOException;
 
         private WrappedIOException(IOException ioe) {
