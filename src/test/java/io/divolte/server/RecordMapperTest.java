@@ -64,7 +64,8 @@ public class RecordMapperTest {
                 "i=1024",
                 "j=768",
                 "w=640",
-                "h=480"
+                "h=480",
+                "t=pageView"
                 );
 
         GenericRecord record = maker.newRecordFromExchange(theExchange);
@@ -79,6 +80,7 @@ public class RecordMapperTest {
         assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
+        assertEquals("pageView", record.get("eventType"));
     }
 
     @Test
@@ -135,6 +137,15 @@ public class RecordMapperTest {
     }
 
     @Test
+    public void shouldFailOnStartupIfCustomCookieMappingMissingName() throws IOException, UnirestException {
+        expected.expect(SchemaMappingException.class);
+        expected.expectMessage("Cookie mapping for field customCookie requires a string 'name' property.");
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-missing-cookie-name");
+        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+    }
+
+    @Test
     public void shouldSetFieldWithMatchingRegexName() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-matchingregex");
@@ -162,6 +173,29 @@ public class RecordMapperTest {
         assertEquals("ABA", record.get("toplevelCategory"));
         assertEquals("C12", record.get("subCategory"));
         assertEquals("about", record.get("contentPage"));
+    }
+
+    @Test
+    public void shouldSetFieldFromCustomEventParameter() throws IOException, UnirestException {
+        final Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        final Config config = ConfigFactory.load("schema-test-customparameter");
+        final RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "t.abba=Honey, Honey");
+        final GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals("Honey, Honey", record.get("customEventParameter"));
+    }
+
+    @Test
+    public void shouldFailOnStartupIfCustomEventParameterMappingMissingName() throws IOException, UnirestException {
+        expected.expect(SchemaMappingException.class);
+        expected.expectMessage("Event parameter mapping for field customEventParameter requires a string 'name' property.");
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-missing-customparameter-name");
+        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     private void testMapping(final Optional<CityResponse> response,

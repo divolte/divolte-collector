@@ -86,8 +86,10 @@ minifyJs {
     dest = file("${buildDir}/generated-resources/javascript/static/dvt.js")
     sourceMap = file("${buildDir}/generated-resources/javascript/static/dvt.sourcemap.json")
     closure {
-        warningLevel = 'QUIET'
+        warningLevel = 'DEFAULT'
         compilationLevel = 'ADVANCED_OPTIMIZATIONS'
+        compilerOptions.languageIn = 'ECMASCRIPT5_STRICT'
+        compilerOptions.languageOut = 'ECMASCRIPT5_STRICT'
     }
 }
 

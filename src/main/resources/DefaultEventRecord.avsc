@@ -58,6 +58,11 @@
             "type": "string"
         },
         {
+            "name": "eventType",
+            "type": ["null", "string"],
+            "default": null
+        },
+        {
             "name": "userAgentString",
             "type": ["null", "string"],
             "default": null

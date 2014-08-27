@@ -148,8 +148,15 @@ final class RecordMapper {
     private static FieldSupplier<?> complexFieldSupplierFromConfig(final String name, final String type, final Config config) {
         switch (type) {
         case "cookie":
-            return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(config.getString("name")))
+            final String cookieName = OptionalConfig.of(config::getString, "name")
+                .orElseThrow(() -> new SchemaMappingException("Cookie mapping for field %s requires a string 'name' property.", name));
+            return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(cookieName))
                                   .map(Cookie::getValue);
+        case "event_parameter":
+            final String parameterName = OptionalConfig.of(config::getString, "name")
+                                                       .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", name));
+            final String queryParameterName = "t." + parameterName;
+            return (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
         case "regex_group":
             return regexGroupFieldSupplier(config);
         case "regex_name":
@@ -185,8 +192,6 @@ final class RecordMapper {
     private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
     private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
     private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = (c) -> c.userAgent.get();
-    private static final FieldSupplier<Long> TIMESTAMP_FIELD_PRODUCER = (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
-    private static final FieldSupplier<String> PAGE_VIEW_ID_PRODUCER = (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
 
     private static FieldSupplier<String> regexFieldSupplierForName(final String name) {
         switch (name) {
@@ -205,6 +210,8 @@ final class RecordMapper {
 
     private static FieldSupplier<?> simpleFieldSupplier(final String name) {
         switch (name) {
+        case "eventType":
+            return (FieldSupplier<String>) (c) -> c.getQueryParameter("t");
         case "firstInSession":
             return (c) -> Optional.of(c.isFirstInSession());
         case "geoCityId":
@@ -272,7 +279,7 @@ final class RecordMapper {
         case "geoSatelliteProvider":
             return (c) -> c.getTraits().map(Traits::isSatelliteProvider);
         case "timestamp":
-            return TIMESTAMP_FIELD_PRODUCER;
+            return (FieldSupplier<Long>) (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
         case "userAgent":
             return USERAGENT_FIELD_PRODUCER;
         case "userAgentName":
@@ -312,7 +319,7 @@ final class RecordMapper {
         case "sessionId":
             return (c) -> c.getAttachment(SESSION_COOKIE_KEY).map((cv) -> cv.value);
         case "pageViewId":
-            return PAGE_VIEW_ID_PRODUCER;
+            return (FieldSupplier<String>) (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
         default:
             throw new SchemaMappingException("Unknown field in schema mapping: %s", name);
         }
