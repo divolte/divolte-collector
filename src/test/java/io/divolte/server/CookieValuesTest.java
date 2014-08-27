@@ -12,7 +12,7 @@ public class CookieValuesTest {
     @Test
     public void cookieValuesShouldBeUnique() {
         final int num = 100000;
-        final Set<String> values = new HashSet<>(num + (num / 2));
+        final Set<String> values = new HashSet<>(num + num / 2);
         for (int c = 0; c < num; c++) {
             values.add(CookieValues.generate().value);
         }

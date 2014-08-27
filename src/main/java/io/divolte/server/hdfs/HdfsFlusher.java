@@ -26,15 +26,14 @@ import com.typesafe.config.Config;
 final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
-    private final FileSystem hadoopFs;
-    private final short hdfsReplication;
-
     private final FileCreateAndSyncStrategy fileStrategy;
     private HdfsOperationResult lastHdfsResult;
 
     public HdfsFlusher(final Config config, final Schema schema) {
         Objects.requireNonNull(config);
 
+        final FileSystem hadoopFs;
+        final short hdfsReplication;
         try {
             hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
             final URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));

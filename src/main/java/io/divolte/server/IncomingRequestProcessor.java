@@ -1,12 +1,13 @@
 package io.divolte.server;
 
-import static io.divolte.server.DivolteEventHandler.*;
+import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -19,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import static io.divolte.server.DivolteEventHandler.*;
+
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
@@ -28,18 +31,21 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
     @Nullable
     private final HdfsFlushingPool hdfsFlushingPool;
 
-    private final GenericRecordMaker maker;
+    private final RecordMapper mapper;
 
     public IncomingRequestProcessor(final Config config,
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
                                     @Nullable final HdfsFlushingPool hdfsFlushingPool,
+                                    @Nullable final LookupService geoipLookupService,
                                     final Schema schema) {
 
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
 
         final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));
-        maker = new GenericRecordMaker(Objects.requireNonNull(schema), schemaMappingConfig, config);
+        mapper = new RecordMapper(Objects.requireNonNull(schema),
+                                  schemaMappingConfig, config,
+                                  Optional.ofNullable(geoipLookupService));
     }
 
     private Config schemaMappingConfigFromConfig(final Config config) {
@@ -56,7 +62,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
 
     @Override
     public void process(final HttpServerExchange exchange) {
-        final GenericRecord avroRecord = maker.makeRecordFromExchange(exchange);
+        final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
         final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
                 exchange.getAttachment(PARTY_COOKIE_KEY),
                 exchange.getAttachment(SESSION_COOKIE_KEY),

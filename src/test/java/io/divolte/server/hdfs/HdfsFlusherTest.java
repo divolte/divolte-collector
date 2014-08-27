@@ -24,11 +24,18 @@ import org.apache.commons.lang.mutable.MutableInt;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class HdfsFlusherTest {
+    private static final Logger logger = LoggerFactory.getLogger(HdfsFlusherTest.class);
+
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
+    private static final String ARBITRARY_IP = "8.8.8.8";
+
     private Path tempDir;
 
     @Before
@@ -54,13 +61,11 @@ public class HdfsFlusherTest {
         List<Record> records = LongStream.range(0, 10)
         .mapToObj((time) -> new GenericRecordBuilder(schema)
         .set("ts", time)
-        .set("remoteHost", "8.8.8.8")
+        .set("remoteHost", ARBITRARY_IP)
         .build())
         .collect(Collectors.toList());
 
-        records.forEach((record) -> {
-            flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record));
-        });
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record)));
 
         flusher.cleanup();
 
@@ -80,24 +85,20 @@ public class HdfsFlusherTest {
         List<Record> records = LongStream.range(0, 5)
         .mapToObj((time) -> new GenericRecordBuilder(schema)
         .set("ts", time)
-        .set("remoteHost", "8.8.8.8")
+        .set("remoteHost", ARBITRARY_IP)
         .build())
         .collect(Collectors.toList());
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
-        records.forEach((record) -> {
-            flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record));
-        });
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record)));
 
         for (int c = 0; c < 2; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> {
-            flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record));
-        });
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), record)));
 
         flusher.cleanup();
 
@@ -116,7 +117,9 @@ public class HdfsFlusherTest {
     private void deleteQuietly(Path p) {
         try {
             Files.delete(p);
-        } catch (Exception e) {}
+        } catch (final Exception e) {
+            logger.debug("Ignoring failure while deleting file: " + p, e);
+        }
     }
 
     private void verifyAvroFile(List<Record> expected, Schema schema, Path avroFile) {
@@ -128,7 +131,7 @@ public class HdfsFlusherTest {
     private DataFileReader<Record> readAvroFile(Schema schema, File file) {
         DatumReader<Record> dr = new GenericDatumReader<>(schema);
         try {
-            return new DataFileReader<Record>(file, dr);
+            return new DataFileReader<>(file, dr);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

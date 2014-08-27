@@ -1,0 +1,72 @@
+{
+  // This JSON file contains every possible piece of information that we can map to a record.
+  // Values are unique so that we can detect incorrect field mappings.
+  "city": {
+    "geoname_id": 2758064,
+    "names": {
+      "en": "Bussum"
+    }
+  },
+  "location": {
+    "latitude": 52.27333,
+    "longitude": 5.16111,
+    "metro_code": 37331,
+    "time_zone": "Europe/Amsterdam"
+  },
+  "postal": {
+    "code": "1403RM"
+  },
+  "continent": {
+    "code": "EU",
+    "geoname_id": 6255148,
+    "names": {
+      "en": "Europe"
+    }
+  },
+  "country": {
+    "iso_code": "NL",
+    "geoname_id": 2750405,
+    "names": {
+      "en": "Netherlands"
+    }
+  },
+  "registered_country": {
+    "iso_code": "AB",
+    "geoname_id": 12,
+    "names": {
+      "en": "Name1"
+    }
+  },
+  "represented_country": {
+    "iso_code": "CD",
+    "geoname_id": 14,
+    "names": {
+      "en": "Name2"
+    }
+  },
+  "traits": {
+    "autonomous_system_number": 42,
+    "autonomous_system_organization": "Level Communications",
+    "domain": "divolte.io",
+    "is_anonymous_proxy": true,
+    "is_satellite_provider": false,
+    "isp": "An ISP",
+    "organization": "The Organization"
+  },
+  "subdivisions": [
+    {
+      "iso_code": "WN",
+      "geoname_id": 2331,
+      "names": {
+        "en": "Subdivision1"
+      }
+    },
+    {
+      "iso_code": "YC",
+      "geoname_id": 2333,
+      "names": {
+        "en": "Subdivision2"
+      }
+    }
+  ]
+}
