@@ -200,7 +200,7 @@ public class RecordMapperTest {
 
     private void testMapping(final Optional<CityResponse> response,
                              final Map<String,Object> expectedMapping)
-            throws IOException, UnirestException {
+            throws IOException, UnirestException, LookupService.ClosedServiceException {
         // Set up the test.
         final Schema schema = schemaFromClassPath("/TestRecord.avsc");
         final Config config = ConfigFactory.load("schema-test-geo");
@@ -222,7 +222,7 @@ public class RecordMapperTest {
     }
 
     @Test
-    public void shouldMapAllGeoIpFields() throws IOException, UnirestException {
+    public void shouldMapAllGeoIpFields() throws IOException, UnirestException, LookupService.ClosedServiceException {
         final CityResponse mockResponseWithEverything = loadFromClassPath("/city-response-with-everything.json",
                                                                           new TypeReference<CityResponse>(){});
         final Map<String,Object> expectedMapping = loadFromClassPath("/city-response-expected-mapping.json",
@@ -250,14 +250,15 @@ public class RecordMapperTest {
     }
 
     @Test
-    public void shouldMapMissingGeoIpFields() throws IOException, UnirestException {
+    public void shouldMapMissingGeoIpFields() throws IOException, UnirestException, LookupService.ClosedServiceException {
         final CityResponse mockResponseWithNothing = MAPPER.readValue("{}",CityResponse.class);
         final Map<String,Object> expectedMapping = buildEmptyMapping(false, ImmutableList.of());
         testMapping(Optional.of(mockResponseWithNothing), expectedMapping);
     }
 
     @Test
-    public void shouldNotPerformGeoLookupIfMappingsDoNotUseIt() throws IOException, UnirestException {
+    public void shouldNotPerformGeoLookupIfMappingsDoNotUseIt()
+            throws IOException, UnirestException, LookupService.ClosedServiceException {
         // Set up the test.
         final Schema schema = schemaFromClassPath("/TestRecord.avsc");
         final Config config = ConfigFactory.load("schema-test-no-geo");
@@ -273,7 +274,8 @@ public class RecordMapperTest {
     }
 
     @Test
-    public void shouldNotSetAnyGeoFieldsWhenLookupYieldsNoResult() throws IOException, UnirestException {
+    public void shouldNotSetAnyGeoFieldsWhenLookupYieldsNoResult()
+            throws IOException, UnirestException, LookupService.ClosedServiceException {
         testMapping(Optional.empty(), buildEmptyMapping(null, null));
     }
 

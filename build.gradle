@@ -39,7 +39,7 @@ dependencies {
     compile group: 'org.apache.hadoop', name:'hadoop-client', version: '2.4.1'
     compile group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.19'
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.07'
-    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'0.8.0') {
+    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'0.8.1') {
         // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'

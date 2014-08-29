@@ -14,6 +14,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.maxmind.db.ClosedDatabaseException;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.CityResponse;
@@ -60,7 +61,7 @@ public class DatabaseLookupService implements LookupService {
     }
 
     @Override
-    public Optional<CityResponse> lookup(final InetAddress address) {
+    public Optional<CityResponse> lookup(final InetAddress address) throws ClosedServiceException {
         Optional<CityResponse> result;
         try {
             result = Optional.of(databaseReader.city(address));
@@ -71,6 +72,8 @@ public class DatabaseLookupService implements LookupService {
                 logger.debug("Ignoring failure to lookup address: " + address, e);
             }
             result = Optional.empty();
+        } catch (final ClosedDatabaseException e) {
+            throw new ClosedServiceException(this, e);
         } catch (final IOException e) {
             logger.warn("Lookup failed for address: " + address, e);
             result = Optional.empty();

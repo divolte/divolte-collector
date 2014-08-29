@@ -431,7 +431,11 @@ final class RecordMapper {
             this.geoLookup = new LazyReference<>(() -> geoipService.flatMap((service) -> {
                 final InetSocketAddress sourceAddress = serverExchange.getSourceAddress();
                 final InetAddress ipAddress = null != sourceAddress ? sourceAddress.getAddress() : null;
-                return null != ipAddress ? service.lookup(ipAddress) : Optional.empty();
+                try {
+                    return null != ipAddress ? service.lookup(ipAddress) : Optional.empty();
+                } catch (final LookupService.ClosedServiceException e) {
+                    return Optional.empty();
+                }
             }));
         }
 

@@ -110,9 +110,18 @@ public class ExternalDatabaseLookupService implements LookupService {
     }
 
     @Override
-    public Optional<CityResponse> lookup(final InetAddress address) {
+    public Optional<CityResponse> lookup(final InetAddress address) throws ClosedServiceException {
         final DatabaseLookupService service = databaseLookupService.get();
-        return null != service ? service.lookup(address) : Optional.empty();
+        if (null == service) {
+            throw new ClosedServiceException(this);
+        }
+        try {
+            return service.lookup(address);
+        } catch (final ClosedServiceException e) {
+            // We accidentally performed a lookup using an underlying service that was closed
+            // between us fetching it and using it. Retry via recursion.
+            return lookup(address);
+        }
     }
 
     @Override
