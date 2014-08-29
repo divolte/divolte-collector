@@ -368,7 +368,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     }
 
     @SuppressWarnings("serial")
-    private final class WrappedIOException extends RuntimeException {
+    private static final class WrappedIOException extends RuntimeException {
         final IOException wrappedIOException;
 
         private WrappedIOException(IOException ioe) {
