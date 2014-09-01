@@ -11,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.StreamSupport;
@@ -37,26 +36,33 @@ public class SessionBinningFileStrategyTest {
     @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     private static final String ARBITRARY_IP = "8.8.8.8";
 
-    private Path tempDir;
+    private Path tempInflightDir;
+    private Path tempPublishDir;
 
     @Before
     public void setupTempDir() throws IOException {
-        tempDir = Files.createTempDirectory("hdfs-flusher-binning-test");
+        tempInflightDir = Files.createTempDirectory("hdfs-flusher-test-inflight");
+        tempPublishDir = Files.createTempDirectory("hdfs-flusher-test-publish");
     }
 
     @After
     public void cleanupTempDir() throws IOException {
-        Files.walk(tempDir)
-        .filter((p) -> !p.equals(tempDir))
-        .forEach(this::deleteQuietly);
-        deleteQuietly(tempDir);
+        Files.walk(tempInflightDir)
+             .filter((p) -> !p.equals(tempInflightDir))
+             .forEach(this::deleteQuietly);
+        deleteQuietly(tempInflightDir);
+        Files.walk(tempPublishDir)
+             .filter((p) -> !p.equals(tempPublishDir))
+             .forEach(this::deleteQuietly);
+        deleteQuietly(tempPublishDir);
     }
 
     @Test
     public void shouldCreateFilePerRound() throws IOException {
         Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
-                "divolte.hdfs_flusher.session_binning_file_strategy.dir = \"" + tempDir.toString() + "\""));
+                "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
@@ -77,19 +83,37 @@ public class SessionBinningFileStrategyTest {
 
         flusher.cleanup();
 
-        // abuse AtomicInteger as mutable integer object for a final counter
-        final AtomicInteger count = new AtomicInteger(0);
-        Files.walk(tempDir)
-        .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
-        .filter((p) -> p.toString().endsWith(".avro"))
-        .forEach((p) -> verifyAvroFile(records.subList(count.get(), count.incrementAndGet()), schema, p));
+        List<Path> inflightFiles = Files.walk(tempInflightDir)
+                .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
+                .filter((p) -> p.toString().endsWith(".avro.partial"))
+                .collect(Collectors.toList());
+        List<Path> publishedFiles = Files.walk(tempPublishDir)
+                .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
+                .filter((p) -> p.toString().endsWith(".avro"))
+                .collect(Collectors.toList());
+
+        /*
+         * We created 5 events, each in a different round. On each sync event, we evaluate
+         * which open files can be closed because their 3-session span has elapsed. So:
+         * a) On the 4th event, the 1st span is completed.
+         * b) On the 5th event, the 2nd span is completed.
+         * c) The last 3 spans remain in-flight.
+         */
+        assertEquals(3, inflightFiles.size());
+        assertEquals(2 ,publishedFiles.size());
+        verifyAvroFile(Arrays.asList(records.get(0)), schema, publishedFiles.get(0));
+        verifyAvroFile(Arrays.asList(records.get(1)), schema, publishedFiles.get(1));
+        verifyAvroFile(Arrays.asList(records.get(2)), schema, inflightFiles.get(0));
+        verifyAvroFile(Arrays.asList(records.get(3)), schema, inflightFiles.get(1));
+        verifyAvroFile(Arrays.asList(records.get(4)), schema, inflightFiles.get(2));
     }
 
     @Test
     public void eventsShouldStickWithSessionStartTimeRound() throws IOException {
         Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
-                "divolte.hdfs_flusher.session_binning_file_strategy.dir = \"" + tempDir.toString() + "\""));
+                "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
@@ -118,22 +142,22 @@ public class SessionBinningFileStrategyTest {
 
         flusher.cleanup();
 
-        List<Path> avroFiles = Files.walk(tempDir)
+        List<Path> avroFiles = Files.walk(tempInflightDir)
         .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
-        .filter((p) -> p.toString().endsWith(".avro"))
+        .filter((p) -> p.toString().endsWith(".avro.partial"))
         .collect(Collectors.toList());
 
+        assertEquals(2, avroFiles.size());
         verifyAvroFile(Arrays.asList(records.get(0), records.get(0)), schema, avroFiles.get(0));
         verifyAvroFile(Arrays.asList(records.get(1), records.get(1)), schema, avroFiles.get(1));
-
-        assertEquals(2, avroFiles.size());
     }
 
     @Test
     public void eventsShouldMoveToNextRoundFileIfSessionStartTimeRoundFileIsNoLongerOpen() throws IOException {
         Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
-                "divolte.hdfs_flusher.session_binning_file_strategy.dir = \"" + tempDir.toString() + "\""));
+                "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
 
         HdfsFlusher flusher = new HdfsFlusher(config, schema);
 
@@ -153,22 +177,58 @@ public class SessionBinningFileStrategyTest {
         .map((r) -> AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.tryParse((String) r.get("session")).get(), (Long) r.get("ts"), r))
         .collect(Collectors.toList());
 
-        buffers.forEach((b) -> {
-            flusher.process(b);
-        });
+        buffers.forEach(flusher::process);
         flusher.cleanup();
 
-        List<Path> avroFiles = Files.walk(tempDir)
-        .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
-        .filter((p) -> p.toString().endsWith(".avro"))
-        .collect(Collectors.toList());
+        List<Path> inflightFiles = Files.walk(tempInflightDir)
+            .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
+            .filter((p) -> p.toString().endsWith(".avro.partial"))
+            .collect(Collectors.toList());
+        List<Path> publishedFiles = Files.walk(tempPublishDir)
+            .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
+            .filter((p) -> p.toString().endsWith(".avro"))
+            .collect(Collectors.toList());
 
-        verifyAvroFile(Arrays.asList(records.get(0)), schema, avroFiles.get(0));
-        verifyAvroFile(Arrays.asList(records.get(1), records.get(4), records.get(5)), schema, avroFiles.get(1));
-        verifyAvroFile(Arrays.asList(records.get(2), records.get(6)), schema, avroFiles.get(2));
-        verifyAvroFile(Arrays.asList(records.get(3), records.get(7)), schema, avroFiles.get(3));
+        assertEquals(1, publishedFiles.size());
+        assertEquals(3, inflightFiles.size());
 
-        assertEquals(4, avroFiles.size());
+        verifyAvroFile(Arrays.asList(records.get(0)), schema, publishedFiles.get(0));
+        verifyAvroFile(Arrays.asList(records.get(1), records.get(4), records.get(5)), schema, inflightFiles.get(0));
+        verifyAvroFile(Arrays.asList(records.get(2), records.get(6)), schema, inflightFiles.get(1));
+        verifyAvroFile(Arrays.asList(records.get(3), records.get(7)), schema, inflightFiles.get(2));
+    }
+
+    @Test
+    public void shouldNotPublishInflightFilesOnCleanup() throws IOException {
+        Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
+        Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
+                "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
+
+        HdfsFlusher flusher = new HdfsFlusher(config, schema);
+
+        final Record record = new GenericRecordBuilder(schema)
+                .set("ts", 100L)
+                .set("remoteHost", ARBITRARY_IP)
+                .build();
+        flusher.process(AvroRecordBuffer.fromRecord(
+                                CookieValues.generate((Long) record.get("ts")),
+                                CookieValues.generate((Long) record.get("ts")),
+                                (Long) record.get("ts"),
+                                record));
+        flusher.cleanup();
+
+        List<Path> inflightFiles = Files.walk(tempInflightDir)
+                .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
+                .filter((p) -> p.toString().endsWith(".avro.partial"))
+                .collect(Collectors.toList());
+        List<Path> publishedFiles = Files.walk(tempPublishDir)
+                .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
+                .filter((p) -> p.toString().endsWith(".avro"))
+                .collect(Collectors.toList());
+
+        assertEquals(1, inflightFiles.size());
+        assertEquals(0 ,publishedFiles.size());
     }
 
     private void deleteQuietly(Path p) {

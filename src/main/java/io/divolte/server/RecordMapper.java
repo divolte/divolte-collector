@@ -57,9 +57,6 @@ import com.typesafe.config.ConfigValueType;
 
 import static io.divolte.server.DivolteEventHandler.*;
 
-/*
- * This class is called maker, because builder was already taken by Avro itself.
- */
 @ParametersAreNonnullByDefault
 @NotThreadSafe
 final class RecordMapper {

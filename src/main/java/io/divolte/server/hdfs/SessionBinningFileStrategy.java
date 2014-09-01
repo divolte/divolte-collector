@@ -43,7 +43,7 @@ import com.typesafe.config.Config;
  * - all events for a session are stored in the file with the round marked by the session start time
  * - a file for a round is kept open for at least three times the session duration *in absence of failures*
  * - during this entire process, we use the event timestamp for events that come off the queue as a logical clock signal
- *      - only in the case of an empty queue, we use the actual system time as clock signal (receiving heartbeats means an empty queue)
+ *      - only in the case of an empty queue, we use the actual system time as clock signal (receiving heartbeats in a state of normal operation means an empty queue)
  * - when a file for a round is closed, but events that should be in that file still arrive, they are stored in the oldest open file
  *      - this happens for exceptionally long sessions
  *
@@ -56,7 +56,7 @@ import com.typesafe.config.Config;
 public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private final static Logger logger = LoggerFactory.getLogger(SessionBinningFileStrategy.class);
 
-    private final static long HDFS_RECONNECT_DELAY = 15000;
+    private final static long HDFS_RECONNECT_DELAY_MILLIS = 15000;
     private final static long FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS = 3;
 
     private final static AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
@@ -72,7 +72,8 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private final long sessionTimeoutMillis;
 
     private final Map<Long, RoundHdfsFile> openFiles;
-    private final String hdfsFileDir;
+    private final String hdfsInflightDir;
+    private final String hdfsPublishDir;
     private final long syncEveryMillis;
     private final int syncEveryRecords;
 
@@ -89,7 +90,8 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
         hostString = findLocalHostName();
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
-        hdfsFileDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.dir");
+        hdfsInflightDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.working_dir");
+        hdfsPublishDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.publish_dir");
 
         syncEveryMillis = config.getDuration("divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_duration", TimeUnit.MILLISECONDS);
         syncEveryRecords = config.getInt("divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_records");
@@ -172,7 +174,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
     @Override
     public void cleanup() {
-        openFiles.values().forEach((file) -> throwsIoException(file::close)
+        openFiles.values().forEach((file) -> throwsIoException(() -> file.close(false))
         .ifPresent((ioe) -> logger.warn("Failed to properly close HDFS file: " + file.path, ioe)));
         openFiles.clear();
     }
@@ -225,7 +227,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         .distinct()
         .forEach((file) -> {
             logger.debug("Closing HDFS file: {}", file.path);
-            throwsIoException(file::close)
+            throwsIoException(() -> file.close(true))
             .ifPresent((ioe) -> logger.warn("Failed to cleanly close HDFS file: " + file.path, ioe));
         });
 
@@ -239,7 +241,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         }
 
         final long time = System.currentTimeMillis();
-        if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
+        if (time - lastFixAttempt > HDFS_RECONNECT_DELAY_MILLIS) {
             return throwsIoException(() -> openFiles.put(timeSignal / sessionTimeoutMillis, new RoundHdfsFile(timeSignal)))
             .map((ioe) -> {
                 logger.warn("Could not reconnect to HDFS after failure.");
@@ -264,7 +266,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
          * as records for specific files arrive.
          */
         isHdfsAlive = false;
-        openFiles.values().forEach((file) -> throwsIoException(file::close));
+        openFiles.values().forEach((file) -> throwsIoException(() -> file.close(false)));
         openFiles.clear();
 
         logger.warn("HDFS failure. Closing all files and going into connect retry cycle.");
@@ -283,7 +285,8 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
             .orElseGet(() -> new RoundHdfsFile(sessionStartTime)));
     }
 
-    private final class RoundHdfsFile implements AutoCloseable {
+    private final class RoundHdfsFile {
+        private static final String INFLIGHT_EXTENSION = ".partial";
         private static final int MAX_AVRO_SYNC_INTERVAL = 1 << 30;
         private final DateFormat format = new SimpleDateFormat("HH.mm.ss.SSS");
 
@@ -295,13 +298,12 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         int recordsSinceLastSync;
 
         RoundHdfsFile(final long time) {
-
             final long requestedRound = time / sessionTimeoutMillis;
             final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
             this.round = Math.max(requestedRound, oldestAllowedRound);
 
-            this.path = new Path(hdfsFileDir,
-                    String.format("%s-divolte-tracking-%s-%s-%d.avro",
+            this.path = new Path(hdfsInflightDir,
+                    String.format("%s-divolte-tracking-%s-%s-%d.avro" + INFLIGHT_EXTENSION,
                             hostString, // add host name, differentiates when deploying multiple collector instances
                             roundString(round * sessionTimeoutMillis), // composed of the round start date + round number within the day
                             format.format(new Date()), // additionally, we add a timestamp, because after failures, a file for a round can be created multiple times
@@ -352,7 +354,23 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
                     (roundStartTime - gc.getTimeInMillis()) / sessionTimeoutMillis);
         }
 
-        public void close() { try { writer.close(); } catch (IOException e) { throw new WrappedIOException(e); } }
+        private Path getPublishDestination() {
+            final String pathName = path.getName();
+            return new Path(hdfsPublishDir, pathName.substring(0, pathName.length() - INFLIGHT_EXTENSION.length()));
+        }
+
+        public void close(final boolean publish) {
+            try {
+                writer.close();
+                if (publish) {
+                    final Path publishDestination = getPublishDestination();
+                    logger.debug("Moving HDFS file: {} -> {}", path, publishDestination);
+                    hdfs.rename(path, publishDestination);
+                }
+            } catch (IOException e) {
+                throw new WrappedIOException(e);
+            }
+        }
     }
 
     @SuppressWarnings("serial")
