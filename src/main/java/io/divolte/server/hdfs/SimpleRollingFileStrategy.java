@@ -36,6 +36,8 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
 
     private final static long HDFS_RECONNECT_DELAY = 15000;
 
+    private final static String INFLIGHT_EXTENSION = ".partial";
+
     private final static AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
     private final int instanceNumber;
     private final String hostString;
@@ -48,7 +50,8 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     private final long newFileEveryMillis;
 
     private final FileSystem hadoopFs;
-    private final String hdfsFileDir;
+    private final String hdfsWorkingDir;
+    private final String hdfsPublishDir;
     private final short hdfsReplication;
 
     private HadoopFile currentFile;
@@ -69,11 +72,12 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         this.hadoopFs = fs;
         this.hdfsReplication = hdfsReplication;
 
-        hdfsFileDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.dir");
+        hdfsWorkingDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir");
+        hdfsPublishDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir");
     }
 
     private Path newFilePath() {
-        return new Path(hdfsFileDir, String.format("%s-divolte-tracking-%s-%d.avro", datePartFormat.format(new Date()), hostString, instanceNumber));
+        return new Path(hdfsWorkingDir, String.format("%s-divolte-tracking-%s-%d.avro" + INFLIGHT_EXTENSION, datePartFormat.format(new Date()), hostString, instanceNumber));
     }
 
     private static String findLocalHostName() {
@@ -237,7 +241,17 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             this.projectedCloseTime = openTime + newFileEveryMillis;
         }
 
-        public void close() throws IOException { writer.close(); }
+        private Path getPublishDestination() {
+            final String pathName = path.getName();
+            return new Path(hdfsPublishDir, pathName.substring(0, pathName.length() - INFLIGHT_EXTENSION.length()));
+        }
+
+        public void close() throws IOException {
+            writer.close();
+            final Path publishDestination = getPublishDestination();
+            logger.debug("Moving HDFS file: {} -> {}", path, publishDestination);
+            hadoopFs.rename(path, publishDestination);
+        }
     }
 
     @FunctionalInterface
