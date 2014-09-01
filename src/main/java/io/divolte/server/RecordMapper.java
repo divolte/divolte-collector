@@ -26,7 +26,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -164,13 +163,13 @@ final class RecordMapper {
     }
 
     private static FieldSupplier<String> regexNameFieldSupplier(final Config config) {
-        final Stream<String> regexNames = config.getStringList("regexes").stream();
+        final List<String> regexNames = config.getStringList("regexes");
         final String fieldName = config.getString("field");
         final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(fieldName);
 
         return (c) -> fieldSupplier.get(c)
-                                 .flatMap((s) -> regexNames.filter((rn) -> c.matcher(rn, fieldName, s).matches())
-                                                           .findFirst());
+                                 .flatMap((s) -> regexNames.stream().filter((rn) -> c.matcher(rn, fieldName, s).matches())
+                                                                    .findFirst());
     }
 
     private static FieldSupplier<String> regexGroupFieldSupplier(final Config config) {
