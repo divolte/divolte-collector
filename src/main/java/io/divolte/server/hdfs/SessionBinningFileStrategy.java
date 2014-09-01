@@ -131,7 +131,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         if (isHdfsAlive) {
             // queue is empty, so logical time == current system time
             timeSignal = System.currentTimeMillis();
-            return throwsIoException(() -> possiblySyncAndOrClose())
+            return throwsIoException(this::possiblySyncAndOrClose)
             .map((ioe) -> {
                 logger.warn("Failed to sync HDFS file.", ioe);
                 hdfsDied();
@@ -172,12 +172,8 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
     @Override
     public void cleanup() {
-        openFiles.values().forEach((file) -> {
-            throwsIoException(() -> file.close())
-            .ifPresent((ioe) -> {
-                logger.warn("Failed to properly close HDFS file: " + file.path, ioe);
-            });
-        });
+        openFiles.values().forEach((file) -> throwsIoException(file::close)
+        .ifPresent((ioe) -> logger.warn("Failed to properly close HDFS file: " + file.path, ioe)));
         openFiles.clear();
     }
 
@@ -230,9 +226,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         .forEach((file) -> {
             logger.debug("Closing HDFS file: {}", file.path);
             throwsIoException(file::close)
-            .ifPresent((ioe) -> {
-                logger.warn("Failed to cleanly close HDFS file: " + file.path, ioe);
-            });
+            .ifPresent((ioe) -> logger.warn("Failed to cleanly close HDFS file: " + file.path, ioe));
         });
 
         entriesToBeClosed
@@ -246,9 +240,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
         final long time = System.currentTimeMillis();
         if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
-            return throwsIoException(() -> {
-                openFiles.put(timeSignal / sessionTimeoutMillis, new RoundHdfsFile(timeSignal));
-            })
+            return throwsIoException(() -> openFiles.put(timeSignal / sessionTimeoutMillis, new RoundHdfsFile(timeSignal)))
             .map((ioe) -> {
                 logger.warn("Could not reconnect to HDFS after failure.");
                 lastFixAttempt = time;
@@ -272,9 +264,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
          * as records for specific files arrive.
          */
         isHdfsAlive = false;
-        openFiles.values().forEach((file) -> {
-            throwsIoException(() -> file.close());
-        });
+        openFiles.values().forEach((file) -> throwsIoException(file::close));
         openFiles.clear();
 
         logger.warn("HDFS failure. Closing all files and going into connect retry cycle.");
@@ -282,17 +272,15 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
     private RoundHdfsFile fileForSessionStartTime(final long sessionStartTime) {
         final long requestedRound = sessionStartTime / sessionTimeoutMillis;
-        return openFiles.computeIfAbsent(requestedRound, (ignored) -> {
-            // return the first open file for which the round >= the requested round
-            // or create a new file if no such file is present
-            return openFiles
-                .values()
-                .stream()
-                .sorted((left, right) -> Long.compare(left.round, right.round))
-                .filter((f) -> f.round >= requestedRound)
-                .findFirst()
-                .orElseGet(() -> new RoundHdfsFile(sessionStartTime));
-        });
+        // return the first open file for which the round >= the requested round
+        // or create a new file if no such file is present
+        return openFiles.computeIfAbsent(requestedRound, (ignored) -> openFiles
+            .values()
+            .stream()
+            .sorted((left, right) -> Long.compare(left.round, right.round))
+            .filter((f) -> f.round >= requestedRound)
+            .findFirst()
+            .orElseGet(() -> new RoundHdfsFile(sessionStartTime)));
     }
 
     private final class RoundHdfsFile implements AutoCloseable {
