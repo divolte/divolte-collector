@@ -74,6 +74,15 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
 
         hdfsWorkingDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir");
         hdfsPublishDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir");
+
+        throwsIoException(() -> {
+            if (!hadoopFs.isDirectory(new Path(hdfsWorkingDir))) {
+                throw new IOException("Working directory for in-flight AVRO records does not exist: " + hdfsWorkingDir);
+            }
+            if (!hadoopFs.isDirectory(new Path(hdfsPublishDir))) {
+                throw new IOException("Working directory for publishing AVRO records does not exist: " + hdfsPublishDir);
+            }
+        }).ifPresent((e) -> { throw new RuntimeException("Configuration error", e); });
     }
 
     private Path newFilePath() {
@@ -250,7 +259,9 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             writer.close();
             final Path publishDestination = getPublishDestination();
             logger.debug("Moving HDFS file: {} -> {}", path, publishDestination);
-            hadoopFs.rename(path, publishDestination);
+            if (!hadoopFs.rename(path, publishDestination)) {
+                throw new IOException("Could not rename HDFS file: " + path + " -> " + publishDestination);
+            }
         }
     }
 

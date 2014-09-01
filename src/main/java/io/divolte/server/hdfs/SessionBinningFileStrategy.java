@@ -102,6 +102,15 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         this.schema = schema;
 
         openFiles = Maps.newHashMapWithExpectedSize(10);
+
+        throwsIoException(() -> {
+            if (!hdfs.isDirectory(new Path(hdfsInflightDir))) {
+                throw new IOException("Working directory for in-flight AVRO records does not exist: " + hdfsInflightDir);
+            }
+            if (!hdfs.isDirectory(new Path(hdfsPublishDir))) {
+                throw new IOException("Working directory for publishing AVRO records does not exist: " + hdfsPublishDir);
+            }
+        }).ifPresent((e) -> { throw new RuntimeException("Configuration error", e); });
     }
 
     private static String findLocalHostName() {
@@ -365,7 +374,9 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
                 if (publish) {
                     final Path publishDestination = getPublishDestination();
                     logger.debug("Moving HDFS file: {} -> {}", path, publishDestination);
-                    hdfs.rename(path, publishDestination);
+                    if (!hdfs.rename(path, publishDestination)) {
+                        throw new IOException("Could not rename HDFS file: " + path + " -> " + publishDestination);
+                    }
                 }
             } catch (IOException e) {
                 throw new WrappedIOException(e);
