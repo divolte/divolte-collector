@@ -43,7 +43,7 @@ import com.typesafe.config.Config;
  * - all events for a session are stored in the file with the round marked by the session start time
  * - a file for a round is kept open for at least three times the session duration *in absence of failures*
  * - during this entire process, we use the event timestamp for events that come off the queue as a logical clock signal
- *      - only in the case of an empty queue, we use the actual system time as clock signal (receiving heartbeats means an empty queue)
+ *      - only in the case of an empty queue, we use the actual system time as clock signal (receiving heartbeats in a state of normal operation means an empty queue)
  * - when a file for a round is closed, but events that should be in that file still arrive, they are stored in the oldest open file
  *      - this happens for exceptionally long sessions
  *
@@ -56,7 +56,7 @@ import com.typesafe.config.Config;
 public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private final static Logger logger = LoggerFactory.getLogger(SessionBinningFileStrategy.class);
 
-    private final static long HDFS_RECONNECT_DELAY = 15000;
+    private final static long HDFS_RECONNECT_DELAY_MILLIS = 15000;
     private final static long FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS = 3;
 
     private final static AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
@@ -245,7 +245,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         }
 
         final long time = System.currentTimeMillis();
-        if (time - lastFixAttempt > HDFS_RECONNECT_DELAY) {
+        if (time - lastFixAttempt > HDFS_RECONNECT_DELAY_MILLIS) {
             return throwsIoException(() -> {
                 openFiles.put(timeSignal / sessionTimeoutMillis, new RoundHdfsFile(timeSignal));
             })
@@ -307,7 +307,6 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         int recordsSinceLastSync;
 
         RoundHdfsFile(final long time) {
-
             final long requestedRound = time / sessionTimeoutMillis;
             final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
             this.round = Math.max(requestedRound, oldestAllowedRound);
