@@ -49,7 +49,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     private final int syncEveryRecords;
     private final long newFileEveryMillis;
 
-    private final FileSystem hadoopFs;
+    private final FileSystem hdfs;
     private final String hdfsWorkingDir;
     private final String hdfsPublishDir;
     private final short hdfsReplication;
@@ -69,17 +69,17 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
         hostString = findLocalHostName();
 
-        this.hadoopFs = fs;
+        this.hdfs = fs;
         this.hdfsReplication = hdfsReplication;
 
         hdfsWorkingDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir");
         hdfsPublishDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir");
 
         throwsIoException(() -> {
-            if (!hadoopFs.isDirectory(new Path(hdfsWorkingDir))) {
+            if (!hdfs.isDirectory(new Path(hdfsWorkingDir))) {
                 throw new IOException("Working directory for in-flight AVRO records does not exist: " + hdfsWorkingDir);
             }
-            if (!hadoopFs.isDirectory(new Path(hdfsPublishDir))) {
+            if (!hdfs.isDirectory(new Path(hdfsPublishDir))) {
                 throw new IOException("Working directory for publishing AVRO records does not exist: " + hdfsPublishDir);
             }
         }).ifPresent((e) -> { throw new RuntimeException("Configuration error", e); });
@@ -109,7 +109,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         .map((ioe) -> {
             logger.warn("HDFS flusher starting up without HDFS connection.", ioe);
             isHdfsAlive = false;
-            throwsIoException(() -> hadoopFs.delete(newFilePath, false));
+            throwsIoException(() -> hdfs.delete(newFilePath, false));
             return FAILURE;
         })
         .orElseGet(() -> {
@@ -186,7 +186,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             try {
                 currentFile = openNewFile(newFilePath);
             } catch (IOException e) {
-                throwsIoException(() -> hadoopFs.delete(newFilePath, false));
+                throwsIoException(() -> hdfs.delete(newFilePath, false));
                 throw e;
             }
             logger.debug("Rolling file. Opened: {}", currentFile.path);
@@ -207,7 +207,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
                 isHdfsAlive = false;
                 lastFixAttempt = time;
                 // possibly we created the file, so silently attempt a delete
-                throwsIoException(() -> hadoopFs.delete(newFilePath, false));
+                throwsIoException(() -> hdfs.delete(newFilePath, false));
                 return FAILURE;
             }).orElseGet(() -> {
                 isHdfsAlive = true;
@@ -233,7 +233,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         @SuppressWarnings("resource")
         public HadoopFile(Path path) throws IOException {
             this.path = path;
-            this.stream = hadoopFs.create(path, hdfsReplication);
+            this.stream = hdfs.create(path, hdfsReplication);
 
             writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, stream);
             writer.setSyncInterval(1 << 30);
@@ -259,7 +259,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             writer.close();
             final Path publishDestination = getPublishDestination();
             logger.debug("Moving HDFS file: {} -> {}", path, publishDestination);
-            if (!hadoopFs.rename(path, publishDestination)) {
+            if (!hdfs.rename(path, publishDestination)) {
                 throw new IOException("Could not rename HDFS file: " + path + " -> " + publishDestination);
             }
         }

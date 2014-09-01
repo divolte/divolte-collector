@@ -72,7 +72,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private final long sessionTimeoutMillis;
 
     private final Map<Long, RoundHdfsFile> openFiles;
-    private final String hdfsInflightDir;
+    private final String hdfsWorkingDir;
     private final String hdfsPublishDir;
     private final long syncEveryMillis;
     private final int syncEveryRecords;
@@ -90,7 +90,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
         hostString = findLocalHostName();
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
-        hdfsInflightDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.working_dir");
+        hdfsWorkingDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.working_dir");
         hdfsPublishDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.publish_dir");
 
         syncEveryMillis = config.getDuration("divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_duration", TimeUnit.MILLISECONDS);
@@ -104,8 +104,8 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         openFiles = Maps.newHashMapWithExpectedSize(10);
 
         throwsIoException(() -> {
-            if (!hdfs.isDirectory(new Path(hdfsInflightDir))) {
-                throw new IOException("Working directory for in-flight AVRO records does not exist: " + hdfsInflightDir);
+            if (!hdfs.isDirectory(new Path(hdfsWorkingDir))) {
+                throw new IOException("Working directory for in-flight AVRO records does not exist: " + hdfsWorkingDir);
             }
             if (!hdfs.isDirectory(new Path(hdfsPublishDir))) {
                 throw new IOException("Working directory for publishing AVRO records does not exist: " + hdfsPublishDir);
@@ -311,7 +311,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
             final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
             this.round = Math.max(requestedRound, oldestAllowedRound);
 
-            this.path = new Path(hdfsInflightDir,
+            this.path = new Path(hdfsWorkingDir,
                     String.format("%s-divolte-tracking-%s-%s-%d.avro" + INFLIGHT_EXTENSION,
                             hostString, // add host name, differentiates when deploying multiple collector instances
                             roundString(round * sessionTimeoutMillis), // composed of the round start date + round number within the day
