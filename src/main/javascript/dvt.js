@@ -91,7 +91,7 @@
             // property names as strings are required here
             // because minifaction otherwise changes them
             // which breaks the query params contract
-            'p': dvt._pageViewId,
+            'p': dvt['_pageViewId'],
             'l': window.location.href,
             'r': document.referrer || undefined,
             'i': window.screen.availWidth,
@@ -145,7 +145,7 @@
 
       // If we don't have a pageViewId yet, we'll add an onload handler
       // to the pixel request to set it after the initial event signal
-      if ('undefined' === typeof dvt._pageViewId) {
+      if ('undefined' === typeof dvt['_pageViewId']) {
         image.onload = function() {
           var cookies = document.cookie ? document.cookie.split('; ') : [];
           for (var i = 0, l = cookies.length; i < l; i++) {
