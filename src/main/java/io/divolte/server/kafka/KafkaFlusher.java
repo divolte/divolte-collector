@@ -1,5 +1,6 @@
 package io.divolte.server.kafka;
 
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.processing.ItemProcessor;
 import kafka.javaapi.producer.Producer;
@@ -34,8 +35,9 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     @Override
-    public void process(AvroRecordBuffer record) {
+    public ProcessingDirective process(AvroRecordBuffer record) {
         producer.send(buildMessage(record));
+        return CONTINUE;
     }
 
     private KeyedMessage<byte[], byte[]> buildMessage(final AvroRecordBuffer record) {

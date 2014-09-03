@@ -21,6 +21,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import static io.divolte.server.DivolteEventHandler.*;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
@@ -61,7 +62,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
     }
 
     @Override
-    public void process(final HttpServerExchange exchange) {
+    public ProcessingDirective process(final HttpServerExchange exchange) {
         final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
         final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
                 exchange.getAttachment(PARTY_COOKIE_KEY),
@@ -80,5 +81,6 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         if (logger.isDebugEnabled()) {
             logger.debug("Incoming request record:\n{}", avroRecord);
         }
+        return CONTINUE;
     }
 }
