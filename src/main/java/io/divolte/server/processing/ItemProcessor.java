@@ -1,13 +1,20 @@
 package io.divolte.server.processing;
 
-public interface ItemProcessor<E> {
-    void process(E e);
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
-    default void heartbeat() {
-        // noop, override to implement heartbeats
+public interface ItemProcessor<E> {
+    ProcessingDirective process(E e);
+
+    default ProcessingDirective heartbeat() {
+        return CONTINUE;
     }
 
     default void cleanup() {
         // noop, override to implement cleanup
+    }
+
+    public enum ProcessingDirective {
+        CONTINUE,
+        PAUSE;
     }
 }

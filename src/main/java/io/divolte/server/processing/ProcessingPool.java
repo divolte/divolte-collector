@@ -1,6 +1,10 @@
 package io.divolte.server.processing;
 
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+import io.divolte.server.processing.ItemProcessor.ProcessingDirective;
+
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -94,23 +98,41 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final ItemProcessor<E> processor) {
         return () -> {
             final List<E> batch = new ArrayList<>(MAX_BATCH_SIZE);
+            ProcessingDirective directive;
+
             while (!queue.isEmpty() || !Thread.currentThread().isInterrupted()) {
-                queue.drainTo(batch, MAX_BATCH_SIZE);
-                if (batch.isEmpty()) {
-                    // If the batch was empty, block on the queue for some time
-                    // until something is available.
-                    final E polled;
-                    if (null != (polled = pollQuietly(queue, 1, TimeUnit.SECONDS))) {
-                        processor.process(polled);
+                do {
+                    queue.drainTo(batch, MAX_BATCH_SIZE);
+                    if (batch.isEmpty()) {
+                        // If the batch was empty, block on the queue for some time
+                        // until something is available.
+                        final E polled;
+                        directive = (null != (polled = pollQuietly(queue, 1, TimeUnit.SECONDS)))
+                                ? processor.process(polled) :
+                                  processor.heartbeat();
                     } else {
-                        processor.heartbeat();
+                        Iterator<E> itr = batch.iterator();
+                        do {
+                            directive = processor.process(itr.next());
+                            itr.remove();
+                        } while (itr.hasNext() && directive == CONTINUE);
                     }
-                } else {
-                    batch.forEach(processor::process);
-                    batch.clear();
+                } while (directive == CONTINUE && !Thread.currentThread().isInterrupted());
+
+                while (directive == PAUSE && !Thread.currentThread().isInterrupted()) {
+                    sleepOneSecond();
+                    directive = processor.heartbeat();
                 }
             }
         };
+    }
+
+    private static void sleepOneSecond() {
+        try {
+            Thread.sleep(1000);
+        } catch(InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static <E> E pollQuietly(final BlockingQueue<E> queue, final long timeout, final TimeUnit unit) {
