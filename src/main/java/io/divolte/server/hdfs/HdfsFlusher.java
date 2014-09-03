@@ -1,6 +1,7 @@
 package io.divolte.server.hdfs;
 
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
 import io.divolte.server.processing.ItemProcessor;
@@ -59,14 +60,17 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     @Override
-    public void process(AvroRecordBuffer record) {
+    public ProcessingDirective process(AvroRecordBuffer record) {
         if (lastHdfsResult == SUCCESS) {
-            lastHdfsResult = fileStrategy.append(record);
+            return (lastHdfsResult = fileStrategy.append(record)) == SUCCESS ? CONTINUE : PAUSE;
+        } else {
+            return PAUSE;
         }
     }
 
     @Override
-    public void heartbeat() {
+    public ProcessingDirective heartbeat() {
         lastHdfsResult = fileStrategy.heartbeat();
+        return lastHdfsResult == SUCCESS ? CONTINUE : PAUSE;
     }
 }
