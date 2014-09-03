@@ -62,9 +62,10 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     @Override
     public ProcessingDirective process(AvroRecordBuffer record) {
         if (lastHdfsResult == SUCCESS) {
-            lastHdfsResult = fileStrategy.append(record);
+            return (lastHdfsResult = fileStrategy.append(record)) == SUCCESS ? CONTINUE : PAUSE;
+        } else {
+            return PAUSE;
         }
-        return CONTINUE;
     }
 
     @Override
