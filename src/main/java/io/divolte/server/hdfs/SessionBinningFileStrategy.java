@@ -167,7 +167,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
     private HdfsOperationResult writeRecord(final AvroRecordBuffer record) {
         return throwsIoException(() -> {
-            RoundHdfsFile file = fileForSessionStartTime(record.getSessionId().timestamp);
+            final RoundHdfsFile file = fileForSessionStartTime(record.getSessionId().timestamp);
             file.writer.appendEncoded(record.getByteBuffer());
             file.recordsSinceLastSync += 1;
             recordsSinceLastSync += 1;
