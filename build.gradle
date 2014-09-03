@@ -6,6 +6,7 @@ apply plugin: 'findbugs'
 apply plugin: 'pmd'
 apply plugin: 'jacoco'
 apply plugin: 'application'
+apply plugin: 'eu.appsatori.fatjar'
 
 sourceCompatibility = 1.8
 version = '0.1-SNAPSHOT'
@@ -26,6 +27,7 @@ buildscript {
     }
     dependencies {
         classpath group: 'com.eriwen', name: 'gradle-js-plugin', version: '1.12.1'
+        classpath 'eu.appsatori:gradle-fatjar-plugin:0.3'
     }
 }
 
