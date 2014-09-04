@@ -17,6 +17,7 @@ import java.time.Duration;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +28,7 @@ import com.typesafe.config.ConfigFactory;
 public class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
+    private final DivolteEventHandler divolteEventHandler;
 
     private final String host;
     private final int port;
@@ -35,7 +37,7 @@ public class Server implements Runnable {
         host = config.getString("divolte.server.host");
         port = config.getInt("divolte.server.port");
 
-        final DivolteEventHandler divolteEventHandler = new DivolteEventHandler(config);
+        divolteEventHandler = new DivolteEventHandler(config);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
@@ -73,6 +75,16 @@ public class Server implements Runnable {
                 () -> {
                     logger.info("Stopping server.");
                     undertow.stop();
+                    divolteEventHandler.shutdown();
+//                    try {
+//                        FileSystem.closeAll();
+//                    } catch (Exception e) {
+//                        logger.warn("Failed to cleanly close HDFS file system.", e);
+//                    }
+                    try {
+                        Thread.sleep(1500);
+                    } catch (Exception e) {
+                    }
                 }
         ));
         logger.info("Starting server on {}:{}", host, port);
