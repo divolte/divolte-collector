@@ -94,8 +94,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             processor.cleanup();
 
             // In case the reader for some reason escapes its loop with an
-            // exception,
-            // log any uncaught exceptions and reschedule
+            // exception, log any uncaught exceptions and reschedule
                 if (error != null && running) {
                     logger.warn("Uncaught exception in incoming queue reader thread.", error);
                     scheduleQueueReader(es, queue, processor);
@@ -127,9 +126,9 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
                             itr.remove();
                         } while (itr.hasNext() && directive == CONTINUE);
                     }
-                } while (directive == CONTINUE && !Thread.currentThread().isInterrupted());
+                } while (directive == CONTINUE && running);
 
-                while (directive == PAUSE && !Thread.currentThread().isInterrupted()) {
+                while (directive == PAUSE && running) {
                     sleepOneSecond();
                     directive = processor.heartbeat();
                 }

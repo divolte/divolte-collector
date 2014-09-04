@@ -77,10 +77,6 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
             hdfsFlushingPool.enqueueRecordsForFlushing(avroBuffer);
         }
 
-        // #toString() is quite expensive on Avro records
-        if (logger.isDebugEnabled()) {
-            logger.debug("Incoming request record:\n{}", avroRecord);
-        }
         return CONTINUE;
     }
 }

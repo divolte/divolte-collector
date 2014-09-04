@@ -73,17 +73,17 @@ public class Server implements Runnable {
     public void run() {
         Runtime.getRuntime().addShutdownHook(new Thread(
                 () -> {
-                    logger.info("Stopping server.");
+                    logger.info("Stopping HTTP server.");
                     undertow.stop();
+
+                    logger.info("Stopping thread pools.");
                     divolteEventHandler.shutdown();
-//                    try {
-//                        FileSystem.closeAll();
-//                    } catch (Exception e) {
-//                        logger.warn("Failed to cleanly close HDFS file system.", e);
-//                    }
+
+                    logger.info("Closing HDFS filesystem connection.");
                     try {
-                        Thread.sleep(1500);
+                        FileSystem.closeAll();
                     } catch (Exception e) {
+                        logger.warn("Failed to cleanly close HDFS file system.", e);
                     }
                 }
         ));

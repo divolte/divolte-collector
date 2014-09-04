@@ -108,6 +108,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     @Override
     public void stop() {
         super.stop();
+
         kafkaPool.ifPresent(KafkaFlushingPool::stop);
         hdfsPool.ifPresent(HdfsFlushingPool::stop);
     }
