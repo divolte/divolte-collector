@@ -6,6 +6,7 @@ import io.divolte.server.processing.ItemProcessor.ProcessingDirective;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -111,14 +112,16 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
 
             while (!queue.isEmpty() || running) {
                 do {
-                    queue.drainTo(batch, MAX_BATCH_SIZE);
+                    queue.drainTo(batch, MAX_BATCH_SIZE - batch.size());
                     if (batch.isEmpty()) {
                         // If the batch was empty, block on the queue for some time
                         // until something is available.
-                        final E polled;
-                        directive = (null != (polled = pollQuietly(queue, 1, TimeUnit.SECONDS)))
-                                ? processor.process(polled) :
-                                  processor.heartbeat();
+                        directive = Optional.ofNullable(pollQuietly(queue, 1, TimeUnit.SECONDS))
+                        .map((p) -> {
+                            batch.add(p);
+                            return CONTINUE;
+                        })
+                        .orElseGet(processor::heartbeat);
                     } else {
                         Iterator<E> itr = batch.iterator();
                         do {
