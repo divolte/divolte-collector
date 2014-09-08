@@ -14,6 +14,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
 
+import java.io.IOException;
 import java.time.Duration;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -84,7 +85,7 @@ public class Server implements Runnable {
                         shutdownHandler.shutdown();
                         shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
                         undertow.stop();
-                    } catch (Exception e1) {
+                    } catch (Exception ie) {
                         Thread.currentThread().interrupt();
                     }
 
@@ -94,8 +95,8 @@ public class Server implements Runnable {
                     logger.info("Closing HDFS filesystem connection.");
                     try {
                         FileSystem.closeAll();
-                    } catch (Exception e) {
-                        logger.warn("Failed to cleanly close HDFS file system.", e);
+                    } catch (IOException ioe) {
+                        logger.warn("Failed to cleanly close HDFS file system.", ioe);
                     }
                 }
         ));
