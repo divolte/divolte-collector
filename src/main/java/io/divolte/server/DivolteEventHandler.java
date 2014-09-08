@@ -141,6 +141,10 @@ final class DivolteEventHandler {
         }
     }
 
+    public void shutdown() {
+        processingPool.stop();
+    }
+
     private void methodNotAllowed(final HttpServerExchange exchange) {
         exchange.getResponseHeaders()
         .put(Headers.ALLOW, Methods.GET_STRING)

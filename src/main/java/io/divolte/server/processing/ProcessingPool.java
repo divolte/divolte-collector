@@ -30,9 +30,12 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
 
     private static final int MAX_BATCH_SIZE = 128;
 
-    private final ThreadGroup threadGroup;
+    private final ExecutorService executorService;
     private final List<BlockingQueue<E>> queues;
     private final long maxEnqueueDelay;
+
+    private volatile boolean running;
+
 
     public ProcessingPool(
             final int numThreads,
@@ -41,12 +44,13 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final String threadBaseName,
             final Supplier<T> processorSupplier) {
 
+        running = true;
+
         @SuppressWarnings("PMD.AvoidThreadGroup")
         final ThreadGroup threadGroup = new ThreadGroup(threadBaseName + " group");
         final ThreadFactory factory = createThreadFactory(threadGroup, threadBaseName + " - %d");
-        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads, factory);
+        executorService = Executors.newFixedThreadPool(numThreads, factory);
 
-        this.threadGroup = threadGroup;
         this.maxEnqueueDelay = maxEnqueueDelay;
 
         this.queues = Stream.<ArrayBlockingQueue<E>>
@@ -76,7 +80,13 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
     }
 
     public void stop() {
-        threadGroup.interrupt();
+        try {
+            running = false;
+            executorService.shutdown();
+            executorService.awaitTermination(1, TimeUnit.HOURS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void scheduleQueueReader(final ExecutorService es, final BlockingQueue<E> queue, final ItemProcessor<E> processor) {
@@ -84,9 +94,8 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             processor.cleanup();
 
             // In case the reader for some reason escapes its loop with an
-            // exception,
-            // log any uncaught exceptions and reschedule
-                if (error != null) {
+            // exception, log any uncaught exceptions and reschedule
+                if (error != null && running) {
                     logger.warn("Uncaught exception in incoming queue reader thread.", error);
                     scheduleQueueReader(es, queue, processor);
                 }
@@ -100,7 +109,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final List<E> batch = new ArrayList<>(MAX_BATCH_SIZE);
             ProcessingDirective directive;
 
-            while (!queue.isEmpty() || !Thread.currentThread().isInterrupted()) {
+            while (!queue.isEmpty() || running) {
                 do {
                     queue.drainTo(batch, MAX_BATCH_SIZE);
                     if (batch.isEmpty()) {
@@ -117,9 +126,9 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
                             itr.remove();
                         } while (itr.hasNext() && directive == CONTINUE);
                     }
-                } while (directive == CONTINUE && !Thread.currentThread().isInterrupted());
+                } while (directive == CONTINUE && running);
 
-                while (directive == PAUSE && !Thread.currentThread().isInterrupted()) {
+                while (directive == PAUSE && running) {
                     sleepOneSecond();
                     directive = processor.heartbeat();
                 }
