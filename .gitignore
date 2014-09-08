@@ -17,3 +17,6 @@
 /bin
 
 /target/
+
+# Local/non-default configuration
+application.conf
