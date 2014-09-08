@@ -27,6 +27,7 @@ import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
 public class Server implements Runnable {
+    private static final long HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS = 120000L;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
     private final GracefulShutdownHandler shutdownHandler;
@@ -81,7 +82,7 @@ public class Server implements Runnable {
                     try {
                         logger.info("Stopping HTTP server.");
                         shutdownHandler.shutdown();
-                        shutdownHandler.awaitShutdown(120000L);
+                        shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
                         undertow.stop();
                     } catch (Exception e1) {
                         Thread.currentThread().interrupt();
