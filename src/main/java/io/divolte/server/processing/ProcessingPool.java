@@ -140,7 +140,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         try {
             Thread.sleep(1000);
         } catch(InterruptedException e) {
-            logger.debug("Thread interrupted.");
             Thread.currentThread().interrupt();
         }
     }
@@ -149,7 +148,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         try {
             return queue.poll(timeout, unit);
         } catch (InterruptedException e) {
-            logger.debug("Thread interrupted.");
             Thread.currentThread().interrupt();
             return null;
         }
@@ -159,7 +157,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         try {
             return queue.offer(item, timeout, unit);
         } catch (InterruptedException e) {
-            logger.debug("Thread interrupted.");
             Thread.currentThread().interrupt();
             return false;
         }
