@@ -3,6 +3,7 @@ package io.divolte.server;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
+import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
@@ -28,6 +29,7 @@ import com.typesafe.config.ConfigFactory;
 public class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
+    private final GracefulShutdownHandler shutdownHandler;
     private final DivolteEventHandler divolteEventHandler;
 
     private final String host;
@@ -46,9 +48,12 @@ public class Server implements Runnable {
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
-        final HttpHandler rootHandler = config.getBoolean("divolte.server.use_x_forwarded_for") ?
-                new ProxyPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler;
+        final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
+                config.getBoolean("divolte.server.use_x_forwarded_for") ?
+                new ProxyPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
+                );
 
+        shutdownHandler = rootHandler;
         undertow = Undertow.builder()
                            .addHttpListener(port, host)
                            .setHandler(rootHandler)
@@ -73,8 +78,14 @@ public class Server implements Runnable {
     public void run() {
         Runtime.getRuntime().addShutdownHook(new Thread(
                 () -> {
-                    logger.info("Stopping HTTP server.");
-                    undertow.stop();
+                    try {
+                        logger.info("Stopping HTTP server.");
+                        shutdownHandler.shutdown();
+                        shutdownHandler.awaitShutdown(120000L);
+                        undertow.stop();
+                    } catch (Exception e1) {
+                        Thread.currentThread().interrupt();
+                    }
 
                     logger.info("Stopping thread pools.");
                     divolteEventHandler.shutdown();
