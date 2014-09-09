@@ -15,6 +15,6 @@ public interface ItemProcessor<E> {
 
     public enum ProcessingDirective {
         CONTINUE,
-        PAUSE;
+        PAUSE
     }
 }
