@@ -37,6 +37,8 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
 
     private volatile boolean running;
 
+    private final Supplier<T> processorSupplier;
+
 
     public ProcessingPool(
             final int numThreads,
@@ -46,6 +48,8 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final Supplier<T> processorSupplier) {
 
         running = true;
+
+        this.processorSupplier = processorSupplier;
 
         @SuppressWarnings("PMD.AvoidThreadGroup")
         final ThreadGroup threadGroup = new ThreadGroup(threadBaseName + " group");
@@ -60,11 +64,10 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
                 .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
         queues.forEach((queue) -> {
-                    final T processor = processorSupplier.get();
                     scheduleQueueReader(
                             executorService,
                             queue,
-                            processor);
+                            processorSupplier.get());
                 });
 
     }
@@ -98,7 +101,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             // exception, log any uncaught exceptions and reschedule
                 if (error != null && running) {
                     logger.warn("Uncaught exception in incoming queue reader thread.", error);
-                    scheduleQueueReader(es, queue, processor);
+                    scheduleQueueReader(es, queue, processorSupplier.get());
                 }
             });
     }
