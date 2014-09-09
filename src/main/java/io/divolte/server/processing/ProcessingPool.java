@@ -3,9 +3,11 @@ package io.divolte.server.processing;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.processing.ItemProcessor.ProcessingDirective;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -109,7 +111,9 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final BlockingQueue<E> queue,
             final ItemProcessor<E> processor) {
         return () -> {
-            final List<E> batch = new ArrayList<>(MAX_BATCH_SIZE);
+            // The default item processor implementation removes items one-by-one as they
+            // are processed. Using a Queue ensures that this is efficient.
+            final Queue<E> batch = new ArrayDeque<>(MAX_BATCH_SIZE);
 
             while (!queue.isEmpty() || running) {
                 ProcessingDirective directive;

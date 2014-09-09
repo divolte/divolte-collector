@@ -1,14 +1,14 @@
 package io.divolte.server.processing;
 
 import java.util.Iterator;
-import java.util.List;
+import java.util.Queue;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 public interface ItemProcessor<E> {
     ProcessingDirective process(E e);
 
-    default ProcessingDirective process(List<E> batch) {
+    default ProcessingDirective process(final Queue<E> batch) {
         final Iterator<E> itr = batch.iterator();
         ProcessingDirective directive;
         do {
