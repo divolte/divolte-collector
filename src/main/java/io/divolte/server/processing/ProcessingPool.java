@@ -111,9 +111,9 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final ItemProcessor<E> processor) {
         return () -> {
             final List<E> batch = new ArrayList<>(MAX_BATCH_SIZE);
-            ProcessingDirective directive;
 
             while (!queue.isEmpty() || running) {
+                ProcessingDirective directive;
                 do {
                     queue.drainTo(batch, MAX_BATCH_SIZE - batch.size());
                     if (batch.isEmpty()) {
