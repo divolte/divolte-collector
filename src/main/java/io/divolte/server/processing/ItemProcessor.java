@@ -1,6 +1,5 @@
 package io.divolte.server.processing;
 
-import java.util.Iterator;
 import java.util.Queue;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
@@ -9,12 +8,13 @@ public interface ItemProcessor<E> {
     ProcessingDirective process(E e);
 
     default ProcessingDirective process(final Queue<E> batch) {
-        final Iterator<E> itr = batch.iterator();
         ProcessingDirective directive;
         do {
-            directive = process(itr.next());
-            itr.remove();
-        } while (itr.hasNext() && directive == CONTINUE);
+            // Note: processing should not throw an unchecked
+            // exception unless no further processing should
+            // take place.
+            directive = process(batch.remove());
+        } while (batch.isEmpty() && directive == CONTINUE);
         return directive;
     }
 
