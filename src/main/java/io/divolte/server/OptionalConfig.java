@@ -5,6 +5,10 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.*;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public abstract class OptionalConfig<T> {
 
     private OptionalConfig() {
@@ -53,6 +57,7 @@ public abstract class OptionalConfig<T> {
         }
     }
 
+    @Nullable
     public static <T> OptionalConfig<T> ofNullable(T value) {
         return value == null ? empty() : of(value);
     }
