@@ -163,7 +163,7 @@ public abstract class OptionalConfig<T> {
         @Override
         public boolean equals(final Object other) {
             return this == other ||
-                   null != other && getClass() == other.getClass() && Objects.equals(exception, ((ConfigAbsent)other).exception);
+                   null != other && getClass() == other.getClass() && Objects.equals(exception, ((ConfigAbsent<?>)other).exception);
         }
 
         @Override
@@ -260,7 +260,7 @@ public abstract class OptionalConfig<T> {
         @Override
         public boolean equals(final Object other) {
             return this == other ||
-                   null != other && getClass() == other.getClass() && Objects.equals(value, ((ConfigPresent)other).value);
+                   null != other && getClass() == other.getClass() && Objects.equals(value, ((ConfigPresent<?>)other).value);
         }
 
         @Override
