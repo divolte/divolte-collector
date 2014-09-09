@@ -57,8 +57,7 @@ public abstract class OptionalConfig<T> {
         }
     }
 
-    @Nullable
-    public static <T> OptionalConfig<T> ofNullable(T value) {
+    public static <T> OptionalConfig<T> ofNullable(@Nullable T value) {
         return value == null ? empty() : of(value);
     }
 
@@ -93,7 +92,7 @@ public abstract class OptionalConfig<T> {
 
     public abstract <U> OptionalConfig<U> map(Function<? super T,? extends U> mapper);
 
-    public abstract T orElse(T other);
+    public abstract T orElse(@Nullable T other);
 
     public abstract T orElseGet(Supplier<? extends T> other);
 
