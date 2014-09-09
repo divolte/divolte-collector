@@ -5,6 +5,10 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.*;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public abstract class OptionalConfig<T> {
 
     private OptionalConfig() {
@@ -53,7 +57,7 @@ public abstract class OptionalConfig<T> {
         }
     }
 
-    public static <T> OptionalConfig<T> ofNullable(T value) {
+    public static <T> OptionalConfig<T> ofNullable(@Nullable T value) {
         return value == null ? empty() : of(value);
     }
 
@@ -88,7 +92,7 @@ public abstract class OptionalConfig<T> {
 
     public abstract <U> OptionalConfig<U> map(Function<? super T,? extends U> mapper);
 
-    public abstract T orElse(T other);
+    public abstract T orElse(@Nullable T other);
 
     public abstract T orElseGet(Supplier<? extends T> other);
 
@@ -163,7 +167,7 @@ public abstract class OptionalConfig<T> {
         @Override
         public boolean equals(final Object other) {
             return this == other ||
-                   null != other && getClass() == other.getClass() && Objects.equals(exception, ((ConfigAbsent)other).exception);
+                   null != other && getClass() == other.getClass() && Objects.equals(exception, ((ConfigAbsent<?>)other).exception);
         }
 
         @Override
@@ -195,7 +199,7 @@ public abstract class OptionalConfig<T> {
         private final T value;
 
         public ConfigPresent(T value) {
-            this.value = value;
+            this.value = Objects.requireNonNull(value);
         }
 
         @Override
@@ -210,45 +214,32 @@ public abstract class OptionalConfig<T> {
 
         @Override
         public void ifPresent(Consumer<? super T> consumer) {
-            if (isPresent())
-                consumer.accept(this.value);
+            consumer.accept(this.value);
         }
 
         @Override
         public <U> OptionalConfig<U> map(Function<? super T, ? extends U> mapper) {
             Objects.requireNonNull(mapper);
-            if (!isPresent())
-                return empty();
-            else {
-                return OptionalConfig.ofNullable(mapper.apply(value));
-            }
+            return OptionalConfig.ofNullable(mapper.apply(value));
         }
 
         @Override
         public T orElse(T other) {
-            return value != null ? value : other;
+            return value;
         }
 
         @Override
         public T orElseGet(Supplier<? extends T> other) {
-            return value != null ? value : other.get();
+            return value;
         }
 
         @Override
         public <X extends Throwable> T orElseThrow(Supplier<? extends X> exceptionSupplier) throws X {
-            if (value != null) {
-                return value;
-            } else {
-                throw exceptionSupplier.get();
-            }
-
+            return value;
         }
 
         @Override
         public T get() {
-            if (value == null) {
-                throw new NoSuchElementException("No value present");
-            }
             return this.value;
         }
 
@@ -260,7 +251,7 @@ public abstract class OptionalConfig<T> {
         @Override
         public boolean equals(final Object other) {
             return this == other ||
-                   null != other && getClass() == other.getClass() && Objects.equals(value, ((ConfigPresent)other).value);
+                   null != other && getClass() == other.getClass() && Objects.equals(value, ((ConfigPresent<?>)other).value);
         }
 
         @Override
@@ -271,28 +262,18 @@ public abstract class OptionalConfig<T> {
         @Override
         public OptionalConfig<T> filter(Predicate<? super T> predicate) {
             Objects.requireNonNull(predicate);
-            if (!isPresent())
-                return this;
-            else
-                return predicate.test(value) ? this : empty();
+            return predicate.test(value) ? this : empty();
         }
 
         @Override
         public <U> OptionalConfig<U> flatMap(Function<? super T, OptionalConfig<U>> mapper) {
             Objects.requireNonNull(mapper);
-            if (!isPresent())
-                return empty();
-            else {
-                return Objects.requireNonNull(mapper.apply(value));
-            }
+            return Objects.requireNonNull(mapper.apply(value));
         }
 
         @Override
         public String toString() {
-            return this.value != null
-                    ? String.format("ConfigPresent[%s]", this.value)
-                    : "OptionalConfig.empty";
+            return String.format("ConfigPresent[%s]", value);
         }
-
     }
 }

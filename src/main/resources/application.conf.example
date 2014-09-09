@@ -1,0 +1,14 @@
+divolte {
+  tracking {
+    include "schema-mapping.conf.example"
+  }
+
+  hdfs_flusher {
+    session_binning_file_strategy {
+      sync_file_after_records = 1000
+      sync_file_after_duration = 30 seconds
+      working_dir = /tmp
+      publish_dir = /tmp
+    }
+  }  
+}

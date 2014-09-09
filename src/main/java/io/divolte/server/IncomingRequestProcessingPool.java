@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -29,6 +30,9 @@ import com.typesafe.config.ConfigFactory;
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, HttpServerExchange> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
+
+    private final Optional<KafkaFlushingPool> kafkaPool;
+    private final Optional<HdfsFlushingPool> hdfsPool;
 
     public IncomingRequestProcessingPool() {
         this(ConfigFactory.load());
@@ -62,6 +66,9 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                 maxEnqueueDelay,
                 "Incoming Request Processor",
                 () -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema));
+
+        this.kafkaPool = Optional.ofNullable(kafkaFlushingPool);
+        this.hdfsPool = Optional.ofNullable(hdfsFlushingPool);
     }
 
     private static Schema schemaFromConfig(final Config config) {
@@ -96,5 +103,13 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
 
     public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
         enqueue(partyId.value, exchange);
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+
+        kafkaPool.ifPresent(KafkaFlushingPool::stop);
+        hdfsPool.ifPresent(HdfsFlushingPool::stop);
     }
 }

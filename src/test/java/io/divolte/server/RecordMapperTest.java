@@ -290,7 +290,7 @@ public class RecordMapperTest {
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
                     .setInjectableValues(new InjectableValues.Std().addValue("locales", ImmutableList.of("en")));
 
-    private <T> T loadFromClassPath(final String resource, final TypeReference typeReference) throws IOException {
+    private <T> T loadFromClassPath(final String resource, final TypeReference<?> typeReference) throws IOException {
         try (final InputStream resourceStream = this.getClass().getResourceAsStream(resource)) {
             return MAPPER.readValue(resourceStream, typeReference);
         }

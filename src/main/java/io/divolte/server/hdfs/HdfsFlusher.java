@@ -36,9 +36,16 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
         final FileSystem hadoopFs;
         final short hdfsReplication;
         try {
+            final Configuration hdfsConfiguration = new Configuration();
             hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
             final URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
-            hadoopFs = FileSystem.get(hdfsLocation, new Configuration());
+            /*
+             * The HDFS client creates a JVM shutdown hook, which interferes with our own server shutdown hook.
+             * This config option disabled the built in shutdown hook. We call FileSystem.closeAll() ourselves
+             * in the server shutdown hook instead.
+             */
+            hdfsConfiguration.setBoolean("fs.automatic.close", false);
+            hadoopFs = FileSystem.get(hdfsLocation, hdfsConfiguration);
         } catch (IOException|URISyntaxException e) {
             /*
              * It is possible to create a FileSystem instance when HDFS is not available (e.g. NameNode down).

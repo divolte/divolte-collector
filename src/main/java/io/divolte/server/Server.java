@@ -3,6 +3,7 @@ package io.divolte.server;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
+import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
@@ -13,10 +14,12 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
 
+import java.io.IOException;
 import java.time.Duration;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,8 +28,11 @@ import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
 public class Server implements Runnable {
+    private static final long HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS = 120000L;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
+    private final GracefulShutdownHandler shutdownHandler;
+    private final DivolteEventHandler divolteEventHandler;
 
     private final String host;
     private final int port;
@@ -35,7 +41,7 @@ public class Server implements Runnable {
         host = config.getString("divolte.server.host");
         port = config.getInt("divolte.server.port");
 
-        final DivolteEventHandler divolteEventHandler = new DivolteEventHandler(config);
+        divolteEventHandler = new DivolteEventHandler(config);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
@@ -44,9 +50,12 @@ public class Server implements Runnable {
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
-        final HttpHandler rootHandler = config.getBoolean("divolte.server.use_x_forwarded_for") ?
-                new ProxyPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler;
+        final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
+                config.getBoolean("divolte.server.use_x_forwarded_for") ?
+                new ProxyPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
+                );
 
+        shutdownHandler = rootHandler;
         undertow = Undertow.builder()
                            .addHttpListener(port, host)
                            .setHandler(rootHandler)
@@ -71,8 +80,24 @@ public class Server implements Runnable {
     public void run() {
         Runtime.getRuntime().addShutdownHook(new Thread(
                 () -> {
-                    logger.info("Stopping server.");
-                    undertow.stop();
+                    try {
+                        logger.info("Stopping HTTP server.");
+                        shutdownHandler.shutdown();
+                        shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
+                        undertow.stop();
+                    } catch (Exception ie) {
+                        Thread.currentThread().interrupt();
+                    }
+
+                    logger.info("Stopping thread pools.");
+                    divolteEventHandler.shutdown();
+
+                    logger.info("Closing HDFS filesystem connection.");
+                    try {
+                        FileSystem.closeAll();
+                    } catch (IOException ioe) {
+                        logger.warn("Failed to cleanly close HDFS file system.", ioe);
+                    }
                 }
         ));
         logger.info("Starting server on {}:{}", host, port);

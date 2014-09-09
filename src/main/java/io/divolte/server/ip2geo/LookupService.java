@@ -15,6 +15,8 @@ public interface LookupService extends AutoCloseable {
 
     @ParametersAreNonnullByDefault
     public class ClosedServiceException extends Exception {
+        private static final long serialVersionUID = -7048764813960463375L;
+
         private final LookupService service;
 
         public ClosedServiceException(final LookupService service) {

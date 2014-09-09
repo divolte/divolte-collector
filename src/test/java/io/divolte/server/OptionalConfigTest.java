@@ -37,7 +37,6 @@ public class OptionalConfigTest {
 
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldProcessPresentPathsForAllTypes() {
         Config config = ConfigFactory.load("config-test-optionals-present");
