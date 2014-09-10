@@ -51,7 +51,7 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     @Override
-    public ProcessingDirective process(AvroRecordBuffer record) {
+    public ProcessingDirective process(final AvroRecordBuffer record) {
         logger.debug("Processing individual record.", record);
         return send(() -> {
             producer.send(buildMessage(record));
