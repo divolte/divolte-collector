@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Joiner;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigList;
@@ -29,6 +32,8 @@ import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 @ParametersAreNonnullByDefault
 @NotThreadSafe
 final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
+    private final static Logger logger = LoggerFactory.getLogger(KafkaFlusher.class);
+
     private final String topic;
     private final Producer<byte[], byte[]> producer;
 
@@ -41,7 +46,9 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     @Override
     public ProcessingDirective process(AvroRecordBuffer record) {
+        logger.debug("Processing individual record.", record);
         producer.send(buildMessage(record));
+        logger.debug("Sent individual record to Kafka.", record);
         return CONTINUE;
     }
 
@@ -51,18 +58,21 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
         final ProcessingDirective result;
         switch (batchSize) {
         case 0:
+            logger.warn("Ignoring empty batch of events.");
             result = CONTINUE;
             break;
         case 1:
             result = process(batch.remove());
             break;
         default:
+            logger.debug("Processing batch of {} records.", batchSize);
             final List<KeyedMessage<byte[], byte[]>> kafkaMessages =
                     batch.stream()
                          .map(this::buildMessage)
                          .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
             batch.clear();
             producer.send(kafkaMessages);
+            logger.debug("Sent {} records to Kafka.", batchSize);
             result = CONTINUE;
          }
         return result;
