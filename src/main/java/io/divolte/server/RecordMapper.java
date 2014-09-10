@@ -1,17 +1,17 @@
 package io.divolte.server;
 
+import static io.divolte.server.DivolteEventHandler.*;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
-import net.sf.uadetector.OperatingSystem;
-import net.sf.uadetector.ReadableUserAgent;
-import net.sf.uadetector.UserAgentStringParser;
-import net.sf.uadetector.service.UADetectorServiceFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
@@ -30,9 +30,15 @@ import java.util.stream.Collectors;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import net.sf.uadetector.OperatingSystem;
+import net.sf.uadetector.ReadableUserAgent;
+import net.sf.uadetector.UserAgentStringParser;
+import net.sf.uadetector.service.UADetectorServiceFactory;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,8 +60,6 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
-
-import static io.divolte.server.DivolteEventHandler.*;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -124,20 +128,18 @@ final class RecordMapper {
 
     private static FieldSupplier<?> fieldSupplierFromConfig(final Entry<String, ConfigValue> entry) {
         final ConfigValue value = entry.getValue();
+        final String fieldName = entry.getKey();
 
         switch (value.valueType()) {
         case STRING:
             return simpleFieldSupplier((String) value.unwrapped());
         case OBJECT:
-            final String fieldName = entry.getKey();
             final Config subConfig = ((ConfigObject) value).toConfig();
-            if (!subConfig.hasPath("type")) {
-                throw new SchemaMappingException("Missing type property on configuration for field %s.", fieldName);
-            }
-            final String type = subConfig.getString("type");
-            return complexFieldSupplierFromConfig(fieldName, type, subConfig);
+            return OptionalConfig.of(subConfig::getString, "type")
+                                 .map((type) -> complexFieldSupplierFromConfig(fieldName, type, subConfig))
+                                 .orElseThrow(() -> new SchemaMappingException("Missing type property on configuration for field %s.", fieldName));
         default:
-            throw new SchemaMappingException("Schema mapping for fields can only be of type STRING or OBJECT. Found %s.", value.valueType());
+            throw new SchemaMappingException("Schema mapping for fields can only be of type STRING or OBJECT. Found %s for field %s.", value.valueType(), fieldName);
         }
     }
 
@@ -154,28 +156,42 @@ final class RecordMapper {
             final String queryParameterName = "t." + parameterName;
             return (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
         case "regex_group":
-            return regexGroupFieldSupplier(config);
+            return regexGroupFieldSupplier(config, name);
         case "regex_name":
-            return regexNameFieldSupplier(config);
+            return regexNameFieldSupplier(config, name);
+        case "query_param":
+            return queryParamFieldSupplier(config, name);
         default:
             throw new SchemaMappingException("Unknown mapping type: %s for field %s.", type, name);
         }
     }
 
-    private static FieldSupplier<String> regexNameFieldSupplier(final Config config) {
-        final List<String> regexNames = config.getStringList("regexes");
-        final String fieldName = config.getString("field");
+    private static FieldSupplier<String> queryParamFieldSupplier(final Config config, final String name) {
+        final String paramName = OptionalConfig.of(config::getString, "name")
+                                               .orElseThrow(() -> new SchemaMappingException("Query param mapping for field %s requires a 'name' property.", name));
+        final String fieldName = OptionalConfig.of(config::getString, "field")
+                .orElseThrow(() -> new SchemaMappingException("Query param mapping for field %s requires a string 'field' property.", name));
+
+        final FieldSupplier<String> fieldSupplier = queryParamFieldSupplierForName(fieldName);
+        return (c) -> fieldSupplier.get(c).map((value) -> c.queryStringParameterMap(fieldName, value).get(paramName));
+    }
+
+    private static FieldSupplier<String> regexNameFieldSupplier(final Config config, final String name) {
+        final List<String> regexNames = OptionalConfig.of(config::getStringList, "regexes")
+                                                      .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a array 'regexes' property.", name));
+        final String fieldName = OptionalConfig.of(config::getString, "field")
+                                               .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a string 'field' property.", name));
         final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(fieldName);
 
         return (c) -> fieldSupplier.get(c)
-                                 .flatMap((s) -> regexNames.stream().filter((rn) -> c.matcher(rn, fieldName, s).matches())
-                                                                    .findFirst());
+                                   .flatMap((s) -> regexNames.stream().filter((rn) -> c.matcher(rn, fieldName, s).matches())
+                                                                      .findFirst());
     }
 
-    private static FieldSupplier<String> regexGroupFieldSupplier(final Config config) {
-        final String regexName = config.getString("regex");
-        final String fieldName = config.getString("field");
-        final String groupName = config.getString("group");
+    private static FieldSupplier<String> regexGroupFieldSupplier(final Config config, final String name) {
+        final String regexName = OptionalConfig.of(config::getString, "regex").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'regex' property.", name));
+        final String fieldName = OptionalConfig.of(config::getString, "field").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'field' property.", name));
+        final String groupName = OptionalConfig.of(config::getString, "group").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'group' property.", name));
         final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(fieldName);
 
         return (c) -> fieldSupplier.get(c)
@@ -201,6 +217,17 @@ final class RecordMapper {
             return LOCATION_FIELD_PRODUCER;
         default:
             throw new SchemaMappingException("Only userAgent, remoteHost, referer and location fields can be used for regex matchers. Found %s.", name);
+        }
+    }
+
+    private static FieldSupplier<String> queryParamFieldSupplierForName(final String name) {
+        switch (name) {
+        case "referer":
+            return REFERER_FIELD_PRODUCER;
+        case "location":
+            return LOCATION_FIELD_PRODUCER;
+        default:
+            throw new SchemaMappingException("Only referer and location fields can be used for query string matchers. Found %s.", name);
         }
     }
 
@@ -413,6 +440,7 @@ final class RecordMapper {
 
         // In general a regular expression is used against a single value, but it can be used more than once.
         private final Map<String, Matcher> matchers = Maps.newHashMapWithExpectedSize(regexes.size() * 2);
+        private final Map<String, Map<String,String>> parsedQueryString = Maps.newHashMapWithExpectedSize(5);
 
         private final HttpServerExchange serverExchange;
 
@@ -434,6 +462,27 @@ final class RecordMapper {
                     return Optional.empty();
                 }
             }));
+        }
+
+        public Map<String,String> queryStringParameterMap(final String field, final String value) {
+            return parsedQueryString.computeIfAbsent(field, (ignored) -> {
+                URI uri;
+                try {
+                    uri = new URI(value);
+                } catch (URISyntaxException e) {
+                    return Collections.emptyMap();
+                }
+
+                final String rawQuery = uri.getRawQuery();
+                if (rawQuery == null) {
+                    return Collections.emptyMap();
+                } else {
+                    return URLEncodedUtils
+                            .parse(rawQuery, StandardCharsets.UTF_8)
+                            .stream()
+                            .collect(Collectors.toMap((nvp) -> nvp.getName(), (nvp) -> nvp.getValue()));
+                }
+            });
         }
 
         public Matcher matcher(final String regex, final String field, final String value) {

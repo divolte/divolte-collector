@@ -10,6 +10,7 @@
         { "name": "remoteHost",                      "type": "string" },
         { "name": "referer",                         "type": ["null","string"],  "default": null },
         { "name": "location",                        "type": ["null","string"],  "default": null },
+        { "name": "queryparam",                      "type": ["string"],         "default": "not set" },
         { "name": "client",                          "type": ["null","string"],  "default": null },
         { "name": "session",                         "type": ["null","string"],  "default": null },
         { "name": "pageview",                        "type": ["null","string"],  "default": null },

@@ -1,11 +1,14 @@
 package io.divolte.server;
 
+import static io.divolte.server.DivolteEventHandler.*;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.RecordMapper.SchemaMappingException;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieImpl;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,10 +41,6 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import com.maxmind.geoip2.model.CityResponse;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-
-import static io.divolte.server.DivolteEventHandler.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 @ParametersAreNonnullByDefault
 public class RecordMapperTest {
@@ -173,6 +172,37 @@ public class RecordMapperTest {
         assertEquals("ABA", record.get("toplevelCategory"));
         assertEquals("C12", record.get("subCategory"));
         assertEquals("about", record.get("contentPage"));
+    }
+
+    @Test
+    public void shouldSetFieldWithValueFromQueryString() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://ci-website-elb-1121474138.eu-west-1.elb.amazonaws.com/search?q=fiets+lamp+rood",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals("fiets lamp rood", record.get("queryparam"));
+    }
+
+    @Test
+    public void shouldNotSetFieldWithIfNotPresentInQueryString() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://ci-website-elb-1121474138.eu-west-1.elb.amazonaws.com/search?other=wrong+param+name",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        // "not set" is the default value in the Avro schema
+        assertEquals("not set", record.get("queryparam").toString());
     }
 
     @Test
@@ -347,10 +377,6 @@ public class RecordMapperTest {
                     exchange.putAttachment(PARTY_COOKIE_KEY, party);
                     exchange.putAttachment(SESSION_COOKIE_KEY, session);
                     exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
-
-                    exchange.getResponseCookies().put("_dvp", new CookieImpl("_dvp", party.value));
-                    exchange.getResponseCookies().put("_dvs", new CookieImpl("_dvs", session.value));
-                    exchange.getResponseCookies().put("_dvv", new CookieImpl("_dvv", page.value));
 
                     exchange.getResponseSender().send("OK");
                     theExchange = exchange;

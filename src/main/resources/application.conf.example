@@ -1,6 +1,7 @@
 divolte {
   tracking {
     include "schema-mapping.conf.example"
+    schema_file = /some/dir/MySchema.avsc
   }
 
   hdfs_flusher {
