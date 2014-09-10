@@ -47,13 +47,25 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     @Override
     public ProcessingDirective process(final Queue<AvroRecordBuffer> batch) {
-        final List<KeyedMessage<byte[], byte[]>> kafkaMessages =
-                batch.stream()
-                     .map(this::buildMessage)
-                     .collect(Collectors.toCollection(() -> new ArrayList<>(batch.size())));
-        batch.clear();
-        producer.send(kafkaMessages);
-        return CONTINUE;
+        final int batchSize = batch.size();
+        final ProcessingDirective result;
+        switch (batchSize) {
+        case 0:
+            result = CONTINUE;
+            break;
+        case 1:
+            result = process(batch.remove());
+            break;
+        default:
+            final List<KeyedMessage<byte[], byte[]>> kafkaMessages =
+                    batch.stream()
+                         .map(this::buildMessage)
+                         .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
+            batch.clear();
+            producer.send(kafkaMessages);
+            result = CONTINUE;
+         }
+        return result;
     }
 
     private KeyedMessage<byte[], byte[]> buildMessage(final AvroRecordBuffer record) {
