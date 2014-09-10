@@ -2,6 +2,7 @@ package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.processing.ItemProcessor;
+import kafka.common.FailedToSendMessageException;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.stream.Collectors;
@@ -37,6 +39,10 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     private final String topic;
     private final Producer<byte[], byte[]> producer;
 
+    // On failure, we pause delivery and store the failed operation here.
+    // During heartbeats it will be retried until success.
+    private Optional<KafkaSender> pendingOperation = Optional.empty();
+
     public KafkaFlusher(final Config config) {
         Objects.requireNonNull(config);
         final ProducerConfig producerConfig = new ProducerConfig(getProperties(config, "divolte.kafka_flusher.producer"));
@@ -47,9 +53,10 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     @Override
     public ProcessingDirective process(AvroRecordBuffer record) {
         logger.debug("Processing individual record.", record);
-        producer.send(buildMessage(record));
-        logger.debug("Sent individual record to Kafka.", record);
-        return CONTINUE;
+        return send(() -> {
+            producer.send(buildMessage(record));
+            logger.debug("Sent individual record to Kafka.", record);
+        });
     }
 
     @Override
@@ -70,11 +77,41 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
                     batch.stream()
                          .map(this::buildMessage)
                          .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
+            // Clear the messages now; on failure they'll be retried as part of our
+            // pending operation.
             batch.clear();
-            producer.send(kafkaMessages);
-            logger.debug("Sent {} records to Kafka.", batchSize);
-            result = CONTINUE;
+            result = send(() -> {
+                producer.send(kafkaMessages);
+                logger.debug("Sent {} records to Kafka.", batchSize);
+            });
          }
+        return result;
+    }
+
+    @Override
+    public ProcessingDirective heartbeat() {
+        return pendingOperation.map((t) -> {
+            logger.debug("Retrying to send message(s) that failed.");
+            return send(t);
+        }).orElse(CONTINUE);
+    }
+
+    @FunctionalInterface
+    private interface KafkaSender {
+        public abstract void send() throws FailedToSendMessageException;
+    }
+
+    private ProcessingDirective send(final KafkaSender sender) {
+        ProcessingDirective result;
+        try {
+            sender.send();
+            pendingOperation = Optional.empty();
+            result = CONTINUE;
+        } catch (final FailedToSendMessageException e) {
+            logger.warn("Failed to send message(s) to Kafka! (Will retry.)", e);
+            pendingOperation = Optional.of(sender);
+            result = PAUSE;
+        }
         return result;
     }
 
