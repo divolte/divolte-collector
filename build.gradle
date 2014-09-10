@@ -127,3 +127,10 @@ findbugsTest.reports {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.1'
 }
+
+startScripts {
+    doLast {
+        unixScript.text = "java -jar ../lib/$jar.archiveName\n" + unixScript.text
+        windowsScript.text = "java -jar ..\\lib\\$jar.archiveName\n" + windowsScript.text
+    }
+}
