@@ -11,8 +11,11 @@ apply plugin: 'com.github.johnrengelman.shadow'
 sourceCompatibility = 1.8
 version = '0.1-SNAPSHOT'
 mainClassName = 'io.divolte.server.Server'
-
-applicationDefaultJvmArgs = ["-XX:+UseG1GC"]
+applicationName = 'divolte-collector'
+applicationDefaultJvmArgs = [
+        "-XX:+UseG1GC",
+        "-Djava.awt.headless=true"
+]
 
 compileJava.options.encoding = 'UTF-8'
 
@@ -119,4 +122,8 @@ findbugsMain.reports {
 findbugsTest.reports {
     xml.enabled = false
     html.enabled = true
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.1'
 }
