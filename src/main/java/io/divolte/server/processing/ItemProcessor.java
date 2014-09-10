@@ -14,7 +14,7 @@ public interface ItemProcessor<E> {
             // exception unless no further processing should
             // take place.
             directive = process(batch.remove());
-        } while (batch.isEmpty() && directive == CONTINUE);
+        } while (!batch.isEmpty() && directive == CONTINUE);
         return directive;
     }
 
