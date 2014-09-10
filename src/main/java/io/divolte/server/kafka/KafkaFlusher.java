@@ -1,6 +1,5 @@
 package io.divolte.server.kafka;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.processing.ItemProcessor;
 import kafka.javaapi.producer.Producer;
@@ -9,9 +8,13 @@ import kafka.producer.ProducerConfig;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Queue;
+import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -20,6 +23,8 @@ import com.google.common.base.Joiner;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
+
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -37,6 +42,17 @@ final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     @Override
     public ProcessingDirective process(AvroRecordBuffer record) {
         producer.send(buildMessage(record));
+        return CONTINUE;
+    }
+
+    @Override
+    public ProcessingDirective process(final Queue<AvroRecordBuffer> batch) {
+        final List<KeyedMessage<byte[], byte[]>> kafkaMessages =
+                batch.stream()
+                     .map(this::buildMessage)
+                     .collect(Collectors.toCollection(() -> new ArrayList<>(batch.size())));
+        batch.clear();
+        producer.send(kafkaMessages);
         return CONTINUE;
     }
 
