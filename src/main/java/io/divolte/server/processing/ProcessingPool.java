@@ -3,10 +3,11 @@ package io.divolte.server.processing;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.processing.ItemProcessor.ProcessingDirective;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -110,10 +111,12 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             final BlockingQueue<E> queue,
             final ItemProcessor<E> processor) {
         return () -> {
-            final List<E> batch = new ArrayList<>(MAX_BATCH_SIZE);
-            ProcessingDirective directive;
+            // The default item processor implementation removes items one-by-one as they
+            // are processed. Using a Queue ensures that this is efficient.
+            final Queue<E> batch = new ArrayDeque<>(MAX_BATCH_SIZE);
 
             while (!queue.isEmpty() || running) {
+                ProcessingDirective directive;
                 do {
                     queue.drainTo(batch, MAX_BATCH_SIZE - batch.size());
                     if (batch.isEmpty()) {
@@ -126,11 +129,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
                         })
                         .orElseGet(processor::heartbeat);
                     } else {
-                        Iterator<E> itr = batch.iterator();
-                        do {
-                            directive = processor.process(itr.next());
-                            itr.remove();
-                        } while (itr.hasNext() && directive == CONTINUE);
+                        directive = processor.process(batch);
                     }
                 } while (directive == CONTINUE && running);
 
