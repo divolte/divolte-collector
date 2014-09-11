@@ -175,6 +175,48 @@ public class RecordMapperTest {
     }
 
     @Test
+    public void shouldCastValueFromComplexMappingToSchemaType() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam-types");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://example.com/42/false/3.14159265359/34359738368/whatever?i=-42&b=true&d=3.14159265359&l=34359738368",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals(Integer.valueOf(-42), record.get("queryparamInteger"));
+        assertEquals(Boolean.valueOf(true), record.get("queryparamBoolean"));
+        assertEquals(Double.valueOf(3.14159265359), record.get("queryparamDouble"));
+        assertEquals(Long.valueOf(34359738368L), record.get("queryparamLong"));
+
+        assertEquals(Integer.valueOf(42), record.get("pathInteger"));
+        assertEquals(Boolean.valueOf(false), record.get("pathBoolean"));
+        assertEquals(Double.valueOf(3.14159265359), record.get("pathDouble"));
+        assertEquals(Long.valueOf(34359738368L), record.get("pathLong"));
+
+        assertEquals(Integer.valueOf(42), record.get("cookieInteger"));
+        assertEquals(Boolean.valueOf(true), record.get("cookieBoolean"));
+    }
+
+    @Test
+    public void shouldNotBreakOnMalformedIntForCastingMapping() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam-types");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://example.com/NotAnInt/false/3.14159265359/34359738368/whatever?i=-42&b=true&d=3.14159265359&l=34359738368",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        // -1 is the default value in the Avro schema
+        assertEquals(Integer.valueOf(-1), record.get("pathInteger"));
+    }
+
+    @Test
     public void shouldSetFieldWithValueFromQueryString() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
@@ -349,7 +391,7 @@ public class RecordMapperTest {
                 String.format("http://localhost:1234/whatever/happens/is/fine%s", "".equals(queryString) ? "" : "?" + queryString))
                 .header("accept", "text/plain")
                 .header("User-Agent", userAgent)
-                .header("Cookie", "custom_cookie=custom_cookie_value;")
+                .header("Cookie", "custom_cookie=custom_cookie_value;typed_cookie_int=42;typed_cookie_bool=true")
                 .asString();
     }
 

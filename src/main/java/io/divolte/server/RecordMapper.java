@@ -36,6 +36,8 @@ import net.sf.uadetector.UserAgentStringParser;
 import net.sf.uadetector.service.UADetectorServiceFactory;
 
 import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -47,7 +49,10 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.maxmind.geoip2.model.CityResponse;
 import com.maxmind.geoip2.record.City;
 import com.maxmind.geoip2.record.Continent;
@@ -117,18 +122,18 @@ final class RecordMapper {
     }
 
     private static FieldSetter fieldSetterFromConfig(final Schema schema, final Entry<String, ConfigValue> entry) {
-        final String fieldName = entry.getKey();
-        final Schema.Field field = schema.getField(fieldName);
+        final String targetFieldName = entry.getKey();
+        final Schema.Field field = schema.getField(targetFieldName);
         if (null == field) {
-            throw new SchemaMappingException("Schema missing mapped field: %s", fieldName);
+            throw new SchemaMappingException("Schema missing mapped field: %s", targetFieldName);
         }
-        final FieldSupplier<?> fieldSupplier = fieldSupplierFromConfig(entry);
+        final FieldSupplier<?> fieldSupplier = fieldSupplierFromConfig(entry, schema);
         return (b, e, c) -> fieldSupplier.get(c).ifPresent((v) -> b.set(field, v));
     }
 
-    private static FieldSupplier<?> fieldSupplierFromConfig(final Entry<String, ConfigValue> entry) {
+    private static FieldSupplier<?> fieldSupplierFromConfig(final Entry<String, ConfigValue> entry, Schema schema) {
         final ConfigValue value = entry.getValue();
-        final String fieldName = entry.getKey();
+        final String targetFieldName = entry.getKey();
 
         switch (value.valueType()) {
         case STRING:
@@ -136,66 +141,114 @@ final class RecordMapper {
         case OBJECT:
             final Config subConfig = ((ConfigObject) value).toConfig();
             return OptionalConfig.of(subConfig::getString, "type")
-                                 .map((type) -> complexFieldSupplierFromConfig(fieldName, type, subConfig))
-                                 .orElseThrow(() -> new SchemaMappingException("Missing type property on configuration for field %s.", fieldName));
+                                 .map((type) -> complexFieldSupplierFromConfig(targetFieldName, type, subConfig, schema))
+                                 .orElseThrow(() -> new SchemaMappingException("Missing type property on configuration for field %s.", targetFieldName));
         default:
-            throw new SchemaMappingException("Schema mapping for fields can only be of type STRING or OBJECT. Found %s for field %s.", value.valueType(), fieldName);
+            throw new SchemaMappingException("Schema mapping for fields can only be of type STRING or OBJECT. Found %s for field %s.", value.valueType(), targetFieldName);
         }
     }
 
-    private static FieldSupplier<?> complexFieldSupplierFromConfig(final String name, final String type, final Config config) {
+    private static FieldSupplier<?> complexFieldSupplierFromConfig(final String targetFieldName, final String type, final Config config, final Schema schema) {
         switch (type) {
         case "cookie":
             final String cookieName = OptionalConfig.of(config::getString, "name")
-                .orElseThrow(() -> new SchemaMappingException("Cookie mapping for field %s requires a string 'name' property.", name));
-            return (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(cookieName))
+                                                    .orElseThrow(() -> new SchemaMappingException("Cookie mapping for field %s requires a string 'name' property.", targetFieldName));
+
+            final FieldSupplier<String> cookieFieldSupplier = (c) -> Optional.ofNullable(c.getServerExchange().getRequestCookies().get(cookieName))
                                   .map(Cookie::getValue);
+            return castingSupplierForStringField(targetFieldName, cookieFieldSupplier, schema);
         case "event_parameter":
             final String parameterName = OptionalConfig.of(config::getString, "name")
-                                                       .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", name));
+                                                       .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", targetFieldName));
             final String queryParameterName = "t." + parameterName;
             return (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
         case "regex_group":
-            return regexGroupFieldSupplier(config, name);
+            final FieldSupplier<String> regexGroupFieldSupplier = regexGroupFieldSupplier(config, targetFieldName);
+            return castingSupplierForStringField(targetFieldName, regexGroupFieldSupplier, schema);
         case "regex_name":
-            return regexNameFieldSupplier(config, name);
+            return regexNameFieldSupplier(config, targetFieldName);
         case "query_param":
-            return queryParamFieldSupplier(config, name);
+            final FieldSupplier<String> queryParamFieldSupplier = queryParamFieldSupplier(config, targetFieldName);
+            return castingSupplierForStringField(targetFieldName, queryParamFieldSupplier, schema);
         default:
-            throw new SchemaMappingException("Unknown mapping type: %s for field %s.", type, name);
+            throw new SchemaMappingException("Unknown mapping type: %s for field %s.", type, targetFieldName);
         }
     }
 
-    private static FieldSupplier<String> queryParamFieldSupplier(final Config config, final String name) {
-        final String paramName = OptionalConfig.of(config::getString, "name")
-                                               .orElseThrow(() -> new SchemaMappingException("Query param mapping for field %s requires a 'name' property.", name));
-        final String fieldName = OptionalConfig.of(config::getString, "field")
-                .orElseThrow(() -> new SchemaMappingException("Query param mapping for field %s requires a string 'field' property.", name));
+    private static FieldSupplier<?> castingSupplierForStringField(final String targetFieldName, final FieldSupplier<String> original, final Schema schema) {
+        Field avroField = schema.getField(targetFieldName);
+        final Type originalType = avroField.schema().getType();
+        final Type type;
+        if (originalType == Type.UNION) {
+            List<Schema> unionTypes = avroField.schema().getTypes();
 
-        final FieldSupplier<String> fieldSupplier = queryParamFieldSupplierForName(fieldName);
-        return (c) -> fieldSupplier.get(c).map((value) -> c.queryStringParameterMap(fieldName, value).get(paramName));
+            final SchemaMappingException wrongUnionException = new SchemaMappingException("Field %s is a Avro UNION type which is not of the form [\"null\", \"<other primitive>\"], "
+                    + "which is not supported. UNION is only supported to create a nullable field with possible null default value.", targetFieldName);
+
+            if (unionTypes.size() != 2) {
+                throw wrongUnionException;
+            }
+
+            type = unionTypes
+                .stream()
+                .filter((t) -> t.getType() != Type.NULL)
+                .findFirst()
+                .map(Schema::getType)
+                .orElseThrow(() -> wrongUnionException);
+        } else {
+            type = originalType;
+        }
+
+        switch(type) {
+        case STRING:
+            return original;
+        case BOOLEAN:
+            // Boolean.valueOf(String) returns true for "true" and false for anything else
+            // this means we always set the field if there is some kind of value
+            return (c) -> original.get(c).map(Boolean::valueOf);
+        case DOUBLE:
+            return (c) -> original.get(c).map(Doubles::tryParse);
+        case FLOAT:
+            return (c) -> original.get(c).map(Floats::tryParse);
+        case INT:
+            return (c) -> original.get(c).map(Ints::tryParse);
+        case LONG:
+            return (c) -> original.get(c).map(Longs::tryParse);
+        default:
+            throw new SchemaMappingException("Schema mapping for field %s is a Avro field of type %s, which is not supported.", targetFieldName, type.toString());
+        }
     }
 
-    private static FieldSupplier<String> regexNameFieldSupplier(final Config config, final String name) {
+    private static FieldSupplier<String> queryParamFieldSupplier(final Config config, final String targetFieldName) {
+        final String paramName = OptionalConfig.of(config::getString, "name")
+                                               .orElseThrow(() -> new SchemaMappingException("Query param mapping for field %s requires a 'name' property.", targetFieldName));
+        final String sourceFieldName = OptionalConfig.of(config::getString, "field")
+                .orElseThrow(() -> new SchemaMappingException("Query param mapping for field %s requires a string 'field' property.", targetFieldName));
+
+        final FieldSupplier<String> fieldSupplier = queryParamFieldSupplierForName(sourceFieldName);
+        return (c) -> fieldSupplier.get(c).map((value) -> c.queryStringParameterMap(sourceFieldName, value).get(paramName));
+    }
+
+    private static FieldSupplier<String> regexNameFieldSupplier(final Config config, final String targetFieldName) {
         final List<String> regexNames = OptionalConfig.of(config::getStringList, "regexes")
-                                                      .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a array 'regexes' property.", name));
-        final String fieldName = OptionalConfig.of(config::getString, "field")
-                                               .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a string 'field' property.", name));
-        final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(fieldName);
+                                                      .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a array 'regexes' property.", targetFieldName));
+        final String sourceFieldName = OptionalConfig.of(config::getString, "field")
+                                               .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a string 'field' property.", targetFieldName));
+        final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(sourceFieldName);
 
         return (c) -> fieldSupplier.get(c)
-                                   .flatMap((s) -> regexNames.stream().filter((rn) -> c.matcher(rn, fieldName, s).matches())
+                                   .flatMap((s) -> regexNames.stream().filter((rn) -> c.matcher(rn, sourceFieldName, s).matches())
                                                                       .findFirst());
     }
 
-    private static FieldSupplier<String> regexGroupFieldSupplier(final Config config, final String name) {
-        final String regexName = OptionalConfig.of(config::getString, "regex").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'regex' property.", name));
-        final String fieldName = OptionalConfig.of(config::getString, "field").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'field' property.", name));
-        final String groupName = OptionalConfig.of(config::getString, "group").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'group' property.", name));
-        final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(fieldName);
+    private static FieldSupplier<String> regexGroupFieldSupplier(final Config config, final String targetFieldName) {
+        final String regexName = OptionalConfig.of(config::getString, "regex").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'regex' property.", targetFieldName));
+        final String sourceFieldName = OptionalConfig.of(config::getString, "field").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'field' property.", targetFieldName));
+        final String groupName = OptionalConfig.of(config::getString, "group").orElseThrow(() -> new SchemaMappingException("Regex group mapping for field %s requires a string 'group' property.", targetFieldName));
+        final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(sourceFieldName);
 
         return (c) -> fieldSupplier.get(c)
-                                 .flatMap((s) -> groupFromMatcher(c.matcher(regexName, fieldName, s), groupName));
+                                 .flatMap((s) -> groupFromMatcher(c.matcher(regexName, sourceFieldName, s), groupName));
     }
 
     private static final FieldSupplier<String> REMOTE_HOST_FIELD_PRODUCER =
@@ -231,8 +284,8 @@ final class RecordMapper {
         }
     }
 
-    private static FieldSupplier<?> simpleFieldSupplier(final String name) {
-        switch (name) {
+    private static FieldSupplier<?> simpleFieldSupplier(final String sourceFieldName) {
+        switch (sourceFieldName) {
         case "eventType":
             return (FieldSupplier<String>) (c) -> c.getQueryParameter("t");
         case "firstInSession":
@@ -344,7 +397,7 @@ final class RecordMapper {
         case "pageViewId":
             return (FieldSupplier<String>) (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
         default:
-            throw new SchemaMappingException("Unknown field in schema mapping: %s", name);
+            throw new SchemaMappingException("Unknown field in schema mapping: %s", sourceFieldName);
         }
     }
 
