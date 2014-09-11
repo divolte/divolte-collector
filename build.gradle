@@ -38,11 +38,13 @@ dependencies {
     compile group: 'io.undertow', name: 'undertow-core', version: '1.0.15.Final'
     compile group: 'com.typesafe', name: 'config', version: '1.2.1'
     compile group: 'com.google.guava', name: 'guava', version: '17.0'
-    compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.0'
-    compile group: 'com.google.code.findbugs', name: 'findbugs', version: '3.0.0'
     compile group: 'org.apache.avro', name: 'avro', version: '1.7.7'
-    compile group: 'org.apache.hadoop', name:'hadoop-client', version: '2.4.1'
-    compile group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.20'
+    compile (group: 'org.apache.hadoop', name:'hadoop-common', version: '2.4.1') {
+        exclude group: 'jline', module: 'jline'
+    }
+    compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.20') {
+        exclude group: 'com.google.code.findbugs', module: 'jsr305'
+    }
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.08'
     compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'0.8.1') {
         // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
