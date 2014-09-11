@@ -107,7 +107,7 @@ findbugs {
 }
 
 pmd {
-    toolVersion = "5.1.2"
+    toolVersion = "5.1.3"
 }
 
 jacoco {
