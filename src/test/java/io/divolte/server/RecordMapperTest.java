@@ -182,18 +182,18 @@ public class RecordMapperTest {
 
         setupExchange(
                 "Divolte/Test",
-                "l=http://example.com/42/false/3.14159265359/34359738368/whatever?i=-42&b=true&d=3.14159265359&l=34359738368",
+                "l=http://example.com/42/false/1.6180339887498948482/34359738368/whatever?i=-42&b=true&d=1.6180339887498948482&l=34359738368",
                 "r=https://www.example.com/about.html");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals(Integer.valueOf(-42), record.get("queryparamInteger"));
         assertEquals(Boolean.valueOf(true), record.get("queryparamBoolean"));
-        assertEquals(Double.valueOf(3.14159265359), record.get("queryparamDouble"));
+        assertEquals(Double.valueOf(1.6180339887498948482), record.get("queryparamDouble"));
         assertEquals(Long.valueOf(34359738368L), record.get("queryparamLong"));
 
         assertEquals(Integer.valueOf(42), record.get("pathInteger"));
         assertEquals(Boolean.valueOf(false), record.get("pathBoolean"));
-        assertEquals(Double.valueOf(3.14159265359), record.get("pathDouble"));
+        assertEquals(Double.valueOf(1.6180339887498948482), record.get("pathDouble"));
         assertEquals(Long.valueOf(34359738368L), record.get("pathLong"));
 
         assertEquals(Integer.valueOf(42), record.get("cookieInteger"));
