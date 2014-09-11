@@ -42,6 +42,7 @@ dependencies {
     compile (group: 'org.apache.hadoop', name:'hadoop-common', version: '2.4.1') {
         exclude group: 'jline', module: 'jline'
     }
+    compile group: 'org.apache.hadoop', name:'hadoop-hdfs', version: '2.4.1'
     compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.20') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
