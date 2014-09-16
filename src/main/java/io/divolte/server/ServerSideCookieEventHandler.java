@@ -5,14 +5,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.StatusCodes;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
 import java.util.Deque;
@@ -25,12 +18,9 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.Resources;
 import com.typesafe.config.Config;
 
 /**
- * Event handler for Divolte signalling events.
- *
  * This handler deals with requests aimed at our signalling endpoint. The signalling
  * endpoint responds to GET requests with a small transparent 1x1 image, allowing it
  * to be invoked using image requests.
@@ -48,13 +38,10 @@ import com.typesafe.config.Config;
  * </ul>
  */
 @ParametersAreNonnullByDefault
-final class DivolteEventHandler {
-    private static final Logger logger = LoggerFactory.getLogger(Server.class);
+final class ServerSideCookieEventHandler extends BaseEventHandler {
+    private static final String PAGE_VIEW_QUERY_PARAM = "p";
 
-    public final static AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    public final static AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    public final static AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
-    public final static AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
+    private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     private final String partyCookieName;
     private final Duration partyTimeout;
@@ -64,106 +51,56 @@ final class DivolteEventHandler {
     private final OptionalConfig<String> cookieDomain;
 
 
-    private final ByteBuffer transparentImage;
-
-    private final IncomingRequestProcessingPool processingPool;
-
-
-    public DivolteEventHandler(final String partyCookieName,
+    public ServerSideCookieEventHandler(final String partyCookieName,
                                final Duration partyTimeout,
                                final String sessionCookieName,
                                final Duration sessionTimeout,
                                final String pageViewCookieName,
                                final OptionalConfig<String> cookieDomain,
                                final IncomingRequestProcessingPool processingPool) {
+        super(processingPool);
         this.partyCookieName =    Objects.requireNonNull(partyCookieName);
         this.partyTimeout =       Objects.requireNonNull(partyTimeout);
         this.sessionCookieName =  Objects.requireNonNull(sessionCookieName);
         this.sessionTimeout =     Objects.requireNonNull(sessionTimeout);
         this.pageViewCookieName = Objects.requireNonNull(pageViewCookieName);
         this.cookieDomain = cookieDomain;
-        this.processingPool =     Objects.requireNonNull(processingPool);
-        try {
-            this.transparentImage = ByteBuffer.wrap(
-                Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
-            ).asReadOnlyBuffer();
-        } catch (final IOException e) {
-            // Should throw something more specific than this.
-            throw new RuntimeException("Could not load transparent image resource.", e);
-        }
     }
 
-    public DivolteEventHandler(final Config config) {
+    public ServerSideCookieEventHandler(final Config config, final IncomingRequestProcessingPool pool) {
         this(config.getString("divolte.tracking.party_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.party_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.session_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.page_view_cookie"),
              OptionalConfig.of(config::getString, "divolte.tracking.cookie_domain"),
-             new IncomingRequestProcessingPool(config));
+             pool);
     }
 
-    public void handleEventRequest(final HttpServerExchange exchange) throws Exception {
+    protected void doHandleEventRequest(final HttpServerExchange exchange) throws Exception {
         /*
          * Our strategy is:
          * 1) Set up the cookies.
-         * 2) Materialize the source address, so we can safely get it later.
-         * 3) Acknowledge the response.
-         * 4) Pass into our queuing system for further handling.
+         * 2) Acknowledge the response.
+         * 3) Pass into our queuing system for further handling.
          */
-        // We only accept GET requests.
-        if (exchange.getRequestMethod().equals(Methods.GET)) {
-            // 1
-            final long requestTime = System.currentTimeMillis();
-            exchange.putAttachment(REQUEST_START_TIME_KEY, requestTime);
 
-            final CookieValue partyId = prepareTrackingIdentifierAndReturnCookieValue(exchange, partyCookieName, PARTY_COOKIE_KEY, partyTimeout, requestTime);
-            final CookieValue sessionId = prepareTrackingIdentifierAndReturnCookieValue(exchange, sessionCookieName, SESSION_COOKIE_KEY, sessionTimeout, requestTime);
-            final String pageViewId = prepareAndReturnPageViewId(exchange, pageViewCookieName, requestTime);
+        // 1
+        final long requestTime = System.currentTimeMillis();
+        exchange.putAttachment(REQUEST_START_TIME_KEY, requestTime);
+        // Server side generated cookies are UTC, so offset = 0
+        exchange.putAttachment(COOKIE_UTC_OFFSET, 0L);
 
-            // 2
-            /*
-             * The source address can be fetched on-demand from the peer connection, which may
-             * no longer be available after the response has been sent. So we materialize it here
-             * to ensure it's available further down the chain.
-             */
-            exchange.setSourceAddress(exchange.getSourceAddress());
+        final CookieValue partyId = prepareTrackingIdentifierAndReturnCookieValue(exchange, partyCookieName, PARTY_COOKIE_KEY, partyTimeout, requestTime);
+        final CookieValue sessionId = prepareTrackingIdentifierAndReturnCookieValue(exchange, sessionCookieName, SESSION_COOKIE_KEY, sessionTimeout, requestTime);
+        final String pageViewId = prepareAndReturnPageViewId(exchange, pageViewCookieName, requestTime);
 
-            // 3
-            exchange.setResponseCode(StatusCodes.ACCEPTED);
-            serveImage(exchange);
+        // 2
+        serveImage(exchange);
 
-            // 4
-            logger.debug("Enqueuing event: {}/{}/{}", partyId, sessionId, pageViewId);
-            processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
-        } else {
-            methodNotAllowed(exchange);
-        }
-    }
-
-    public void shutdown() {
-        processingPool.stop();
-    }
-
-    private void methodNotAllowed(final HttpServerExchange exchange) {
-        exchange.getResponseHeaders()
-        .put(Headers.ALLOW, Methods.GET_STRING)
-        .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-
-        exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED)
-        .getResponseSender()
-                .send("HTTP method " + exchange.getRequestMethod() + " not allowed.", StandardCharsets.UTF_8);
-    }
-
-    private void serveImage(final HttpServerExchange exchange) {
-        final HeaderMap responseHeaders = exchange.getResponseHeaders();
-        responseHeaders
-        .put(Headers.CONTENT_TYPE, "image/gif")
-        .put(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
-        .put(Headers.PRAGMA, "no-cache")
-        .put(Headers.EXPIRES, 0);
-
-        exchange.getResponseSender().send(transparentImage.slice());
+        // 3
+        logger.debug("Enqueuing event (server generated cookies): {}/{}/{}", partyId, sessionId, pageViewId);
+        processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
     }
 
     private CookieValue prepareTrackingIdentifierAndReturnCookieValue(final HttpServerExchange exchange,
@@ -201,7 +138,7 @@ final class DivolteEventHandler {
     }
 
     private String prepareAndReturnPageViewId(final HttpServerExchange exchange, final String cookieName, final long currentTime) {
-        final String pageViewId = Optional.ofNullable(exchange.getQueryParameters().get("p"))
+        final String pageViewId = Optional.ofNullable(exchange.getQueryParameters().get(PAGE_VIEW_QUERY_PARAM))
                 .map(Deque::getFirst)
                 .orElseGet(() -> CookieValues.generate(currentTime).value);
 

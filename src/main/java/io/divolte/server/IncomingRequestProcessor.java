@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-import static io.divolte.server.DivolteEventHandler.*;
+import static io.divolte.server.ServerSideCookieEventHandler.*;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 @ParametersAreNonnullByDefault
@@ -68,6 +68,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
                 exchange.getAttachment(PARTY_COOKIE_KEY),
                 exchange.getAttachment(SESSION_COOKIE_KEY),
                 exchange.getAttachment(REQUEST_START_TIME_KEY),
+                exchange.getAttachment(COOKIE_UTC_OFFSET),
                 avroRecord);
 
         if (null != kafkaFlushingPool) {

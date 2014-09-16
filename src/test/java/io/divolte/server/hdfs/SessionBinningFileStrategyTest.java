@@ -79,6 +79,7 @@ public class SessionBinningFileStrategyTest {
                                 CookieValues.generate((Long) record.get("ts")),
                                 CookieValues.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
+                                0,
                                 record)));
 
         flusher.cleanup();
@@ -130,6 +131,7 @@ public class SessionBinningFileStrategyTest {
                                 CookieValues.generate((Long) record.get("ts")),
                                 CookieValues.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
+                                0,
                                 record)));
 
         records.forEach(
@@ -138,6 +140,7 @@ public class SessionBinningFileStrategyTest {
                                 CookieValues.generate((Long) record.get("ts")),
                                 CookieValues.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
+                                0,
                                 record)));
 
         flusher.cleanup();
@@ -174,7 +177,7 @@ public class SessionBinningFileStrategyTest {
 
         List<AvroRecordBuffer> buffers = records
         .stream()
-        .map((r) -> AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.tryParse((String) r.get("session")).get(), (Long) r.get("ts"), r))
+        .map((r) -> AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.tryParse((String) r.get("session")).get(), (Long) r.get("ts"), 0, r))
         .collect(Collectors.toList());
 
         buffers.forEach(flusher::process);
@@ -215,6 +218,7 @@ public class SessionBinningFileStrategyTest {
                                 CookieValues.generate((Long) record.get("ts")),
                                 CookieValues.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
+                                0,
                                 record));
         flusher.cleanup();
 
