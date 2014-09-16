@@ -74,14 +74,13 @@
   var generateCacheNonce = function() {
     var digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789~_',
         math = Math,
-        floor = math.floor,
-        random = math.random;
-        return function() {
-          return new Date().getTime().toString(36)
-              + digits[floor(random() * digits.length)]
-              + digits[floor(random() * digits.length)]
-              + digits[floor(random() * digits.length)];
+        randomDigit = function() {
+          return digits[math.floor(math.random() * digits.length)];
         };
+    return function() {
+      return new Date().getTime().toString(36)
+          + randomDigit() + randomDigit() + randomDigit();
+    };
   }();
 
   // Declare the namespace our module will export.
