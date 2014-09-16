@@ -10,7 +10,16 @@
   factory(global);
 }('undefined' !== typeof window ? window : this, function(window) {
   "use strict";
-  window.console.log("Initializing DVT.");
+
+  // Set up logging references that we frequently use.
+  var document = window.document,
+      console = window.console,
+      log = console.log.bind(console),
+      info = console.info.bind(console),
+      warn = console.warn.bind(console),
+      error = console.error.bind(console);
+
+  log("Initializing DVT.");
 
   // Find the <script> element used to load this script.
   var dvtElement = function() {
@@ -36,12 +45,14 @@
     }
     return myElement;
   }();
+
   // Detect the base URL for the Divolte server that served this file.
   var baseURL = function(element) {
     var myUrl = element.src;
     return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
   }(dvtElement);
-  window.console.info("Divolte base URL detected", baseURL);
+  info("Divolte base URL detected", baseURL);
+
   // Figure out the pageview ID, if one is present.
   var pageViewId = function(element) {
     var myUrl = element.src,
@@ -51,22 +62,27 @@
       if (-1 !== anchor.indexOf('/')) {
         throw "DVT not initialized correctly; page view ID may not contain a slash ('/').";
       }
-      window.console.info("Page view ID: " + anchor);
+      info("Page view ID: " + anchor);
     } else {
-      window.console.log("Page view ID deferred until after first event.");
+      log("Page view ID deferred until after first event.");
     }
     return anchor;
   }(dvtElement);
 
   // Declare a function that can be used to generate a reasonably unique string.
   // The string need not be globally unique, but only for this client.
-  var digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789~_',
-      generateCacheNonce = function() {
-        return new Date().getTime().toString(36)
-          + digits[Math.floor(Math.random() * digits.length)]
-          + digits[Math.floor(Math.random() * digits.length)]
-          + digits[Math.floor(Math.random() * digits.length)];
-  };
+  var generateCacheNonce = function() {
+    var digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789~_',
+        math = Math,
+        floor = math.floor,
+        random = math.random;
+        return function() {
+          return new Date().getTime().toString(36)
+              + digits[floor(random() * digits.length)]
+              + digits[floor(random() * digits.length)]
+              + digits[floor(random() * digits.length)];
+        };
+  }();
 
   // Declare the namespace our module will export.
   var dvt = {
@@ -87,9 +103,9 @@
     // Only proceed if we have an event type.
     if (type) {
       if ('undefined' === typeof customParameters) {
-        window.console.info("Signalling event: " + type);
+        info("Signalling event: " + type);
       } else {
-        window.console.info("Signalling event: " + type, customParameters);
+        info("Signalling event: " + type, customParameters);
       }
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
@@ -143,7 +159,7 @@
           }
           break;
         default:
-          window.console.error("Ignoring non-object custom event parameters", customParameters);
+          error("Ignoring non-object custom event parameters", customParameters);
       }
       // Special special cache-busting parameter.
       var image = new Image(1,1);
@@ -159,14 +175,14 @@
             if (parts.shift() == '_dvv') {
               var pageViewId = parts.shift();
               dvt['_pageViewId'] = pageViewId;
-              window.console.info("Divolte-generated page view ID: " + pageViewId);
+              info("Divolte-generated page view ID: " + pageViewId);
               break;
             }
           }
         }
       }
     } else {
-      window.console.warn("Ignoring event with no type.");
+      warn("Ignoring event with no type.");
     }
   };
   dvt['signal'] = signal;
@@ -179,7 +195,7 @@
   } else {
     window['$$$'] = window['dvt'] = dvt;
   }
-  window.console.log("Module initialized.", dvt);
+  log("Module initialized.", dvt);
 
   // On load we always signal the 'pageView' event.
   signal('pageView');
