@@ -169,14 +169,19 @@
       if ('undefined' === typeof dvt['_pageViewId']) {
         image.onload = function() {
           var cookies = document.cookie ? document.cookie.split('; ') : [];
+          var pageViewId = undefined;
           for (var i = 0, l = cookies.length; i < l; i++) {
             var parts = cookies[i].split('=');
-            if (parts.shift() == '_dvv') {
-              var pageViewId = parts.shift();
-              dvt['_pageViewId'] = pageViewId;
-              info("Divolte-generated page view ID: " + pageViewId);
+            if (parts[0] == '_dvv') {
+              pageViewId = parts[1] || "";
               break;
             }
+          }
+          if ('undefined' !== typeof pageViewId) {
+            dvt['_pageViewId'] = pageViewId;
+            info("Divolte-generated page view ID: " + pageViewId);
+          } else {
+            warn("Divolte-generated page view ID unavailable.")
           }
         }
       }
