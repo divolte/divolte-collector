@@ -14,6 +14,12 @@
 
   // Find the <script> element used to load this script.
   var dvtElement = function() {
+    /*
+     * Modern browsers set a 'currentScript' attribute to the script element
+     * of the running script, so we check that first. If that fails we
+     * fall back to searching the document for the <script> tag, identified
+     * by the 'divolte' id.
+     */
     var document = window.document,
         myElement = document.currentScript;
     if ('undefined' === typeof myElement) {
