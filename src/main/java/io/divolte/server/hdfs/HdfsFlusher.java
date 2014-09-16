@@ -3,6 +3,7 @@ package io.divolte.server.hdfs;
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.OptionalConfig;
 import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
 import io.divolte.server.processing.ItemProcessor;
 
@@ -34,27 +35,39 @@ final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
         Objects.requireNonNull(config);
 
         final FileSystem hadoopFs;
-        final short hdfsReplication;
+        final Configuration hdfsConfiguration = new Configuration();
+        final short hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
+
+        /*
+         * The HDFS client creates a JVM shutdown hook, which interferes with our own server shutdown hook.
+         * This config option disabled the built in shutdown hook. We call FileSystem.closeAll() ourselves
+         * in the server shutdown hook instead.
+         */
+        hdfsConfiguration.setBoolean("fs.automatic.close", false);
         try {
-            final Configuration hdfsConfiguration = new Configuration();
-            hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
-            final URI hdfsLocation = new URI(config.getString("divolte.hdfs_flusher.hdfs.uri"));
-            /*
-             * The HDFS client creates a JVM shutdown hook, which interferes with our own server shutdown hook.
-             * This config option disabled the built in shutdown hook. We call FileSystem.closeAll() ourselves
-             * in the server shutdown hook instead.
-             */
-            hdfsConfiguration.setBoolean("fs.automatic.close", false);
-            hadoopFs = FileSystem.get(hdfsLocation, hdfsConfiguration);
-        } catch (IOException|URISyntaxException e) {
+            hadoopFs = OptionalConfig.of(config::getString, "divolte.hdfs_flusher.hdfs.uri").map(uri -> {
+                try {
+                    return FileSystem.get(new URI(uri), hdfsConfiguration);
+                } catch (IOException | URISyntaxException e) {
+                    /*
+                     * It is possible to create a FileSystem instance when HDFS is not available (e.g. NameNode down).
+                     * This exception only occurs when there is a configuration error in the URI (e.g. wrong scheme).
+                     * So we fail to start up in this case. Below we create the actual HDFS connection, by opening
+                     * files. If that fails, we do startup and initiate the regular retry cycle.
+                     */
+                    logger.error("Could not initialize HDFS filesystem.", e);
+                    throw new RuntimeException("Could not initialize HDFS filesystem", e);
+                }
+            }).orElse(FileSystem.get(hdfsConfiguration));
+        } catch (IOException ioe) {
             /*
              * It is possible to create a FileSystem instance when HDFS is not available (e.g. NameNode down).
              * This exception only occurs when there is a configuration error in the URI (e.g. wrong scheme).
              * So we fail to start up in this case. Below we create the actual HDFS connection, by opening
              * files. If that fails, we do startup and initiate the regular retry cycle.
              */
-            logger.error("Could not initialize HDFS filesystem.", e);
-            throw new RuntimeException("Could not initialize HDFS filesystem", e);
+            logger.error("Could not initialize HDFS filesystem.", ioe);
+            throw new RuntimeException("Could not initialize HDFS filesystem", ioe);
         }
 
         fileStrategy = FileCreateAndSyncStrategy.create(config, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
