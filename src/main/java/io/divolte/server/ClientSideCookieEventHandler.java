@@ -13,13 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.primitives.Longs;
-import com.typesafe.config.Config;
 
 @ParametersAreNonnullByDefault
 final class ClientSideCookieEventHandler extends BaseEventHandler {
     private final static Logger logger = LoggerFactory.getLogger(ClientSideCookieEventHandler.class);
 
-    public ClientSideCookieEventHandler(final Config config, final IncomingRequestProcessingPool pool) {
+    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool pool) {
         super(pool);
     }
 

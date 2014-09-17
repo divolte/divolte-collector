@@ -46,7 +46,7 @@ public class Server implements Runnable {
         final ServerSideCookieEventHandler serverSideCookieEventHandler =
                 new ServerSideCookieEventHandler(config, processingPool);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
-                new ClientSideCookieEventHandler(config, processingPool);
+                new ClientSideCookieEventHandler(processingPool);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
