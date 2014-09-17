@@ -34,8 +34,6 @@ public class Server implements Runnable {
     private final GracefulShutdownHandler shutdownHandler;
 
     private final IncomingRequestProcessingPool processingPool;
-    private final ServerSideCookieEventHandler serverSideCookieEventHandler;
-    private final ClientSideCookieEventHandler clientSideCookieEventHandler;
 
     private final String host;
     private final int port;
@@ -45,8 +43,10 @@ public class Server implements Runnable {
         port = config.getInt("divolte.server.port");
 
         processingPool = new IncomingRequestProcessingPool(config);
-        serverSideCookieEventHandler = new ServerSideCookieEventHandler(config, processingPool);
-        clientSideCookieEventHandler = new ClientSideCookieEventHandler(config, processingPool);
+        final ServerSideCookieEventHandler serverSideCookieEventHandler =
+                new ServerSideCookieEventHandler(config, processingPool);
+        final ClientSideCookieEventHandler clientSideCookieEventHandler =
+                new ClientSideCookieEventHandler(config, processingPool);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
