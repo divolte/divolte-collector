@@ -32,7 +32,10 @@ public class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
     private final GracefulShutdownHandler shutdownHandler;
-    private final DivolteEventHandler divolteEventHandler;
+
+    private final IncomingRequestProcessingPool processingPool;
+    private final ServerSideCookieEventHandler serverSideCookieEventHandler;
+    private final ClientSideCookieEventHandler clientSideCookieEventHandler;
 
     private final String host;
     private final int port;
@@ -41,11 +44,14 @@ public class Server implements Runnable {
         host = config.getString("divolte.server.host");
         port = config.getInt("divolte.server.port");
 
-        divolteEventHandler = new DivolteEventHandler(config);
+        processingPool = new IncomingRequestProcessingPool(config);
+        serverSideCookieEventHandler = new ServerSideCookieEventHandler(config, processingPool);
+        clientSideCookieEventHandler = new ClientSideCookieEventHandler(config, processingPool);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
-        handler.addExactPath("/event", divolteEventHandler::handleEventRequest);
+        handler.addExactPath("/ssc-event", serverSideCookieEventHandler::handleEventRequest);
+        handler.addExactPath("/csc-event", clientSideCookieEventHandler::handleEventRequest);
         handler.addPrefixPath("/", createStaticResourceHandler());
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
@@ -90,7 +96,7 @@ public class Server implements Runnable {
                     }
 
                     logger.info("Stopping thread pools.");
-                    divolteEventHandler.shutdown();
+                    processingPool.stop();
 
                     logger.info("Closing HDFS filesystem connection.");
                     try {

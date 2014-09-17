@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import static io.divolte.server.DivolteEventHandler.*;
+import static io.divolte.server.ServerSideCookieEventHandler.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;

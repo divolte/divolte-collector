@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import static io.divolte.server.DivolteEventHandler.*;
+import static io.divolte.server.BaseEventHandler.*;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -160,7 +160,7 @@ final class RecordMapper {
         case "event_parameter":
             final String parameterName = OptionalConfig.of(config::getString, "name")
                                                        .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", targetFieldName));
-            final String queryParameterName = "t." + parameterName;
+            final String queryParameterName = EVENT_TYPE_QUERY_PARAM + "." + parameterName;
             return (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
         case "regex_group":
             final FieldSupplier<String> regexGroupFieldSupplier = regexGroupFieldSupplier(config, targetFieldName);
@@ -254,8 +254,8 @@ final class RecordMapper {
     private static final FieldSupplier<String> REMOTE_HOST_FIELD_PRODUCER =
             (c) -> Optional.ofNullable(c.getServerExchange().getSourceAddress())
                            .map(InetSocketAddress::getHostString);
-    private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
-    private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
+    private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter(REFERER_QUERY_PARAM);
+    private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter(LOCATION_QUERY_PARAM);
     private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = (c) -> c.userAgent.get();
 
     private static FieldSupplier<String> regexFieldSupplierForName(final String name) {
@@ -287,7 +287,7 @@ final class RecordMapper {
     private static FieldSupplier<?> simpleFieldSupplier(final String sourceFieldName) {
         switch (sourceFieldName) {
         case "eventType":
-            return (FieldSupplier<String>) (c) -> c.getQueryParameter("t");
+            return (FieldSupplier<String>) (c) -> c.getQueryParameter(EVENT_TYPE_QUERY_PARAM);
         case "firstInSession":
             return (c) -> Optional.of(c.isFirstInSession());
         case "geoCityId":
@@ -383,13 +383,13 @@ final class RecordMapper {
         case "location":
             return LOCATION_FIELD_PRODUCER;
         case "viewportPixelWidth":
-            return (c) -> c.getQueryParameter("w").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(Ints::tryParse);
         case "viewportPixelHeight":
-            return (c) -> c.getQueryParameter("h").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(Ints::tryParse);
         case "screenPixelWidth":
-            return (c) -> c.getQueryParameter("i").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(Ints::tryParse);
         case "screenPixelHeight":
-            return (c) -> c.getQueryParameter("j").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(Ints::tryParse);
         case "partyId":
             return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map((cv) -> cv.value);
         case "sessionId":
