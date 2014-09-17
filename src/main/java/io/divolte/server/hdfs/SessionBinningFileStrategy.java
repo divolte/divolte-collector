@@ -291,7 +291,14 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
             .sorted((left, right) -> Long.compare(left.round, right.round))
             .filter((f) -> f.round >= requestedRound)
             .findFirst()
-            .orElseGet(() -> new RoundHdfsFile(sessionStartTime)));
+            .orElseGet(() -> {
+                // if the requested round is greater than the current round + 1,
+                // we return the file for the current round, as probably this is
+                // a result of a very skewed client side clock, or a fake request
+                return requestedRound > timeSignal / sessionTimeoutMillis  + 1 ?
+                        fileForSessionStartTime(timeSignal) :
+                        new RoundHdfsFile(sessionStartTime);
+            }));
     }
 
     private final class RoundHdfsFile {
