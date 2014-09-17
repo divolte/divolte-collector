@@ -54,11 +54,7 @@
   info("Divolte base URL detected", baseURL);
 
   // Some utilities for working with cookies.
-  var /*hasCookie = function(name) {
-   // Assumes cookie name is sensible.
-   return new RegExp("(?:^|;\\s*)" + name + "\\s*\\=").test(document.cookie);
-   },*/
-      getCookie = function(name) {
+  var getCookie = function(name) {
         // Assumes cookie name and value are sensible.
         return document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + name + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1") || null;
       };
