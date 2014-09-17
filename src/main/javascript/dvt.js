@@ -266,6 +266,10 @@
         default:
           error("Ignoring non-object custom event parameters", customParameters);
       }
+
+      // The next request is no longer the first for the session.
+      isFirstInSession = false;
+
       var image = new Image(1,1);
       image.src = baseURL + 'csc-event?' + params;
     } else {
