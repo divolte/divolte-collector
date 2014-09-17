@@ -21,6 +21,7 @@
         { "name": "pathLong",                        "type": "long",             "default": -1 },
         { "name": "cookieInteger",                   "type": "int",              "default": -1 },
         { "name": "cookieBoolean",                   "type": "boolean",          "default": false },
+        { "name": "customInteger",                   "type": "int",              "default": -1 },
         
         { "name": "client",                          "type": ["null","string"],  "default": null },
         { "name": "session",                         "type": ["null","string"],  "default": null },
