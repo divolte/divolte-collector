@@ -21,6 +21,10 @@
 
   log("Initializing DVT.");
 
+  // Maximum ages of the party and session identifiers.
+  var partyIdentifierMaxAge   = 2 * 365 * 24 * 60 * 60,
+      sessionIdentifierMaxAge =                30 * 60;
+
   // Find the <script> element used to load this script.
   var dvtElement = function() {
     /*
@@ -57,6 +61,12 @@
   var getCookie = function(name) {
         // Assumes cookie name and value are sensible.
         return document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + name + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1") || null;
+      },
+      setCookie = function(name, value, maxAgeSeconds, nowMs) {
+        var expiry = new Date(nowMs + 1000 * maxAgeSeconds);
+        // Assumes cookie name and value are sensible. (For our use they are.)
+        // Note: No domain means these are always first-party cookies.
+        document.cookie = name + '=' + value + "; path=/; expires=" + expiry.toUTCString() + "; max-age=" + maxAgeSeconds;
       };
 
   // A server-side pageview is placed as the anchor of the Divolte script.
@@ -196,13 +206,14 @@
       }
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
+          eventTime = Date.now(),
           event = {
             // Note: numbers will be automatically base-36 encoded.
             'p': partyId,
             's': sessionId,
             'v': pageViewId,
             'e': eventId,
-            'c': Date.now(),
+            'c': eventTime,
             'n': isNewParty ? 't' : 'f',
             'f': isFirstInSession ? 't' : 'f',
             'l': window.location.href,
@@ -270,6 +281,10 @@
       // (We don't modify the module exports: they refer to the page view.)
       isNewParty = false;
       isFirstInSession = false;
+
+      // Update the party and session cookies.
+      setCookie("_dvs", sessionId, sessionIdentifierMaxAge, eventTime);
+      setCookie("_dvp", partyId, partyIdentifierMaxAge, eventTime);
 
       var image = new Image(1,1);
       image.src = baseURL + 'csc-event?' + params;
