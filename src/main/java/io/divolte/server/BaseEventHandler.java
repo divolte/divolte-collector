@@ -26,7 +26,9 @@ public abstract class BaseEventHandler {
     public static final AttachmentKey<Long> COOKIE_UTC_OFFSET = AttachmentKey.create(Long.class);
 
     public final static String PARTY_ID_QUERY_PARAM = "p";
+    public final static String NEW_PARTY_ID_QUERY_PARAM = "n";
     public final static String SESSION_ID_QUERY_PARAM = "s";
+    public final static String FIRST_IN_SESSION_QUERY_PARAM = "f";
     public final static String PAGE_VIEW_ID_QUERY_PARAM = "v";
     public final static String EVENT_TYPE_QUERY_PARAM = "t";
     public final static String CLIENT_TIMESTAMP_QUERY_PARAM = "c"; // chronos
