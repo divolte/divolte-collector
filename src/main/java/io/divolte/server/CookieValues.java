@@ -1,19 +1,25 @@
 package io.divolte.server;
 
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.Objects;
+import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Hex;
+import com.google.common.base.Splitter;
 
 /**
  * A generator for cookies that encode a timestamp in their value.
  */
+@ParametersAreNonnullByDefault
 public final class CookieValues {
+    private final static char VERSION = '0';
+    private static final char SEPARATOR_CHAR = ':';
+
+    private final static Splitter splitter = Splitter.on(SEPARATOR_CHAR).limit(3);
+
     // Some sources mention it's a good idea to avoid contention on SecureRandom instances...
     private final static ThreadLocal<SecureRandom> localRandom = new ThreadLocal<SecureRandom> () {
         protected SecureRandom initialValue() {
@@ -26,15 +32,13 @@ public final class CookieValues {
     }
 
     public static CookieValue generate(final long ts) {
-        final byte[] valueBytes = new byte[16];
-        final ByteBuffer buf = ByteBuffer.wrap(valueBytes);
-        buf.putLong(ts);
+        final SecureRandom random = localRandom.get();
 
-        final byte[] randomBytes = new byte[8];
-        localRandom.get().nextBytes(randomBytes);
-        buf.put(randomBytes);
+        final byte[] randomBytes = new byte[24];
+        random.nextBytes(randomBytes);
+        final String id = Base64.getUrlEncoder().encodeToString(randomBytes);
 
-        return new CookieValue(valueBytes, ts);
+        return new CookieValue(ts, id);
     }
 
     public static CookieValue generate() {
@@ -42,14 +46,16 @@ public final class CookieValues {
     }
 
     public static Optional<CookieValue> tryParse(String input) {
-        if (input.length() != 32) {
-            return Optional.empty();
-        }
         try {
-            byte[] valueBytes = Hex.decodeHex(input.toCharArray());
-            long ts = ByteBuffer.wrap(valueBytes).getLong();
-            return Optional.of(new CookieValue(valueBytes, ts));
-        } catch (DecoderException e) {
+            List<String> parts = splitter.splitToList(input);
+            return
+                    parts.size() != 2 &&
+                    parts.get(0).charAt(0) != VERSION ?
+                            Optional.empty() :
+                            Optional.of(new CookieValue(
+                                    Long.parseLong(parts.get(0).substring(1), 36),
+                                    parts.get(1)));
+        } catch (NumberFormatException e) {
             return Optional.empty();
         }
     }
@@ -58,10 +64,12 @@ public final class CookieValues {
         @Nonnull
         public final String value;
         public final long timestamp;
+        public final char version;
 
-        private CookieValue(@Nonnull final byte[] valueBytes, final long timestamp) {
-            this.value = Hex.encodeHexString(Objects.requireNonNull(valueBytes));
+        private CookieValue(final long timestamp, final String id) {
+            this.version = VERSION;
             this.timestamp = timestamp;
+            this.value = VERSION + Long.toString(timestamp, 36) + SEPARATOR_CHAR + id;
         }
 
         @Override
