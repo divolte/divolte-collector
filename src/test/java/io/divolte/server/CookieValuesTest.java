@@ -39,7 +39,7 @@ public class CookieValuesTest {
 
     @Test
     public void cookieValuesShouldParseVersionAndTimestamp() {
-        String stringValue = "016:5mRCeUO4p2_6R7u1m9ZoxXG2AfBeJeHD";
+        String stringValue = "0:16:5mRCeUO4p2_6R7u1m9ZoxXG2AfBeJeHD";
         CookieValue value = CookieValues.tryParse(stringValue).get();
         assertEquals(42, value.timestamp);
         assertEquals('0', value.version);

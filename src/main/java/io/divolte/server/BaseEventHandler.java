@@ -23,7 +23,8 @@ public abstract class BaseEventHandler {
     public static final AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
     public static final AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
     public static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
-    public static final AttachmentKey<Long> COOKIE_UTC_OFFSET = AttachmentKey.create(Long.class);
+    public static final AttachmentKey<Long> COOKIE_UTC_OFFSET_KEY = AttachmentKey.create(Long.class);
+    public static final AttachmentKey<Boolean> FIRST_IN_SESSION_KEY = AttachmentKey.create(Boolean.class);
 
     public final static String PARTY_ID_QUERY_PARAM = "p";
     public final static String NEW_PARTY_ID_QUERY_PARAM = "n";

@@ -3,6 +3,7 @@ package io.divolte.server;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import javax.annotation.Nonnull;
@@ -16,9 +17,10 @@ import com.google.common.base.Splitter;
 @ParametersAreNonnullByDefault
 public final class CookieValues {
     private final static char VERSION = '0';
+    private final static String VERSION_STRING = "" + VERSION;
     private static final char SEPARATOR_CHAR = ':';
 
-    private final static Splitter splitter = Splitter.on(SEPARATOR_CHAR).limit(3);
+    private final static Splitter splitter = Splitter.on(SEPARATOR_CHAR).limit(4);
 
     // Some sources mention it's a good idea to avoid contention on SecureRandom instances...
     private final static ThreadLocal<SecureRandom> localRandom = new ThreadLocal<SecureRandom> () {
@@ -46,15 +48,16 @@ public final class CookieValues {
     }
 
     public static Optional<CookieValue> tryParse(String input) {
+        Objects.requireNonNull(input);
         try {
             List<String> parts = splitter.splitToList(input);
             return
-                    parts.size() != 2 &&
+                    parts.size() != 3 ||
                     parts.get(0).charAt(0) != VERSION ?
                             Optional.empty() :
                             Optional.of(new CookieValue(
-                                    Long.parseLong(parts.get(0).substring(1), 36),
-                                    parts.get(1)));
+                                    Long.parseLong(parts.get(1), 36),
+                                    parts.get(2)));
         } catch (NumberFormatException e) {
             return Optional.empty();
         }
@@ -69,7 +72,7 @@ public final class CookieValues {
         private CookieValue(final long timestamp, final String id) {
             this.version = VERSION;
             this.timestamp = timestamp;
-            this.value = VERSION + Long.toString(timestamp, 36) + SEPARATOR_CHAR + id;
+            this.value = VERSION_STRING + SEPARATOR_CHAR + Long.toString(timestamp, 36) + SEPARATOR_CHAR + id;
         }
 
         @Override

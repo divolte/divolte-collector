@@ -89,11 +89,15 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
         final long requestTime = System.currentTimeMillis();
         exchange.putAttachment(REQUEST_START_TIME_KEY, requestTime);
         // Server side generated cookies are UTC, so offset = 0
-        exchange.putAttachment(COOKIE_UTC_OFFSET, 0L);
+        exchange.putAttachment(COOKIE_UTC_OFFSET_KEY, 0L);
 
         final CookieValue partyId = prepareTrackingIdentifierAndReturnCookieValue(exchange, partyCookieName, PARTY_COOKIE_KEY, partyTimeout, requestTime);
         final CookieValue sessionId = prepareTrackingIdentifierAndReturnCookieValue(exchange, sessionCookieName, SESSION_COOKIE_KEY, sessionTimeout, requestTime);
         final String pageViewId = prepareAndReturnPageViewId(exchange, pageViewCookieName, requestTime);
+
+        // required for the RecordMapper; the logic to determine whether a event is first in session
+        // differs between the server side and client side cookie endpoint
+        exchange.putAttachment(FIRST_IN_SESSION_KEY, !exchange.getRequestCookies().containsKey(sessionCookieName));
 
         // 2
         serveImage(exchange);

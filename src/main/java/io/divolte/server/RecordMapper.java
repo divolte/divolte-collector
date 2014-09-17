@@ -71,8 +71,6 @@ import com.typesafe.config.ConfigValueType;
 final class RecordMapper {
     private final static Logger logger = LoggerFactory.getLogger(RecordMapper.class);
 
-    private final String sessionIdCookie;
-
     private final Schema schema;
     private final Map<String, Pattern> regexes;
     private final List<FieldSetter> setters;
@@ -86,8 +84,6 @@ final class RecordMapper {
                         final Optional<LookupService> geoipService) {
         Objects.requireNonNull(schemaConfig);
         Objects.requireNonNull(globalConfig);
-
-        this.sessionIdCookie = globalConfig.getString("divolte.tracking.session_cookie");
 
         final int version = schemaConfig.getInt("divolte.tracking.schema_mapping.version");
         checkVersion(version);
@@ -384,13 +380,13 @@ final class RecordMapper {
         case "location":
             return LOCATION_FIELD_PRODUCER;
         case "viewportPixelWidth":
-            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "viewportPixelHeight":
-            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "screenPixelWidth":
-            return (c) -> c.getQueryParameter(SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "screenPixelHeight":
-            return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "partyId":
             return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map((cv) -> cv.value);
         case "sessionId":
@@ -489,6 +485,14 @@ final class RecordMapper {
         }
     }
 
+    private static Integer tryParseBase36Int(String input) {
+        try {
+            return Integer.valueOf(input, 36);
+        } catch(NumberFormatException nfe) {
+            return null;
+        }
+    }
+
     @ParametersAreNonnullByDefault
     private final class Context {
 
@@ -557,7 +561,7 @@ final class RecordMapper {
         }
 
         public boolean isFirstInSession() {
-            return !serverExchange.getRequestCookies().containsKey(sessionIdCookie);
+            return serverExchange.getAttachment(FIRST_IN_SESSION_KEY);
         }
 
         public Optional<ReadableUserAgent> getUserAgentLookup() {
