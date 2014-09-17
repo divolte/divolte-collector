@@ -263,7 +263,10 @@
           error("Ignoring non-object custom event parameters", customParameters);
       }
 
-      // The next request is no longer the first for the session.
+      // After the first request it's neither a new party nor a new session,
+      // as far as events are concerned.
+      // (We don't modify the module exports: they refer to the page view.)
+      isNewParty = false;
       isFirstInSession = false;
 
       var image = new Image(1,1);
