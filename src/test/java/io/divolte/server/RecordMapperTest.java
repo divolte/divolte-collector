@@ -183,7 +183,8 @@ public class RecordMapperTest {
         setupExchange(
                 "Divolte/Test",
                 "l=http://example.com/42/false/1.6180339887498948482/34359738368/whatever?i=-42&b=true&d=1.6180339887498948482&l=34359738368",
-                "r=https://www.example.com/about.html");
+                "r=https://www.example.com/about.html",
+                "t.asdf=42");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals(Integer.valueOf(-42), record.get("queryparamInteger"));
@@ -198,6 +199,8 @@ public class RecordMapperTest {
 
         assertEquals(Integer.valueOf(42), record.get("cookieInteger"));
         assertEquals(Boolean.valueOf(true), record.get("cookieBoolean"));
+
+        assertEquals(Integer.valueOf(42), record.get("customInteger"));
     }
 
     @Test

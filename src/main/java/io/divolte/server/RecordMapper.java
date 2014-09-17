@@ -161,7 +161,8 @@ final class RecordMapper {
             final String parameterName = OptionalConfig.of(config::getString, "name")
                                                        .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", targetFieldName));
             final String queryParameterName = EVENT_TYPE_QUERY_PARAM + "." + parameterName;
-            return (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
+            FieldSupplier<String> eventParameterFieldSupplier = (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
+            return castingSupplierForStringField(targetFieldName, eventParameterFieldSupplier, schema);
         case "regex_group":
             final FieldSupplier<String> regexGroupFieldSupplier = regexGroupFieldSupplier(config, targetFieldName);
             return castingSupplierForStringField(targetFieldName, regexGroupFieldSupplier, schema);
