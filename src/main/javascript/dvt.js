@@ -134,7 +134,7 @@
       isServerPageView = Boolean(pageViewId);
   if (isNewParty) {
     log("New party; generating identifier.");
-    partyId = generateId(false);
+    partyId = generateId(true);
   }
   if (isFirstInSession) {
     log("New session; generating identifier.");
