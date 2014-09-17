@@ -30,7 +30,7 @@
      * by the 'divolte' id.
      */
     var document = window.document,
-        myElement = document.currentScript;
+        myElement = document['currentScript'];
     if ('undefined' === typeof myElement) {
       myElement = document.getElementById("divolte");
       if (null == myElement ||
