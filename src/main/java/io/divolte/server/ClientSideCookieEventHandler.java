@@ -7,12 +7,15 @@ import java.net.InetSocketAddress;
 import java.util.Deque;
 import java.util.Optional;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.primitives.Longs;
 import com.typesafe.config.Config;
 
+@ParametersAreNonnullByDefault
 final class ClientSideCookieEventHandler extends BaseEventHandler {
     private final static Logger logger = LoggerFactory.getLogger(ClientSideCookieEventHandler.class);
 
