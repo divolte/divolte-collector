@@ -298,10 +298,10 @@
   dvt['signal'] = signal;
 
   // Expose dvt and $$$ identifiers.
-  if (typeof define === "function" && define.amd) {
+  if (typeof define === "function" && define['amd']) {
     define(function() { return dvt; });
-  } else if (typeof module !== 'undefined' && module.exports) {
-    module.exports = dvt;
+  } else if (typeof module !== 'undefined' && module['exports']) {
+    module['exports'] = dvt;
   } else {
     window['$$$'] = window['dvt'] = dvt;
   }
