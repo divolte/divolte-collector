@@ -118,9 +118,11 @@
           return id;
         };
 
+    // Time of module initialization. (Used to ensure consistent timestamps.)
+    var now = Date.now();
+
     return function(includeTimestampPrefix) {
-      var now = Date.now(),
-          digits = generateDigits(now);
+      var digits = generateDigits(now);
       return includeTimestampPrefix ? (now.toString(36) + ':' + digits) : digits;
     };
   }();
