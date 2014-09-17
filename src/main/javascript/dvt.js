@@ -133,7 +133,8 @@
 
     return function(includeTimestampPrefix) {
       var digits = generateDigits(now);
-      return includeTimestampPrefix ? (now.toString(36) + ':' + digits) : digits;
+      // For now our identifiers are version 0.
+      return "0:" + (includeTimestampPrefix ? (now.toString(36) + ':' + digits) : digits);
     };
   }();
 
