@@ -207,6 +207,7 @@
       }
       var documentElement = document.documentElement,
           bodyElement = document.getElementsByName('body')[0],
+          referrer = document.referrer,
           eventTime = Date.now(),
           event = {
             // Note: numbers will be automatically base-36 encoded.
@@ -218,7 +219,7 @@
             'n': isNewParty ? 't' : 'f',
             'f': isFirstInSession ? 't' : 'f',
             'l': window.location.href,
-            'r': document.referrer,
+            'r': referrer ? referrer : undefined,
             'i': window.screen.availWidth,
             'j': window.screen.availHeight,
             'w': window.innerWidth || documentElement.clientWidth || bodyElement.clientWidth,
