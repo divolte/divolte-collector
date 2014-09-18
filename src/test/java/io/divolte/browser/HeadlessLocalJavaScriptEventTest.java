@@ -23,7 +23,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static com.thoughtworks.selenium.SeleneseTestCase.assertEquals;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.collection.IsMapContaining.hasKey;
@@ -82,7 +81,7 @@ public class HeadlessLocalJavaScriptEventTest {
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
         // Open the start page, and check the title
         driver.get("http://localhost:9999/");
-        assertEquals("DVT", driver.getTitle());
+        assertThat(driver.getTitle(), is("DVT"));
 
         // Opening the page triggers an event to devolte
         HttpServerExchange exchange = getLatestExchange();
@@ -105,7 +104,7 @@ public class HeadlessLocalJavaScriptEventTest {
     public void shouldSignalCustomEvent() throws InterruptedException {
         // Open the start page, and check the title
         driver.get("http://localhost:9999/");
-        assertEquals("DVT", driver.getTitle());
+        assertThat(driver.getTitle(), is("DVT"));
 
         // Default request triggered by opening the page.
         HttpServerExchange exchange = getLatestExchange();

@@ -19,6 +19,10 @@ applicationDefaultJvmArgs = [
 
 compileJava.options.encoding = 'UTF-8'
 
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:deprecation"
+}
+
 repositories {
     mavenCentral()
 }
