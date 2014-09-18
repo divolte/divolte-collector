@@ -60,10 +60,10 @@ public class RecordMapperTest {
                 "p=the_page_view_id",
                 "l=https://example.com/",
                 "r=http://example.com/",
-                "i=1024",
-                "j=768",
-                "w=640",
-                "h=480",
+                "i=sg",
+                "j=lc",
+                "w=hs",
+                "h=dc",
                 "t=pageView"
                 );
 
@@ -422,6 +422,7 @@ public class RecordMapperTest {
                     exchange.putAttachment(PARTY_COOKIE_KEY, party);
                     exchange.putAttachment(SESSION_COOKIE_KEY, session);
                     exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
+                    exchange.putAttachment(FIRST_IN_SESSION_KEY, true);
 
                     exchange.getResponseSender().send("OK");
                     theExchange = exchange;
