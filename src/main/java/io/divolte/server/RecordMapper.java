@@ -27,6 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -487,10 +488,12 @@ final class RecordMapper {
         }
     }
 
+    @Nullable
     private static Integer tryParseBase36Int(String input) {
         try {
             return Integer.valueOf(input, 36);
         } catch(NumberFormatException nfe) {
+            // We expect parsing to fail; signal via null.
             return null;
         }
     }
