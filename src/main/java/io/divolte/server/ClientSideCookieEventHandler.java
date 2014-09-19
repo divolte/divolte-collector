@@ -60,7 +60,7 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
     }
 
     private static class IncompleteRequestException extends Exception {
-        private static final long serialVersionUID = 3991442606210410941L;
+        private static final long serialVersionUID = 1L;
     }
 
     private static Long tryParseBase36Long(String input) {
