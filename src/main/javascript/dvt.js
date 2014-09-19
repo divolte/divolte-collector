@@ -11,13 +11,20 @@
 }('undefined' !== typeof window ? window : this, function(window) {
   "use strict";
 
-  // Set up logging references that we frequently use.
+  // Set up references that we frequently use.
   var document = window.document,
+      navigator = window.navigator,
+      documentElement = document.documentElement,
+      bodyElement = document.getElementsByName('body')[0],
       console = window.console,
-      log = console.log.bind(console),
-      info = console.info.bind(console),
-      warn = console.warn.bind(console),
-      error = console.error.bind(console);
+      // On some browsers, logging functions are methods that need to access the console as 'this'.
+      bound = function(method, instance) {
+        return method.bind ? method.bind(instance) : method;
+      },
+      log = console ? bound(console.log, console) : function() {},
+      info = console ? bound(console.info, console) : function() {},
+      warn = console ? bound(console.warn, console) : function() {},
+      error = console ? bound(console.error, console) : function() {};
 
   log("Initializing DVT.");
 
@@ -50,6 +57,16 @@
     return myElement;
   }();
 
+  // Some current browser features that we send to Divolte.
+  var screenWidth = window.screen.availWidth,
+      screenHeight = window.screen.availHeight,
+      windowWidth = function() {
+        return window['innerWidth'] || documentElement['clientWidth'] || bodyElement['clientWidth'] || documentElement['offsetWidth'] || bodyElement['offsetWidth'];
+      },
+      windowHeight = function() {
+        return window['innerHeight'] || documentElement['clientHeight'] || bodyElement['clientHeight'] || documentElement['offsetHeight'] || bodyElement['offsetHeight'];
+      };
+
   // Detect the base URL for the Divolte server that served this file.
   var baseURL = function(element) {
     var myUrl = element.src;
@@ -80,6 +97,75 @@
     return anchor;
   };
 
+  // Convenience method for the current time.
+  var now = function() {
+    // Older IE doesn't support Date.now().
+    return new Date().getTime();
+  };
+
+  /*
+   * Implementation of SHA3 (256).
+   *
+   * This is based on an original implementation by Chris Drost of drostie.org
+   * and placed into the public domain. (Thanks!)
+   */
+  var sha3_256 = function() {
+    var permute = [0, 10, 20, 5, 15, 16, 1, 11, 21, 6, 7, 17, 2, 12, 22, 23, 8, 18, 3, 13, 14, 24, 9, 19, 4],
+        RC = [ 0x1, 0x8082, 0x808a, 0x80008000, 0x808b, 0x80000001, 0x80008081, 0x8009,
+               0x8a, 0x88, 0x80008009, 0x8000000a, 0x8000808b, 0x8b, 0x8089, 0x8003,
+               0x8002, 0x80, 0x800a, 0x8000000a, 0x80008081, 0x8080 ],
+        r = [0, 1, 30, 28, 27, 4, 12, 6, 23, 20, 3, 10, 11, 25, 7, 9, 13, 15, 21, 8, 18, 2, 29, 24, 14],
+        rotate = function(s, n) {
+          return (s << n) | (s >>> (32 - n));
+        };
+    return function (message) {
+      var i,
+          state = [];
+      for (i = 0; i < 25; i += 1) {
+        state[i] = 0;
+      }
+      if (message.length % 16 === 15) {
+        message += "\u8001";
+      } else {
+        message += "\x01";
+        while (message.length % 16 !== 15) {
+          message += "\0";
+        }
+        message += "\u8000";
+      }
+      for (var b = 0; b < message.length; b += 16) {
+        for (i = 0; i < 16; i += 2) {
+          state[i / 2] ^= message.charCodeAt(b + i) + message.charCodeAt(b + i + 1) * 65536;
+        }
+        for (var round = 0; round < 22; round += 1) {
+          var C = [];
+          for (i = 0; i < 5; i += 1) {
+            C[i] = state[i] ^ state[i + 5] ^ state[i + 10] ^ state[i + 15] ^ state[i + 20];
+          }
+          var D = [];
+          for (i = 0; i < 5; i += 1) {
+            D[i] = C[(i + 4) % 5] ^ rotate(C[(i + 1) % 5], 1);
+          }
+          var next = [];
+          for (i = 0; i < 25; i += 1) {
+            next[permute[i]] = rotate(state[i] ^ D[i % 5], r[i]);
+          }
+          for (i = 0; i < 5; i += 1) {
+            for (var j = 0; j < 25; j += 5) {
+              state[j + i] = next[j + i] ^ ((~ next[j + (i + 1) % 5]) & (next[j + (i + 2) % 5]));
+            }
+          }
+          state[0] ^= RC[round];
+        }
+      }
+      var output = [];
+      for (i = 0; i < 8; ++i) {
+        var n = state[i];
+        output.push(n & 255, n >>> 8, n >>> 16, n >>> 24);
+      }
+      return output;
+    }}();
+
   // A function for generating a unique identifier, optionally prefixed with a timestamp.
   var generateId = function() {
     /*
@@ -108,9 +194,103 @@
         return array;
       }
     } else {
-      genRandom = function() {
-        // We have to fall back on hash-based randomness.
-        throw "Not yet supported without Crypto extensions.";
+      var math = Math,
+          // What we want here is the smallest set that discriminates best amongst users.
+          // This list is relatively arbitrary based on existing lists that people use.
+          // (It doesn't necessarily meet the criteria of most efficient discrimination.)
+          probeMimeTypes = [
+            "application/pdf",
+            "video/quicktime",
+            "video/x-msvideo",
+            "audio/x-pn-realaudio-plugin",
+            "audio/mpeg3",
+            "application/googletalk",
+            "application/x-mplayer2",
+            "application/x-director",
+            "application/x-shockwave-flash",
+            "application/x-java-vm",
+            "application/x-googlegears",
+            "application/x-silverlight"
+          ],
+          // Poor quality randomness based on Math.random().
+          randomValue = function() {
+            return math.floor(math.random() * 0x7fffffff).toString(36);
+          },
+          getMimeTypeInformation = function() {
+            var plugins,
+                mimeTypes = navigator.mimeTypes;
+            if (mimeTypes) {
+              plugins = "plugins:";
+              for (var i = 0, l = probeMimeTypes.length; i < l; ++i) {
+                var probeMimeType = probeMimeTypes[i];
+                plugins += probeMimeType in mimeTypes ? '1' : '0';
+              }
+            } else {
+              plugins = "";
+            }
+            return plugins;
+          },
+          probeActiveXControls = [
+            "ShockwaveFlash.ShockwaveFlash.1",
+            "AcroPDF.PDF",
+            "AgControl.AgControl",
+            "QuickTime.QuickTime"
+          ],
+          getActiveXTypeInformation = function() {
+            var plugins;
+            if ('ActiveXObject' in window) {
+              plugins = "activex:";
+              for (var i = 0, l = probeActiveXControls.length; i < l; ++i) {
+                var probeActiveXControl = probeActiveXControls[i];
+                try {
+                  var plugin = new ActiveXObject(probeActiveXControl);
+                  plugins += "1";
+                  if ('getVersions' in plugin) {
+                    plugins += "(" + plugin['getVersions']() + ")";
+                  } else if ('getVariable' in plugin) {
+                    plugins += "(" + plugin['getVariable']("$version") + ")";
+                  }
+                } catch(unused) {
+                  plugins += '0';
+                }
+              }
+            } else {
+              plugins = "";
+            }
+            return plugins;
+          };
+      genRandom = function(length, ts) {
+        // Build up the data to mix into the hash.
+        var winWidth = windowWidth(),
+            winHeight = windowHeight(),
+            message = [
+              // Number of milliseconds since 1970.
+              ts.toString(36),
+              // Some browser features that should vary between users.
+              navigator['userAgent'] || "",
+              navigator['platform'] || "",
+              navigator['language'] || "",
+              navigator['systemLanguage'] || "",
+              navigator['userLanguage'] || "",
+              screenWidth ? screenWidth.toString(36) : '',
+              screenHeight ? screenHeight.toString(36) : '',
+              winWidth ? winWidth.toString(36) : '',
+              winHeight ? winWidth.toString(36) : '',
+              // A mask that depends on some plugin-supported MIME types.
+              getMimeTypeInformation(),
+              getActiveXTypeInformation(),
+              // Some random numbers. These are poor quality.
+              randomValue(),
+              randomValue(),
+              randomValue(),
+              randomValue()
+            ];
+        // There is no point trying to use a secure hash here: the entropy is simply too low.
+        var digest = sha3_256(message.join(""));
+        if (digest.length != length) {
+          throw "Length mismatch.";
+        }
+        return digest;
       }
     }
 
@@ -119,22 +299,26 @@
         // The maximum number of bytes that can be trivially generated by our hash-based
         // fall-back.
         identifierLength = 32,
-        generateDigits = function(now) {
-          var randomData = genRandom(identifierLength, now);
+        generateDigits = function(ts) {
+          var randomData = genRandom(identifierLength, ts);
           var id = "";
-          for (var i = 0; i < identifierLength; ++i) {
-            id += digits[randomData[i] & 0x3f];
+          for (var i = 0, l = randomData.length; i < l; ++i) {
+            // Warning: IE6 doesn't support [] syntax on strings.
+            id += digits.charAt(randomData[i] & 0x3f);
+          }
+          if (!isKnownRandom) {
+            id += '!';
           }
           return id;
         };
 
     // Time of module initialization. (Used to ensure consistent timestamps.)
-    var now = Date.now();
+    var scriptLoadTime = now();
 
     return function(includeTimestampPrefix) {
-      var digits = generateDigits(now);
+      var digits = generateDigits(scriptLoadTime);
       // For now our identifiers are version 0.
-      return "0:" + (includeTimestampPrefix ? (now.toString(36) + ':' + digits) : digits);
+      return "0:" + (includeTimestampPrefix ? (scriptLoadTime.toString(36) + ':' + digits) : digits);
     };
   }();
 
@@ -205,10 +389,8 @@
       } else {
         info("Signalling event: " + type, eventId, customParameters);
       }
-      var documentElement = document.documentElement,
-          bodyElement = document.getElementsByName('body')[0],
-          referrer = document.referrer,
-          eventTime = Date.now(),
+      var referrer = document.referrer,
+          eventTime = now(),
           event = {
             // Note: numbers will be automatically base-36 encoded.
             'p': partyId,
@@ -220,10 +402,11 @@
             'f': isFirstInSession ? 't' : 'f',
             'l': window.location.href,
             'r': referrer ? referrer : undefined,
-            'i': window.screen.availWidth,
-            'j': window.screen.availHeight,
-            'w': window.innerWidth || documentElement.clientWidth || bodyElement.clientWidth,
-            'h': window.innerHeight || documentElement.clientHeight || bodyElement.clientHeight,
+            'i': screenWidth,
+            'j': screenHeight,
+            'k': window['devicePixelRatio'],
+            'w': windowWidth(),
+            'h': windowHeight(),
             't': type
           };
 
