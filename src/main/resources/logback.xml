@@ -8,8 +8,8 @@
   </appender>
 
   <logger name="io.divolte" level="DEBUG" />
-  <!-- <logger name="io.divolte.server.IncomingRequestProcessor" level="INFO" />
-  <logger name="io.divolte.server.Server" level="INFO" /> -->
+  <logger name="io.divolte.server.IncomingRequestProcessor" level="INFO" />
+  <logger name="io.divolte.server.Server" level="INFO" />
 
   <root level="info">
     <appender-ref ref="CONSOLE"/>
