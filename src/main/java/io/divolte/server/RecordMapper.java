@@ -89,9 +89,8 @@ final class RecordMapper {
         checkVersion(version);
 
         this.regexes = regexMapFromConfig(schemaConfig);
-        this.setters = setterListFromConfig(schema, schemaConfig);
-
         this.schema = Objects.requireNonNull(schema);
+        this.setters = setterListFromConfig(schema, schemaConfig);
 
         final UserAgentStringParser parser = parserBasedOnTypeConfig(globalConfig.getString("divolte.tracking.ua_parser.type"));
         this.uaLookupCache = sizeBoundCacheFromLoadingFunction(parser::parse, globalConfig.getInt("divolte.tracking.ua_parser.cache_size"));
