@@ -39,6 +39,7 @@ public abstract class BaseEventHandler {
     public final static String VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM = "h";
     public final static String SCREEN_PIXEL_WIDTH_QUERY_PARAM = "i";
     public final static String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
+    public final static String DEVICE_PIXEL_RATIO = "k";
 
 
     protected final ByteBuffer transparentImage;

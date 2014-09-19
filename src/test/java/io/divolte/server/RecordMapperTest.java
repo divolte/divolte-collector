@@ -62,6 +62,7 @@ public class RecordMapperTest {
                 "r=http://example.com/",
                 "i=sg",
                 "j=lc",
+                "k=2",
                 "w=hs",
                 "h=dc",
                 "t=pageView"
@@ -81,6 +82,7 @@ public class RecordMapperTest {
         assertEquals(480, record.get("viewportHeight"));
         assertEquals(1024, record.get("screenWidth"));
         assertEquals(768, record.get("screenHeight"));
+        assertEquals(2, record.get("pixelRatio"));
         assertEquals("pageView", record.get("eventType"));
     }
 
