@@ -39,7 +39,7 @@ import com.typesafe.config.Config;
  */
 @ParametersAreNonnullByDefault
 final class ServerSideCookieEventHandler extends BaseEventHandler {
-    private static final String PAGE_VIEW_QUERY_PARAM = "p";
+    private static final String PAGE_VIEW_QUERY_PARAM = "v";
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
