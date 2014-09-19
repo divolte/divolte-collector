@@ -40,6 +40,7 @@ import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -539,7 +540,7 @@ final class RecordMapper {
                     return URLEncodedUtils
                             .parse(rawQuery, StandardCharsets.UTF_8)
                             .stream()
-                            .collect(Collectors.toMap((nvp) -> nvp.getName(), (nvp) -> nvp.getValue()));
+                            .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
                 }
             });
         }
