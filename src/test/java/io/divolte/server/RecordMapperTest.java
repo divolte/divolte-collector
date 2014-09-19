@@ -79,6 +79,8 @@ public class RecordMapperTest {
         assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
+        assertEquals(1024, record.get("screenWidth"));
+        assertEquals(768, record.get("screenHeight"));
         assertEquals("pageView", record.get("eventType"));
     }
 
