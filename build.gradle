@@ -130,3 +130,18 @@ findbugsTest.reports {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.1'
 }
+
+def confDir = ""
+run {
+    try {
+        confDir = System.getenv("HADOOP_CONF_DIR")
+        classpath += files(confDir)
+    } catch (NullPointerException nphc) {
+        try {
+            confDir = System.getenv("YARN_CONF_DIR")
+            classpath += files(confDir)
+        } catch (NullPointerException npyc) {
+            // Do nothing
+        }
+    }
+}
