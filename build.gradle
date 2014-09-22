@@ -94,11 +94,16 @@ test {
     exclude '**/Saucelabs*Test*.*'
 }
 
-task saucelabsTest(type: Test, dependsOn: "test") << {
+task saucelabsTest(type: Test) {
+    exclude '*.*'
     include '**/Saucelabs*Test*.*'
-    // To run saucelabs edit your ~/.gradle/gradle.properties
-    systemProperty 'saucelabs.username': saucelabs.username
-    systemProperty 'saucelabs.accesskey': saucelabs.accesskey
+
+    // To run saucelabs you should provide your credentials in ~/.gradle/gradle.properties:
+    // saucelabs.username=YourUserName
+    // saucelabs.accesskey=your-own-access-key
+
+    systemProperty 'saucelabs.username', this.properties["saucelabs.username"]
+    systemProperty 'saucelabs.accesskey', this.properties["saucelabs.accesskey"]
 }
 
 javascript.source {

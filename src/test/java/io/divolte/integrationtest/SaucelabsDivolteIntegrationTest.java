@@ -1,4 +1,4 @@
-package io.divolte.browser;
+package io.divolte.integrationtest;
 
 import com.google.common.base.Preconditions;
 import com.saucelabs.common.SauceOnDemandAuthentication;
@@ -15,6 +15,8 @@ import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import java.net.InetAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.util.LinkedList;
 
@@ -24,11 +26,11 @@ import static org.junit.Assert.assertEquals;
  * JUnit test that runs tests against Sauce Labs using multiple browsers in parallel.
  */
 @RunWith(ConcurrentParameterized.class)
-public class SaucelabsJsEventIntegrationTest implements SauceOnDemandSessionIdProvider {
+public class SaucelabsDivolteIntegrationTest implements SauceOnDemandSessionIdProvider {
 
     public SauceOnDemandAuthentication auth = new SauceOnDemandAuthentication(
-            System.getProperty("sauselabs.username"),
-            System.getProperty("sauselabs.accesskey"));
+            System.getProperty("saucelabs.username"),
+            System.getProperty("saucelabs.accesskey"));
 
     /**
      * JUnit Rule which will mark the Sauce Job as passed/failed.
@@ -51,7 +53,7 @@ public class SaucelabsJsEventIntegrationTest implements SauceOnDemandSessionIdPr
      * system, version and browser to be used when launching a Sauce VM.  The order of the parameters should be the same
      * as that of the elements within the {@link #browsersStrings()} method.
      */
-    public SaucelabsJsEventIntegrationTest(String os, String browser, String version) {
+    public SaucelabsDivolteIntegrationTest(String os, String browser, String version) {
         super();
         this.os = os;
         this.version = version;
@@ -79,40 +81,45 @@ public class SaucelabsJsEventIntegrationTest implements SauceOnDemandSessionIdPr
      */
     @Before
     public void setUp() throws Exception {
-        DesiredCapabilities capabilities = new DesiredCapabilities();
+        Preconditions.checkNotNull(auth.getUsername(), "saucelabs.username not provided as property");
+        Preconditions.checkNotNull(auth.getAccessKey(), "saucelabs.accesskey not provided as property");
+        Preconditions.checkState(new Socket(InetAddress.getByName("localhost"), 4445).isBound(), "Looks like Sauce Connect isn't running (port 4445 not bound)");
 
+        DesiredCapabilities capabilities = new DesiredCapabilities();
         capabilities.setCapability(CapabilityType.BROWSER_NAME, browser);
         if (version != null) {
             capabilities.setCapability(CapabilityType.VERSION, version);
         }
         capabilities.setCapability(CapabilityType.PLATFORM, os);
         capabilities.setCapability("name", getClass().getSimpleName());
-        //TODO explore capabilities.
+        //TODO: explore capabilities...
 
-        Preconditions.checkNotNull(auth.getUsername(), "saucelabs.username not provided as property");
-        Preconditions.checkNotNull(auth.getAccessKey(), "saucelabs.accesskey not provided as property");
+        // Connect trough the tunnel (Sauce Connect at port 4445)
+        //TODO: Start/Restart tunnel to saucelabs in build (Saucelabs connect)
 
-        URL remoteAddress = new URL("http://" + auth.getUsername() + ":" + auth.getAccessKey() + "@ondemand.saucelabs.com:80/wd/hub");
+        URL remoteAddress = new URL("http://" + auth.getUsername() + ":" + auth.getAccessKey() + "@localhost:4445/wd/hub");
 
-        this.driver = new RemoteWebDriver( remoteAddress, capabilities);
+        this.driver = new RemoteWebDriver(remoteAddress, capabilities);
         this.sessionId = (((RemoteWebDriver) driver).getSessionId()).toString();
     }
 
     @After
     public void tearDown() throws Exception {
-        driver.quit();
+        if (driver != null) {
+            driver.quit();
+        }
     }
 
-    /**
-     * Runs a simple test verifying the title of the amazon.com homepage.
-     * @throws Exception
-     */
     @Test
-    public void amazon() throws Exception {
-        driver.get("http://www.amazon.com/");
-        assertEquals("Amazon.com: Online Shopping for Electronics, Apparel, Computers, Books, DVDs & more", driver.getTitle());
-    }
+    public void testDevolteJavaScript() throws Exception {
+        // Connect from Saucelabs through tunnel to running instance.
+        //TODO: start server host dvt.js + html in test (multiple times?)
+        
+        driver.get("http://localhost:8290/");
+        assertEquals("DVT", driver.getTitle());
 
+        //TODO: And check dvt-signals generated.
+    }
 
     @Override
     public String getSessionId() {
