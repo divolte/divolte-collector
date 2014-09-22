@@ -1,6 +1,5 @@
 package io.divolte.integrationtest;
 
-import com.google.common.base.Preconditions;
 import com.saucelabs.common.SauceOnDemandAuthentication;
 import com.saucelabs.common.SauceOnDemandSessionIdProvider;
 import com.saucelabs.junit.ConcurrentParameterized;
@@ -15,11 +14,13 @@ import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.util.LinkedList;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -81,9 +82,9 @@ public class SaucelabsDivolteIntegrationTest implements SauceOnDemandSessionIdPr
      */
     @Before
     public void setUp() throws Exception {
-        Preconditions.checkNotNull(auth.getUsername(), "saucelabs.username not provided as property");
-        Preconditions.checkNotNull(auth.getAccessKey(), "saucelabs.accesskey not provided as property");
-        Preconditions.checkState(new Socket(InetAddress.getByName("localhost"), 4445).isBound(), "Looks like Sauce Connect isn't running (port 4445 not bound)");
+        checkNotNull(auth.getUsername(), "saucelabs.username not provided as property");
+        checkNotNull(auth.getAccessKey(), "saucelabs.accesskey not provided as property");
+        checkConnection("localhost", 4445, "Looks like Sauce Connect isn't running (localhost:4445 not bound)");
 
         DesiredCapabilities capabilities = new DesiredCapabilities();
         capabilities.setCapability(CapabilityType.BROWSER_NAME, browser);
@@ -124,5 +125,14 @@ public class SaucelabsDivolteIntegrationTest implements SauceOnDemandSessionIdPr
     @Override
     public String getSessionId() {
         return sessionId;
+    }
+
+    private static void checkConnection(String host, int port, String failMsg) throws IllegalStateException {
+        try {
+            // Can I open a socket to expected host:port ?
+            new Socket(InetAddress.getByName(host), port);
+        } catch (IOException e) {
+            throw new IllegalStateException(failMsg);
+        }
     }
 }
