@@ -47,20 +47,23 @@
         },
         {
             "name": "partyId",
-            "type": "string"
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "sessionId",
-            "type": "string"
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "pageViewId",
-            "type": "string"
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "eventType",
-            "type": ["null", "string"],
-            "default": null
+            "type": "string",
+            "default": "unknown"
         },
         {
             "name": "userAgentString",

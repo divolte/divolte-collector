@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import static io.divolte.server.DivolteEventHandler.*;
+import static io.divolte.server.ServerSideCookieEventHandler.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
@@ -60,10 +60,11 @@ public class RecordMapperTest {
                 "p=the_page_view_id",
                 "l=https://example.com/",
                 "r=http://example.com/",
-                "i=1024",
-                "j=768",
-                "w=640",
-                "h=480",
+                "i=sg",
+                "j=lc",
+                "k=2",
+                "w=hs",
+                "h=dc",
                 "t=pageView"
                 );
 
@@ -79,6 +80,9 @@ public class RecordMapperTest {
         assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
+        assertEquals(1024, record.get("screenWidth"));
+        assertEquals(768, record.get("screenHeight"));
+        assertEquals(2, record.get("pixelRatio"));
         assertEquals("pageView", record.get("eventType"));
     }
 
@@ -183,7 +187,8 @@ public class RecordMapperTest {
         setupExchange(
                 "Divolte/Test",
                 "l=http://example.com/42/false/1.6180339887498948482/34359738368/whatever?i=-42&b=true&d=1.6180339887498948482&l=34359738368",
-                "r=https://www.example.com/about.html");
+                "r=https://www.example.com/about.html",
+                "t.asdf=42");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals(Integer.valueOf(-42), record.get("queryparamInteger"));
@@ -198,6 +203,8 @@ public class RecordMapperTest {
 
         assertEquals(Integer.valueOf(42), record.get("cookieInteger"));
         assertEquals(Boolean.valueOf(true), record.get("cookieBoolean"));
+
+        assertEquals(Integer.valueOf(42), record.get("customInteger"));
     }
 
     @Test
@@ -419,6 +426,7 @@ public class RecordMapperTest {
                     exchange.putAttachment(PARTY_COOKIE_KEY, party);
                     exchange.putAttachment(SESSION_COOKIE_KEY, session);
                     exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
+                    exchange.putAttachment(FIRST_IN_SESSION_KEY, true);
 
                     exchange.getResponseSender().send("OK");
                     theExchange = exchange;

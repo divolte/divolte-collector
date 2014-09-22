@@ -24,7 +24,7 @@ final class PingHandler {
     }
 
     public static void handlePingRequest(final HttpServerExchange exchange) throws Exception {
-        logger.debug("Ping received from {}", exchange.getDestinationAddress().getHostString());
+        logger.debug("Ping received from {}", exchange.getSourceAddress().getHostString());
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
         exchange.getResponseSender().send("pong", StandardCharsets.UTF_8);
     }

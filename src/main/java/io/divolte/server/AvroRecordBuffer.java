@@ -23,14 +23,17 @@ public final class AvroRecordBuffer {
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
 
     private final long eventTime;
+    private final long cookieUtcOffset;
     private final CookieValue partyId;
     private final CookieValue sessionId;
     private final ByteBuffer byteBuffer;
 
-    private AvroRecordBuffer(final CookieValue partyId, final CookieValue sessionId, final long eventTime, final GenericRecord record) throws IOException {
+    private AvroRecordBuffer(final CookieValue partyId, final CookieValue sessionId, final long eventTime, final long cookieUtcOffset, final GenericRecord record) throws IOException {
         this.partyId = Objects.requireNonNull(partyId);
         this.sessionId = Objects.requireNonNull(sessionId);
         this.eventTime = eventTime;
+        this.cookieUtcOffset = cookieUtcOffset;
+
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
          * a lot of copying. Instead, we create a byte array and point a
@@ -62,10 +65,14 @@ public final class AvroRecordBuffer {
         return eventTime;
     }
 
-    public static AvroRecordBuffer fromRecord(final CookieValue partyId, final CookieValue sessionId, final long eventTime, final GenericRecord record) {
+    public long getCookieUtcOffset() {
+        return cookieUtcOffset;
+    }
+
+    public static AvroRecordBuffer fromRecord(final CookieValue partyId, final CookieValue sessionId, final long eventTime, final long cookieUtcOffset, final GenericRecord record) {
         for (;;) {
             try {
-                return new AvroRecordBuffer(partyId, sessionId, eventTime, record);
+                return new AvroRecordBuffer(partyId, sessionId, eventTime, cookieUtcOffset, record);
             } catch (final BufferOverflowException boe) {
                 // Increase the buffer size by about 10%
                 // Because we only ever increase the buffer size, we discard the
