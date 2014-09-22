@@ -35,10 +35,10 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     private final Optional<HdfsFlushingPool> hdfsPool;
 
     public IncomingRequestProcessingPool() {
-        this(ConfigFactory.load());
+        this(ConfigFactory.load(), (e,b,r) -> {});
     }
 
-    public IncomingRequestProcessingPool(final Config config) {
+    public IncomingRequestProcessingPool(final Config config, IncomingRequestListener listener) {
         this (
                 config.getInt("divolte.incoming_request_processor.threads"),
                 config.getInt("divolte.incoming_request_processor.max_write_queue"),
@@ -47,7 +47,8 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                 schemaFromConfig(config),
                 config.getBoolean("divolte.kafka_flusher.enabled") ? new KafkaFlushingPool(config) : null,
                 config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schemaFromConfig(config)) : null,
-                lookupServiceFromConfig(config)
+                lookupServiceFromConfig(config),
+                listener
                 );
     }
 
@@ -59,13 +60,14 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             final Schema schema,
             @Nullable final KafkaFlushingPool kafkaFlushingPool,
             @Nullable final HdfsFlushingPool hdfsFlushingPool,
-            @Nullable final LookupService geoipLookupService) {
+            @Nullable final LookupService geoipLookupService,
+            final IncomingRequestListener listener) {
         super(
                 numThreads,
                 maxQueueSize,
                 maxEnqueueDelay,
                 "Incoming Request Processor",
-                () -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema));
+                () -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema, listener));
 
         this.kafkaPool = Optional.ofNullable(kafkaFlushingPool);
         this.hdfsPool = Optional.ofNullable(hdfsFlushingPool);

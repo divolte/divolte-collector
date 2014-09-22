@@ -2,10 +2,13 @@ package io.divolte.server;
 
 import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+import io.divolte.server.hdfs.HdfsFlusher;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.kafka.KafkaFlusher;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
+import io.divolte.server.processing.ProcessingPool;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.Objects;
@@ -27,9 +30,11 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
     @Nullable
-    private final KafkaFlushingPool kafkaFlushingPool;
+    private final ProcessingPool<KafkaFlusher, AvroRecordBuffer> kafkaFlushingPool;
     @Nullable
-    private final HdfsFlushingPool hdfsFlushingPool;
+    private final ProcessingPool<HdfsFlusher, AvroRecordBuffer> hdfsFlushingPool;
+
+    private final IncomingRequestListener listener;
 
     private final RecordMapper mapper;
 
@@ -37,10 +42,12 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
                                     @Nullable final HdfsFlushingPool hdfsFlushingPool,
                                     @Nullable final LookupService geoipLookupService,
-                                    final Schema schema) {
+                                    final Schema schema,
+                                    final IncomingRequestListener listener) {
 
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
+        this.listener = listener;
 
         final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));
         mapper = new RecordMapper(Objects.requireNonNull(schema),
@@ -70,11 +77,13 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
                 exchange.getAttachment(COOKIE_UTC_OFFSET_KEY),
                 avroRecord);
 
+        listener.incomingRequest(exchange, avroBuffer, avroRecord);
+
         if (null != kafkaFlushingPool) {
-            kafkaFlushingPool.enqueueRecord(avroBuffer);
+            kafkaFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
         }
         if (null != hdfsFlushingPool) {
-            hdfsFlushingPool.enqueueRecordsForFlushing(avroBuffer);
+            hdfsFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
         }
 
         return CONTINUE;

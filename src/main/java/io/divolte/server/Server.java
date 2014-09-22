@@ -27,7 +27,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
-public class Server implements Runnable {
+public final class Server implements Runnable {
     private static final long HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS = 120000L;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
@@ -39,10 +39,14 @@ public class Server implements Runnable {
     private final int port;
 
     public Server(final Config config) {
+        this(config, (e,b,r) -> {});
+    }
+
+    Server(final Config config, IncomingRequestListener listener) {
         host = config.getString("divolte.server.host");
         port = config.getInt("divolte.server.port");
 
-        processingPool = new IncomingRequestProcessingPool(config);
+        processingPool = new IncomingRequestProcessingPool(config, listener);
         final ServerSideCookieEventHandler serverSideCookieEventHandler =
                 new ServerSideCookieEventHandler(config, processingPool);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
@@ -84,30 +88,31 @@ public class Server implements Runnable {
 
     @Override
     public void run() {
-        Runtime.getRuntime().addShutdownHook(new Thread(
-                () -> {
-                    try {
-                        logger.info("Stopping HTTP server.");
-                        shutdownHandler.shutdown();
-                        shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
-                        undertow.stop();
-                    } catch (Exception ie) {
-                        Thread.currentThread().interrupt();
-                    }
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
-                    logger.info("Stopping thread pools.");
-                    processingPool.stop();
-
-                    logger.info("Closing HDFS filesystem connection.");
-                    try {
-                        FileSystem.closeAll();
-                    } catch (IOException ioe) {
-                        logger.warn("Failed to cleanly close HDFS file system.", ioe);
-                    }
-                }
-        ));
         logger.info("Starting server on {}:{}", host, port);
         undertow.start();
+    }
+
+    public void shutdown() {
+        try {
+            logger.info("Stopping HTTP server.");
+            shutdownHandler.shutdown();
+            shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
+            undertow.stop();
+        } catch (Exception ie) {
+            Thread.currentThread().interrupt();
+        }
+
+        logger.info("Stopping thread pools.");
+        processingPool.stop();
+
+        logger.info("Closing HDFS filesystem connection.");
+        try {
+            FileSystem.closeAll();
+        } catch (IOException ioe) {
+            logger.warn("Failed to cleanly close HDFS file system.", ioe);
+        }
     }
 
     public static void main(final String[] args) {

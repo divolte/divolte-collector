@@ -33,7 +33,7 @@ import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
-final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
+public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     private final static Logger logger = LoggerFactory.getLogger(KafkaFlusher.class);
 
     private final String topic;

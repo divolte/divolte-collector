@@ -25,7 +25,7 @@ import com.typesafe.config.Config;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
-final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
+public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     private final static Logger logger = LoggerFactory.getLogger(HdfsFlusher.class);
 
     private final FileCreateAndSyncStrategy fileStrategy;
