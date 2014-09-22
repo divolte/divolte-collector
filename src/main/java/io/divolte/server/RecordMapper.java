@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import static io.divolte.server.DivolteEventHandler.*;
+import static io.divolte.server.BaseEventHandler.*;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -27,6 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -40,6 +41,7 @@ import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,8 +73,6 @@ import com.typesafe.config.ConfigValueType;
 final class RecordMapper {
     private final static Logger logger = LoggerFactory.getLogger(RecordMapper.class);
 
-    private final String sessionIdCookie;
-
     private final Schema schema;
     private final Map<String, Pattern> regexes;
     private final List<FieldSetter> setters;
@@ -87,15 +87,12 @@ final class RecordMapper {
         Objects.requireNonNull(schemaConfig);
         Objects.requireNonNull(globalConfig);
 
-        this.sessionIdCookie = globalConfig.getString("divolte.tracking.session_cookie");
-
         final int version = schemaConfig.getInt("divolte.tracking.schema_mapping.version");
         checkVersion(version);
 
         this.regexes = regexMapFromConfig(schemaConfig);
-        this.setters = setterListFromConfig(schema, schemaConfig);
-
         this.schema = Objects.requireNonNull(schema);
+        this.setters = setterListFromConfig(schema, schemaConfig);
 
         final UserAgentStringParser parser = parserBasedOnTypeConfig(globalConfig.getString("divolte.tracking.ua_parser.type"));
         this.uaLookupCache = sizeBoundCacheFromLoadingFunction(parser::parse, globalConfig.getInt("divolte.tracking.ua_parser.cache_size"));
@@ -160,8 +157,9 @@ final class RecordMapper {
         case "event_parameter":
             final String parameterName = OptionalConfig.of(config::getString, "name")
                                                        .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", targetFieldName));
-            final String queryParameterName = "t." + parameterName;
-            return (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
+            final String queryParameterName = EVENT_TYPE_QUERY_PARAM + "." + parameterName;
+            final FieldSupplier<String> eventParameterFieldSupplier = (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
+            return castingSupplierForStringField(targetFieldName, eventParameterFieldSupplier, schema);
         case "regex_group":
             final FieldSupplier<String> regexGroupFieldSupplier = regexGroupFieldSupplier(config, targetFieldName);
             return castingSupplierForStringField(targetFieldName, regexGroupFieldSupplier, schema);
@@ -254,8 +252,8 @@ final class RecordMapper {
     private static final FieldSupplier<String> REMOTE_HOST_FIELD_PRODUCER =
             (c) -> Optional.ofNullable(c.getServerExchange().getSourceAddress())
                            .map(InetSocketAddress::getHostString);
-    private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter("r");
-    private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter("l");
+    private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter(REFERER_QUERY_PARAM);
+    private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter(LOCATION_QUERY_PARAM);
     private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = (c) -> c.userAgent.get();
 
     private static FieldSupplier<String> regexFieldSupplierForName(final String name) {
@@ -287,7 +285,7 @@ final class RecordMapper {
     private static FieldSupplier<?> simpleFieldSupplier(final String sourceFieldName) {
         switch (sourceFieldName) {
         case "eventType":
-            return (FieldSupplier<String>) (c) -> c.getQueryParameter("t");
+            return (FieldSupplier<String>) (c) -> c.getQueryParameter(EVENT_TYPE_QUERY_PARAM);
         case "firstInSession":
             return (c) -> Optional.of(c.isFirstInSession());
         case "geoCityId":
@@ -383,13 +381,15 @@ final class RecordMapper {
         case "location":
             return LOCATION_FIELD_PRODUCER;
         case "viewportPixelWidth":
-            return (c) -> c.getQueryParameter("w").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "viewportPixelHeight":
-            return (c) -> c.getQueryParameter("h").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "screenPixelWidth":
-            return (c) -> c.getQueryParameter("i").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "screenPixelHeight":
-            return (c) -> c.getQueryParameter("j").map(Ints::tryParse);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
+        case "devicePixelRatio":
+            return (c) -> c.getQueryParameter(DEVICE_PIXEL_RATIO).map(RecordMapper::tryParseBase36Int);
         case "partyId":
             return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map((cv) -> cv.value);
         case "sessionId":
@@ -488,6 +488,16 @@ final class RecordMapper {
         }
     }
 
+    @Nullable
+    private static Integer tryParseBase36Int(final String input) {
+        try {
+            return Integer.valueOf(input, 36);
+        } catch (final NumberFormatException ignored) {
+            // We expect parsing to fail; signal via null.
+            return null;
+        }
+    }
+
     @ParametersAreNonnullByDefault
     private final class Context {
 
@@ -533,7 +543,7 @@ final class RecordMapper {
                     return URLEncodedUtils
                             .parse(rawQuery, StandardCharsets.UTF_8)
                             .stream()
-                            .collect(Collectors.toMap((nvp) -> nvp.getName(), (nvp) -> nvp.getValue()));
+                            .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
                 }
             });
         }
@@ -556,7 +566,7 @@ final class RecordMapper {
         }
 
         public boolean isFirstInSession() {
-            return !serverExchange.getRequestCookies().containsKey(sessionIdCookie);
+            return serverExchange.getAttachment(FIRST_IN_SESSION_KEY);
         }
 
         public Optional<ReadableUserAgent> getUserAgentLookup() {

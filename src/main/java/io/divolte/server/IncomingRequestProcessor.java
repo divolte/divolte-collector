@@ -1,7 +1,9 @@
 package io.divolte.server;
 
-import io.divolte.server.ip2geo.LookupService;
+import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.hdfs.HdfsFlushingPool;
+import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
 import io.undertow.server.HttpServerExchange;
@@ -19,9 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-
-import static io.divolte.server.DivolteEventHandler.*;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
@@ -68,6 +67,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
                 exchange.getAttachment(PARTY_COOKIE_KEY),
                 exchange.getAttachment(SESSION_COOKIE_KEY),
                 exchange.getAttachment(REQUEST_START_TIME_KEY),
+                exchange.getAttachment(COOKIE_UTC_OFFSET_KEY),
                 avroRecord);
 
         if (null != kafkaFlushingPool) {

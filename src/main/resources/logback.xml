@@ -7,9 +7,9 @@
     </encoder>
   </appender>
 
-  <logger name="io.divolte" level="DEBUG" />
-  <logger name="io.divolte.server.IncomingRequestProcessor" level="INFO" />
-  <logger name="io.divolte.server.Server" level="INFO" />
+  <logger name="io.divolte" level="info" />
+  <logger name="io.divolte.server.IncomingRequestProcessor" level="inherited" />
+  <logger name="io.divolte.server.Server" level="inherited" />
 
   <root level="info">
     <appender-ref ref="CONSOLE"/>
