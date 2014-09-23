@@ -1,12 +1,14 @@
 package io.divolte.server;
 
 import static io.divolte.server.BaseEventHandler.*;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.Deque;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -16,6 +18,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.openqa.selenium.Dimension;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.phantomjs.PhantomJSDriver;
@@ -23,11 +26,6 @@ import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-/*
- * Requires PhantomJS:
- * Mac: brew update && brew install phantomjs
- * Windows: make sure phantomjs.exe is on your PATH.
- */
 public class SeleniumJavaScriptTest {
     public final static String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public final static String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
@@ -39,31 +37,78 @@ public class SeleniumJavaScriptTest {
 
     private WebDriver driver;
 
+    private Config config;
     private Server server;
     private final int port = findFreePort();
 
     @Test
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
-        driver.get(String.format("http://localhost:%d/", port));
-        assertThat(driver.getTitle(), is("DVT"));
+        final long requestStartTime = System.currentTimeMillis();
+        final long ONE_DAY = 12L * 3600L * 1000L;
 
-        EventPayload event = waitForEvent();
+        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
+        driver.get(location);
 
-        assertTrue(event.exchange.getQueryParameters().containsKey(PARTY_ID_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(NEW_PARTY_ID_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(SESSION_ID_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(FIRST_IN_SESSION_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(PAGE_VIEW_ID_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(EVENT_ID_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(EVENT_TYPE_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(CLIENT_TIMESTAMP_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(LOCATION_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(SCREEN_PIXEL_WIDTH_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(SCREEN_PIXEL_HEIGHT_QUERY_PARAM));
-        assertTrue(event.exchange.getQueryParameters().containsKey(DEVICE_PIXEL_RATIO));
+        EventPayload viewEvent = waitForEvent();
+        System.out.println(viewEvent.record);
+
+        final Map<String, Deque<String>> params = viewEvent.exchange.getQueryParameters();
+        assertTrue(params.containsKey(PARTY_ID_QUERY_PARAM));
+
+        assertTrue(params.containsKey(NEW_PARTY_ID_QUERY_PARAM));
+        assertEquals("t", params.get(NEW_PARTY_ID_QUERY_PARAM).getFirst());
+
+        assertTrue(params.containsKey(SESSION_ID_QUERY_PARAM));
+        assertTrue(params.containsKey(FIRST_IN_SESSION_QUERY_PARAM));
+        assertEquals("t", params.get(FIRST_IN_SESSION_QUERY_PARAM).getFirst());
+
+        assertTrue(params.containsKey(PAGE_VIEW_ID_QUERY_PARAM));
+        assertTrue(params.containsKey(EVENT_ID_QUERY_PARAM));
+
+        assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM));
+        assertEquals("pageView", params.get(EVENT_TYPE_QUERY_PARAM).getFirst());
+
+        assertTrue(params.containsKey(LOCATION_QUERY_PARAM));
+        assertEquals(location, params.get(LOCATION_QUERY_PARAM).getFirst());
+
+        /*
+         * We don't really know anything about the clock on the executing browser,
+         * but we'd expect it to be a reasonably accurate clock on the same planet.
+         * So, if it is within +/- 12 hours of our clock, we think it's fine.
+         */
+        assertTrue(params.containsKey(CLIENT_TIMESTAMP_QUERY_PARAM));
+        assertThat(
+                Long.parseLong(params.get(CLIENT_TIMESTAMP_QUERY_PARAM).getFirst(), 36),
+                allOf(greaterThan(requestStartTime - ONE_DAY), lessThan(requestStartTime + ONE_DAY)));
+
+        /*
+         * We could set the window size through Selenium, but it's unsure
+         * whether that's meaningful on mobile devices, such as phones and tables.
+         */
+        final Dimension windowSize = driver.manage().window().getSize();
+        assertTrue(params.containsKey(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM));
+        assertThat(
+                Integer.parseInt(params.get(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).getFirst(), 36),
+                lessThanOrEqualTo(windowSize.width));
+
+        assertTrue(params.containsKey(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM));
+        assertThat(
+                Integer.parseInt(params.get(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).getFirst(), 36),
+                lessThan(windowSize.height));
+
+        assertTrue(params.containsKey(SCREEN_PIXEL_WIDTH_QUERY_PARAM));
+        assertThat(
+                Integer.parseInt(params.get(SCREEN_PIXEL_WIDTH_QUERY_PARAM).getFirst(), 36),
+                greaterThanOrEqualTo(windowSize.width));
+
+        assertTrue(params.containsKey(SCREEN_PIXEL_HEIGHT_QUERY_PARAM));
+        assertThat(
+                Integer.parseInt(params.get(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).getFirst(), 36),
+                greaterThanOrEqualTo(windowSize.height));
+
+        assertTrue(params.containsKey(DEVICE_PIXEL_RATIO));
     }
+
 
     @Before
     public void setUp() throws Exception {
@@ -84,7 +129,7 @@ public class SeleniumJavaScriptTest {
             break;
         }
 
-        Config config = ConfigFactory.parseResources("selenium-test-config.conf")
+        config = ConfigFactory.parseResources("selenium-test-config.conf")
                 .withFallback(ConfigFactory.parseString("divolte.server.port = " + port));
         server = new Server(config, (exchange, buffer, record) -> incoming.add(new EventPayload(exchange, buffer, record)));
         server.run();
