@@ -3,6 +3,7 @@ package io.divolte.server;
 import static io.divolte.server.BaseEventHandler.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import io.divolte.server.CookieValues.CookieValue;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;
@@ -18,6 +19,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -50,7 +52,6 @@ public class SeleniumJavaScriptTest {
         driver.get(location);
 
         EventPayload viewEvent = waitForEvent();
-        System.out.println(viewEvent.record);
 
         final Map<String, Deque<String>> params = viewEvent.exchange.getQueryParameters();
         assertTrue(params.containsKey(PARTY_ID_QUERY_PARAM));
@@ -107,6 +108,42 @@ public class SeleniumJavaScriptTest {
                 greaterThanOrEqualTo(windowSize.height));
 
         assertTrue(params.containsKey(DEVICE_PIXEL_RATIO));
+    }
+
+    @Test
+    public void shouldSendCustomEvent() throws RuntimeException, InterruptedException {
+        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
+        driver.get(location);
+        waitForEvent();
+
+        driver.findElement(By.id("custom")).click();
+        EventPayload viewEvent = waitForEvent();
+
+        final Map<String, Deque<String>> params = viewEvent.exchange.getQueryParameters();
+        assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM));
+        assertEquals("custom", params.get(EVENT_TYPE_QUERY_PARAM).getFirst());
+
+        assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM + ".key"));
+        assertEquals("value", params.get(EVENT_TYPE_QUERY_PARAM + ".key").getFirst());
+    }
+
+    @Test
+    public void shouldSetAppropriateCookies() throws RuntimeException, InterruptedException {
+        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
+        driver.get(location);
+        waitForEvent();
+
+        Optional<CookieValue> parsedPartyCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(config.getString("divolte.tracking.party_cookie")).getValue());
+        assertTrue(parsedPartyCookieOption.isPresent());
+        assertThat(
+                parsedPartyCookieOption.get(),
+                isA(CookieValue.class));
+
+        Optional<CookieValue> parsedSessionCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(config.getString("divolte.tracking.session_cookie")).getValue());
+        assertTrue(parsedSessionCookieOption.isPresent());
+        assertThat(
+                parsedSessionCookieOption.get(),
+                isA(CookieValue.class));
     }
 
 

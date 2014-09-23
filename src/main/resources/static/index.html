@@ -13,40 +13,9 @@
   </head>
   <body>
     <h1 style="text-align: center">Divolte</h1>
-    <p id="tagline"
-       style="text-align: center"
+    <p style="text-align: center"
        onclick="dvt.signal('question',{text:this.innerText})">What would you like to know today?</p>
 
-    <div style="text-align: center">
-      <label for="favoriteLanguage">Favorite language?</label>
-      <input id="favoriteLanguage" name="favoriteLanguage"/>
-    </div>
-
     <script id='divolte' src="dvt.js" defer async></script>
-    <script>
-      (function() {
-        var lastSendValue = '';
-
-        var input = document.getElementById('favoriteLanguage');
-
-        input.addEventListener("keypress", function(event){
-          var key = event.keyCode || event.which;
-          if (key == 13) { // enter
-            sendIfRelevant(this.value);
-          }
-        });
-
-        input.addEventListener("blur", function(event) {
-          sendIfRelevant(this.value);
-        });
-
-        function sendIfRelevant(inputText) {
-          if (lastSendValue != inputText && inputText.length > 3) {
-            dvt.signal('customInputLanguage', {text: inputText});
-            lastSendValue = inputText;
-          }
-        }
-      })();
-    </script>
   </body>
 </html>
