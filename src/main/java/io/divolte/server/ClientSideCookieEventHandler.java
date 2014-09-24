@@ -37,8 +37,8 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
         final CookieValue partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
         final CookieValue sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
         final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
-        /*final boolean isNewPartyId = */queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map((s) -> TRUE_STRING.equals(s)).orElseThrow(IncompleteRequestException::new);
-        final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map((s) -> TRUE_STRING.equals(s)).orElseThrow(IncompleteRequestException::new);
+        /*final boolean isNewPartyId = */queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
+        final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
         final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
 
         final long requestTime = System.currentTimeMillis();
