@@ -32,8 +32,7 @@ public class JavaScriptResource {
     private static final CompilationLevel COMPILATION_LEVEL = CompilationLevel.ADVANCED_OPTIMIZATIONS;
 
     private final String resourceName;
-    private final ByteBuffer entityBody;
-    private final String eTag;
+    private final GzippableHttpBody entityBody;
 
     public JavaScriptResource(final String resourceName,
                               final ImmutableMap<String, Object> scriptConstants,
@@ -44,25 +43,20 @@ public class JavaScriptResource {
         try (final InputStream is = getClass().getClassLoader().getResourceAsStream(resourceName)) {
             compiler = compile(resourceName, is, scriptConstants, debugMode);
         }
-        logger.info("Finished compiling JavaScript source: {}", resourceName);
+        logger.info("Pre-compiled JavaScript source: {}", resourceName);
         if (!compiler.getResult().success) {
             throw new IllegalArgumentException("Javascript resource contains errors: " + resourceName);
         }
         final byte[] entityBytes = compiler.toSource().getBytes(StandardCharsets.UTF_8);
-        entityBody = ByteBuffer.wrap(entityBytes).asReadOnlyBuffer();
-        eTag = generateETag(entityBytes);
+        entityBody = new GzippableHttpBody(ByteBuffer.wrap(entityBytes), generateETag(entityBytes));
     }
 
     public String getResourceName() {
         return resourceName;
     }
 
-    public ByteBuffer getEntityBody() {
-        return entityBody.duplicate();
-    }
-
-    public String getETag() {
-        return eTag;
+    public GzippableHttpBody getEntityBody() {
+        return entityBody;
     }
 
     private static Compiler compile(final String filename,
