@@ -41,7 +41,7 @@ public class JavaScriptResource {
         this.resourceName = Objects.requireNonNull(resourceName);
         logger.debug("Compiling JavaScript resource: {}", resourceName);
         final Compiler compiler;
-        try (final InputStream is = getClass().getResourceAsStream(resourceName)) {
+        try (final InputStream is = getClass().getClassLoader().getResourceAsStream(resourceName)) {
             compiler = compile(resourceName, is, scriptConstants, debugMode);
         }
         logger.info("Finished compiling JavaScript source: {}", resourceName);

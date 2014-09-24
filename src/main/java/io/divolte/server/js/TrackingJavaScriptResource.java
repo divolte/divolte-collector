@@ -18,7 +18,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
     private static final Logger logger = LoggerFactory.getLogger(TrackingJavaScriptResource.class);
 
     public TrackingJavaScriptResource(final Config config) throws IOException {
-        super("/static/dvt.js", createScriptConstants(config), getJavascriptDebugMode(config));
+        super("static/dvt.js", createScriptConstants(config), getJavascriptDebugMode(config));
     }
 
     private static ImmutableMap<String, Object> createScriptConstants(final Config config) {
