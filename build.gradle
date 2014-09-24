@@ -74,12 +74,6 @@ configurations {
     all*.exclude group: 'log4j', module: 'log4j'
 }
 
-sourceSets {
-    main {
-        output.dir("${buildDir}/generated-resources/javascript", builtBy: 'minifyJs')
-    }
-}
-
 shadowJar {
     mergeServiceFiles()
 }
