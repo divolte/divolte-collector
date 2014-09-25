@@ -1,7 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'application'
-apply plugin: 'js'
 apply plugin: 'findbugs'
 apply plugin: 'pmd'
 apply plugin: 'jacoco'
@@ -29,7 +28,6 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath group: 'com.eriwen', name: 'gradle-js-plugin', version: '1.12.1'
         classpath group: 'com.github.jengelman.gradle.plugins', name: 'shadow', version: '1.1.1'
     }
 }
@@ -54,6 +52,8 @@ dependencies {
     }
     compile group: 'org.apache.kafka', name:'kafka_2.10', version:'0.8.1.1'
 
+    compile group: 'com.google.javascript', name:'closure-compiler', version:'v20140814'
+
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.7'
@@ -72,33 +72,6 @@ configurations {
     // (At runtime these are redirected over SLF4J.)
     all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     all*.exclude group: 'log4j', module: 'log4j'
-}
-
-sourceSets {
-    main {
-        output.dir("${buildDir}/generated-resources/javascript", builtBy: 'minifyJs')
-    }
-}
-
-javascript.source {
-    dev {
-        js {
-            srcDir 'src/main/javascript'
-            include 'dvt.js'
-        }
-    }
-}
-
-minifyJs {
-    source = javascript.source.dev.js.files
-    dest = file("${buildDir}/generated-resources/javascript/static/dvt.js")
-    sourceMap = file("${buildDir}/generated-resources/javascript/static/dvt.sourcemap.json")
-    closure {
-        warningLevel = 'DEFAULT'
-        compilationLevel = 'ADVANCED_OPTIMIZATIONS'
-        compilerOptions.languageIn = 'ECMASCRIPT5_STRICT'
-        compilerOptions.languageOut = 'ECMASCRIPT5_STRICT'
-    }
 }
 
 shadowJar {

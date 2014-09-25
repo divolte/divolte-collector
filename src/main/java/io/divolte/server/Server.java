@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
@@ -13,6 +14,7 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -47,11 +49,14 @@ public class Server implements Runnable {
                 new ServerSideCookieEventHandler(config, processingPool);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
                 new ClientSideCookieEventHandler(processingPool);
+        final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(loadTrackingJavaScript(config)), Methods.GET);
 
         final PathHandler handler = new PathHandler();
-        handler.addExactPath("/ping", PingHandler::handlePingRequest);
-        handler.addExactPath("/ssc-event", serverSideCookieEventHandler::handleEventRequest);
         handler.addExactPath("/csc-event", clientSideCookieEventHandler::handleEventRequest);
+        handler.addExactPath("/ssc-event", serverSideCookieEventHandler::handleEventRequest);
+        handler.addExactPath("/dvt.js", javascriptHandler);
+        handler.addExactPath("/ping", PingHandler::handlePingRequest);
+        // Catch-all handler; must be last.
         handler.addPrefixPath("/", createStaticResourceHandler());
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
@@ -66,6 +71,14 @@ public class Server implements Runnable {
                            .addHttpListener(port, host)
                            .setHandler(rootHandler)
                            .build();
+    }
+
+    private TrackingJavaScriptResource loadTrackingJavaScript(final Config config) {
+        try {
+            return new TrackingJavaScriptResource(config);
+        } catch (final IOException e) {
+            throw new RuntimeException("Could not precompile tracking JavaScript.", e);
+        }
     }
 
     private HttpHandler createStaticResourceHandler() {
