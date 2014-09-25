@@ -47,6 +47,6 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
     }
 
     private static boolean getJavascriptDebugMode(final Config config) {
-        return config.getBoolean("divolte.javascript.debuggable");
+        return config.getBoolean("divolte.javascript.debug");
     }
 }
