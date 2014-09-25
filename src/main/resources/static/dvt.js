@@ -22,6 +22,8 @@ var SESSION_ID_TIMEOUT_SECONDS = 30 * 60;
 var COOKIE_DOMAIN = '';
 /** @define {boolean} */
 var LOGGING = false;
+/** @define {string} */
+var SCRIPT_NAME = 'dvt.js';
 
 (function (global, factory) {
   factory(global);
@@ -46,12 +48,21 @@ var LOGGING = false;
   log("Initializing DVT.");
 
   /**
-   * The <script> element used to load this script.
+   * The URL used to load this script.
+   * (This will include the anchor on the URL, if any.)
    *
    * @const
-   * @type {Script}
+   * @type {string}
    */
-  var dvtElement = function() {
+  var thisUrl = function() {
+    var couldNotInitialize = function(extra) {
+      var error = "Divolte could not initialize itself";
+      if (LOGGING) {
+        error += '; ' + extra;
+      }
+      error += '.';
+      throw error;
+    };
     /*
      * Modern browsers set a 'currentScript' attribute to the script element
      * of the running script, so we check that first. If that fails we
@@ -59,20 +70,43 @@ var LOGGING = false;
      * by the 'divolte' id.
      */
     var myElement = document['currentScript'];
+    var url;
     if ('undefined' === typeof myElement) {
-      myElement = document.getElementById("divolte");
-      if (null == myElement ||
-          'script' !== myElement.tagName.toLowerCase()) {
-        myElement = undefined;
+      var regexEscape = function (s) {
+        return s.replace(/([.*+?^${}()|\[\]\/\\])/g, "\\$1");
+      };
+      var scriptElements = document.getElementsByTagName('script');
+      var scriptPattern = new RegExp("^(:?.*\/)?" + regexEscape(SCRIPT_NAME) + "(:?[?#].*)?$");
+      for (var i = scriptElements.length - 1; i >= 0; --i) {
+        var scriptElement = scriptElements.item(i);
+        var scriptUrl = scriptElement.src;
+        if (scriptPattern.test(scriptUrl)) {
+          if ('undefined' == typeof url) {
+            url = scriptUrl;
+          } else {
+            couldNotInitialize('multiple <script> elements found with src="…/' + SCRIPT_NAME + '"');
+          }
+        }
       }
+    } else {
+      url = myElement.src;
     }
-    if ('undefined' === typeof myElement ||
-        'undefined' === typeof myElement.id ||
-        'divolte' !== myElement.id) {
-      throw "DVT not initialized correctly; script element missing id='divolte'.";
+    if ('undefined' === typeof url) {
+      couldNotInitialize('could not locate <script> with src=".../' + SCRIPT_NAME + '"');
     }
-    return myElement;
+    return url;
   }();
+
+  /**
+   * The base URL for the Divolte server that served this file.
+   *
+   * @const
+   * @type {string}
+   */
+  var baseURL = function(myUrl) {
+    return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
+  }(thisUrl);
+  info("Divolte base URL detected", baseURL);
 
   // Some current browser features that we send to Divolte.
   var screenWidth = window.screen.availWidth,
@@ -83,18 +117,6 @@ var LOGGING = false;
       windowHeight = function() {
         return window['innerHeight'] || documentElement['clientHeight'] || bodyElement['clientHeight'] || documentElement['offsetHeight'] || bodyElement['offsetHeight'];
       };
-
-  /**
-   * The base URL for the Divolte server that served this file.
-   *
-   * @const
-   * @type {string}
-   */
-  var baseURL = function(element) {
-    var myUrl = element.src;
-    return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
-  }(dvtElement);
-  info("Divolte base URL detected", baseURL);
 
   /**
    * Get the value of a cookie.
@@ -130,14 +152,13 @@ var LOGGING = false;
    * Get the server-supplied pageview ID, if present.
    * The server can supply a pageview ID by placing it in the anchor of the script URL.
    *
-   * @param {Script} element    The <script> element used to load this script.
+   * @param {string} myUrl The URL used to load this script.
    * @return {?string} the server-supplied pageview ID, if present, or null if not.
    * @throws {string} if the pageview ID is supplied but contains a slath ('/').
    */
   // A server-side pageview is placed as the anchor of the Divolte script.
-  var getServerPageView = function(element) {
-    var myUrl = element.src,
-        anchorIndex = myUrl.indexOf("#"),
+  var getServerPageView = function(myUrl) {
+    var anchorIndex = myUrl.indexOf("#"),
         anchor = -1 !== anchorIndex ? myUrl.substring(anchorIndex + 1) : undefined;
     if ('undefined' !== typeof anchor && -1 !== anchor.indexOf('/')) {
       throw "DVT not initialized correctly; page view ID may not contain a slash ('/').";
@@ -387,7 +408,7 @@ var LOGGING = false;
   // Locate our identifiers, or generate them if necessary.
   var partyId    = getCookie(PARTY_COOKIE_NAME),
       sessionId  = getCookie(SESSION_COOKIE_NAME),
-      pageViewId = getServerPageView(dvtElement),
+      pageViewId = getServerPageView(thisUrl),
       isNewParty = !partyId,
       isFirstInSession = !sessionId,
       isServerPageView = Boolean(pageViewId);
