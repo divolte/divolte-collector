@@ -12,11 +12,15 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.util.Deque;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.generic.GenericRecord;
 import org.junit.After;
@@ -33,12 +37,14 @@ import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @RunWith(Parameterized.class)
+@ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest {
     public final static String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public final static String PHANTOMJS_DRIVER = "phantomjs";
@@ -61,9 +67,11 @@ public class SeleniumJavaScriptTest {
 
     private final BlockingQueue<EventPayload> incoming = new ArrayBlockingQueue<>(100);
 
+    @Nullable
     private WebDriver driver;
-
+    @Nullable
     private Config config;
+    @Nullable
     private Server server;
     private final int port = findFreePort();
 
@@ -248,6 +256,7 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final long requestStartTime = System.currentTimeMillis();
         final long ONE_DAY = 12L * 3600L * 1000L;
 
@@ -319,6 +328,7 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSendCustomEvent() throws RuntimeException, InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
         driver.get(location);
         waitForEvent();
@@ -336,6 +346,7 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSetAppropriateCookies() throws RuntimeException, InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
         driver.get(location);
         waitForEvent();
@@ -355,6 +366,7 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldPickupProvidedPageViewIdFromHash() throws RuntimeException, InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final String location = String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", port);
         driver.get(location);
         EventPayload event = waitForEvent();
@@ -424,8 +436,14 @@ public class SeleniumJavaScriptTest {
 
     @After
     public void tearDown() {
-        driver.quit();
-        server.shutdown();
+        if (null != driver) {
+            driver.quit();
+            driver = null;
+        }
+        if (null != server) {
+            server.shutdown();
+            server = null;
+        }
     }
 
     private EventPayload waitForEvent() throws RuntimeException, InterruptedException {
@@ -433,15 +451,18 @@ public class SeleniumJavaScriptTest {
         return Optional.ofNullable(incoming.poll(40, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
     }
 
+    @ParametersAreNonnullByDefault
     private static final class EventPayload {
         final HttpServerExchange exchange;
         final AvroRecordBuffer buffer;
         final GenericRecord record;
 
-        private EventPayload(HttpServerExchange exchange, AvroRecordBuffer buffer, GenericRecord record) {
-            this.exchange = exchange;
-            this.buffer = buffer;
-            this.record = record;
+        private EventPayload(final HttpServerExchange exchange,
+                             final AvroRecordBuffer buffer,
+                             final GenericRecord record) {
+            this.exchange = Objects.requireNonNull(exchange);
+            this.buffer = Objects.requireNonNull(buffer);
+            this.record = Objects.requireNonNull(record);
         }
     }
 
