@@ -31,6 +31,7 @@ public abstract class BaseEventHandler {
     public final static String SESSION_ID_QUERY_PARAM = "s";
     public final static String FIRST_IN_SESSION_QUERY_PARAM = "f";
     public final static String PAGE_VIEW_ID_QUERY_PARAM = "v";
+    public final static String EVENT_ID_QUERY_PARAM = "e";
     public final static String EVENT_TYPE_QUERY_PARAM = "t";
     public final static String CLIENT_TIMESTAMP_QUERY_PARAM = "c"; // chronos
     public final static String LOCATION_QUERY_PARAM = "l";
@@ -42,7 +43,7 @@ public abstract class BaseEventHandler {
     public final static String DEVICE_PIXEL_RATIO = "k";
 
 
-    protected final ByteBuffer transparentImage;
+    private final ByteBuffer transparentImage;
     protected final IncomingRequestProcessingPool processingPool;
 
     public BaseEventHandler(final IncomingRequestProcessingPool processingPool) {
