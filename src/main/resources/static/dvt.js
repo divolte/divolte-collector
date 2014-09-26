@@ -6,6 +6,25 @@
  * Released under the Apache License, Version 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.txt
  */
+
+// Declared as global, the Closure compiler will inline them.
+// (The closure compiler requires them to be declared globally.)
+
+/** @define {string} */
+var PARTY_COOKIE_NAME = '_dvp';
+/** @define {number} */
+var PARTY_ID_TIMEOUT_SECONDS = 2 * 365 * 24 * 60 * 60;
+/** @define {string} */
+var SESSION_COOKIE_NAME = '_dvs';
+/** @define {number} */
+var SESSION_ID_TIMEOUT_SECONDS = 30 * 60;
+/** @define {string} */
+var COOKIE_DOMAIN = '';
+/** @define {boolean} */
+var LOGGING = false;
+/** @define {string} */
+var SCRIPT_NAME = 'dvt.js';
+
 (function (global, factory) {
   factory(global);
 }('undefined' !== typeof window ? window : this, function(window) {
@@ -21,41 +40,73 @@
       bound = function(method, instance) {
         return method.bind ? method.bind(instance) : method;
       },
-      log = console ? bound(console.log, console) : function() {},
-      info = console ? bound(console.info, console) : function() {},
-      warn = console ? bound(console.warn, console) : function() {},
-      error = console ? bound(console.error, console) : function() {};
+      log = LOGGING && console ? bound(console.log, console) : function() {},
+      info = LOGGING && console ? bound(console.info, console) : function() {},
+      warn = LOGGING && console ? bound(console.warn, console) : function() {},
+      error = LOGGING && console ? bound(console.error, console) : function() {};
 
   log("Initializing DVT.");
 
-  // Maximum ages of the party and session identifiers.
-  var partyIdentifierMaxAge   = 2 * 365 * 24 * 60 * 60,
-      sessionIdentifierMaxAge =                30 * 60;
-
-  // Find the <script> element used to load this script.
-  var dvtElement = function() {
+  /**
+   * The URL used to load this script.
+   * (This will include the anchor on the URL, if any.)
+   *
+   * @const
+   * @type {string}
+   */
+  var thisUrl = function() {
+    var couldNotInitialize = function(extra) {
+      var error = "Divolte could not initialize itself";
+      if (LOGGING) {
+        error += '; ' + extra;
+      }
+      error += '.';
+      throw error;
+    };
     /*
      * Modern browsers set a 'currentScript' attribute to the script element
      * of the running script, so we check that first. If that fails we
      * fall back to searching the document for the <script> tag, identified
      * by the 'divolte' id.
      */
-    var document = window.document,
-        myElement = document['currentScript'];
+    var myElement = document['currentScript'];
+    var url;
     if ('undefined' === typeof myElement) {
-      myElement = document.getElementById("divolte");
-      if (null == myElement ||
-          'script' !== myElement.tagName.toLowerCase()) {
-        myElement = undefined;
+      var regexEscape = function (s) {
+        return s.replace(/([.*+?^${}()|\[\]\/\\])/g, "\\$1");
+      };
+      var scriptElements = document.getElementsByTagName('script');
+      var scriptPattern = new RegExp("^(:?.*\/)?" + regexEscape(SCRIPT_NAME) + "(:?[?#].*)?$");
+      for (var i = scriptElements.length - 1; i >= 0; --i) {
+        var scriptElement = scriptElements.item(i);
+        var scriptUrl = scriptElement.src;
+        if (scriptPattern.test(scriptUrl)) {
+          if ('undefined' == typeof url) {
+            url = scriptUrl;
+          } else {
+            couldNotInitialize('multiple <script> elements found with src="…/' + SCRIPT_NAME + '"');
+          }
+        }
       }
+    } else {
+      url = myElement.src;
     }
-    if ('undefined' === typeof myElement ||
-        'undefined' === typeof myElement.id ||
-        'divolte' !== myElement.id) {
-      throw "DVT not initialized correctly; script element missing id='divolte'.";
+    if ('undefined' === typeof url) {
+      couldNotInitialize('could not locate <script> with src=".../' + SCRIPT_NAME + '"');
     }
-    return myElement;
+    return url;
   }();
+
+  /**
+   * The base URL for the Divolte server that served this file.
+   *
+   * @const
+   * @type {string}
+   */
+  var baseURL = function(myUrl) {
+    return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
+  }(thisUrl);
+  info("Divolte base URL detected", baseURL);
 
   // Some current browser features that we send to Divolte.
   var screenWidth = window.screen.availWidth,
@@ -67,29 +118,47 @@
         return window['innerHeight'] || documentElement['clientHeight'] || bodyElement['clientHeight'] || documentElement['offsetHeight'] || bodyElement['offsetHeight'];
       };
 
-  // Detect the base URL for the Divolte server that served this file.
-  var baseURL = function(element) {
-    var myUrl = element.src;
-    return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
-  }(dvtElement);
-  info("Divolte base URL detected", baseURL);
-
-  // Some utilities for working with cookies.
+  /**
+   * Get the value of a cookie.
+   *
+   * @param {string} name   The name of the cookie to retrieve.
+   * @return {?string}      the value of the cookie, if the cookie exists, or null otherwise.
+   */
   var getCookie = function(name) {
         // Assumes cookie name and value are sensible.
         return document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + name + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1") || null;
-      },
-      setCookie = function(name, value, maxAgeSeconds, nowMs) {
+      };
+  /**
+   * Set a cookie.
+   *
+   * @param {string} name          The name of the cookie to set.
+   * @param {string} value         The value to assign to the cookie.
+   * @param {number} maxAgeSeconds The expiry (age) of the cookie, in seconds from now.
+   * @param {number} nowMs         The current time, in milliseconds since the Unix epoch.
+   * @param {string} domain        The domain to set the cookies for, if non-zero in length.
+   */
+  var setCookie = function(name, value, maxAgeSeconds, nowMs, domain) {
         var expiry = new Date(nowMs + 1000 * maxAgeSeconds);
         // Assumes cookie name and value are sensible. (For our use they are.)
         // Note: No domain means these are always first-party cookies.
-        document.cookie = name + '=' + value + "; path=/; expires=" + expiry.toUTCString() + "; max-age=" + maxAgeSeconds;
+        var cookieString = name + '=' + value + "; path=/; expires=" + expiry.toUTCString() + "; max-age=" + maxAgeSeconds;
+        if (domain) {
+          cookieString += "; domain=" + domain;
+        }
+        document.cookie = cookieString;
       };
 
+  /**
+   * Get the server-supplied pageview ID, if present.
+   * The server can supply a pageview ID by placing it in the anchor of the script URL.
+   *
+   * @param {string} myUrl The URL used to load this script.
+   * @return {?string} the server-supplied pageview ID, if present, or null if not.
+   * @throws {string} if the pageview ID is supplied but contains a slath ('/').
+   */
   // A server-side pageview is placed as the anchor of the Divolte script.
-  var getServerPageView = function(element) {
-    var myUrl = element.src,
-        anchorIndex = myUrl.indexOf("#"),
+  var getServerPageView = function(myUrl) {
+    var anchorIndex = myUrl.indexOf("#"),
         anchor = -1 !== anchorIndex ? myUrl.substring(anchorIndex + 1) : undefined;
     if ('undefined' !== typeof anchor && -1 !== anchor.indexOf('/')) {
       throw "DVT not initialized correctly; page view ID may not contain a slash ('/').";
@@ -97,17 +166,25 @@
     return anchor;
   };
 
-  // Convenience method for the current time.
+  /**
+   * Convenience method for the current time.
+   * The time is returned as a Java-style timestamp.
+   *
+   * @return {number} the number of milliseconds since the start of 1970, UTC.
+   */
   var now = function() {
     // Older IE doesn't support Date.now().
     return new Date().getTime();
   };
 
-  /*
+  /**
    * Implementation of SHA3 (256).
    *
    * This is based on an original implementation by Chris Drost of drostie.org
    * and placed into the public domain. (Thanks!)
+   *
+   * @param {string} message    The message to product a digest of.
+   * @returns {Array.<number>} the calculated 256-bit SHA-3 digest of the supplied message.
    */
   var sha3_256 = function() {
     var permute = [0, 10, 20, 5, 15, 16, 1, 11, 21, 6, 7, 17, 2, 12, 22, 23, 8, 18, 3, 13, 14, 24, 9, 19, 4],
@@ -166,7 +243,13 @@
       return output;
     }}();
 
-  // A function for generating a unique identifier, optionally prefixed with a timestamp.
+  /**
+   * Generate a unique identifier, optionally prefixed with a timestamp.
+   * There are two internal implementations, depending on whether Crypto
+   * extensions are detected or not.
+   *
+   * @return {string} a unique identifier.
+   */
   var generateId = function() {
     /*
      * A unique identifier is either:
@@ -323,9 +406,9 @@
   }();
 
   // Locate our identifiers, or generate them if necessary.
-  var partyId    = getCookie("_dvp"),
-      sessionId  = getCookie("_dvs"),
-      pageViewId = getServerPageView(dvtElement),
+  var partyId    = getCookie(PARTY_COOKIE_NAME),
+      sessionId  = getCookie(SESSION_COOKIE_NAME),
+      pageViewId = getServerPageView(thisUrl),
       isNewParty = !partyId,
       isFirstInSession = !sessionId,
       isServerPageView = Boolean(pageViewId);
@@ -355,8 +438,12 @@
     'isServerPageView': isServerPageView
   };
 
-  // A function for generating an event ID. Each time we invoke this, it will
-  // return a new identifier.
+  /**
+   * Generate an event identifier.
+   * Note that the implementation requires that pageview identifiers also be unique.
+   *
+   * @return {string} a unique event identifier.
+   */
   var generateEventId = function() {
     // These don't have to be globally unique. So we can leverage the pageview
     // id with a simple counter.
@@ -468,8 +555,8 @@
       isFirstInSession = false;
 
       // Update the party and session cookies.
-      setCookie("_dvs", sessionId, sessionIdentifierMaxAge, eventTime);
-      setCookie("_dvp", partyId, partyIdentifierMaxAge, eventTime);
+      setCookie(SESSION_COOKIE_NAME, sessionId, SESSION_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
+      setCookie(PARTY_COOKIE_NAME, partyId, PARTY_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
 
       var image = new Image(1,1);
       image.src = baseURL + 'csc-event?' + params;
