@@ -10,6 +10,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 
@@ -17,8 +18,14 @@ import com.typesafe.config.Config;
 public class TrackingJavaScriptResource extends JavaScriptResource {
     private static final Logger logger = LoggerFactory.getLogger(TrackingJavaScriptResource.class);
 
+    private static final String SCRIPT_CONSTANT_NAME = "SCRIPT_NAME";
+
     public TrackingJavaScriptResource(final Config config) throws IOException {
-        super("static/dvt.js", createScriptConstants(config), getJavascriptDebugMode(config));
+        super("dvt.js", createScriptConstants(config), getJavascriptDebugMode(config));
+    }
+
+    public String getScriptName() {
+        return (String)getScriptConstants().get(SCRIPT_CONSTANT_NAME);
     }
 
     private static ImmutableMap<String, Object> createScriptConstants(final Config config) {
@@ -30,7 +37,17 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
         OptionalConfig.of(config::getString, "divolte.tracking.cookie_domain")
                       .ifPresent((v) -> builder.put("COOKIE_DOMAIN", v));
         builder.put("LOGGING", config.getBoolean("divolte.javascript.logging"));
+        builder.put(SCRIPT_CONSTANT_NAME, getScriptName(config));
         return builder.build();
+    }
+
+    private static String getScriptName(final Config config) {
+        final String scriptName = config.getString("divolte.javascript.name");
+        Preconditions.checkArgument(scriptName.matches("^[A-Za-z0-9_-]+\\.js$"),
+                                    "Script name (divolte.javascript.name) must contain only letters,"
+                                    + " numbers, underscores and dashes. It must also end in '.js'. Found: %s",
+                                    scriptName);
+        return scriptName;
     }
 
     private static int getDurationSeconds(final Config config, final String path) {

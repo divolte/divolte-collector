@@ -21,6 +21,7 @@ import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.Compiler;
 import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.ErrorManager;
+import com.google.javascript.jscomp.Result;
 import com.google.javascript.jscomp.SourceFile;
 
 import static com.google.javascript.jscomp.CompilerOptions.LanguageMode.*;
@@ -32,20 +33,23 @@ public class JavaScriptResource {
     private static final CompilationLevel COMPILATION_LEVEL = CompilationLevel.ADVANCED_OPTIMIZATIONS;
 
     private final String resourceName;
+    private final ImmutableMap<String, Object> scriptConstants;
     private final GzippableHttpBody entityBody;
 
     public JavaScriptResource(final String resourceName,
                               final ImmutableMap<String, Object> scriptConstants,
                               final boolean debugMode) throws IOException {
         this.resourceName = Objects.requireNonNull(resourceName);
+        this.scriptConstants = Objects.requireNonNull(scriptConstants);
         logger.debug("Compiling JavaScript resource: {}", resourceName);
         final Compiler compiler;
         try (final InputStream is = getClass().getClassLoader().getResourceAsStream(resourceName)) {
             compiler = compile(resourceName, is, scriptConstants, debugMode);
         }
         logger.info("Pre-compiled JavaScript source: {}", resourceName);
-        if (!compiler.getResult().success) {
-            throw new IllegalArgumentException("Javascript resource contains errors: " + resourceName);
+        final Result result = compiler.getResult();
+        if (!result.success || 0 < result.warnings.length) {
+            throw new IllegalArgumentException("Javascript resource contains warnings and/or errors: " + resourceName);
         }
         final byte[] entityBytes = compiler.toSource().getBytes(StandardCharsets.UTF_8);
         entityBody = new GzippableHttpBody(ByteBuffer.wrap(entityBytes), generateETag(entityBytes));
@@ -53,6 +57,10 @@ public class JavaScriptResource {
 
     public String getResourceName() {
         return resourceName;
+    }
+
+    protected ImmutableMap<String, Object> getScriptConstants() {
+        return scriptConstants;
     }
 
     public GzippableHttpBody getEntityBody() {
