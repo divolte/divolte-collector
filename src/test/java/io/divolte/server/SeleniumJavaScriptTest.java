@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +33,7 @@ import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -76,9 +76,9 @@ public class SeleniumJavaScriptTest {
     @Parameters(name = "Selenium JS test: {1}")
     public static Iterable<Object[]> sauceLabBrowsersToTest() {
         if (!System.getenv().containsKey(DRIVER_ENV_VAR)) {
-            return Arrays.asList(new Object[0][0]);
+            return ImmutableList.of();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
-            return Arrays.asList(new Object[][] {
+            return ImmutableList.of(
                     // iOS
                     new Object[] { (Supplier<DesiredCapabilities>) () -> {
                         final DesiredCapabilities caps = DesiredCapabilities.iphone();
@@ -239,10 +239,10 @@ public class SeleniumJavaScriptTest {
                         caps.setCapability("deviceName", "");
                         return caps;
                     }, "FF30 on Linux"}
-            });
+            );
         } else {
             // Parameters are not used for non-sauce tests
-            return Arrays.asList(new Object[][] { new Object[] { (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run" }});
+            return ImmutableList.of(new Object[] { (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run" });
         }
     }
 
