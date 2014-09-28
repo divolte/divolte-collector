@@ -104,12 +104,12 @@ jacoco {
 
 // For now we prefer to have a HTML report instead of XML.
 findbugsMain.reports {
-    xml.enabled = false
-    html.enabled = true
+    xml.enabled = true
+    html.enabled = false
 }
 findbugsTest.reports {
-    xml.enabled = false
-    html.enabled = true
+    xml.enabled = true
+    html.enabled = false
 }
 
 task wrapper(type: Wrapper) {
