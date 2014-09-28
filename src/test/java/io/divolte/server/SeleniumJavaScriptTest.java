@@ -65,7 +65,7 @@ public class SeleniumJavaScriptTest {
 
     private Config config;
     private Server server;
-    private final int port = findFreePort();
+    private int port;
 
     @Parameter(0)
     public Supplier<DesiredCapabilities> capabilities;
@@ -146,7 +146,7 @@ public class SeleniumJavaScriptTest {
                         caps.setCapability("version", "30");
                         caps.setCapability("deviceName", "");
                         return caps;
-                    }, "Chrome 35 on Windows 7"},
+                    }, "FF30 on Windows 7"},
 
                     // Windows 8
                     new Object[] { (Supplier<DesiredCapabilities>) () -> {
@@ -367,6 +367,8 @@ public class SeleniumJavaScriptTest {
 
     @Before
     public void setUp() throws Exception {
+        port = findFreePort();
+
         final String driverName = System.getenv().getOrDefault(DRIVER_ENV_VAR, PHANTOMJS_DRIVER);
 
         switch (driverName) {
@@ -451,20 +453,15 @@ public class SeleniumJavaScriptTest {
      * TCP stacks allocate port numbers (i.e. increment
      * for the next one).
      */
-    private static int findFreePort() {
+    private static int findFreePort() throws IOException {
         ServerSocket socket = null;
         try {
             socket = new ServerSocket(0);
             return socket.getLocalPort();
-        } catch (IOException e) {
         } finally {
             if (socket != null) {
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                }
+                socket.close();
             }
         }
-        return -1;
     }
 }

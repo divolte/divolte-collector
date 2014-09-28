@@ -84,10 +84,6 @@ configurations {
     all*.exclude group: 'log4j', module: 'log4j'
 }
 
-test {
-    exclude '**/Saucelabs*Test*.*'
-}
-
 shadowJar {
     mergeServiceFiles()
 }
