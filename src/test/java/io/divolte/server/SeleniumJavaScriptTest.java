@@ -10,14 +10,18 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URL;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.generic.GenericRecord;
 import org.junit.After;
@@ -34,11 +38,14 @@ import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @RunWith(Parameterized.class)
+@ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest {
     public final static String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public final static String PHANTOMJS_DRIVER = "phantomjs";
@@ -46,10 +53,10 @@ public class SeleniumJavaScriptTest {
     public final static String SAUCE_DRIVER = "sauce";
 
 
-    private static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
-    private static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_API_KEY";
-    private static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
-    private static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
+    public static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
+    public static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_API_KEY";
+    public static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
+    public static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
 
     public final static String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
 
@@ -61,11 +68,13 @@ public class SeleniumJavaScriptTest {
 
     private final BlockingQueue<EventPayload> incoming = new ArrayBlockingQueue<>(100);
 
+    @Nullable
     private WebDriver driver;
-
+    @Nullable
     private Config config;
+    @Nullable
     private Server server;
-    private int port;
+    private final int port = findFreePort();
 
     @Parameter(0)
     public Supplier<DesiredCapabilities> capabilities;
@@ -76,9 +85,9 @@ public class SeleniumJavaScriptTest {
     @Parameters(name = "Selenium JS test: {1}")
     public static Iterable<Object[]> sauceLabBrowsersToTest() {
         if (!System.getenv().containsKey(DRIVER_ENV_VAR)) {
-            return Arrays.asList(new Object[0][0]);
+            return Collections.emptyList();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
-            return Arrays.asList(new Object[][] {
+            return ImmutableList.of(
                     // iOS
                     new Object[] { (Supplier<DesiredCapabilities>) () -> {
                         final DesiredCapabilities caps = DesiredCapabilities.iphone();
@@ -239,15 +248,16 @@ public class SeleniumJavaScriptTest {
                         caps.setCapability("deviceName", "");
                         return caps;
                     }, "FF30 on Linux"}
-            });
+            );
         } else {
             // Parameters are not used for non-sauce tests
-            return Arrays.asList(new Object[][] { new Object[] { (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run" }});
+            return ImmutableList.of(new Object[] { (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run" });
         }
     }
 
     @Test
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final long requestStartTime = System.currentTimeMillis();
         final long ONE_DAY = 12L * 3600L * 1000L;
 
@@ -286,7 +296,7 @@ public class SeleniumJavaScriptTest {
                 allOf(greaterThan(requestStartTime - ONE_DAY), lessThan(requestStartTime + ONE_DAY)));
 
         /*
-         * Doing true assertions agains the viewport and window size
+         * Doing true assertions against the viewport and window size
          * is problematic on different devices, as the number do not
          * always make sense on SauceLabs. Also, sometimes the window
          * is partially outside of the screen view port or other strange
@@ -319,14 +329,15 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSendCustomEvent() throws RuntimeException, InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
         driver.get(location);
         waitForEvent();
 
         driver.findElement(By.id("custom")).click();
-        EventPayload viewEvent = waitForEvent();
+        EventPayload customEvent = waitForEvent();
 
-        final Map<String, Deque<String>> params = viewEvent.exchange.getQueryParameters();
+        final Map<String, Deque<String>> params = customEvent.exchange.getQueryParameters();
         assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM));
         assertEquals("custom", params.get(EVENT_TYPE_QUERY_PARAM).getFirst());
 
@@ -336,6 +347,7 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSetAppropriateCookies() throws RuntimeException, InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
         driver.get(location);
         waitForEvent();
@@ -355,6 +367,7 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldPickupProvidedPageViewIdFromHash() throws RuntimeException, InterruptedException {
+        Preconditions.checkState(null != driver && null != config && null != server);
         final String location = String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", port);
         driver.get(location);
         EventPayload event = waitForEvent();
@@ -367,8 +380,6 @@ public class SeleniumJavaScriptTest {
 
     @Before
     public void setUp() throws Exception {
-        port = findFreePort();
-
         final String driverName = System.getenv().getOrDefault(DRIVER_ENV_VAR, PHANTOMJS_DRIVER);
 
         switch (driverName) {
@@ -426,8 +437,14 @@ public class SeleniumJavaScriptTest {
 
     @After
     public void tearDown() {
-        driver.quit();
-        server.shutdown();
+        if (null != driver) {
+            driver.quit();
+            driver = null;
+        }
+        if (null != server) {
+            server.shutdown();
+            server = null;
+        }
     }
 
     private EventPayload waitForEvent() throws RuntimeException, InterruptedException {
@@ -435,15 +452,18 @@ public class SeleniumJavaScriptTest {
         return Optional.ofNullable(incoming.poll(40, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
     }
 
+    @ParametersAreNonnullByDefault
     private static final class EventPayload {
         final HttpServerExchange exchange;
         final AvroRecordBuffer buffer;
         final GenericRecord record;
 
-        private EventPayload(HttpServerExchange exchange, AvroRecordBuffer buffer, GenericRecord record) {
-            this.exchange = exchange;
-            this.buffer = buffer;
-            this.record = record;
+        private EventPayload(final HttpServerExchange exchange,
+                             final AvroRecordBuffer buffer,
+                             final GenericRecord record) {
+            this.exchange = Objects.requireNonNull(exchange);
+            this.buffer = Objects.requireNonNull(buffer);
+            this.record = Objects.requireNonNull(record);
         }
     }
 
@@ -453,15 +473,11 @@ public class SeleniumJavaScriptTest {
      * TCP stacks allocate port numbers (i.e. increment
      * for the next one).
      */
-    private static int findFreePort() throws IOException {
-        ServerSocket socket = null;
-        try {
-            socket = new ServerSocket(0);
+    private static int findFreePort() {
+        try (final ServerSocket socket = new ServerSocket(0)) {
             return socket.getLocalPort();
-        } finally {
-            if (socket != null) {
-                socket.close();
-            }
+        } catch (final IOException e) {
+            return -1;
         }
     }
 }
