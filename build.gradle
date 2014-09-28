@@ -7,6 +7,8 @@ apply plugin: 'jacoco'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 
+defaultTasks 'clean', 'build'
+
 sourceCompatibility = 1.8
 version = '0.1-SNAPSHOT'
 mainClassName = 'io.divolte.server.Server'
