@@ -21,7 +21,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
     private static final String SCRIPT_CONSTANT_NAME = "SCRIPT_NAME";
 
     public TrackingJavaScriptResource(final Config config) throws IOException {
-        super("dvt.js", createScriptConstants(config), getJavascriptDebugMode(config));
+        super("divolte.js", createScriptConstants(config), getJavascriptDebugMode(config));
     }
 
     public String getScriptName() {
