@@ -29,6 +29,7 @@ repositories {
     maven {
         url 'https://repository-saucelabs.forge.cloudbees.com/release'
     }
+    mavenLocal()
 }
 
 buildscript {
@@ -42,6 +43,7 @@ buildscript {
 }
 
 dependencies {
+    compile group: 'io.divolte', name: 'divolte-schema', version: version
     compile group: 'io.undertow', name: 'undertow-core', version: '1.0.15.Final'
     compile group: 'com.typesafe', name: 'config', version: '1.2.1'
     compile group: 'com.google.guava', name: 'guava', version: '17.0'
