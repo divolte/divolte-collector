@@ -7,6 +7,8 @@ apply plugin: 'jacoco'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 
+defaultTasks 'clean', 'build'
+
 sourceCompatibility = 1.8
 version = '0.1-SNAPSHOT'
 mainClassName = 'io.divolte.server.Server'
@@ -84,10 +86,6 @@ configurations {
     all*.exclude group: 'log4j', module: 'log4j'
 }
 
-test {
-    exclude '**/Saucelabs*Test*.*'
-}
-
 shadowJar {
     mergeServiceFiles()
 }
@@ -106,12 +104,12 @@ jacoco {
 
 // For now we prefer to have a HTML report instead of XML.
 findbugsMain.reports {
-    xml.enabled = false
-    html.enabled = true
+    xml.enabled = true
+    html.enabled = false
 }
 findbugsTest.reports {
-    xml.enabled = false
-    html.enabled = true
+    xml.enabled = true
+    html.enabled = false
 }
 
 task wrapper(type: Wrapper) {

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Objects;
@@ -52,10 +53,10 @@ public class SeleniumJavaScriptTest {
     public final static String SAUCE_DRIVER = "sauce";
 
 
-    private static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
-    private static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_API_KEY";
-    private static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
-    private static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
+    public static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
+    public static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_API_KEY";
+    public static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
+    public static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
 
     public final static String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
 
@@ -84,7 +85,7 @@ public class SeleniumJavaScriptTest {
     @Parameters(name = "Selenium JS test: {1}")
     public static Iterable<Object[]> sauceLabBrowsersToTest() {
         if (!System.getenv().containsKey(DRIVER_ENV_VAR)) {
-            return ImmutableList.of();
+            return Collections.emptyList();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
             return ImmutableList.of(
                     // iOS
@@ -154,7 +155,7 @@ public class SeleniumJavaScriptTest {
                         caps.setCapability("version", "30");
                         caps.setCapability("deviceName", "");
                         return caps;
-                    }, "Chrome 35 on Windows 7"},
+                    }, "FF30 on Windows 7"},
 
                     // Windows 8
                     new Object[] { (Supplier<DesiredCapabilities>) () -> {
@@ -295,7 +296,7 @@ public class SeleniumJavaScriptTest {
                 allOf(greaterThan(requestStartTime - ONE_DAY), lessThan(requestStartTime + ONE_DAY)));
 
         /*
-         * Doing true assertions agains the viewport and window size
+         * Doing true assertions against the viewport and window size
          * is problematic on different devices, as the number do not
          * always make sense on SauceLabs. Also, sometimes the window
          * is partially outside of the screen view port or other strange
@@ -334,9 +335,9 @@ public class SeleniumJavaScriptTest {
         waitForEvent();
 
         driver.findElement(By.id("custom")).click();
-        EventPayload viewEvent = waitForEvent();
+        EventPayload customEvent = waitForEvent();
 
-        final Map<String, Deque<String>> params = viewEvent.exchange.getQueryParameters();
+        final Map<String, Deque<String>> params = customEvent.exchange.getQueryParameters();
         assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM));
         assertEquals("custom", params.get(EVENT_TYPE_QUERY_PARAM).getFirst());
 
