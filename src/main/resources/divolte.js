@@ -23,7 +23,7 @@ var COOKIE_DOMAIN = '';
 /** @define {boolean} */
 var LOGGING = false;
 /** @define {string} */
-var SCRIPT_NAME = 'dvt.js';
+var SCRIPT_NAME = 'divolte.js';
 
 (function (global, factory) {
   factory(global);

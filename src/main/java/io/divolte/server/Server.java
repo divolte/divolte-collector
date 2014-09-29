@@ -53,12 +53,13 @@ public final class Server implements Runnable {
                 new ServerSideCookieEventHandler(config, processingPool);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
                 new ClientSideCookieEventHandler(processingPool);
-        final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(loadTrackingJavaScript(config)), Methods.GET);
+        final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(config);
+        final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
 
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/csc-event", clientSideCookieEventHandler::handleEventRequest);
         handler.addExactPath("/ssc-event", serverSideCookieEventHandler::handleEventRequest);
-        handler.addExactPath("/dvt.js", javascriptHandler);
+        handler.addExactPath('/' + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
         // Catch-all handler; must be last.
         handler.addPrefixPath("/", createStaticResourceHandler());
