@@ -88,22 +88,6 @@ public class SeleniumJavaScriptTest {
             return Collections.emptyList();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
             return ImmutableList.of(
-                    // iOS
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.iphone();
-                        caps.setCapability("platform", "OS X 10.9");
-                        caps.setCapability("version", "7.1");
-                        caps.setCapability("device-orientation", "portrait");
-                        return caps;
-                    }, "iOS 7.1 on iPhone"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.iphone();
-                        caps.setCapability("platform", "OS X 10.8");
-                        caps.setCapability("version", "6.1");
-                        caps.setCapability("device-orientation", "portrait");
-                        return caps;
-                    }, "iOS 6.1 on iPhone"},
-
                     // Windows XP
                     new Object[] { (Supplier<DesiredCapabilities>) () -> {
                         final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
@@ -247,7 +231,23 @@ public class SeleniumJavaScriptTest {
                         caps.setCapability("version", "30");
                         caps.setCapability("deviceName", "");
                         return caps;
-                    }, "FF30 on Linux"}
+                    }, "FF30 on Linux"},
+
+                    // iOS
+                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                        final DesiredCapabilities caps = DesiredCapabilities.iphone();
+                        caps.setCapability("platform", "OS X 10.9");
+                        caps.setCapability("version", "7.1");
+                        caps.setCapability("device-orientation", "portrait");
+                        return caps;
+                    }, "iOS 7.1 on iPhone"},
+                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                        final DesiredCapabilities caps = DesiredCapabilities.iphone();
+                        caps.setCapability("platform", "OS X 10.8");
+                        caps.setCapability("version", "6.1");
+                        caps.setCapability("device-orientation", "portrait");
+                        return caps;
+                    }, "iOS 6.1 on iPhone"}
             );
         } else {
             // Parameters are not used for non-sauce tests
