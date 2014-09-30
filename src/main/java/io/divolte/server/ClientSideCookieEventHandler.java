@@ -52,7 +52,7 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
 
         exchange.putAttachment(FIRST_IN_SESSION_KEY, isFirstInSession);
 
-        logger.debug("Enqueuing event (client generated cookies): {}/{}/{}", partyId, sessionId, pageViewId);
+        logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
         processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
     }
 
