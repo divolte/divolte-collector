@@ -57,7 +57,7 @@ public final class ServerTestUtils {
         public TestServer(final String configResource) {
             events = new ArrayBlockingQueue<>(100);
             port = findFreePort();
-            config = ConfigFactory.parseResources("selenium-test-config.conf")
+            config = ConfigFactory.parseResources(configResource)
                      .withFallback(ConfigFactory.parseString("divolte.server.port = " + port));
             server = new Server(config, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
         }

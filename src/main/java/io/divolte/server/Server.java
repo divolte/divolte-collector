@@ -61,7 +61,7 @@ public final class Server implements Runnable {
         handler.addExactPath("/ssc-event", serverSideCookieEventHandler::handleEventRequest);
         handler.addExactPath('/' + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
-        if (isLandingPageEnabled(config)) {
+        if (config.getBoolean("divolte.server.serve_static_resources")) {
             // Catch-all handler; must be last if present.
             handler.addPrefixPath("/", createStaticResourceHandler());
         }
@@ -86,28 +86,6 @@ public final class Server implements Runnable {
         } catch (final IOException e) {
             throw new RuntimeException("Could not precompile tracking JavaScript.", e);
         }
-    }
-
-    private static boolean isLandingPageEnabled(final Config config) {
-        final boolean isLandingPageEnabled;
-        if (config.getBoolean("divolte.server.landing_page")) {
-            /*
-             * If the name of the JavaScript has been overridden, our landing page
-             * doesn't work properly. Here we check whether we're using the default
-             * value for the JavaScript name or an override from somewhere.
-             */
-            final String resource = config.getValue("divolte.javascript.name").origin().resource();
-            if ("reference.conf".equals(resource)) {
-                isLandingPageEnabled = true;
-            } else {
-                logger.info("Disabling landing page; default JavaScript location is being overridden.");
-                isLandingPageEnabled = false;
-            }
-        } else {
-            logger.debug("Landing page disabled by configuration.");
-            isLandingPageEnabled = false;
-        }
-        return isLandingPageEnabled;
     }
 
     private HttpHandler createStaticResourceHandler() {
