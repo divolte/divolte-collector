@@ -4,26 +4,20 @@ import static io.divolte.server.BaseEventHandler.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import io.divolte.server.CookieValues.CookieValue;
-import io.undertow.server.HttpServerExchange;
+import io.divolte.server.ServerTestUtils.EventPayload;
+import io.divolte.server.ServerTestUtils.TestServer;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.ServerSocket;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import org.apache.avro.generic.GenericRecord;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,8 +35,6 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
 @RunWith(Parameterized.class)
 @ParametersAreNonnullByDefault
@@ -66,15 +58,10 @@ public class SeleniumJavaScriptTest {
         LOCAL_RUN_CAPABILITIES.setBrowserName("Local Selenium instructed browser");
     }
 
-    private final BlockingQueue<EventPayload> incoming = new ArrayBlockingQueue<>(100);
-
     @Nullable
     private WebDriver driver;
     @Nullable
-    private Config config;
-    @Nullable
-    private Server server;
-    private final int port = findFreePort();
+    private TestServer server;
 
     @Parameter(0)
     public Supplier<DesiredCapabilities> capabilities;
@@ -257,14 +244,14 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
-        Preconditions.checkState(null != driver && null != config && null != server);
+        Preconditions.checkState(null != driver && null != server);
         final long requestStartTime = System.currentTimeMillis();
         final long ONE_DAY = 12L * 3600L * 1000L;
 
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
+        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
         driver.get(location);
 
-        EventPayload viewEvent = waitForEvent();
+        EventPayload viewEvent = server.waitForEvent();
 
         final Map<String, Deque<String>> params = viewEvent.exchange.getQueryParameters();
         assertTrue(params.containsKey(PARTY_ID_QUERY_PARAM));
@@ -329,13 +316,13 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSendCustomEvent() throws RuntimeException, InterruptedException {
-        Preconditions.checkState(null != driver && null != config && null != server);
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
+        Preconditions.checkState(null != driver && null != server);
+        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
         driver.get(location);
-        waitForEvent();
+        server.waitForEvent();
 
         driver.findElement(By.id("custom")).click();
-        EventPayload customEvent = waitForEvent();
+        EventPayload customEvent = server.waitForEvent();
 
         final Map<String, Deque<String>> params = customEvent.exchange.getQueryParameters();
         assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM));
@@ -347,18 +334,18 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldSetAppropriateCookies() throws RuntimeException, InterruptedException {
-        Preconditions.checkState(null != driver && null != config && null != server);
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", port);
+        Preconditions.checkState(null != driver && null != server);
+        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
         driver.get(location);
-        waitForEvent();
+        server.waitForEvent();
 
-        Optional<CookieValue> parsedPartyCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(config.getString("divolte.tracking.party_cookie")).getValue());
+        Optional<CookieValue> parsedPartyCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
         assertTrue(parsedPartyCookieOption.isPresent());
         assertThat(
                 parsedPartyCookieOption.get(),
                 isA(CookieValue.class));
 
-        Optional<CookieValue> parsedSessionCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(config.getString("divolte.tracking.session_cookie")).getValue());
+        Optional<CookieValue> parsedSessionCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
         assertTrue(parsedSessionCookieOption.isPresent());
         assertThat(
                 parsedSessionCookieOption.get(),
@@ -367,14 +354,17 @@ public class SeleniumJavaScriptTest {
 
     @Test
     public void shouldPickupProvidedPageViewIdFromHash() throws RuntimeException, InterruptedException {
-        Preconditions.checkState(null != driver && null != config && null != server);
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", port);
+        Preconditions.checkState(null != driver && null != server);
+        final String location = String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", server.port);
         driver.get(location);
-        EventPayload event = waitForEvent();
+        EventPayload event = server.waitForEvent();
 
         final Map<String, Deque<String>> params = event.exchange.getQueryParameters();
         assertTrue(params.containsKey(PAGE_VIEW_ID_QUERY_PARAM));
         assertEquals("supercalifragilisticexpialidocious", params.get(PAGE_VIEW_ID_QUERY_PARAM).getFirst());
+
+        assertTrue(params.containsKey(EVENT_ID_QUERY_PARAM));
+        assertEquals("supercalifragilisticexpialidocious0", params.get(EVENT_ID_QUERY_PARAM).getFirst());
     }
 
 
@@ -395,10 +385,8 @@ public class SeleniumJavaScriptTest {
             break;
         }
 
-        config = ConfigFactory.parseResources("selenium-test-config.conf")
-                .withFallback(ConfigFactory.parseString("divolte.server.port = " + port));
-        server = new Server(config, (exchange, buffer, record) -> incoming.add(new EventPayload(exchange, buffer, record)));
-        server.run();
+        server = new TestServer("selenium-test-config.conf");
+        server.server.run();
     }
 
     private void setupSauceLabs() throws MalformedURLException {
@@ -442,42 +430,8 @@ public class SeleniumJavaScriptTest {
             driver = null;
         }
         if (null != server) {
-            server.shutdown();
+            server.server.shutdown();
             server = null;
-        }
-    }
-
-    private EventPayload waitForEvent() throws RuntimeException, InterruptedException {
-        // SauceLabs can take quite a while to fire up everything.
-        return Optional.ofNullable(incoming.poll(40, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
-    }
-
-    @ParametersAreNonnullByDefault
-    private static final class EventPayload {
-        final HttpServerExchange exchange;
-        final AvroRecordBuffer buffer;
-        final GenericRecord record;
-
-        private EventPayload(final HttpServerExchange exchange,
-                             final AvroRecordBuffer buffer,
-                             final GenericRecord record) {
-            this.exchange = Objects.requireNonNull(exchange);
-            this.buffer = Objects.requireNonNull(buffer);
-            this.record = Objects.requireNonNull(record);
-        }
-    }
-
-    /*
-     * Theoretically, this is prone to race conditions,
-     * but in practice, it should be fine due to the way
-     * TCP stacks allocate port numbers (i.e. increment
-     * for the next one).
-     */
-    private static int findFreePort() {
-        try (final ServerSocket socket = new ServerSocket(0)) {
-            return socket.getLocalPort();
-        } catch (final IOException e) {
-            return -1;
         }
     }
 }

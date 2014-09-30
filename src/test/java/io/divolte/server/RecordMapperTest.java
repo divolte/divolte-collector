@@ -78,6 +78,7 @@ public class RecordMapperTest {
         assertEquals(theExchange.getAttachment(PARTY_COOKIE_KEY).value, record.get("client"));
         assertEquals(theExchange.getAttachment(SESSION_COOKIE_KEY).value, record.get("session"));
         assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
+        assertEquals(theExchange.getAttachment(EVENT_ID_KEY), record.get("event"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
         assertEquals(1024, record.get("screenWidth"));
@@ -421,11 +422,13 @@ public class RecordMapperTest {
                     CookieValue party = CookieValues.generate(theTime);
                     CookieValue session = CookieValues.generate(theTime);
                     CookieValue page = CookieValues.generate(theTime);
+                    CookieValue event = CookieValues.generate(theTime);
 
                     exchange.putAttachment(REQUEST_START_TIME_KEY, theTime);
                     exchange.putAttachment(PARTY_COOKIE_KEY, party);
                     exchange.putAttachment(SESSION_COOKIE_KEY, session);
                     exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
+                    exchange.putAttachment(EVENT_ID_KEY, event.value);
                     exchange.putAttachment(FIRST_IN_SESSION_KEY, true);
 
                     exchange.getResponseSender().send("OK");

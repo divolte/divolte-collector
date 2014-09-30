@@ -22,6 +22,7 @@ public abstract class BaseEventHandler {
     public static final AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
     public static final AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
     public static final AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
+    public static final AttachmentKey<String> EVENT_ID_KEY = AttachmentKey.create(String.class);
     public static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
     public static final AttachmentKey<Long> COOKIE_UTC_OFFSET_KEY = AttachmentKey.create(Long.class);
     public static final AttachmentKey<Boolean> FIRST_IN_SESSION_KEY = AttachmentKey.create(Boolean.class);
@@ -98,5 +99,9 @@ public abstract class BaseEventHandler {
         .put(Headers.EXPIRES, 0);
 
         exchange.getResponseSender().send(transparentImage.slice());
+    }
+
+    protected static class IncompleteRequestException extends Exception {
+        private static final long serialVersionUID = 1L;
     }
 }

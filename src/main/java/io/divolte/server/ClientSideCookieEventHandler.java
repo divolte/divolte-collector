@@ -37,6 +37,7 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
         final CookieValue partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
         final CookieValue sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
         final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
+        final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
         /*final boolean isNewPartyId = */queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
         final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
         final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
@@ -48,6 +49,7 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
         exchange.putAttachment(PARTY_COOKIE_KEY, partyId);
         exchange.putAttachment(SESSION_COOKIE_KEY, sessionId);
         exchange.putAttachment(PAGE_VIEW_ID_KEY, pageViewId);
+        exchange.putAttachment(EVENT_ID_KEY, eventId);
 
         exchange.putAttachment(FIRST_IN_SESSION_KEY, isFirstInSession);
 
@@ -57,10 +59,6 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
 
     private Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
         return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
-    }
-
-    private static class IncompleteRequestException extends Exception {
-        private static final long serialVersionUID = 1L;
     }
 
     private static Long tryParseBase36Long(String input) {
