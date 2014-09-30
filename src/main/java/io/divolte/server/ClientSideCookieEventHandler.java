@@ -4,7 +4,6 @@ import io.divolte.server.CookieValues.CookieValue;
 import io.undertow.server.HttpServerExchange;
 
 import java.net.InetSocketAddress;
-import java.util.Deque;
 import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -55,10 +54,6 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}", partyId, sessionId, pageViewId);
         processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
-    }
-
-    private Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 
     private static Long tryParseBase36Long(String input) {

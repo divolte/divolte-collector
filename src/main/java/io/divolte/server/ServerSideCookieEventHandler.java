@@ -8,7 +8,6 @@ import io.undertow.util.AttachmentKey;
 
 import java.time.Duration;
 import java.util.Date;
-import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -103,11 +102,6 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
         logger.debug("Enqueuing event (server generated cookies): {}/{}/{}", partyId, sessionId, pageViewId);
         processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
     }
-
-    private Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
-    }
-
 
     private CookieValue prepareTrackingIdentifierAndReturnCookieValue(final HttpServerExchange exchange,
                                                 final String cookieName,
