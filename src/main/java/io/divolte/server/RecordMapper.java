@@ -396,6 +396,8 @@ final class RecordMapper {
             return (c) -> c.getAttachment(SESSION_COOKIE_KEY).map((cv) -> cv.value);
         case "pageViewId":
             return (FieldSupplier<String>) (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
+        case "eventId":
+            return (FieldSupplier<String>) (c) -> c.getAttachment(EVENT_ID_KEY);
         default:
             throw new SchemaMappingException("Unknown field in schema mapping: %s", sourceFieldName);
         }

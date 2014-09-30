@@ -8,7 +8,6 @@ import io.undertow.util.AttachmentKey;
 
 import java.time.Duration;
 import java.util.Date;
-import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -39,15 +38,12 @@ import com.typesafe.config.Config;
  */
 @ParametersAreNonnullByDefault
 final class ServerSideCookieEventHandler extends BaseEventHandler {
-    private static final String PAGE_VIEW_QUERY_PARAM = "v";
-
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     private final String partyCookieName;
     private final Duration partyTimeout;
     private final String sessionCookieName;
     private final Duration sessionTimeout;
-    private final String pageViewCookieName;
     private final OptionalConfig<String> cookieDomain;
 
 
@@ -55,7 +51,6 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
                                final Duration partyTimeout,
                                final String sessionCookieName,
                                final Duration sessionTimeout,
-                               final String pageViewCookieName,
                                final OptionalConfig<String> cookieDomain,
                                final IncomingRequestProcessingPool processingPool) {
         super(processingPool);
@@ -63,7 +58,6 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
         this.partyTimeout =       Objects.requireNonNull(partyTimeout);
         this.sessionCookieName =  Objects.requireNonNull(sessionCookieName);
         this.sessionTimeout =     Objects.requireNonNull(sessionTimeout);
-        this.pageViewCookieName = Objects.requireNonNull(pageViewCookieName);
         this.cookieDomain = cookieDomain;
     }
 
@@ -72,7 +66,6 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
              Duration.ofSeconds(config.getDuration("divolte.tracking.party_timeout", TimeUnit.SECONDS)),
              config.getString("divolte.tracking.session_cookie"),
              Duration.ofSeconds(config.getDuration("divolte.tracking.session_timeout", TimeUnit.SECONDS)),
-             config.getString("divolte.tracking.page_view_cookie"),
              OptionalConfig.of(config::getString, "divolte.tracking.cookie_domain"),
              pool);
     }
@@ -93,7 +86,10 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
 
         final CookieValue partyId = prepareTrackingIdentifierAndReturnCookieValue(exchange, partyCookieName, PARTY_COOKIE_KEY, partyTimeout, requestTime);
         final CookieValue sessionId = prepareTrackingIdentifierAndReturnCookieValue(exchange, sessionCookieName, SESSION_COOKIE_KEY, sessionTimeout, requestTime);
-        final String pageViewId = prepareAndReturnPageViewId(exchange, pageViewCookieName, requestTime);
+
+        final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseGet(() -> CookieValues.generate(requestTime).value);
+        exchange.putAttachment(PAGE_VIEW_ID_KEY, pageViewId);
+        exchange.putAttachment(EVENT_ID_KEY, pageViewId);
 
         // required for the RecordMapper; the logic to determine whether a event is first in session
         // differs between the server side and client side cookie endpoint
@@ -139,24 +135,5 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
         .putAttachment(key, cookieValue);
 
         return cookieValue;
-    }
-
-    private String prepareAndReturnPageViewId(final HttpServerExchange exchange, final String cookieName, final long currentTime) {
-        final String pageViewId = Optional.ofNullable(exchange.getQueryParameters().get(PAGE_VIEW_QUERY_PARAM))
-                .map(Deque::getFirst)
-                .orElseGet(() -> CookieValues.generate(currentTime).value);
-
-        final CookieImpl pageViewCookie = new CookieImpl(cookieName, pageViewId);
-        cookieDomain.ifPresent(pageViewCookie::setDomain);
-
-        pageViewCookie
-        .setVersion(1)
-        .setHttpOnly(false);
-
-        exchange
-        .setResponseCookie(pageViewCookie)
-        .putAttachment(PAGE_VIEW_ID_KEY, pageViewId);
-
-        return pageViewId;
     }
 }

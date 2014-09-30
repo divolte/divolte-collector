@@ -11,7 +11,9 @@ import io.undertow.util.StatusCodes;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Deque;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -22,6 +24,7 @@ public abstract class BaseEventHandler {
     public static final AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
     public static final AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
     public static final AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
+    public static final AttachmentKey<String> EVENT_ID_KEY = AttachmentKey.create(String.class);
     public static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
     public static final AttachmentKey<Long> COOKIE_UTC_OFFSET_KEY = AttachmentKey.create(Long.class);
     public static final AttachmentKey<Boolean> FIRST_IN_SESSION_KEY = AttachmentKey.create(Boolean.class);
@@ -77,16 +80,6 @@ public abstract class BaseEventHandler {
 
     protected abstract void doHandleEventRequest(final HttpServerExchange exchange) throws Exception;
 
-    private void methodNotAllowed(final HttpServerExchange exchange) {
-        exchange.getResponseHeaders()
-        .put(Headers.ALLOW, Methods.GET_STRING)
-        .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-
-        exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED)
-        .getResponseSender()
-                .send("HTTP method " + exchange.getRequestMethod() + " not allowed.", StandardCharsets.UTF_8);
-    }
-
     protected final void serveImage(final HttpServerExchange exchange) {
         exchange.setResponseCode(StatusCodes.ACCEPTED);
 
@@ -98,5 +91,23 @@ public abstract class BaseEventHandler {
         .put(Headers.EXPIRES, 0);
 
         exchange.getResponseSender().send(transparentImage.slice());
+    }
+
+    private static void methodNotAllowed(final HttpServerExchange exchange) {
+        exchange.getResponseHeaders()
+        .put(Headers.ALLOW, Methods.GET_STRING)
+        .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
+
+        exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED)
+        .getResponseSender()
+                .send("HTTP method " + exchange.getRequestMethod() + " not allowed.", StandardCharsets.UTF_8);
+    }
+
+    protected static class IncompleteRequestException extends Exception {
+        private static final long serialVersionUID = 1L;
+    }
+
+    protected static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
+        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 }
