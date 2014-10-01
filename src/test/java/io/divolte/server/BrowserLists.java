@@ -233,7 +233,7 @@ public final class BrowserLists {
             }, "Android 4 on Amazon Kindle Fire 2" }
     );
 
-    public static final String browserNameList(final Iterable<Object[]> list) {
+    public static String browserNameList(final Iterable<Object[]> list) {
         Joiner joiner = Joiner.on('\n');
         return joiner.join(StreamSupport.stream(list.spliterator(),  false).map((param) -> param[1]).toArray());
     }
