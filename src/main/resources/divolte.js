@@ -472,16 +472,6 @@ var SCRIPT_NAME = 'divolte.js';
 
   info("Divolte party/session/pageview identifiers", [partyId, sessionId, pageViewId]);
 
-  // Declare the namespace our module will export, with some basic content.
-  var dvt = {
-    'partyId':          partyId,
-    'sessionId':        sessionId,
-    'pageViewId':       pageViewId,
-    'isNewPartyId':     isNewParty,
-    'isFirstInSession': isFirstInSession,
-    'isServerPageView': isServerPageView
-  };
-
   /**
    * Generate an event identifier.
    * Note that the implementation requires that pageview identifiers also be unique.
@@ -667,20 +657,46 @@ var SCRIPT_NAME = 'divolte.js';
     }
     return eventId;
   };
-  dvt['signal'] = signal;
 
-  // Expose dvt and $$$ identifiers.
-  if (typeof define === "function" && define['amd']) {
-    define(function() { return dvt; });
-  } else if (typeof module !== 'undefined' && module['exports']) {
-    module['exports'] = dvt;
+  /**
+   * The namespace that we export.
+   * @const
+   * @type {{partyId: string,
+   *         sessionId: string,
+   *         pageViewId: string,
+   *         isNewPartyId: boolean,
+   *         isFirstInSession: boolean,
+   *         isServerPageView: boolean,
+   *         signal: function(!string,object=): string}}
+   */
+  var divolte = {
+    'partyId':          partyId,
+    'sessionId':        sessionId,
+    'pageViewId':       pageViewId,
+    'isNewPartyId':     isNewParty,
+    'isFirstInSession': isFirstInSession,
+    'isServerPageView': isServerPageView,
+    'signal':           signal
+  };
+
+  if ("object" !== typeof window['divolte']) {
+    // Expose divolte module.
+    if (typeof define === "function" && define['amd']) {
+      define(function () {
+        return divolte;
+      });
+    } else if (typeof module !== 'undefined' && module['exports']) {
+      module['exports'] = divolte;
+    } else {
+      window['divolte'] = divolte;
+    }
+    log("Module initialized.", divolte);
+
+    // On load we always signal the 'pageView' event.
+    signal('pageView');
   } else {
-    window['$$$'] = window['dvt'] = dvt;
+    warn("Divolte module already initialized; existing module left intact.");
   }
-  log("Module initialized.", dvt);
 
-  // On load we always signal the 'pageView' event.
-  signal('pageView');
-
-  return dvt;
+  return divolte;
 }));
