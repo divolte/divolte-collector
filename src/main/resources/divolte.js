@@ -287,15 +287,13 @@ var SCRIPT_NAME = 'divolte.js';
 
     // Detect crypto extensions for generating random data.
     var crypto = window['crypto'] || window['msCrypto'],
-        getRandomValues = ('undefined' !== typeof crypto) ? crypto['getRandomValues'] : undefined,
-        isKnownRandom = ('undefined' !== typeof getRandomValues),
+        isKnownRandom = ('undefined' !== typeof crypto && 'undefined' !== typeof crypto['getRandomValue']),
         genRandom;
     if (isKnownRandom) {
-      getRandomValues = getRandomValues.bind(crypto);
       genRandom = function(length) {
         // We have Crypto extensions. Use them directly.
         var array = new Uint8Array(length);
-        getRandomValues(array);
+        crypto['getRandomValues'](array);
         return array;
       }
     } else {
