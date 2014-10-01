@@ -1,7 +1,7 @@
 package io.divolte.server;
 
 import static io.divolte.server.BaseEventHandler.*;
-import static io.divolte.server.SauceLabsBrowserList.*;
+import static io.divolte.server.BrowserLists.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import io.divolte.server.CookieValues.CookieValue;
@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -47,12 +46,16 @@ public class SeleniumJavaScriptTest {
     public final static String PHANTOMJS_DRIVER = "phantomjs";
     public final static String CHROME_DRIVER = "chrome";
     public final static String SAUCE_DRIVER = "sauce";
+    public final static String BS_DRIVER = "browserstack";
 
 
     public static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
     public static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_API_KEY";
     public static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
     public static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
+
+    public static final String BS_USER_NAME_ENV_VAR = "BS_USER_NAME";
+    public static final String BS_API_KEY_ENV_VAR = "BS_API_KEY";
 
     public final static String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
 
@@ -80,8 +83,11 @@ public class SeleniumJavaScriptTest {
         if (!System.getenv().containsKey(DRIVER_ENV_VAR)) {
             return Collections.emptyList();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
-            System.out.println("Selenium test running on SauceLabs with these browsers:\n" + browserNameList());
-            return THE_LIST;
+            System.out.println("Selenium test running on SauceLabs with these browsers:\n" + browserNameList(SAUCE_BROWSER_LIST));
+            return SAUCE_BROWSER_LIST;
+        } else if (BS_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
+            System.out.println("Selenium test running on BrowserStack with these browsers:\n" + browserNameList(BS_BROWSER_LIST));
+            return BS_BROWSER_LIST;
         } else {
             // Parameters are not used for non-sauce tests
             return ImmutableList.of(new Object[] { (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run" });
@@ -169,7 +175,6 @@ public class SeleniumJavaScriptTest {
                   action.run();
                   EventPayload event = server.waitForEvent();
                   final Map<String, Deque<String>> params = event.exchange.getQueryParameters();
-                  System.out.println(params.get(PAGE_VIEW_ID_QUERY_PARAM).getFirst());
                   return params.get(PAGE_VIEW_ID_QUERY_PARAM).getFirst();
               })
               .collect(Collectors.toSet()).size();
@@ -311,6 +316,9 @@ public class SeleniumJavaScriptTest {
         case SAUCE_DRIVER:
             setupSauceLabs();
             break;
+        case BS_DRIVER:
+            setupBrowserStack();
+            break;
         case PHANTOMJS_DRIVER:
         default:
             driver = new PhantomJSDriver();
@@ -319,6 +327,25 @@ public class SeleniumJavaScriptTest {
 
         server = new TestServer("selenium-test-config.conf");
         server.server.run();
+    }
+
+    private void setupBrowserStack() throws MalformedURLException {
+        final String bsUserName = Optional
+                .ofNullable(System.getenv(BS_USER_NAME_ENV_VAR))
+                .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
+                                                      + "in the " + BS_USER_NAME_ENV_VAR + " env var."));
+
+            final String bsApiKey = Optional
+                    .ofNullable(System.getenv(BS_API_KEY_ENV_VAR))
+                    .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
+                                                          + "in the " + BS_API_KEY_ENV_VAR + " env var."));
+
+            final DesiredCapabilities caps = capabilities.get();
+            caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
+            driver = new RemoteWebDriver(
+                    new URL(String.format("http://%s:%s@hub.browserstack.com/wd/hub", bsUserName, bsApiKey)),
+                    caps);
+
     }
 
     private void setupSauceLabs() throws MalformedURLException {

@@ -1,21 +1,15 @@
 package io.divolte.server;
 
-import java.lang.reflect.Array;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.openqa.selenium.remote.DesiredCapabilities;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
-public final class SauceLabsBrowserList {
-    public static final Iterable<Object[]> THE_LIST = ImmutableList.of(
+public final class BrowserLists {
+    public static final Iterable<Object[]> SAUCE_BROWSER_LIST = ImmutableList.of(
     // Windows XP
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
@@ -163,8 +157,84 @@ public final class SauceLabsBrowserList {
                 return caps;
             }, "iOS 6.1 on iPhone" });
 
-    public static final String browserNameList() {
+    public static final Iterable<Object[]> BS_BROWSER_LIST = ImmutableList.of(
+    // Windows XP
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browser", "IE");
+                caps.setCapability("browser_version", "11.0");
+                caps.setCapability("os", "Windows");
+                caps.setCapability("os_version", "8.1");
+                caps.setCapability("resolution", "1280x1024");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "IE11 on Windows 8.1" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browser", "IE");
+                caps.setCapability("browser_version", "10.0");
+                caps.setCapability("os", "Windows");
+                caps.setCapability("os_version", "8");
+                caps.setCapability("resolution", "1280x1024");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "IE10 on Windows 8" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browser", "Safari");
+                caps.setCapability("browser_version", "7.0");
+                caps.setCapability("os", "OS X");
+                caps.setCapability("os_version", "Mavericks");
+                caps.setCapability("resolution", "1280x1024");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "Safari 7 on OS X Mavericks" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browser", "IE");
+                caps.setCapability("browser_version", "8.0");
+                caps.setCapability("os", "Windows");
+                caps.setCapability("os_version", "7");
+                caps.setCapability("resolution", "1280x1024");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "IE8 on Windows 7" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browserName", "iPhone");
+                caps.setCapability("platform", "MAC");
+                caps.setCapability("device", "iPhone 5");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "iOS 6.1 on iPhone 5" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browserName", "iPhone");
+                caps.setCapability("platform", "MAC");
+                caps.setCapability("device", "iPhone 5C");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "iOS 7.0 on iPhone 5C" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browserName", "android");
+                caps.setCapability("platform", "ANDROID");
+                caps.setCapability("device", "Samsung Galaxy S III");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "Android 4.1 on Samsung Galaxy S III" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = new DesiredCapabilities();
+                caps.setCapability("browserName", "android");
+                caps.setCapability("platform", "ANDROID");
+                caps.setCapability("device", "Amazon Kindle Fire 2");
+                caps.setCapability("browserstack.local", "true");
+                return caps;
+            }, "Android 4 on Amazon Kindle Fire 2" }
+    );
+
+    public static final String browserNameList(final Iterable<Object[]> list) {
         Joiner joiner = Joiner.on('\n');
-        return joiner.join(StreamSupport.stream(THE_LIST.spliterator(),  false).map((param) -> param[1]).toArray());
+        return joiner.join(StreamSupport.stream(list.spliterator(),  false).map((param) -> param[1]).toArray());
     }
 }
