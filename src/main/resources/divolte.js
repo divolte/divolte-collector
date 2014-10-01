@@ -54,11 +54,11 @@ var SCRIPT_NAME = 'divolte.js';
    * @const
    * @type {string}
    */
-  var thisUrl = function() {
-    var couldNotInitialize = function(extra) {
+  var divolteScriptUrl = function() {
+    var couldNotInitialize = function(reason) {
       var error = "Divolte could not initialize itself";
       if (LOGGING) {
-        error += '; ' + extra;
+        error += '; ' + reason;
       }
       error += '.';
       throw error;
@@ -104,10 +104,10 @@ var SCRIPT_NAME = 'divolte.js';
    * @const
    * @type {string}
    */
-  var baseURL = function(myUrl) {
+  var divolteUrl = function(myUrl) {
     return myUrl.substr(0, 1 + myUrl.lastIndexOf('/'));
-  }(thisUrl);
-  info("Divolte base URL detected", baseURL);
+  }(divolteScriptUrl);
+  info("Divolte base URL detected", divolteUrl);
 
   /* Some current browser features that we send to Divolte. */
   var
@@ -452,7 +452,7 @@ var SCRIPT_NAME = 'divolte.js';
   // Locate our identifiers, or generate them if necessary.
   var partyId    = getCookie(PARTY_COOKIE_NAME),
       sessionId  = getCookie(SESSION_COOKIE_NAME),
-      pageViewId = getServerPageView(thisUrl),
+      pageViewId = getServerPageView(divolteScriptUrl),
       isNewParty = !partyId,
       isFirstInSession = !sessionId,
       isServerPageView = Boolean(pageViewId);
