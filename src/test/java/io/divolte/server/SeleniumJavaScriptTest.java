@@ -1,6 +1,7 @@
 package io.divolte.server;
 
 import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.BrowserLists.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import io.divolte.server.CookieValues.CookieValue;
@@ -14,6 +15,8 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -43,6 +46,7 @@ public class SeleniumJavaScriptTest {
     public final static String PHANTOMJS_DRIVER = "phantomjs";
     public final static String CHROME_DRIVER = "chrome";
     public final static String SAUCE_DRIVER = "sauce";
+    public final static String BS_DRIVER = "browserstack";
 
 
     public static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
@@ -50,7 +54,12 @@ public class SeleniumJavaScriptTest {
     public static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
     public static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
 
+    public static final String BS_USER_NAME_ENV_VAR = "BS_USER_NAME";
+    public static final String BS_API_KEY_ENV_VAR = "BS_API_KEY";
+
     public final static String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
+
+    private static final long ONE_DAY = 12L * 3600L * 1000L;
 
     public final static DesiredCapabilities LOCAL_RUN_CAPABILITIES;
     static {
@@ -74,168 +83,11 @@ public class SeleniumJavaScriptTest {
         if (!System.getenv().containsKey(DRIVER_ENV_VAR)) {
             return Collections.emptyList();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
-            return ImmutableList.of(
-                    // Windows XP
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
-                        caps.setCapability("platform", "Windows XP");
-                        caps.setCapability("version", "6");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "IE6 on Windows XP"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.chrome();
-                        caps.setCapability("platform", "Windows XP");
-                        caps.setCapability("version", "30");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Chrome 30 on Windows XP"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.firefox();
-                        caps.setCapability("platform", "Windows XP");
-                        caps.setCapability("version", "27");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "FF27 on Windows XP"},
-
-                    // Windows 7
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
-                        caps.setCapability("platform", "Windows 7");
-                        caps.setCapability("version", "10");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "IE10 on Windows 7"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.opera();
-                        caps.setCapability("platform", "Windows 7");
-                        caps.setCapability("version", "12");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Opera 12 on Windows 7"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.chrome();
-                        caps.setCapability("platform", "Windows 7");
-                        caps.setCapability("version", "35");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Chrome 35 on Windows 7"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.firefox();
-                        caps.setCapability("platform", "Windows 7");
-                        caps.setCapability("version", "30");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "FF30 on Windows 7"},
-
-                    // Windows 8
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
-                        caps.setCapability("platform", "Windows 8");
-                        caps.setCapability("version", "10");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "IE10 on Windows 8"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.chrome();
-                        caps.setCapability("platform", "Windows 8");
-                        caps.setCapability("version", "35");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Chrome 35 on Windows 8"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.firefox();
-                        caps.setCapability("platform", "Windows 8");
-                        caps.setCapability("version", "30");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "FF30 on Windows 8"},
-
-                    // Windows 8.1
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
-                        caps.setCapability("platform", "Windows 8.1");
-                        caps.setCapability("version", "11");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "IE11 on Windows 8.1"},
-
-                    // OS X
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.safari();
-                        caps.setCapability("platform", "OS X 10.6");
-                        caps.setCapability("version", "5");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Safari 5 on OS X 10.6"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.safari();
-                        caps.setCapability("platform", "OS X 10.8");
-                        caps.setCapability("version", "6");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Safari 6 on OS X 10.8"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.safari();
-                        caps.setCapability("platform", "OS X 10.9");
-                        caps.setCapability("version", "7");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Safari 7 on OS X 10.9"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.chrome();
-                        caps.setCapability("platform", "OS X 10.9");
-                        caps.setCapability("version", "33");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Chrome 33 on OS X 10.9"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        DesiredCapabilities caps = DesiredCapabilities.firefox();
-                        caps.setCapability("platform", "OS X 10.9");
-                        caps.setCapability("version", "30");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "FF30 on OS X 10.9"},
-
-                    // Linux
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.opera();
-                        caps.setCapability("platform", "Linux");
-                        caps.setCapability("version", "12");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Opera 12 on Linux"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.chrome();
-                        caps.setCapability("platform", "Linux");
-                        caps.setCapability("version", "35");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "Chrome 35 on Linux"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.firefox();
-                        caps.setCapability("platform", "Linux");
-                        caps.setCapability("version", "30");
-                        caps.setCapability("deviceName", "");
-                        return caps;
-                    }, "FF30 on Linux"},
-
-                    // iOS
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.iphone();
-                        caps.setCapability("platform", "OS X 10.9");
-                        caps.setCapability("version", "7.1");
-                        caps.setCapability("device-orientation", "portrait");
-                        return caps;
-                    }, "iOS 7.1 on iPhone"},
-                    new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                        final DesiredCapabilities caps = DesiredCapabilities.iphone();
-                        caps.setCapability("platform", "OS X 10.8");
-                        caps.setCapability("version", "6.1");
-                        caps.setCapability("device-orientation", "portrait");
-                        return caps;
-                    }, "iOS 6.1 on iPhone"}
-            );
+            System.out.println("Selenium test running on SauceLabs with these browsers:\n" + browserNameList(SAUCE_BROWSER_LIST));
+            return SAUCE_BROWSER_LIST;
+        } else if (BS_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
+            System.out.println("Selenium test running on BrowserStack with these browsers:\n" + browserNameList(BS_BROWSER_LIST));
+            return BS_BROWSER_LIST;
         } else {
             // Parameters are not used for non-sauce tests
             return ImmutableList.of(new Object[] { (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run" });
@@ -243,10 +95,95 @@ public class SeleniumJavaScriptTest {
     }
 
     @Test
+    public void shouldRegenerateIDsOnExplicitNavigation() {
+        Preconditions.checkState(null != driver && null != server);
+
+        // do a sequence of explicit navigation by setting the browser location
+        // and then check that all requests generated a unique pageview ID
+        final Runnable[] actions = {
+                () -> driver.navigate().to(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                () -> driver.navigate().to(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
+                () -> driver.navigate().to(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port))
+                };
+
+        final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
+        assertEquals(actions.length, numberOfUniquePageViewIDs);
+    }
+
+    @Test
+    public void shouldRegeneratIDsOnRefresh() {
+        Preconditions.checkState(null != driver && null != server);
+
+        // Navigate to the same page twice
+        final Runnable[] actions = {
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                driver.navigate()::refresh
+                };
+        final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
+        assertEquals(actions.length, numberOfUniquePageViewIDs);
+    }
+
+    @Test
+    public void shouldRegenerateIDsOnForwardBackNavigation() {
+        Preconditions.checkState(null != driver && null != server);
+
+        // Navigate to the same page twice
+        final Runnable[] actions = {
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                driver.navigate()::back,
+                driver.navigate()::back,
+                driver.navigate()::forward,
+                driver.navigate()::back,
+                driver.navigate()::forward,
+                driver.navigate()::forward
+                };
+        final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
+        assertEquals(actions.length, numberOfUniquePageViewIDs);
+    }
+
+    @Test
+    public void shouldGenerateIDsOnComplexSeriesOfEvents() {
+        Preconditions.checkState(null != driver && null != server);
+
+        // Navigate to the same page twice
+        final Runnable[] actions = {
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                driver.navigate()::back,
+                driver.navigate()::back,
+                () -> driver.findElement(By.id("custom")).click(),
+                driver.navigate()::forward,
+                driver.navigate()::refresh,
+                driver.navigate()::back,
+                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", server.port)),
+                driver.navigate()::back
+                };
+
+        // we expect on duplicate PV ID, because of the custom event
+        final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
+        assertEquals(actions.length - 1, numberOfUniquePageViewIDs);
+    }
+
+    private int uniquePageViewIdsForSeriesOfActions(final Runnable[] actions) {
+        return Stream.of(actions)
+              .map((action) -> {
+                  action.run();
+                  EventPayload event = server.waitForEvent();
+                  final Map<String, Deque<String>> params = event.exchange.getQueryParameters();
+                  return params.get(PAGE_VIEW_ID_QUERY_PARAM).getFirst();
+              })
+              .collect(Collectors.toSet()).size();
+    }
+
+    @Test
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
         Preconditions.checkState(null != driver && null != server);
         final long requestStartTime = System.currentTimeMillis();
-        final long ONE_DAY = 12L * 3600L * 1000L;
 
         final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
         driver.get(location);
@@ -379,6 +316,9 @@ public class SeleniumJavaScriptTest {
         case SAUCE_DRIVER:
             setupSauceLabs();
             break;
+        case BS_DRIVER:
+            setupBrowserStack();
+            break;
         case PHANTOMJS_DRIVER:
         default:
             driver = new PhantomJSDriver();
@@ -387,6 +327,25 @@ public class SeleniumJavaScriptTest {
 
         server = new TestServer("selenium-test-config.conf");
         server.server.run();
+    }
+
+    private void setupBrowserStack() throws MalformedURLException {
+        final String bsUserName = Optional
+                .ofNullable(System.getenv(BS_USER_NAME_ENV_VAR))
+                .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
+                                                      + "in the " + BS_USER_NAME_ENV_VAR + " env var."));
+
+            final String bsApiKey = Optional
+                    .ofNullable(System.getenv(BS_API_KEY_ENV_VAR))
+                    .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
+                                                          + "in the " + BS_API_KEY_ENV_VAR + " env var."));
+
+            final DesiredCapabilities caps = capabilities.get();
+            caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
+            driver = new RemoteWebDriver(
+                    new URL(String.format("http://%s:%s@hub.browserstack.com/wd/hub", bsUserName, bsApiKey)),
+                    caps);
+
     }
 
     private void setupSauceLabs() throws MalformedURLException {

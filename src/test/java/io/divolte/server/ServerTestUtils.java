@@ -62,9 +62,13 @@ public final class ServerTestUtils {
             server = new Server(config, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
         }
 
-        public EventPayload waitForEvent() throws RuntimeException, InterruptedException {
+        public EventPayload waitForEvent() {
             // SauceLabs can take quite a while to fire up everything.
-            return Optional.ofNullable(events.poll(40, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
+            try {
+                return Optional.ofNullable(events.poll(40, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Exception while waiting for event.", e);
+            }
         }
     }
 }
