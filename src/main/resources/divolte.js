@@ -455,6 +455,64 @@ var SCRIPT_NAME = 'divolte.js';
   }();
 
   /**
+   * A signal queue.
+   * This can hold a list of the signal events that are pending.
+   * If a signal event is currently underway, it is always the
+   * first element in the queue.
+   *
+   * @constructor
+   * @final
+   */
+  var SignalQueue = function() {
+    /**
+     * The internal queue of signal events.
+     * @private
+     * @const
+     * @type {Array.<string>}
+     */
+    this.queue = [];
+  };
+  /**
+   * Enqueue a signal event.
+   * If none are underway, this will commence. Otherwise it will be queued.
+   * @param event {string} the pre-calculated (and rendered) event to queue.
+   */
+  SignalQueue.prototype.enqueue = function(event) {
+    var pendingEvents = this.queue;
+    pendingEvents.push(event);
+    if (1 == pendingEvents.length) {
+      this.deliverFirstPendingEvent();
+    }
+  };
+  /**
+   * @private
+   * Start the next signal event.
+   */
+  SignalQueue.prototype.deliverFirstPendingEvent = function() {
+    var signalQueue = this;
+    var image = new Image(1,1);
+    image.onload = function() {
+      // Delete this signal from the array.
+      var pendingEvents = signalQueue.queue;
+      pendingEvents.shift();
+      // If there are still pending events, schedule the next.
+      if (0 < pendingEvents.length) {
+        signalQueue.deliverFirstPendingEvent();
+      }
+    };
+    image.src = divolteUrl + 'csc-event?' + this.queue[0];
+  };
+
+  /**
+   * The queue for pending signal events.
+   * This ensures that signals are received in the same order that
+   * they are issued in the browser.
+   * @const
+   * @type {SignalQueue}
+   */
+  var signalQueue = new SignalQueue();
+
+  /**
    * Event logger.
    *
    * Invoking this method will cause an event to be logged with the Divolte
@@ -558,8 +616,7 @@ var SCRIPT_NAME = 'divolte.js';
       setCookie(SESSION_COOKIE_NAME, sessionId, SESSION_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
       setCookie(PARTY_COOKIE_NAME, partyId, PARTY_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
 
-      var image = new Image(1,1);
-      image.src = baseURL + 'csc-event?' + params;
+      signalQueue.enqueue(params);
     } else {
       warn("Ignoring event with no type.");
       eventId = undefined;
