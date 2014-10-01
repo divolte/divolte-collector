@@ -45,7 +45,7 @@ var SCRIPT_NAME = 'divolte.js';
       warn = LOGGING && console ? bound(console.warn, console) : function() {},
       error = LOGGING && console ? bound(console.error, console) : function() {};
 
-  log("Initializing DVT.");
+  log("Initializing Divolte.");
 
   /**
    * The URL used to load this script.
