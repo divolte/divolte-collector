@@ -70,12 +70,13 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
              pool);
     }
 
-    protected void doHandleEventRequest(final HttpServerExchange exchange) throws Exception {
+    protected void logEvent(final HttpServerExchange exchange) {
         /*
          * Our strategy is:
          * 1) Set up the cookies.
-         * 2) Acknowledge the response.
-         * 3) Pass into our queuing system for further handling.
+         * 2) Pass into our queuing system for further handling.
+         *
+         * The caller will then complete the HTTP response.
          */
 
         // 1
@@ -96,9 +97,6 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
         exchange.putAttachment(FIRST_IN_SESSION_KEY, !exchange.getRequestCookies().containsKey(sessionCookieName));
 
         // 2
-        serveImage(exchange);
-
-        // 3
         logger.debug("Enqueuing event (server generated cookies): {}/{}/{}", partyId, sessionId, pageViewId);
         processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
     }

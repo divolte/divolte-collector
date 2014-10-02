@@ -1,16 +1,15 @@
 package io.divolte.server;
 
 import io.divolte.server.CookieValues.CookieValue;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
-import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,7 +19,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import com.google.common.io.Resources;
 
 @ParametersAreNonnullByDefault
-public abstract class BaseEventHandler {
+public abstract class BaseEventHandler implements HttpHandler {
     public static final AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
     public static final AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
     public static final AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
@@ -62,25 +61,36 @@ public abstract class BaseEventHandler {
         }
     }
 
-    public final void handleEventRequest(HttpServerExchange exchange) throws Exception {
-        // We only accept GET requests.
-        if (exchange.getRequestMethod().equals(Methods.GET)) {
-            /*
-             * The source address can be fetched on-demand from the peer connection, which may
-             * no longer be available after the response has been sent. So we materialize it here
-             * to ensure it's available further down the chain.
-             */
-            exchange.setSourceAddress(exchange.getSourceAddress());
-
-            doHandleEventRequest(exchange);
-        } else {
-            methodNotAllowed(exchange);
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        /*
+         * The source address can be fetched on-demand from the peer connection, which may
+         * no longer be available after the response has been sent. So we materialize it here
+         * to ensure it's available further down the chain.
+         */
+        exchange.setSourceAddress(exchange.getSourceAddress());
+        // Subclasses are responsible to logging events.
+        // We just ensure the pixel is always returned, no matter what.
+        try {
+            logEvent(exchange);
+        } finally {
+            serveImage(exchange);
         }
     }
 
-    protected abstract void doHandleEventRequest(final HttpServerExchange exchange) throws Exception;
+    /**
+     * Log this event.
+     *
+     * The subclass is responsible for extracting all information from the request and
+     * handing it off. The client is still waiting at this point; the subclass should hand
+     * further processing of as expediently as possible. When it returns (or throws an
+     * exception) the pixel response will be sent. (The subclass must never complete the
+     * request.)
+     * @param exchange the HTTP exchange from which event data can be extracted.
+     */
+    protected abstract void logEvent(final HttpServerExchange exchange);
 
-    protected final void serveImage(final HttpServerExchange exchange) {
+    private void serveImage(final HttpServerExchange exchange) {
         exchange.setResponseCode(StatusCodes.ACCEPTED);
 
         final HeaderMap responseHeaders = exchange.getResponseHeaders();
@@ -94,16 +104,6 @@ public abstract class BaseEventHandler {
             .put(Headers.EXPIRES, "Fri, 14 Apr 1995 11:30:00 GMT");
 
         exchange.getResponseSender().send(transparentImage.slice());
-    }
-
-    private static void methodNotAllowed(final HttpServerExchange exchange) {
-        exchange.getResponseHeaders()
-        .put(Headers.ALLOW, Methods.GET_STRING)
-        .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-
-        exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED)
-        .getResponseSender()
-                .send("HTTP method " + exchange.getRequestMethod() + " not allowed.", StandardCharsets.UTF_8);
     }
 
     protected static class IncompleteRequestException extends Exception {

@@ -57,8 +57,10 @@ public final class Server implements Runnable {
         final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
 
         final PathHandler handler = new PathHandler();
-        handler.addExactPath("/csc-event", clientSideCookieEventHandler::handleEventRequest);
-        handler.addExactPath("/ssc-event", serverSideCookieEventHandler::handleEventRequest);
+        handler.addExactPath("/csc-event",
+                             new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
+        handler.addExactPath("/ssc-event",
+                             new AllowedMethodsHandler(serverSideCookieEventHandler, Methods.GET));
         handler.addExactPath('/' + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
         if (config.getBoolean("divolte.server.serve_static_resources")) {
