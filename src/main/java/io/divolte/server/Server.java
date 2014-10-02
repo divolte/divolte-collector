@@ -71,7 +71,6 @@ public final class Server implements Runnable {
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
-        // TODO: Fix this. ProxyPeerAddressHandler returns the first in the chain, but we want the last.
         final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
                 config.getBoolean("divolte.server.use_x_forwarded_for") ?
                 new ProxyAdjacentPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
