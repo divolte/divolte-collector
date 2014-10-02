@@ -1,5 +1,7 @@
 package io.divolte.server.js;
 
+import io.undertow.util.ETag;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Optional;
@@ -39,7 +41,7 @@ public class TrackingJavaScriptResourceTest {
 
     @Test
     public void testETagIsValid() throws IOException {
-        final String eTag = trackingJavaScript.getEntityBody().getETag();
+        final ETag eTag = trackingJavaScript.getEntityBody().getETag();
         validateEtag(eTag);
     }
 
@@ -63,7 +65,7 @@ public class TrackingJavaScriptResourceTest {
     public void testGzippedETagIsValid() {
         final Optional<HttpBody> gzippedBody = trackingJavaScript.getEntityBody().getGzippedBody();
         assertThat(gzippedBody.isPresent(), is(true));
-        final String eTag = gzippedBody.get().getETag();
+        final ETag eTag = gzippedBody.get().getETag();
         validateEtag(eTag);
         assertThat(eTag, is(not(equalTo(trackingJavaScript.getEntityBody().getETag()))));
     }
@@ -74,10 +76,12 @@ public class TrackingJavaScriptResourceTest {
         assertThat(entityBody.remaining(), is(greaterThan(0)));
     }
 
-    private static void validateEtag(final String eTag) {
+    private static void validateEtag(final ETag eTag) {
         assertThat(eTag, is(notNullValue()));
-        assertThat(eTag, startsWith("\""));
-        assertThat(eTag, endsWith("\""));
-        assertThat(eTag.length(), is(greaterThan(2)));
+        assertThat(eTag.isWeak(), is(false));
+        assertThat(eTag.getTag(), not(isEmptyOrNullString()));
+        assertThat(eTag.toString(), startsWith("\""));
+        assertThat(eTag.toString(), endsWith("\""));
+        assertThat(eTag.toString().length(), is(greaterThan(2)));
     }
 }

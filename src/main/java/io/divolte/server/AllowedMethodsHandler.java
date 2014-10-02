@@ -6,6 +6,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -32,11 +33,16 @@ public class AllowedMethodsHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        if (allowedMethods.contains(exchange.getRequestMethod())) {
+        final HttpString requestMethod = exchange.getRequestMethod();
+        if (allowedMethods.contains(requestMethod)) {
             next.handleRequest(exchange);
         } else {
             exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED);
-            exchange.getResponseHeaders().put(Headers.ALLOW, allowedMethodHeader);
+            exchange.getResponseHeaders()
+                    .put(Headers.ALLOW, allowedMethodHeader)
+                    .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
+            exchange.getResponseSender()
+                    .send("HTTP method" + requestMethod + " + not allowed.", StandardCharsets.UTF_8);
             exchange.endExchange();
         }
     }
