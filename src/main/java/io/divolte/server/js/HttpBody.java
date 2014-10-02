@@ -1,5 +1,7 @@
 package io.divolte.server.js;
 
+import io.undertow.util.ETag;
+
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -11,9 +13,9 @@ import javax.annotation.ParametersAreNonnullByDefault;
 @ParametersAreNonnullByDefault
 public class HttpBody {
     private final ByteBuffer body;
-    private final String eTag;
+    private final ETag eTag;
 
-    public HttpBody(final ByteBuffer body, final String eTag) {
+    public HttpBody(final ByteBuffer body, final ETag eTag) {
         this.body = Objects.requireNonNull(body.asReadOnlyBuffer());
         this.eTag = Objects.requireNonNull(eTag);
     }
@@ -22,7 +24,7 @@ public class HttpBody {
         return body.duplicate();
     }
 
-    public String getETag() {
+    public ETag getETag() {
         return eTag;
     }
 }

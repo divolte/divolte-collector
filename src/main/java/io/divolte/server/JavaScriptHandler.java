@@ -5,6 +5,8 @@ import io.divolte.server.js.HttpBody;
 import io.divolte.server.js.JavaScriptResource;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
@@ -14,7 +16,6 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
@@ -84,30 +85,15 @@ final class JavaScriptHandler implements HttpHandler {
 
         // Now we know which version of the entity is visible to this user-agent,
         // figure out if the client already has the current version or not.
-        final String eTag = bodyToSend.getETag();
-        responseHeaders.put(Headers.ETAG, eTag);
-        final HeaderValues ifNoneMatch = exchange.getRequestHeaders().get(Headers.IF_NONE_MATCH);
-        if (isETagMatch(ifNoneMatch, eTag)) {
-            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
-            exchange.endExchange();
-        } else {
+        final ETag eTag = bodyToSend.getETag();
+        responseHeaders.put(Headers.ETAG, eTag.toString());
+        if (ETagUtils.handleIfNoneMatch(exchange, eTag, true)) {
             final ByteBuffer entityBody = bodyToSend.getBody();
             responseHeaders.put(Headers.CONTENT_TYPE, "application/javascript");
             exchange.getResponseSender().send(entityBody);
+        } else {
+            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+            exchange.endExchange();
         }
-    }
-
-    private static boolean isETagMatch(@Nullable final HeaderValues headerValues, final String eTag) {
-        // Warning: Early return to short-circuit logic.
-        if (null != headerValues) {
-            for (final String headerValue : headerValues) {
-                if (eTag.equals(headerValue)) {
-                    return true;
-                } else if ("*".equals(headerValue)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }

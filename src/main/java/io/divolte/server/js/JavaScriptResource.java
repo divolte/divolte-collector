@@ -1,5 +1,7 @@
 package io.divolte.server.js;
 
+import io.undertow.util.ETag;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -96,10 +98,10 @@ public class JavaScriptResource {
         return compiler;
     }
 
-    private static String generateETag(final byte[] entityBytes) {
+    private static ETag generateETag(final byte[] entityBytes) {
         final MessageDigest digester = createDigester();
         final byte[] digest = digester.digest(entityBytes);
-        return '"' + Base64.getEncoder().encodeToString(digest) + '"';
+        return new ETag(false, Base64.getEncoder().encodeToString(digest));
     }
 
     private static MessageDigest createDigester() {
