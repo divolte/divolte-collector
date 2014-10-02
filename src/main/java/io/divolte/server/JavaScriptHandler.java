@@ -98,7 +98,7 @@ final class JavaScriptHandler implements HttpHandler {
     }
 
     private static boolean isETagMatch(@Nullable final HeaderValues headerValues, final String eTag) {
-        // Warning: Rarely return to short-circuit logic.
+        // Warning: Early return to short-circuit logic.
         if (null != headerValues) {
             for (final String headerValue : headerValues) {
                 if (eTag.equals(headerValue)) {
