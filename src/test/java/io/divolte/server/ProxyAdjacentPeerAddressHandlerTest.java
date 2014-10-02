@@ -12,6 +12,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("PMD.AvoidUsingHardCodedIP")
 public class ProxyAdjacentPeerAddressHandlerTest {
     private static final String URL_STRING = "http://localhost:%d/csc-event";
     private static final String URL_QUERY_STRING = "?"
