@@ -6,7 +6,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
@@ -70,7 +69,7 @@ public final class Server implements Runnable {
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
         final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
                 config.getBoolean("divolte.server.use_x_forwarded_for") ?
-                new ProxyPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
+                new ProxyAdjacentPeerAddressHander(canonicalPathHandler) : canonicalPathHandler
                 );
 
         shutdownHandler = rootHandler;
