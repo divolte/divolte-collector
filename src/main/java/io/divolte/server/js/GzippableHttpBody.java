@@ -1,5 +1,7 @@
 package io.divolte.server.js;
 
+import io.undertow.util.ETag;
+
 import java.nio.ByteBuffer;
 import java.util.Optional;
 
@@ -20,14 +22,15 @@ public class GzippableHttpBody extends HttpBody {
 
     private final Optional<HttpBody> gzippedBody;
 
-    public GzippableHttpBody(final ByteBuffer data, final String eTag) {
+    public GzippableHttpBody(final ByteBuffer data, final ETag eTag) {
         super(data, eTag);
         logger.debug("Compressing resource.");
         final Optional<ByteBuffer> gzippedData = Gzip.compress(data);
         if (gzippedData.isPresent()) {
             logger.info("Compressed resource: {} -> {}",
                         data.remaining(), gzippedData.get().remaining());
-            gzippedBody = Optional.of(new HttpBody(gzippedData.get(), "\"gz+" + eTag.substring(1)));
+            gzippedBody = Optional.of(new HttpBody(gzippedData.get(),
+                                                   new ETag(eTag.isWeak(), "gz+" + eTag.getTag())));
         } else {
             logger.info("Resource not compressable.");
             gzippedBody = Optional.empty();

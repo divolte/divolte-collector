@@ -21,14 +21,12 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
     }
 
     @Override
-    protected void doHandleEventRequest(HttpServerExchange exchange) throws Exception {
+    protected void logEvent(HttpServerExchange exchange) {
         try {
             handleRequestIfComplete(exchange);
-        } catch(IncompleteRequestException ire) {
+        } catch (final IncompleteRequestException ire) {
             // improper request, could be anything
             logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
-        } finally {
-            serveImage(exchange);
         }
     }
 
