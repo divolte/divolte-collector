@@ -84,11 +84,14 @@ public abstract class BaseEventHandler {
         exchange.setResponseCode(StatusCodes.ACCEPTED);
 
         final HeaderMap responseHeaders = exchange.getResponseHeaders();
+        // The client ensures that each request is unique.
+        // The cache-related headers are intended to prevent spurious reloads.
+        // (As a GET request, agents are free to re-issue the request at will. This disturbs us.)
         responseHeaders
-        .put(Headers.CONTENT_TYPE, "image/gif")
-        .put(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
-        .put(Headers.PRAGMA, "no-cache")
-        .put(Headers.EXPIRES, 0);
+            .put(Headers.CONTENT_TYPE, "image/gif")
+            .put(Headers.CACHE_CONTROL, "private, no-cache, proxy-revalidate")
+            .put(Headers.PRAGMA, "no-cache")
+            .put(Headers.EXPIRES, "Fri, 14 Apr 1995 11:30:00 GMT");
 
         exchange.getResponseSender().send(transparentImage.slice());
     }
