@@ -62,7 +62,7 @@ public abstract class BaseEventHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+    public void handleRequest(final HttpServerExchange exchange) {
         /*
          * The source address can be fetched on-demand from the peer connection, which may
          * no longer be available after the response has been sent. So we materialize it here
