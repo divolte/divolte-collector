@@ -75,7 +75,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
     public void shouldAllowMultipleXffHeaders() throws IOException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.addRequestProperty("X-Forwarded-For", "127.0.0.1");
+        conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 8.8.8.8");
         conn.addRequestProperty("X-Forwarded-For", "192.168.13.23");
         conn.setRequestMethod("GET");
 
