@@ -49,8 +49,9 @@ public final class Server implements Runnable {
         port = config.getInt("divolte.server.port");
 
         processingPool = new IncomingRequestProcessingPool(config, listener);
-        final ServerSideCookieEventHandler serverSideCookieEventHandler =
-                new ServerSideCookieEventHandler(config, processingPool);
+        // Disabled for now.
+        //final ServerSideCookieEventHandler serverSideCookieEventHandler =
+        //        new ServerSideCookieEventHandler(config, processingPool);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
                 new ClientSideCookieEventHandler(processingPool);
         final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(config);
@@ -59,8 +60,9 @@ public final class Server implements Runnable {
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/csc-event",
                              new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
-        handler.addExactPath("/ssc-event",
-                             new AllowedMethodsHandler(serverSideCookieEventHandler, Methods.GET));
+        // Disabled; see above.
+        //handler.addExactPath("/ssc-event",
+        //                     new AllowedMethodsHandler(serverSideCookieEventHandler, Methods.GET));
         handler.addExactPath('/' + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
         if (config.getBoolean("divolte.server.serve_static_resources")) {
@@ -70,6 +72,7 @@ public final class Server implements Runnable {
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
+        // TODO: Fix this. ProxyPeerAddressHandler returns the first in the chain, but we want the last.
         final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
                 config.getBoolean("divolte.server.use_x_forwarded_for") ?
                 new ProxyPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
