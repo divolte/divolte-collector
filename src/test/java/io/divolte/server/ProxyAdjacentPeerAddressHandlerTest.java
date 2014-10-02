@@ -71,6 +71,20 @@ public class ProxyAdjacentPeerAddressHandlerTest {
         assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());
     }
 
+    @Test
+    public void shouldAllowMultipleXffHeaders() throws IOException {
+        final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.addRequestProperty("X-Forwarded-For", "127.0.0.1");
+        conn.addRequestProperty("X-Forwarded-For", "192.168.13.23");
+        conn.setRequestMethod("GET");
+
+        assertEquals(202, conn.getResponseCode());
+
+        EventPayload event = server.waitForEvent();
+        assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());
+    }
+
     @Before
     public void setUp() {
         server = new TestServer("x-forwarded-for-test.conf");

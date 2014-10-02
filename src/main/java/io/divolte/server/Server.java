@@ -69,7 +69,7 @@ public final class Server implements Runnable {
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
         final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
                 config.getBoolean("divolte.server.use_x_forwarded_for") ?
-                new ProxyAdjacentPeerAddressHander(canonicalPathHandler) : canonicalPathHandler
+                new ProxyAdjacentPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
                 );
 
         shutdownHandler = rootHandler;
