@@ -679,12 +679,12 @@ var SCRIPT_NAME = 'divolte.js';
 
   if ("object" !== typeof window['divolte']) {
     // Expose divolte module.
-    if (typeof define === "function" && define['amd']) {
-      define(function () {
+    if (typeof window['define'] === "function" && window['define']['amd']) {
+      window['define'](function () {
         return divolte;
       });
-    } else if (typeof module !== 'undefined' && module['exports']) {
-      module['exports'] = divolte;
+    } else if (typeof window['module'] !== 'undefined' && window['module']['exports']) {
+      window['module']['exports'] = divolte;
     } else {
       window['divolte'] = divolte;
     }
