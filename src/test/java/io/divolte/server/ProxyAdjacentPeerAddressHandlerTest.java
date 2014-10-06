@@ -34,7 +34,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
     private TestServer server;
 
     @Test
-    public void shouldObtainRightMostAddressFromChain() throws IOException {
+    public void shouldObtainRightMostAddressFromChain() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1,192.168.13.23");
@@ -47,7 +47,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
     }
 
     @Test
-    public void shouldObtainSingleValueWithoutCommas() throws IOException {
+    public void shouldObtainSingleValueWithoutCommas() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1");
@@ -60,7 +60,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
     }
 
     @Test
-    public void shouldAllowWhitespaceAfterComma() throws IOException {
+    public void shouldAllowWhitespaceAfterComma() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 192.168.13.23");
@@ -73,7 +73,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
     }
 
     @Test
-    public void shouldAllowMultipleXffHeaders() throws IOException {
+    public void shouldAllowMultipleXffHeaders() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 8.8.8.8");

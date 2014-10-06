@@ -173,11 +173,27 @@ public class SeleniumJavaScriptTest {
         return Stream.of(actions)
               .map((action) -> {
                   action.run();
-                  EventPayload event = server.waitForEvent();
+                  final EventPayload event = unchecked(server::waitForEvent);
                   final Map<String, Deque<String>> params = event.exchange.getQueryParameters();
                   return params.get(PAGE_VIEW_ID_QUERY_PARAM).getFirst();
               })
               .collect(Collectors.toSet()).size();
+    }
+
+    @FunctionalInterface
+    private interface ExceptionSupplier<T> {
+        T supply() throws Exception;
+    }
+
+    private static <T> T unchecked(final ExceptionSupplier<T> supplier) {
+        try {
+            return supplier.supply();
+        } catch (final RuntimeException e) {
+            // Pass through as-is;
+            throw e;
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
