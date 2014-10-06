@@ -203,7 +203,7 @@ var SCRIPT_NAME = 'divolte.js';
    * and placed into the public domain. (Thanks!)
    *
    * @param {string} message    The message to product a digest of.
-   * @returns {Array.<number>} the calculated 256-bit SHA-3 digest of the supplied message.
+   * @return {!Array.<number>} the calculated 256-bit SHA-3 digest of the supplied message.
    */
   var sha3_256 = function() {
     var permute = [0, 10, 20, 5, 15, 16, 1, 11, 21, 6, 7, 17, 2, 12, 22, 23, 8, 18, 3, 13, 14, 24, 9, 19, 4],
@@ -500,7 +500,7 @@ var SCRIPT_NAME = 'divolte.js';
      * The internal queue of signal events.
      * @private
      * @const
-     * @type {Array.<string>}
+     * @type {!Array.<string>}
      */
     this.queue = [];
   };
@@ -552,7 +552,7 @@ var SCRIPT_NAME = 'divolte.js';
    * asynchronously.
    *
    * @param {!string} type The type of event to log.
-   * @param {object=} [customParameters] Optional object containing custom parameters to log alongside the event.
+   * @param {Object=} [customParameters] Optional object containing custom parameters to log alongside the event.
    *
    * @return {string} the unique event identifier for this event.
    */
@@ -665,7 +665,7 @@ var SCRIPT_NAME = 'divolte.js';
    *         isNewPartyId: boolean,
    *         isFirstInSession: boolean,
    *         isServerPageView: boolean,
-   *         signal: function(!string,object=): string}}
+   *         signal: function(!string,Object=): string}}
    */
   var divolte = {
     'partyId':          partyId,
