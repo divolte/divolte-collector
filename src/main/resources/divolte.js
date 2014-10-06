@@ -263,7 +263,7 @@ var SCRIPT_NAME = 'divolte.js';
     }}();
 
   /**
-   * Generate a unique identifier, optionally prefixed with a timestamp.
+   * Generate a globally unique identifier, optionally prefixed with a timestamp.
    * There are two internal implementations, depending on whether Crypto
    * extensions are detected or not.
    *
@@ -274,130 +274,186 @@ var SCRIPT_NAME = 'divolte.js';
    */
   var generateId = function() {
     /*
-     * A unique identifier is either:
-     *  - Some random data; or
-     *  - A hash of:
-     *     1) The time;
-     *     2) Some features specific to the current browser;
-     *     3) Rubbish random values from Math.random().
+     * An identifier is a hash of:
+     *  - The time;
+     *  - The current browser URL;
+     *  - Some random values;
+     *  - Optionally, some features specific to the current browser.
      *
-     * The reason for this complication is that producing globally unique values from
-     * within a browser is non-trivial.
+     * Random values are generated using Crypto extensions if they are present, or
+     * Math.random() otherwise.
+     *
+     * Note that in theory when we use the Crypto extensions we shouldn't need to
+     * include any other values, or even hash things. However we've observed collisions
+     * from some clients that do not appear to seed the random source in Crypto
+     * extensions properly. (eg. Google Web Preview.)
      */
 
-    // Detect crypto extensions for generating random data.
-    var crypto = window['crypto'] || window['msCrypto'],
-        isKnownRandom = ('undefined' !== typeof crypto && 'undefined' !== typeof crypto['getRandomValues']),
-        genRandom;
-    if (isKnownRandom) {
-      genRandom = function(length) {
-        // We have Crypto extensions. Use them directly.
-        var array = new Uint8Array(length);
-        crypto['getRandomValues'](array);
-        return array;
-      }
-    } else {
-      var math = Math,
-          // What we want here is the smallest set that discriminates best amongst users.
-          // This list is relatively arbitrary based on existing lists that people use.
-          // (It doesn't necessarily meet the criteria of most efficient discrimination.)
-          probeMimeTypes = [
-            "application/pdf",
-            "video/quicktime",
-            "video/x-msvideo",
-            "audio/x-pn-realaudio-plugin",
-            "audio/mpeg3",
-            "application/googletalk",
-            "application/x-mplayer2",
-            "application/x-director",
-            "application/x-shockwave-flash",
-            "application/x-java-vm",
-            "application/x-googlegears",
-            "application/x-silverlight"
-          ],
-          // Poor quality randomness based on Math.random().
-          randomValue = function() {
-            return math.floor(math.random() * 0x7fffffff).toString(36);
-          },
-          getMimeTypeInformation = function() {
-            var plugins,
-                mimeTypes = navigator.mimeTypes;
-            if (mimeTypes) {
-              plugins = "plugins:";
-              for (var i = 0, l = probeMimeTypes.length; i < l; ++i) {
-                var probeMimeType = probeMimeTypes[i];
-                plugins += probeMimeType in mimeTypes ? '1' : '0';
-              }
-            } else {
-              plugins = "";
+    var math = Math,
+        crypto = window['crypto'] || window['msCrypto'],
+        hasSecureRandom = ('undefined' !== typeof crypto && 'undefined' !== typeof crypto['getRandomValues']),
+        /**
+         * Generate a sequence of random numbers.
+         * Each random number is between 0 and 255, inclusive.
+         * @param {number} length the number of random numbers to generate.
+         * @return {!(Uint8Array|Array.<number>)}
+         */
+        generateRandomNumbers = hasSecureRandom
+            ? function(length) {
+              // We have Crypto extensions. Use them directly.
+              var array = new Uint8Array(length);
+              crypto['getRandomValues'](array);
+              return array;
             }
-            return plugins;
-          },
-          probeActiveXControls = [
-            "ShockwaveFlash.ShockwaveFlash.1",
-            "AcroPDF.PDF",
-            "AgControl.AgControl",
-            "QuickTime.QuickTime"
-          ],
-          getActiveXTypeInformation = function() {
-            var plugins;
-            if ('ActiveXObject' in window) {
-              plugins = "activex:";
-              for (var i = 0, l = probeActiveXControls.length; i < l; ++i) {
-                var probeActiveXControl = probeActiveXControls[i];
-                try {
-                  var plugin = new ActiveXObject(probeActiveXControl);
-                  plugins += "1";
-                  if ('getVersions' in plugin) {
-                    plugins += "(" + plugin['getVersions']() + ")";
-                  } else if ('getVariable' in plugin) {
-                    plugins += "(" + plugin['getVariable']("$version") + ")";
-                  }
-                } catch(unused) {
-                  plugins += '0';
+            : function(length) {
+              // We have no crypto extensions. This is a last resort.
+              var array = new Array(length);
+              for (var i = 0; i < length; ++i) {
+                array[i] = math.floor(math.random() * 0x100);
+              }
+              return array;
+            },
+        /**
+         * Generate a string with random character.
+         * Each character is a code-point in the range between
+         * 0 and 255, inclusive.
+         * @param {number} length the number of random numbers to generate.
+         * @return {string}
+         */
+        generateRandomString = function(length) {
+          var numbers = generateRandomNumbers(length),
+              s = "";
+          for (var i = 0; i < numbers.length; ++i) {
+            s += String.fromCharCode(numbers[i]);
+          }
+          return s;
+        },
+        /**
+         * A set of MIME-types to probe for.
+         * What we want here is the smallest set that discriminates best amongst users.
+         * This list is relatively arbitrary based on observed industry practice.
+         * (It doesn't necessarily meet the criteria of most efficient discrimination.)
+         * @const
+         * @type {!Array.<string>}
+         */
+        probeMimeTypes = [
+          "application/pdf",
+          "video/quicktime",
+          "video/x-msvideo",
+          "audio/x-pn-realaudio-plugin",
+          "audio/mpeg3",
+          "application/googletalk",
+          "application/x-mplayer2",
+          "application/x-director",
+          "application/x-shockwave-flash",
+          "application/x-java-vm",
+          "application/x-googlegears",
+          "application/x-silverlight"
+        ],
+        /**
+         * Generate a string that varies depending on some of the MIME-types that are available.
+         * @return {string}
+         */
+        getMimeTypeInformation = function() {
+          var plugins,
+              mimeTypes = navigator['mimeTypes'];
+          if (mimeTypes) {
+            plugins = "plugins:";
+            for (var i = 0, l = probeMimeTypes.length; i < l; ++i) {
+              var probeMimeType = probeMimeTypes[i];
+              plugins += probeMimeType in mimeTypes ? '1' : '0';
+            }
+          } else {
+            plugins = "";
+          }
+          return plugins;
+        },
+        /**
+         * A set of ActiveX controls to probe for.
+         * What we want here is the smallest set that discriminates best amongst users.
+         * This list is relatively arbitrary based on observed industry practice.
+         * (It doesn't necessarily meet the criteria of most efficient discrimination.)
+         * @const
+         * @type {!Array.<string>}
+         */
+        probeActiveXControls = [
+          "ShockwaveFlash.ShockwaveFlash.1",
+          "AcroPDF.PDF",
+          "AgControl.AgControl",
+          "QuickTime.QuickTime"
+        ],
+        /**
+         * Generate a string that varies depending on some of the ActiveX controls that
+         * are available.
+         * @return {string}
+         */
+        getActiveXTypeInformation = function() {
+          var plugins;
+          if ('ActiveXObject' in window) {
+            plugins = "activex:";
+            for (var i = 0, l = probeActiveXControls.length; i < l; ++i) {
+              var probeActiveXControl = probeActiveXControls[i];
+              try {
+                var plugin = new ActiveXObject(probeActiveXControl);
+                plugins += "1";
+                if ('getVersions' in plugin) {
+                  plugins += "(" + plugin['getVersions']() + ")";
+                } else if ('getVariable' in plugin) {
+                  plugins += "(" + plugin['getVariable']("$version") + ")";
                 }
+              } catch(unused) {
+                plugins += '0';
               }
-            } else {
-              plugins = "";
             }
-            return plugins;
-          };
-      genRandom = function(length, ts) {
-        // Build up the data to mix into the hash.
-        var winWidth = windowWidth(),
-            winHeight = windowHeight(),
-            message = [
-              // Number of milliseconds since 1970.
-              ts.toString(36),
-              // Some browser features that should vary between users.
-              navigator['userAgent'] || "",
-              navigator['platform'] || "",
-              navigator['language'] || "",
-              navigator['systemLanguage'] || "",
-              navigator['userLanguage'] || "",
-              screenWidth ? screenWidth.toString(36) : '',
-              screenHeight ? screenHeight.toString(36) : '',
-              winWidth ? winWidth.toString(36) : '',
-              winHeight ? winWidth.toString(36) : '',
-              // A mask that depends on some plugin-supported MIME types.
-              getMimeTypeInformation(),
-              getActiveXTypeInformation(),
-              // Some random numbers. These are poor quality.
-              randomValue(),
-              randomValue(),
-              randomValue(),
-              randomValue()
-            ];
-        // There is no point trying to use a secure hash here: the entropy is simply too low.
-        var digest = sha3_256(message.join(""));
-        if (digest.length != length) {
-          throw "Length mismatch.";
-        }
-        return digest;
-      }
-    }
-
-    var
+          } else {
+            plugins = "";
+          }
+          return plugins;
+        },
+        /**
+         * Return an array containing strings that are based on local
+         * information.
+         * @return {!Array.<string>}
+         */
+        getAdditionalLocalFacts = function() {
+          var winWidth = windowWidth(),
+              winHeight = windowHeight();
+          return [
+            // Some browser features that should vary between users.
+            navigator['userAgent'] || "",
+            navigator['platform'] || "",
+            navigator['language'] || "",
+            navigator['systemLanguage'] || "",
+            navigator['userLanguage'] || "",
+            screenWidth ? screenWidth.toString(36) : '',
+            screenHeight ? screenHeight.toString(36) : '',
+            winWidth ? winWidth.toString(36) : '',
+            winHeight ? winWidth.toString(36) : '',
+            // A mask that depends on some plugin-supported MIME types.
+            getMimeTypeInformation(),
+            getActiveXTypeInformation()
+          ];
+        },
+        /**
+         * Generate a string that is globally unique.
+         * This is based on a cryptographic hash of local information
+         * that should be random.
+         * @return {string}
+         */
+        generateRandomDigest = function() {
+          var message = [
+            // Number of milliseconds since 1970.
+            now().toString(36),
+            // Current browser location.
+            window.location.href || "",
+            // Random values.
+            generateRandomString(32)
+          ];
+          if (!hasSecureRandom) {
+            message.push.apply(message, getAdditionalLocalFacts());
+          }
+          return sha3_256(message.join(""));
+        },
         /**
          * Digits used for base-64 encoding.
          * @const
@@ -405,20 +461,11 @@ var SCRIPT_NAME = 'divolte.js';
          */
         digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789~_',
         /**
-         * The length of the identifiers that we generate.
-         * This corresponds to the maximum number of bytes that can be trivially generated
-         * using our hash-based fallback mechanism.
-         * @const
-         * @type {number}
-         */
-        identifierLength = 32,
-        /**
          * Generate a random identifier.
-         * @param {number} ts   a timestamp to use for entropy, if necessary.
          * @return {string} a random identifier.
          */
-        generateDigits = function(ts) {
-          var randomData = genRandom(identifierLength, ts);
+        generateDigits = function() {
+          var randomData = generateRandomDigest();
           var id = "";
           for (var i = 0, l = randomData.length; i < l; ++i) {
             // Warning: IE6 doesn't support [] syntax on strings.
@@ -426,7 +473,7 @@ var SCRIPT_NAME = 'divolte.js';
           }
           // Mark pseudo-random identifiers with a '!' suffix, so we
           // can see them amongst secure-random identifiers.
-          if (!isKnownRandom) {
+          if (!hasSecureRandom) {
             id += '!';
           }
           return id;
@@ -441,7 +488,7 @@ var SCRIPT_NAME = 'divolte.js';
     var scriptLoadTime = now();
 
     return function(includeTimestampPrefix) {
-      var digits = generateDigits(scriptLoadTime);
+      var digits = generateDigits();
       // For now our identifiers are version 0.
       return "0:" + (includeTimestampPrefix ? (scriptLoadTime.toString(36) + ':' + digits) : digits);
     };
