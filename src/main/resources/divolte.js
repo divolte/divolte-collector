@@ -85,7 +85,7 @@ var SCRIPT_NAME = 'divolte.js';
           if ('undefined' == typeof url) {
             url = scriptUrl;
           } else {
-            couldNotInitialize('multiple <script> elements found with src="…/' + SCRIPT_NAME + '"');
+            couldNotInitialize('multiple script elements found with src="…/' + SCRIPT_NAME + '"');
           }
         }
       }
@@ -93,7 +93,7 @@ var SCRIPT_NAME = 'divolte.js';
       url = myElement.src;
     }
     if ('undefined' === typeof url) {
-      couldNotInitialize('could not locate <script> with src=".../' + SCRIPT_NAME + '"');
+      couldNotInitialize('could not locate script with src=".../' + SCRIPT_NAME + '"');
     }
     return url;
   }();
