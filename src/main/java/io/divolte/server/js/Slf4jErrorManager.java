@@ -42,11 +42,11 @@ class Slf4jErrorManager extends BasicErrorManager {
         final LogMethod logMethod = (getErrorCount() + getWarningCount() == 0) ?
                                     logger::info : logger::warn;
         if (getTypedPercent() > 0.0) {
-            logMethod.log("{0} error(s), {1} warning(s), {2,number,#.#}% typed",
+            logMethod.log("{} error(s), {} warning(s), {}% typed",
                           getErrorCount(), getWarningCount(), getTypedPercent());
         } else {
             if (getErrorCount() + getWarningCount() > 0) {
-                logMethod.log("{0} error(s), {1} warning(s)",
+                logMethod.log("{} error(s), {} warning(s)",
                               getErrorCount(), getWarningCount());
             }
         }
