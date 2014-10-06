@@ -25,6 +25,7 @@ import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.ErrorManager;
 import com.google.javascript.jscomp.Result;
 import com.google.javascript.jscomp.SourceFile;
+import com.google.javascript.jscomp.WarningLevel;
 
 import static com.google.javascript.jscomp.CompilerOptions.LanguageMode.*;
 
@@ -75,8 +76,10 @@ public class JavaScriptResource {
                                     final boolean debugMode) throws IOException {
         final CompilerOptions options = new CompilerOptions();
         COMPILATION_LEVEL.setOptionsForCompilationLevel(options);
+        COMPILATION_LEVEL.setTypeBasedOptimizationOptions(options);
         options.setLanguageIn(ECMASCRIPT5_STRICT);
         options.setLanguageOut(ECMASCRIPT5_STRICT);
+        WarningLevel.VERBOSE.setOptionsForWarningLevel(options);
 
         // Enable pseudo-compatible mode for debugging where the output is compiled but
         // can be related more easily to the original JavaScript source.
