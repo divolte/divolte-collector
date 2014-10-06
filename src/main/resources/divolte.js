@@ -178,8 +178,8 @@ var SCRIPT_NAME = 'divolte.js';
    */
   var getServerPageView = function(myUrl) {
     var anchorIndex = myUrl.indexOf("#"),
-        anchor = -1 !== anchorIndex ? myUrl.substring(anchorIndex + 1) : undefined;
-    if ('undefined' !== typeof anchor && -1 !== anchor.indexOf('/')) {
+        anchor = -1 !== anchorIndex ? myUrl.substring(anchorIndex + 1) : null;
+    if (null !== anchor && -1 !== anchor.indexOf('/')) {
       throw "DVT not initialized correctly; page view ID may not contain a slash ('/').";
     }
     return anchor;
