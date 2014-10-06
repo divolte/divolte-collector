@@ -67,7 +67,7 @@ public final class ServerTestUtils {
             try {
                 return Optional.ofNullable(events.poll(40, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
             } catch (InterruptedException e) {
-                throw new RuntimeException("Exception while waiting for event.", e);
+                throw new RuntimeException("Interrupted while waiting for event.", e);
             }
         }
     }
