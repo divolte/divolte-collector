@@ -174,7 +174,7 @@ var SCRIPT_NAME = 'divolte.js';
    *
    * @param {string} myUrl The URL used to load this script.
    * @return {?string} the server-supplied pageview ID, if present, or null if not.
-   * @throws {string} if the pageview ID is supplied but contains a slath ('/').
+   * @throws {string} if the pageview ID is supplied but contains a slash ('/').
    */
   var getServerPageView = function(myUrl) {
     var anchorIndex = myUrl.indexOf("#"),
