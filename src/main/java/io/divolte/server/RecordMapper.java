@@ -46,6 +46,7 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -542,10 +543,13 @@ final class RecordMapper {
                 if (rawQuery == null) {
                     return Collections.emptyMap();
                 } else {
-                    return URLEncodedUtils
-                            .parse(rawQuery, StandardCharsets.UTF_8)
-                            .stream()
-                            .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
+                    final List<NameValuePair> parsedParameters =
+                            URLEncodedUtils.parse(rawQuery, StandardCharsets.UTF_8);
+                    return parsedParameters.stream()
+                            .collect(Collectors.toMap(NameValuePair::getName,
+                                     (p) -> Strings.nullToEmpty(p.getValue()),
+                                     (v1, v2) -> v1,
+                                     () -> Maps.newHashMapWithExpectedSize(parsedParameters.size())));
                 }
             });
         }
