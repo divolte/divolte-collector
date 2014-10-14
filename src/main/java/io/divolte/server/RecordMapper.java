@@ -229,7 +229,7 @@ final class RecordMapper {
 
     private static FieldSupplier<String> regexNameFieldSupplier(final Config config, final String targetFieldName) {
         final List<String> regexNames = OptionalConfig.of(config::getStringList, "regexes")
-                                                      .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a array 'regexes' property.", targetFieldName));
+                                                      .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires an array 'regexes' property.", targetFieldName));
         final String sourceFieldName = OptionalConfig.of(config::getString, "field")
                                                .orElseThrow(() -> new SchemaMappingException("Regex name mapping for field %s requires a string 'field' property.", targetFieldName));
         final FieldSupplier<String> fieldSupplier = regexFieldSupplierForName(sourceFieldName);
