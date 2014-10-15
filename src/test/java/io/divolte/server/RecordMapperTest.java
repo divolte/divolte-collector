@@ -256,6 +256,66 @@ public class RecordMapperTest {
     }
 
     @Test
+    public void shouldSetFieldWithEmptyQueryParameterValue() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://ci-website-elb-1121474138.eu-west-1.elb.amazonaws.com/search?q=",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals("", record.get("queryparam").toString());
+    }
+
+    @Test
+    public void shouldSetFieldWithMissingQueryParameterValue() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://ci-website-elb-1121474138.eu-west-1.elb.amazonaws.com/search?q",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals("", record.get("queryparam").toString());
+    }
+
+    @Test
+    public void shouldSetFieldWithFirstQueryParameterValue() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://ci-website-elb-1121474138.eu-west-1.elb.amazonaws.com/search?q=first+param&q=second+param",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals("first param", record.get("queryparam").toString());
+    }
+
+    @Test
+    public void shouldNotFailIfQueryParameterWithMissingNameExists() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-queryparam");
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test",
+                "l=http://ci-website-elb-1121474138.eu-west-1.elb.amazonaws.com/search?q=a+param&=no+name",
+                "r=https://www.example.com/about.html");
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals("a param", record.get("queryparam").toString());
+    }
+
+    @Test
     public void shouldSetFieldFromCustomEventParameter() throws IOException, UnirestException {
         final Schema schema = schemaFromClassPath("/TestRecord.avsc");
         final Config config = ConfigFactory.load("schema-test-customparameter");
