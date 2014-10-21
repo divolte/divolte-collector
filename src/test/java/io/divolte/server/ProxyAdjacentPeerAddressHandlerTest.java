@@ -40,7 +40,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1,192.168.13.23");
         conn.setRequestMethod("GET");
 
-        assertEquals(202, conn.getResponseCode());
+        assertEquals(200, conn.getResponseCode());
 
         EventPayload event = server.waitForEvent();
         assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());
@@ -53,7 +53,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1");
         conn.setRequestMethod("GET");
 
-        assertEquals(202, conn.getResponseCode());
+        assertEquals(200, conn.getResponseCode());
 
         EventPayload event = server.waitForEvent();
         assertEquals("127.0.0.1", event.exchange.getSourceAddress().getHostString());
@@ -66,7 +66,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 192.168.13.23");
         conn.setRequestMethod("GET");
 
-        assertEquals(202, conn.getResponseCode());
+        assertEquals(200, conn.getResponseCode());
 
         EventPayload event = server.waitForEvent();
         assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());
@@ -80,7 +80,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
         conn.addRequestProperty("X-Forwarded-For", "192.168.13.23");
         conn.setRequestMethod("GET");
 
-        assertEquals(202, conn.getResponseCode());
+        assertEquals(200, conn.getResponseCode());
 
         EventPayload event = server.waitForEvent();
         assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());

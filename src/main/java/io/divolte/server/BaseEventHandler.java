@@ -105,7 +105,7 @@ public abstract class BaseEventHandler implements HttpHandler {
             try {
                 logEvent(exchange);
             } finally {
-                exchange.setResponseCode(StatusCodes.ACCEPTED);
+                exchange.setResponseCode(StatusCodes.OK);
                 exchange.getResponseSender().send(transparentImage.slice());
             }
         } else {
