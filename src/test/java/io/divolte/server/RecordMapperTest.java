@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import static io.divolte.server.IncomingRequestProcessor.*;
 import static io.divolte.server.ServerSideCookieEventHandler.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
@@ -88,6 +89,22 @@ public class RecordMapperTest {
     }
 
     @Test
+    public void shouldPopulateDuplicateFlag() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-duplicates");
+
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange(
+                "Divolte/Test"
+                );
+
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals(false, record.get("dupe"));
+    }
+
+    @Test
     public void shouldParseUserAgentString() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-useragent");
@@ -134,7 +151,8 @@ public class RecordMapperTest {
         Config config = ConfigFactory.load("schema-test-customcookie");
         RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
-        setupExchange("Divolte/Test");
+        setupExchange(
+                "Divolte/Test");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals("custom_cookie_value", record.get("customCookie"));
@@ -490,6 +508,7 @@ public class RecordMapperTest {
                     exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
                     exchange.putAttachment(EVENT_ID_KEY, event.value);
                     exchange.putAttachment(FIRST_IN_SESSION_KEY, true);
+                    exchange.putAttachment(DUPLICATE_EVENT_KEY, false);
 
                     exchange.getResponseSender().send("OK");
                     theExchange = exchange;

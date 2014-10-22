@@ -1,6 +1,7 @@
 package io.divolte.server;
 
 import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.IncomingRequestProcessor.*;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -289,6 +290,8 @@ final class RecordMapper {
             return (FieldSupplier<String>) (c) -> c.getQueryParameter(EVENT_TYPE_QUERY_PARAM);
         case "firstInSession":
             return (c) -> Optional.of(c.isFirstInSession());
+        case "duplicate":
+            return (c) -> Optional.of(c.isDuplicateEvent());
         case "geoCityId":
             return (c) -> c.getCity().map(City::getGeoNameId);
         case "geoCityName":
@@ -573,6 +576,10 @@ final class RecordMapper {
 
         public boolean isFirstInSession() {
             return serverExchange.getAttachment(FIRST_IN_SESSION_KEY);
+        }
+
+        public boolean isDuplicateEvent() {
+            return serverExchange.getAttachment(DUPLICATE_EVENT_KEY);
         }
 
         public Optional<ReadableUserAgent> getUserAgentLookup() {
