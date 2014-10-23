@@ -7,7 +7,7 @@
     </encoder>
   </appender>
 
-  <logger name="io.divolte" level="info" />
+  <logger name="io.divolte" level="debug" />
   <logger name="io.divolte.server.IncomingRequestProcessor" level="inherited" />
   <logger name="io.divolte.server.Server" level="inherited" />
 

@@ -6,7 +6,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 @ParametersAreNonnullByDefault
 @NotThreadSafe
 final class ShortTermDuplicateMemory {
-    final int[] memory;
+    private final int[] memory;
 
     public ShortTermDuplicateMemory(final int size) {
         memory = new int[size];
