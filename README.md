@@ -14,7 +14,7 @@ The collector has the following features:
    your site (amongst other things).
 
 For more information you can browse the current
-[User Guide](https://https://github.com/divolte/divolte-collector/blob/master/docs/index.rst).
+[User Guide](https://github.com/divolte/divolte-collector/blob/master/docs/index.rst).
 
 Prerequisites
 -------------
@@ -45,7 +45,7 @@ This will build the documentation and place it under the `build/userdoc/html/` d
 Deployment
 ----------
 
-Please refer to the [User Guide](https://https://github.com/divolte/divolte-collector/blob/master/docs/index.rst)
+Please refer to the [User Guide](https://github.com/divolte/divolte-collector/blob/master/docs/index.rst)
 for information on deploying and configuring the Divolte Collector, as well as information on how to work
 with the collected events.
 
