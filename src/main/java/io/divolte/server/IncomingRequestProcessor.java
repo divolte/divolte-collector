@@ -23,7 +23,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Strings;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -79,14 +78,6 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
 
     @Override
     public ProcessingDirective process(final HttpServerExchange exchange) {
-        final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
-        final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                exchange.getAttachment(PARTY_COOKIE_KEY),
-                exchange.getAttachment(SESSION_COOKIE_KEY),
-                exchange.getAttachment(REQUEST_START_TIME_KEY),
-                exchange.getAttachment(COOKIE_UTC_OFFSET_KEY),
-                avroRecord);
-
         /*
          * Note: we cannot use the actual query string here,
          * as the incoming request processor is agnostic of
@@ -101,22 +92,17 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
                 exchange.getAttachment(EVENT_ID_KEY)
                 );
         final boolean duplicate = memory.observeAndReturnDuplicity(requestHashCode);
+        exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
-        if (duplicate) {
-            if (logger.isDebugEnabled()) {
-                final String queryString = exchange.getQueryString();
-                final String requestUrl = exchange.getRequestURL();
-                final String fullUrl = Strings.isNullOrEmpty(queryString)
-                        ? requestUrl
-                                : requestUrl + '?' + queryString;
-                logger.debug("Received duplicate event from {}: {}", exchange.getSourceAddress(), fullUrl);
-            }
-            if (keepDuplicates) {
-                exchange.putAttachment(DUPLICATE_EVENT_KEY, true);
-                doProcess(exchange, avroRecord, avroBuffer);
-            }
-        } else {
-            exchange.putAttachment(DUPLICATE_EVENT_KEY, false);
+        final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
+        final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
+                exchange.getAttachment(PARTY_COOKIE_KEY),
+                exchange.getAttachment(SESSION_COOKIE_KEY),
+                exchange.getAttachment(REQUEST_START_TIME_KEY),
+                exchange.getAttachment(COOKIE_UTC_OFFSET_KEY),
+                avroRecord);
+
+        if (!duplicate || keepDuplicates) {
             doProcess(exchange, avroRecord, avroBuffer);
         }
 
