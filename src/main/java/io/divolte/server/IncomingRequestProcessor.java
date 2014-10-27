@@ -2,6 +2,7 @@ package io.divolte.server;
 
 import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlusher;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.LookupService;
@@ -78,6 +79,13 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
 
     @Override
     public ProcessingDirective process(final HttpServerExchange exchange) {
+        final CookieValue party = exchange.getAttachment(PARTY_COOKIE_KEY);
+        final CookieValue session = exchange.getAttachment(SESSION_COOKIE_KEY);
+        final String pageView = exchange.getAttachment(PAGE_VIEW_ID_KEY);
+        final String event = exchange.getAttachment(EVENT_ID_KEY);
+        final Long requestStartTime = exchange.getAttachment(REQUEST_START_TIME_KEY);
+        final Long cookieUtcOffset = exchange.getAttachment(COOKIE_UTC_OFFSET_KEY);
+
         /*
          * Note: we cannot use the actual query string here,
          * as the incoming request processor is agnostic of
@@ -86,20 +94,20 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
          * but rather generates these IDs on the server side.
          */
         final int requestHashCode = Objects.hash(
-                exchange.getAttachment(PARTY_COOKIE_KEY),
-                exchange.getAttachment(SESSION_COOKIE_KEY),
-                exchange.getAttachment(PAGE_VIEW_ID_KEY),
-                exchange.getAttachment(EVENT_ID_KEY)
+                party,
+                session,
+                pageView,
+                event
                 );
         final boolean duplicate = memory.observeAndReturnDuplicity(requestHashCode);
         exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
         final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
         final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                exchange.getAttachment(PARTY_COOKIE_KEY),
-                exchange.getAttachment(SESSION_COOKIE_KEY),
-                exchange.getAttachment(REQUEST_START_TIME_KEY),
-                exchange.getAttachment(COOKIE_UTC_OFFSET_KEY),
+                party,
+                session,
+                requestStartTime,
+                cookieUtcOffset,
                 avroRecord);
 
         if (!duplicate || keepDuplicates) {
