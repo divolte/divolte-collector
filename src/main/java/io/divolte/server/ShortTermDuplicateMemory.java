@@ -12,35 +12,53 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.nio.charset.StandardCharsets;
 
 /**
- * This class is used to detect duplicates in the event stream. Its single
- * method is to be called with the hash code of an event or a subset of the
- * uniquely identifying fields of an event as argument. This method both returns
- * whether the event is thought to be a duplicate and updates the internal state
- * of the duplicates memory. Hence, calling this method twice with the same
- * argument will always return true for the second invocation. This class can
- * under some circumstances return false negatives (the observation is though to
- * be unique, but was in fact duplicate) or false positives (the observation is
- * thought to be duplicate, but was in fact unique), although the latter case is
- * far less likely to occur than the former.
- *
- * Duplicate detection works by assigning an incoming observation to a position
- * in a finite amount of memory using the observation modulo the memory size.
- * This means that different observations will map to the same position in the
- * memory. An observation is kept in memory until it is overwritten by another
- * observation that maps to the same position. Before writing an observation
- * into the memory, the current value for the observation's position is compared
- * to the observation itself. If these values are equal, the observation is
- * believed to be duplicate, if not the observation is believed to be unique.
- *
- * Because the event stream is infinite, at some point, all positions in memory
- * will be occupied by some observation and each subsequent observation will
- * always overwrite an existing observation. At this point it is possible that
- * the observation of the first occurrence of a duplicate event is overwritten
- * by another observation that maps to the same position before the second
- * occurrence of the duplicate event is observed, leading to a false negative.
- * It is also possible that two events have colliding hash codes, making them
- * identical as far as this filter is concerned, thus resulting in a false
- * positive.
+ * Probabilistic detection of duplicate events in a stream with fixed memory overhead.
+ * <p>
+ * This class is used to detect duplicates in an event stream. An event
+ * is identified by an array of strings that represent characteristics of the
+ * event. (The same values indicate the same logical event.) Invoking
+ * {@link #isProbableDuplicate(String...)} not only returns whether the event
+ * is probably a duplicate or not, but also updates the internal state such
+ * that the event has been 'seen'. (A second immediate invocation with the same
+ * parameter will always return <code>true</code>.)
+ * <p>
+ * Because this class is probabilistic it can return both false positives
+ * (a unique event is considered to be a duplicate) and false negatives (an event
+ * previously seen is not flagged as a duplicate).
+ * <p>
+ * This class maintains a number of slots as internal state, each of which
+ * can store an event signature. The number of slots is specified as a
+ * constructor parameter. Duplicate detection works by hashing the event
+ * properties to a specific slot, and checking whether the signature stored
+ * in that slot matches the event. The signature is independent of the hash
+ * used to choose a slot.
+ * <p>
+ * Duplicate events are missed (false negatives) when multiple different events
+ * hash to the same slot. The signature of the each such event will replace the
+ * signature of the previous such event. When a prior event is repeated its
+ * signature is no longer present at the slot location and it is not recognized
+ * as a duplicate. For a fixed number of events the proportion of false negatives
+ * is:
+ * <ul>
+ *   <li>Inversely proportional to the number of slots that are configured.
+ *     More slots means fewer false negatives.</li>
+ *   <li>Proportional to the interval between duplicate events. The further
+ *     apart duplicate events occur, the less likely they are to be recognized.</li>
+ * </ul>
+ * <p>
+ * Unique events are incorrectly categorized as duplicates (false positives) when
+ * multiple different events hash to the same slot <em>and</em> have the same
+ * signature, without an intervening event hashing to the same slot. For a fixed
+ * number of events the proportion of false positives is:
+ * <ul>
+ *   <li>Inversely proportional to the number of slots that are configured.
+ *     More slots means fewer false positives.</li>
+ *   <li>Inversely proportional to the probability of multiple events in the same
+ *     slot having the same signature. Signatures are 64-bits in length, meaning
+ *     that the probability of two events having the same signature is 1/(2^32).</li>
+ * </ul>
+ */
+/* TODO: These calculations need revising.
  *
  * The probability of a false positive is equal to the probability of a hash
  * collision with any observation currently in the filter memory. So, if the
@@ -77,6 +95,14 @@ final class ShortTermDuplicateMemory {
 
     private final long[] memory;
 
+    /**
+     * Construct an instance with a specific number of slots.
+     * <p>
+     * More slots lowers the probability of events being categorized
+     * incorrectly, at the expense of more memory.
+     *
+     * @param slotCount the number of slots to use for detecting duplicate events.
+     */
     public ShortTermDuplicateMemory(final int slotCount) {
         memory = new long[slotCount];
     }
