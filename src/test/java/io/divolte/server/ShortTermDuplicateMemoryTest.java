@@ -15,7 +15,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("PMD.AvoidUsingHardCodedIP")
 public class ShortTermDuplicateMemoryTest {
     private static final String URL_STRING = "http://localhost:%d/csc-event";
 
