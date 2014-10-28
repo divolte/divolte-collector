@@ -59,6 +59,7 @@ public final class ServerTestUtils {
             events = new ArrayBlockingQueue<>(100);
             port = findFreePort();
             config = ConfigFactory.parseResources(configResource)
+                        .withFallback(ConfigFactory.parseResources("reference-test.conf"))
                         .withValue("divolte.server.port", ConfigValueFactory.fromAnyRef(port));
             server = new Server(config, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
         }
