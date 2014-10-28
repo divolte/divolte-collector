@@ -89,8 +89,8 @@ final class ShortTermDuplicateMemory {
      */
     public boolean isProbableDuplicate(final String... eventProperties) {
         final Hasher hasher = HASHING_FUNCTION.newHasher();
-        for (int i = 0; i < eventProperties.length; ++i) {
-            hasher.putString(eventProperties[i], StandardCharsets.UTF_8);
+        for (final String eventProperty : eventProperties) {
+            hasher.putString(eventProperty, StandardCharsets.UTF_8);
         }
         return isEventDuplicate(hasher.hash());
     }
