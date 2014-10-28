@@ -102,13 +102,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
              * an endpoint that doesn't require a query string,
              * but rather generates these IDs on the server side.
              */
-            final int requestHashCode = Objects.hash(
-                    party,
-                    session,
-                    pageView,
-                    event
-            );
-            final boolean duplicate = memory.observeAndReturnDuplicity(requestHashCode);
+            final boolean duplicate = memory.isProbableDuplicate(party.value, session.value, pageView, event);
             exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
             if (!duplicate || keepDuplicates) {

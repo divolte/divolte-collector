@@ -1,7 +1,15 @@
 package io.divolte.server;
 
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
+import java.nio.charset.StandardCharsets;
 
 /**
  * This class is used to detect duplicates in the event stream. Its single
@@ -65,17 +73,66 @@ import javax.annotation.concurrent.NotThreadSafe;
 @ParametersAreNonnullByDefault
 @NotThreadSafe
 final class ShortTermDuplicateMemory {
-    private final int[] memory;
+    private static final HashFunction HASHING_FUNCTION = Hashing.murmur3_128();
+
+    private final long[] memory;
 
     public ShortTermDuplicateMemory(final int size) {
-        memory = new int[size];
+        memory = new long[size];
     }
 
-    public boolean observeAndReturnDuplicity(int observation) {
-        final int bucket = (observation & Integer.MAX_VALUE) % memory.length;
-        final boolean result = memory[bucket] == observation;
-        memory[bucket] = observation;
+    /**
+     * Query whether an event has been seen before or not, based on event properties.
+     * @param eventProperties   An array of values that are specific to the event.
+     * @return <code>true</code> if we have probably seen this event previously, or
+     *  false otherwise.
+     */
+    public boolean isProbableDuplicate(final String... eventProperties) {
+        final Hasher hasher = HASHING_FUNCTION.newHasher();
+        for (int i = 0; i < eventProperties.length; ++i) {
+            hasher.putString(eventProperties[i], StandardCharsets.UTF_8);
+        }
+        return isEventDuplicate(hasher.hash());
+    }
 
+    private boolean isEventDuplicate(final HashCode eventDigest) {
+        // Our hashing algorithm produces 8 bytes:
+        //  0: bucket[0]
+        //  1: bucket[1]
+        //  2: bucket[2]
+        //  3: bucket[3]
+        //  4:
+        //  5:
+        //  6:
+        //  7:
+        //  8: signature[0]
+        //  9:  ..
+        // 10:  ..
+        // 11:  ..
+        // 12:  ..
+        // 13:  ..
+        // 14:  ..
+        // 15: signature[7]
+        final byte[] hashBytes = eventDigest.asBytes();
+
+        // We use the low int for the bucket.
+        final int bucketSelector = Ints.fromBytes(hashBytes[0],
+                                                  hashBytes[1],
+                                                  hashBytes[2],
+                                                  hashBytes[3]);
+        // We use the high long for the signature.
+        final long signature = Longs.fromBytes(hashBytes[8],
+                                               hashBytes[9],
+                                               hashBytes[10],
+                                               hashBytes[11],
+                                               hashBytes[12],
+                                               hashBytes[13],
+                                               hashBytes[14],
+                                               hashBytes[15]);
+
+        final int bucket = (bucketSelector & Integer.MAX_VALUE) % memory.length;
+        final boolean result = memory[bucket] == signature;
+        memory[bucket] = signature;
         return result;
     }
 }
