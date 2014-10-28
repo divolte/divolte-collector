@@ -111,16 +111,19 @@ public abstract class BaseEventHandler implements HttpHandler {
             }
         } else {
             if (logger.isDebugEnabled()) {
-                final String queryString = exchange.getQueryString();
-                final String requestUrl = exchange.getRequestURL();
-                final String fullUrl = Strings.isNullOrEmpty(queryString)
-                                       ? requestUrl
-                                       : requestUrl + '?' + queryString;
-                logger.debug("Ignoring duplicate event from {}: {}", sourceAddress, fullUrl);
+                logger.debug("Ignoring duplicate event from {}: {}", sourceAddress, getFullUrl(exchange));
             }
             exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
             exchange.endExchange();
         }
+    }
+
+    private static String getFullUrl(HttpServerExchange exchange) {
+        final String queryString = exchange.getQueryString();
+        final String requestUrl = exchange.getRequestURL();
+        return Strings.isNullOrEmpty(queryString)
+                ? requestUrl
+                : requestUrl + '?' + queryString;
     }
 
     /**
