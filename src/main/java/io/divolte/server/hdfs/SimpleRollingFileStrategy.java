@@ -167,6 +167,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             // Forces a (HDFS) sync on the underlying stream
             currentFile.stream.hsync();
 
+            currentFile.totalRecords += currentFile.recordsSinceLastSync;
             currentFile.recordsSinceLastSync = 0;
             currentFile.lastSyncTime = time;
             possiblyRollFile(time);
@@ -229,6 +230,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
 
         long lastSyncTime;
         int recordsSinceLastSync;
+        long totalRecords;
 
         @SuppressWarnings("resource")
         public HadoopFile(Path path) throws IOException {
@@ -247,6 +249,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
 
             this.openTime = this.lastSyncTime = System.currentTimeMillis();
             this.recordsSinceLastSync = 0;
+            this.totalRecords = 0;
             this.projectedCloseTime = openTime + newFileEveryMillis;
         }
 
@@ -256,11 +259,21 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         }
 
         public void close() throws IOException {
+            totalRecords += recordsSinceLastSync;
             writer.close();
-            final Path publishDestination = getPublishDestination();
-            logger.debug("Moving HDFS file: {} -> {}", path, publishDestination);
-            if (!hdfs.rename(path, publishDestination)) {
-                throw new IOException("Could not rename HDFS file: " + path + " -> " + publishDestination);
+
+            if (totalRecords > 0) {
+                // Publish file to destination directory
+                final Path publishDestination = getPublishDestination();
+                logger.debug("Moving HDFS file: {} -> {}", path, publishDestination);
+                if (!hdfs.rename(path, publishDestination)) {
+                    throw new IOException("Could not rename HDFS file: " + path + " -> " + publishDestination);
+                }
+            } else {
+                // Discard empty file
+                logger.debug("Deleting empty HDFS file: {}", path);
+                throwsIoException(() -> hdfs.delete(path, false))
+                .ifPresent((ioe) -> logger.warn("Could not delete empty HDFS file.", ioe));
             }
         }
     }

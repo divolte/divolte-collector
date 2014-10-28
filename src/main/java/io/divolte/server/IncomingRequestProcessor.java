@@ -1,7 +1,10 @@
 package io.divolte.server;
 
-import static io.divolte.server.BaseEventHandler.*;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlusher;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.LookupService;
@@ -11,25 +14,24 @@ import io.divolte.server.processing.ItemProcessor;
 import io.divolte.server.processing.ProcessingPool;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
+    public final static AttachmentKey<Boolean> CORRUPT_EVENT_KEY = AttachmentKey.create(Boolean.class);
     public final static AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
     @Nullable
@@ -40,6 +42,8 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
     private final IncomingRequestListener listener;
 
     private final RecordMapper mapper;
+
+    private final boolean keepCorrupted;
 
     private final ShortTermDuplicateMemory memory;
     private final boolean keepDuplicates;
@@ -54,6 +58,8 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
         this.listener = listener;
+
+        keepCorrupted = !config.getBoolean("divolte.incoming_request_processor.discard_corrupted");
 
         memory = new ShortTermDuplicateMemory(config.getInt("divolte.incoming_request_processor.duplicate_memory_size"));
         keepDuplicates = !config.getBoolean("divolte.incoming_request_processor.discard_duplicates");
@@ -78,32 +84,37 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
 
     @Override
     public ProcessingDirective process(final HttpServerExchange exchange) {
-        /*
-         * Note: we cannot use the actual query string here,
-         * as the incoming request processor is agnostic of
-         * that sort of thing. The request may have come from
-         * an endpoint that doesn't require a query string,
-         * but rather generates these IDs on the server side.
-         */
-        final int requestHashCode = Objects.hash(
-                exchange.getAttachment(PARTY_COOKIE_KEY),
-                exchange.getAttachment(SESSION_COOKIE_KEY),
-                exchange.getAttachment(PAGE_VIEW_ID_KEY),
-                exchange.getAttachment(EVENT_ID_KEY)
-                );
-        final boolean duplicate = memory.observeAndReturnDuplicity(requestHashCode);
-        exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
+        final boolean corrupt = !isRequestChecksumCorrect(exchange);
+        exchange.putAttachment(CORRUPT_EVENT_KEY, corrupt);
 
-        final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
-        final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                exchange.getAttachment(PARTY_COOKIE_KEY),
-                exchange.getAttachment(SESSION_COOKIE_KEY),
-                exchange.getAttachment(REQUEST_START_TIME_KEY),
-                exchange.getAttachment(COOKIE_UTC_OFFSET_KEY),
-                avroRecord);
+        if (!corrupt || keepCorrupted) {
+            final CookieValue party = exchange.getAttachment(PARTY_COOKIE_KEY);
+            final CookieValue session = exchange.getAttachment(SESSION_COOKIE_KEY);
+            final String pageView = exchange.getAttachment(PAGE_VIEW_ID_KEY);
+            final String event = exchange.getAttachment(EVENT_ID_KEY);
+            final Long requestStartTime = exchange.getAttachment(REQUEST_START_TIME_KEY);
+            final Long cookieUtcOffset = exchange.getAttachment(COOKIE_UTC_OFFSET_KEY);
 
-        if (!duplicate || keepDuplicates) {
-            doProcess(exchange, avroRecord, avroBuffer);
+            /*
+             * Note: we cannot use the actual query string here,
+             * as the incoming request processor is agnostic of
+             * that sort of thing. The request may have come from
+             * an endpoint that doesn't require a query string,
+             * but rather generates these IDs on the server side.
+             */
+            final boolean duplicate = memory.isProbableDuplicate(party.value, session.value, pageView, event);
+            exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
+
+            if (!duplicate || keepDuplicates) {
+                final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
+                final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
+                        party,
+                        session,
+                        requestStartTime,
+                        cookieUtcOffset,
+                        avroRecord);
+                doProcess(exchange, avroRecord, avroBuffer);
+            }
         }
 
         return CONTINUE;
@@ -118,5 +129,50 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         if (null != hdfsFlushingPool) {
             hdfsFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
         }
+    }
+
+    private static final HashFunction CHECKSUM_HASH = Hashing.murmur3_32();
+
+    private static boolean isRequestChecksumCorrect(final HttpServerExchange exchange) {
+        // This is not intended to be robust against intentional tampering; it is intended to guard
+        // against proxies and the like that may have truncated the request.
+
+        return queryParamFromExchange(exchange, CHECKSUM_PARAM)
+                .map(ClientSideCookieEventHandler::tryParseBase36Long)
+                .map((expectedChecksum) -> {
+                    final String canonicalRequestString = buildNormalizedChecksumString(exchange.getQueryParameters());
+                    final int requestChecksum =
+                            CHECKSUM_HASH.hashString(canonicalRequestString, StandardCharsets.UTF_8).asInt();
+                    return expectedChecksum == requestChecksum;
+                })
+                .orElse(false);
+    }
+
+    private static String buildNormalizedChecksumString(final Map<String,Deque<String>> queryParameters) {
+        return buildNormalizedChecksumString(queryParameters instanceof SortedMap
+                ? (SortedMap)queryParameters
+                : new TreeMap<>(queryParameters));
+    }
+
+    private static String buildNormalizedChecksumString(final SortedMap<String,Deque<String>> queryParameters) {
+        /*
+         * Build up a canonical representation of the query parameters. The canonical order is:
+         *  1) Sort the query parameters by key, preserving multiple values (and their order).
+         *  2) The magic parameter containing the checksum is discarded.
+         *  3) Build up a string. For each parameter:
+         *     a) Append the parameter name, followed by a '='.
+         *     b) Append each value of the parameter, followed by a ','.
+         *     c) Append a ';'.
+         *  This is designed to be unambiguous in the face of many edge cases.
+         */
+        final StringBuilder builder = new StringBuilder();
+        queryParameters.forEach((name, values) -> {
+            if (!CHECKSUM_PARAM.equals(name)) {
+                builder.append(name).append('=');
+                values.forEach((value) -> builder.append(value).append(','));
+                builder.append(';');
+            }
+        });
+        return builder.toString();
     }
 }

@@ -149,6 +149,45 @@ public class HdfsFlusherTest {
         assertEquals(2, count.intValue());
     }
 
+    @Test
+    public void shouldNotCreateEmptyFiles() throws IOException, InterruptedException {
+        Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
+        Config config = ConfigFactory.parseResources("hdfs-flusher-test.conf").withFallback(ConfigFactory.parseString(
+                "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 100 millisecond\n"
+                + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
+
+        List<Record> records = LongStream.range(0, 5)
+        .mapToObj((time) -> new GenericRecordBuilder(schema)
+        .set("ts", time)
+        .set("remoteHost", ARBITRARY_IP)
+        .build())
+        .collect(Collectors.toList());
+
+        HdfsFlusher flusher = new HdfsFlusher(config, schema);
+
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+
+        for (int c = 0; c < 4; c++) {
+            Thread.sleep(500);
+            flusher.heartbeat();
+        }
+
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+
+        flusher.cleanup();
+
+        final MutableInt count = new MutableInt(0);
+        Files.walk(tempPublishDir)
+        .filter((p) -> p.toString().endsWith(".avro"))
+        .forEach((p) -> {
+            verifyAvroFile(records, schema, p);
+            count.increment();
+        });
+
+        assertEquals(2, count.intValue());
+    }
+
 
     private void deleteQuietly(Path p) {
         try {

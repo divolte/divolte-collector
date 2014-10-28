@@ -263,6 +263,84 @@ var SCRIPT_NAME = 'divolte.js';
     }}();
 
   /**
+   * Implementation of (32-bit) MurmurHash3.
+   *
+   * This is based on an original implementation by Peter Zotov and placed into
+   * the public domain. (Thanks!)
+   *
+   * The data to hash must contain only single-byte codepoints.
+   *
+   * @param {string} bytes  A string containing the bytes that should be encoded.
+   * @param {number=} seed  An optional number to seed the hash algorithm with. (If not supplied, 0 is used.)
+   * @return {number} a 32-bit number containing the hash of the supplied data.
+   */
+  var murmum3_32 = function() {
+    var c1 = 0xcc9e2d51,
+        c2 = 0x1b873593,
+        mul32 = function(m, n) {
+          var nlo = n & 0xffff;
+          var nhi = n - nlo;
+          return ((nhi * m | 0) + (nlo * m | 0)) | 0;
+        },
+        fmix = function(h) {
+          h ^= h >>> 16;
+          h  = mul32(h, 0x85ebca6b);
+          h ^= h >>> 13;
+          h  = mul32(h, 0xc2b2ae35);
+          h ^= h >>> 16;
+          return h;
+        };
+    return function(bytes, seed) {
+      var len = bytes.length,
+          hash = ('undefined' !== typeof seed) ? seed : 0,
+          roundedEnd = len & ~0x3;
+
+      // Bulk of the data.
+      var k;
+      for (var i = 0; i < roundedEnd; i += 4) {
+        k = (bytes.charCodeAt(i)     & 0xff)        |
+           ((bytes.charCodeAt(i + 1) & 0xff) << 8)  |
+           ((bytes.charCodeAt(i + 2) & 0xff) << 16) |
+           ((bytes.charCodeAt(i + 3) & 0xff) << 24);
+
+        k = mul32(k, c1);
+        // ROTL32(k,15);
+        k = ((k & 0x1ffff) << 15) | (k >>> 17);
+        k = mul32(k, c2);
+
+        hash ^= k;
+        // ROTL32(hash,13);
+        hash = ((hash & 0x7ffff) << 13) | (hash >>> 19);
+        hash = (hash * 5 + 0xe6546b64) | 0;
+      }
+
+      // Leftover data.
+      k = 0;
+      switch (len % 4) {
+        case 3:
+          k = (bytes.charCodeAt(roundedEnd + 2) & 0xff) << 16;
+          // Intentional fall-through.
+        case 2:
+          k |= (bytes.charCodeAt(roundedEnd + 1) & 0xff) << 8;
+          // Intentional fall-through.
+        case 1:
+          k |= (bytes.charCodeAt(roundedEnd) & 0xff);
+
+          k = mul32(k, c1);
+          k = ((k & 0x1ffff) << 15) | (k >>> 17);  // ROTL32(k,15);
+          k = mul32(k, c2);
+          hash ^= k;
+      }
+
+      // Finalization.
+      hash ^= len;
+      hash = fmix(hash);
+
+      return hash;
+    }
+  }();
+
+  /**
    * Generate a globally unique identifier, optionally prefixed with a timestamp.
    * There are two internal implementations, depending on whether Crypto
    * extensions are detected or not.
@@ -592,6 +670,60 @@ var SCRIPT_NAME = 'divolte.js';
   var signalQueue = new SignalQueue();
 
   /**
+   * UTF-8 encode a string.
+   *
+   * @param {string} s  The string to UTF-8 encode.
+   * @return {string} The UTF-8 encoded string, as a string whereby every character corresponds
+   *    to a byte of the UTF-8 encoding of the original string.
+   */
+  var utf8encode = function(s) {
+    return unescape(encodeURIComponent(s));
+  }
+
+  /**
+   * Produce a checksum for a multimap.
+   *
+   * The checksum is a hash of a canonical string derived
+   * from the multimap. The multimap format is an object
+   * whose values are arrays of strings.
+   *
+   * @param {Object.<string, Array.<string>>} multimap   The multimap whose contents should be checksummed.
+   * @return {number} a number that represents a checksum of the multimap.
+   */
+  var calculateChecksum = function(multimap) {
+    /*
+     * Build up a canonical representation of the query parameters. The canonical order is:
+     *  1) Sort the query parameters by key, preserving multiple values (and their order).
+     *  2) Build up a string. For each parameter:
+     *     a) Append the parameter name, followed by a '='.
+     *     b) Append each value of the parameter, followed by a ','.
+     *     c) Append a ';'.
+     *  This is designed to be unambiguous in the face of many edge cases.
+     */
+    var keys = [];
+    for (var key in multimap) {
+      if (multimap.hasOwnProperty(key)) {
+        keys.push(key);
+      }
+    }
+    keys.sort();
+    var canonicalString = "";
+    for (var i = 0; i < keys.length; ++i) {
+      var key = keys[i],
+          values = multimap[key];
+      canonicalString += key;
+      canonicalString += '=';
+      for (var j = 0; j < values.length; ++j) {
+        canonicalString += values[j];
+        canonicalString += ',';
+      }
+      canonicalString += ';';
+    }
+    var canonicalBytes = utf8encode(canonicalString);
+    return murmum3_32(canonicalBytes);
+  };
+
+  /**
    * Event logger.
    *
    * Invoking this method will cause an event to be logged with the Divolte
@@ -637,13 +769,33 @@ var SCRIPT_NAME = 'divolte.js';
       // We don't need anything special for cache-busting; the event ID ensures that each
       // request is for a new and unique URL.
 
-      var params = "",
+      var /**
+           * Query string, incrementally being constructed.
+           * @type {string}
+           */
+          queryString = "",
+          /**
+           * Query parameters, stored as a multimap.
+           * @type {Object.<string, Array.<string>>}
+           */
+          params = {},
+          /**
+           * Add a parameter to the query string being built up.
+           * @param name  {string} the name of the query parameter.
+           * @param value {string} the value of the query parameter.
+           */
           addParam = function(name,value) {
-            if (params.length > 0) {
-              params += '&';
+            if (queryString.length > 0) {
+              queryString += '&';
             }
+            var paramValues = params[name];
+            if ('undefined' === typeof paramValues) {
+              paramValues = [];
+              params[name] = paramValues;
+            }
+            paramValues.push(value);
             // Value can safely contain '&' and '=' without any problems.
-            params += name + '=' + encodeURIComponent(value);
+            queryString += name + '=' + encodeURIComponent(value);
           };
 
       // These are the parameters relating to the event itself.
@@ -695,7 +847,10 @@ var SCRIPT_NAME = 'divolte.js';
       setCookie(SESSION_COOKIE_NAME, sessionId, SESSION_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
       setCookie(PARTY_COOKIE_NAME, partyId, PARTY_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
 
-      signalQueue.enqueue(params);
+      // Last thing we do: add a checksum to the queryString.
+      addParam('x', calculateChecksum(params).toString(36));
+
+      signalQueue.enqueue(queryString);
     } else {
       warn("Ignoring event with no type.");
       eventId = undefined;

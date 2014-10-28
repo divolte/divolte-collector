@@ -54,7 +54,7 @@ final class ClientSideCookieEventHandler extends BaseEventHandler {
         processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
     }
 
-    private static Long tryParseBase36Long(String input) {
+    static Long tryParseBase36Long(String input) {
         try {
             return Long.parseLong(input, 36);
         } catch(NumberFormatException nfe) {
