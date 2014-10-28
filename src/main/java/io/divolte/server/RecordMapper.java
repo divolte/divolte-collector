@@ -290,6 +290,8 @@ final class RecordMapper {
             return (FieldSupplier<String>) (c) -> c.getQueryParameter(EVENT_TYPE_QUERY_PARAM);
         case "firstInSession":
             return (c) -> Optional.of(c.isFirstInSession());
+        case "corrupt":
+            return (c) -> Optional.of(c.isCorruptEvent());
         case "duplicate":
             return (c) -> Optional.of(c.isDuplicateEvent());
         case "geoCityId":
@@ -576,6 +578,10 @@ final class RecordMapper {
 
         public boolean isFirstInSession() {
             return serverExchange.getAttachment(FIRST_IN_SESSION_KEY);
+        }
+
+        public boolean isCorruptEvent() {
+            return serverExchange.getAttachment(CORRUPT_EVENT_KEY);
         }
 
         public boolean isDuplicateEvent() {

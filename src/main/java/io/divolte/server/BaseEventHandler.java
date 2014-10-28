@@ -51,6 +51,7 @@ public abstract class BaseEventHandler implements HttpHandler {
     public final static String SCREEN_PIXEL_WIDTH_QUERY_PARAM = "i";
     public final static String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
     public final static String DEVICE_PIXEL_RATIO = "k";
+    public final static String CHECKSUM_PARAM = "x";
 
     private final static ETag SENTINEL_ETAG = new ETag(false, "6b3edc43-20ec-4078-bc47-e965dd76b88a");
     private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
