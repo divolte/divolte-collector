@@ -140,6 +140,11 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         return queryParamFromExchange(exchange, CHECKSUM_PARAM)
                 .map(ClientSideCookieEventHandler::tryParseBase36Long)
                 .map((expectedChecksum) -> {
+                    /*
+                     * We could optimize this by calculating the checksum directly, instead of building up
+                     * the intermediate string representation. For now the debug value of the string exceeds
+                     * the benefits of going slightly faster.
+                     */
                     final String canonicalRequestString = buildNormalizedChecksumString(exchange.getQueryParameters());
                     final int requestChecksum =
                             CHECKSUM_HASH.hashString(canonicalRequestString, StandardCharsets.UTF_8).asInt();
