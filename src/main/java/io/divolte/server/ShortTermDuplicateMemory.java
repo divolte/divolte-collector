@@ -92,10 +92,10 @@ final class ShortTermDuplicateMemory {
         for (final String eventProperty : eventProperties) {
             hasher.putString(eventProperty, StandardCharsets.UTF_8);
         }
-        return isEventDuplicate(hasher.hash());
+        return isProbablyDuplicate(hasher.hash());
     }
 
-    private boolean isEventDuplicate(final HashCode eventDigest) {
+    private boolean isProbablyDuplicate(final HashCode eventDigest) {
         // Our hashing algorithm produces 8 bytes:
         //  0: bucket[0]
         //  1: bucket[1]
