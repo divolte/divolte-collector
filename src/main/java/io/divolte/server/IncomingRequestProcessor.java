@@ -137,7 +137,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         // This is not intended to be robust against intentional tampering; it is intended to guard
         // against proxies and the like that may have truncated the request.
 
-        return queryParamFromExchange(exchange, CHECKSUM_PARAM)
+        return queryParamFromExchange(exchange, CHECKSUM_QUERY_PARAM)
                 .map(ClientSideCookieEventHandler::tryParseBase36Long)
                 .map((expectedChecksum) -> {
                     /*
@@ -179,7 +179,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
          */
         final StringBuilder builder = new StringBuilder();
         queryParameters.forEach((name, values) -> {
-            if (!CHECKSUM_PARAM.equals(name)) {
+            if (!CHECKSUM_QUERY_PARAM.equals(name)) {
                 builder.append(name).append('=');
                 values.forEach((value) -> builder.append(value).append(','));
                 builder.append(';');
