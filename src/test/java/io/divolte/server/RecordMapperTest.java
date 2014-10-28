@@ -108,9 +108,7 @@ public class RecordMapperTest {
 
         RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
-        setupExchange(
-                "Divolte/Test"
-                );
+        setupExchange("Divolte/Test");
 
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
@@ -164,8 +162,7 @@ public class RecordMapperTest {
         Config config = ConfigFactory.load("schema-test-customcookie");
         RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
-        setupExchange(
-                "Divolte/Test");
+        setupExchange("Divolte/Test");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals("custom_cookie_value", record.get("customCookie"));
@@ -482,12 +479,11 @@ public class RecordMapperTest {
             ) throws UnirestException {
 
         String queryString = Stream.of(query)
-        .map((q) ->  q.split("=", 2))
-        .map((q) -> q[0] + "=" + encodeWithoutBitching(q[1]))
-        .collect(Collectors.joining("&"));
+                .map((q) ->  q.split("=", 2))
+                .map((q) -> q[0] + "=" + encodeWithoutBitching(q[1]))
+                .collect(Collectors.joining("&"));
 
-        Unirest.get(
-                String.format("http://localhost:1234/whatever/happens/is/fine%s", "".equals(queryString) ? "" : "?" + queryString))
+        Unirest.get(String.format("http://localhost:1234/whatever/happens/is/fine%s", "".equals(queryString) ? "" : "?" + queryString))
                 .header("accept", "text/plain")
                 .header("User-Agent", userAgent)
                 .header("Cookie", "custom_cookie=custom_cookie_value;typed_cookie_int=42;typed_cookie_bool=true")
