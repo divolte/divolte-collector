@@ -7,8 +7,6 @@ import io.divolte.server.ServerTestUtils.TestServer;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 
 import org.junit.After;
@@ -114,7 +112,7 @@ public class ShortTermDuplicateMemoryTest {
         assertEquals(false, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
     }
 
-    private void request(int which) throws MalformedURLException, IOException, ProtocolException {
+    private void request(int which) throws IOException {
         URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRINGS[which]);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
