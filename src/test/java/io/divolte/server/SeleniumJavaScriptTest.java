@@ -111,7 +111,7 @@ public class SeleniumJavaScriptTest {
     }
 
     @Test
-    public void shouldRegeneratIDsOnRefresh() {
+    public void shouldRegenerateIDsOnRefresh() {
         Preconditions.checkState(null != driver && null != server);
 
         // Navigate to the same page twice
