@@ -42,6 +42,55 @@ To build the User Guide:
 
 This will build the documentation and place it under the `build/userdoc/html/` directory.
 
+Testing
+-------
+
+Some parts of the server are covered by automated tests. These can be executed with:
+
+    % ./gradlew test
+
+By default this will skip browser-based integration tests. Currently browser-based
+testing is supported using: 
+
+ - [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/)
+ - [PhantomJS](http://phantomjs.org)
+ - [SauceLabs](http://saucelabs.com)
+
+### Chromedriver ###
+
+ChromeDriver must be installed locally. Under OS X this can be installed via
+HomeBrew:
+
+    % brew install chromedriver
+    
+Tests can then be executed:
+
+    % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.11/bin/chromedriver ./gradlew cleanTest test
+    
+### PhantomJS ###
+
+*Note: broken pending a fix that should appear in PhantomJS 2.0.*
+
+PhantomJS must be installed locally. Under OS X this can be installed via
+HomeBrew:
+
+    % brew install phantomjs
+    
+Tests can then be executed:
+
+    % SELENIUM_DRIVER=phantom gradle cleanTest test
+ 
+### SauceLabs ###
+
+If you have a SauceLabs account, you can test against a wide variety of browsers.
+Once you have a username and API key, tests can then be executed:
+
+    % export SAUCE_USER_NAME=<username>
+    % export SAUCE_API_KEY=<api key>
+    % SELENIUM_DRIVER=sauce ./gradle cleanTest test
+
+These tests can take quite some time to execute.
+    
 Deployment
 ----------
 
