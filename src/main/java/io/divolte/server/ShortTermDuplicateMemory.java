@@ -77,8 +77,8 @@ final class ShortTermDuplicateMemory {
 
     private final long[] memory;
 
-    public ShortTermDuplicateMemory(final int size) {
-        memory = new long[size];
+    public ShortTermDuplicateMemory(final int slotCount) {
+        memory = new long[slotCount];
     }
 
     /**
@@ -97,10 +97,10 @@ final class ShortTermDuplicateMemory {
 
     private boolean isProbablyDuplicate(final HashCode eventDigest) {
         // Our hashing algorithm produces 8 bytes:
-        //  0: bucket[0]
-        //  1: bucket[1]
-        //  2: bucket[2]
-        //  3: bucket[3]
+        //  0: slot[0]
+        //  1: slot[1]
+        //  2: slot[2]
+        //  3: slot[3]
         //  4:
         //  5:
         //  6:
@@ -115,11 +115,11 @@ final class ShortTermDuplicateMemory {
         // 15: signature[7]
         final byte[] hashBytes = eventDigest.asBytes();
 
-        // We use the low int for the bucket.
-        final int bucketSelector = Ints.fromBytes(hashBytes[0],
-                                                  hashBytes[1],
-                                                  hashBytes[2],
-                                                  hashBytes[3]);
+        // We use the low int for the slot.
+        final int slotSelector = Ints.fromBytes(hashBytes[0],
+                                                hashBytes[1],
+                                                hashBytes[2],
+                                                hashBytes[3]);
         // We use the high long for the signature.
         final long signature = Longs.fromBytes(hashBytes[8],
                                                hashBytes[9],
@@ -130,9 +130,9 @@ final class ShortTermDuplicateMemory {
                                                hashBytes[14],
                                                hashBytes[15]);
 
-        final int bucket = (bucketSelector & Integer.MAX_VALUE) % memory.length;
-        final boolean result = memory[bucket] == signature;
-        memory[bucket] = signature;
+        final int slot = (slotSelector & Integer.MAX_VALUE) % memory.length;
+        final boolean result = memory[slot] == signature;
+        memory[slot] = signature;
         return result;
     }
 }
