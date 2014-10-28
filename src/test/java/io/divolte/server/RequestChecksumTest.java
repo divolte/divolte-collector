@@ -86,7 +86,7 @@ public class RequestChecksumTest {
         request(URL_QUERY_CHECKSUM_GOOD);
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
-        assertFalse((Boolean) event.record.get("detectedCorruption"));
+        assertFalse(event.exchange.getAttachment(IncomingRequestProcessor.CORRUPT_EVENT_KEY));
     }
 
     @Test
@@ -94,7 +94,7 @@ public class RequestChecksumTest {
         request(URL_QUERY_CHECKSUM_BAD);
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
-        assertTrue((Boolean)event.record.get("detectedCorruption"));
+        assertTrue(event.exchange.getAttachment(IncomingRequestProcessor.CORRUPT_EVENT_KEY));
     }
 
     @Test
@@ -102,7 +102,7 @@ public class RequestChecksumTest {
         request(URL_QUERY_CHECKSUM_MISSING);
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
-        assertTrue((Boolean) event.record.get("detectedCorruption"));
+        assertTrue(event.exchange.getAttachment(IncomingRequestProcessor.CORRUPT_EVENT_KEY));
     }
 
     @Test
@@ -111,7 +111,7 @@ public class RequestChecksumTest {
             request(urlQueryChecksumPartial);
             Preconditions.checkState(null != server);
             final EventPayload event = server.waitForEvent();
-            assertTrue((Boolean) event.record.get("detectedCorruption"));
+            assertTrue(event.exchange.getAttachment(IncomingRequestProcessor.CORRUPT_EVENT_KEY));
         }
     }
 
@@ -120,8 +120,9 @@ public class RequestChecksumTest {
         request(URL_QUERY_CHECKSUM_UNICODE);
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
-        assertFalse((Boolean) event.record.get("detectedCorruption"));
-        assertEquals("ụñ⚕©ºḌℨ", event.record.get("eventType"));
+        assertFalse(event.exchange.getAttachment(IncomingRequestProcessor.CORRUPT_EVENT_KEY));
+        final String eventType = event.exchange.getQueryParameters().get(BaseEventHandler.EVENT_TYPE_QUERY_PARAM).getFirst();
+        assertEquals("ụñ⚕©ºḌℨ", eventType);
     }
 
     @Test
@@ -132,7 +133,8 @@ public class RequestChecksumTest {
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
         // The first request should be missing, and we should now have the sentinel event.
-        assertEquals("sentinelEvent", event.record.get("eventType"));
+        final String eventType = event.exchange.getQueryParameters().get(BaseEventHandler.EVENT_TYPE_QUERY_PARAM).getFirst();
+        assertEquals("sentinelEvent", eventType);
     }
 
     private void request(final String queryString) throws IOException {

@@ -4,6 +4,7 @@
     "name": "TestRecord",
     "fields": [
         { "name": "sessionStart",                    "type": "boolean" },
+        { "name": "unreliable",                      "type": ["null","boolean"], "default": null },
         { "name": "dupe",                            "type": ["null","boolean"], "default": null },
         { "name": "ts",                              "type": "long" },
         { "name": "eventType",                       "type": ["null","string"],  "default": null },
