@@ -148,7 +148,14 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
                     final String canonicalRequestString = buildNormalizedChecksumString(exchange.getQueryParameters());
                     final int requestChecksum =
                             CHECKSUM_HASH.hashString(canonicalRequestString, StandardCharsets.UTF_8).asInt();
-                    return expectedChecksum == requestChecksum;
+                    final boolean isRequestChecksumCorrect = expectedChecksum == requestChecksum;
+                    if (!isRequestChecksumCorrect && logger.isDebugEnabled()) {
+                        logger.debug("Checksum mismatch detected; expected {} but was {} for request string: {}",
+                                Long.toString(expectedChecksum, 36),
+                                Integer.toString(requestChecksum, 36),
+                                canonicalRequestString);
+                    }
+                    return isRequestChecksumCorrect;
                 })
                 .orElse(false);
     }
