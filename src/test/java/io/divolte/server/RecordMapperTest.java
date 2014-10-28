@@ -48,7 +48,6 @@ public class RecordMapperTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-
     @Test
     public void shouldPopulateFlatFields() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
