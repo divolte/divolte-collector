@@ -18,10 +18,14 @@ applicationDefaultJvmArgs = [
         "-Djava.awt.headless=true"
 ]
 
-compileJava.options.encoding = 'UTF-8'
-
+// This applies to all JavaCompile tasks, not just :compileJava
+// (which is the delegate for compileJava {}).
 tasks.withType(JavaCompile) {
-    options.compilerArgs << "-Xlint:deprecation"
+    // All our files are UTF-8 encoded.
+    options.encoding = 'UTF-8'
+
+    // Log details about usage of deprecated symbols.
+    options.deprecation = true
 }
 
 repositories {
