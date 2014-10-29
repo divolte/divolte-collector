@@ -52,10 +52,10 @@ dependencies {
         exclude group: 'jline', module: 'jline'
     }
     compile group: 'org.apache.hadoop', name:'hadoop-hdfs', version: '2.4.1'
-    compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.20') {
+    compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.21') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
-    compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.08'
+    compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.09'
     compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'0.8.1') {
         // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
         // client which conflicts with the version via Hadoop.
