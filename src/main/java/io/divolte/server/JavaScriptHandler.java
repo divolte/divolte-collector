@@ -13,6 +13,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -31,6 +32,9 @@ import com.google.common.collect.Iterables;
 final class JavaScriptHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
+    private static final Duration CACHING_AGE = Duration.ofHours(1);
+    private static final String CACHE_CONTROL_HEADER_VALUE = "public, max-age=" + CACHING_AGE.getSeconds();
+
     private static final Splitter HEADER_SPLITTER =
             Splitter.on(',').trimResults().omitEmptyStrings();
 
@@ -48,7 +52,7 @@ final class JavaScriptHandler implements HttpHandler {
         }
         // Start with headers that we always set the same way.
         final HeaderMap responseHeaders = exchange.getResponseHeaders();
-        responseHeaders.put(Headers.CACHE_CONTROL, "public");
+        responseHeaders.put(Headers.CACHE_CONTROL, CACHE_CONTROL_HEADER_VALUE);
 
         // Figure out if we possibly need to deal with a compressed response,
         // based on client capability.
