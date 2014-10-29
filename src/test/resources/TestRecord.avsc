@@ -4,7 +4,8 @@
     "name": "TestRecord",
     "fields": [
         { "name": "sessionStart",                    "type": "boolean" },
-        { "name": "dupe",                            "type": ["null", "boolean"], "default": null },
+        { "name": "unreliable",                      "type": ["null","boolean"], "default": null },
+        { "name": "dupe",                            "type": ["null","boolean"], "default": null },
         { "name": "ts",                              "type": "long" },
         { "name": "eventType",                       "type": ["null","string"],  "default": null },
         { "name": "userAgentString",                 "type": ["null","string"],  "default": null },
@@ -12,7 +13,7 @@
         { "name": "referer",                         "type": ["null","string"],  "default": null },
         { "name": "location",                        "type": ["null","string"],  "default": null },
         { "name": "queryparam",                      "type": "string",           "default": "not set" },
-        { "name": "queryparamInteger",               "type": ["null","int"],      "default": null },
+        { "name": "queryparamInteger",               "type": ["null","int"],     "default": null },
         { "name": "queryparamBoolean",               "type": "boolean",          "default": false },
         { "name": "queryparamDouble",                "type": "double",           "default": -1.0 },
         { "name": "queryparamLong",                  "type": "long",             "default": -1 },

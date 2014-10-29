@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import com.typesafe.config.ConfigValueFactory;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;
@@ -58,7 +59,8 @@ public final class ServerTestUtils {
             events = new ArrayBlockingQueue<>(100);
             port = findFreePort();
             config = ConfigFactory.parseResources(configResource)
-                     .withFallback(ConfigFactory.parseString("divolte.server.port = " + port));
+                        .withFallback(ConfigFactory.parseResources("reference-test.conf"))
+                        .withValue("divolte.server.port", ConfigValueFactory.fromAnyRef(port));
             server = new Server(config, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
         }
 

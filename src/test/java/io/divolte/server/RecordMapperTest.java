@@ -48,7 +48,6 @@ public class RecordMapperTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-
     @Test
     public void shouldPopulateFlatFields() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
@@ -89,15 +88,27 @@ public class RecordMapperTest {
     }
 
     @Test
+    public void shouldPopulateCorruptFlag() throws IOException, UnirestException {
+        Schema schema = schemaFromClassPath("/TestRecord.avsc");
+        Config config = ConfigFactory.load("schema-test-corrupted");
+
+        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+
+        setupExchange("Divolte/Test");
+
+        GenericRecord record = maker.newRecordFromExchange(theExchange);
+
+        assertEquals(false, record.get("unreliable"));
+    }
+
+    @Test
     public void shouldPopulateDuplicateFlag() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-duplicates");
 
         RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
-        setupExchange(
-                "Divolte/Test"
-                );
+        setupExchange("Divolte/Test");
 
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
@@ -151,8 +162,7 @@ public class RecordMapperTest {
         Config config = ConfigFactory.load("schema-test-customcookie");
         RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
-        setupExchange(
-                "Divolte/Test");
+        setupExchange("Divolte/Test");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         assertEquals("custom_cookie_value", record.get("customCookie"));
@@ -469,12 +479,11 @@ public class RecordMapperTest {
             ) throws UnirestException {
 
         String queryString = Stream.of(query)
-        .map((q) ->  q.split("=", 2))
-        .map((q) -> q[0] + "=" + encodeWithoutBitching(q[1]))
-        .collect(Collectors.joining("&"));
+                .map((q) ->  q.split("=", 2))
+                .map((q) -> q[0] + "=" + encodeWithoutBitching(q[1]))
+                .collect(Collectors.joining("&"));
 
-        Unirest.get(
-                String.format("http://localhost:1234/whatever/happens/is/fine%s", "".equals(queryString) ? "" : "?" + queryString))
+        Unirest.get(String.format("http://localhost:1234/whatever/happens/is/fine%s", "".equals(queryString) ? "" : "?" + queryString))
                 .header("accept", "text/plain")
                 .header("User-Agent", userAgent)
                 .header("Cookie", "custom_cookie=custom_cookie_value;typed_cookie_int=42;typed_cookie_bool=true")
@@ -508,6 +517,7 @@ public class RecordMapperTest {
                     exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
                     exchange.putAttachment(EVENT_ID_KEY, event.value);
                     exchange.putAttachment(FIRST_IN_SESSION_KEY, true);
+                    exchange.putAttachment(CORRUPT_EVENT_KEY, false);
                     exchange.putAttachment(DUPLICATE_EVENT_KEY, false);
 
                     exchange.getResponseSender().send("OK");

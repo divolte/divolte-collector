@@ -111,7 +111,7 @@ public class SeleniumJavaScriptTest {
     }
 
     @Test
-    public void shouldRegeneratIDsOnRefresh() {
+    public void shouldRegenerateIDsOnRefresh() {
         Preconditions.checkState(null != driver && null != server);
 
         // Navigate to the same page twice
@@ -264,7 +264,7 @@ public class SeleniumJavaScriptTest {
                 Integer.parseInt(params.get(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).getFirst(), 36),
                 greaterThan(50));
 
-//        assertTrue(params.containsKey(DEVICE_PIXEL_RATIO));
+//        assertTrue(params.containsKey(DEVICE_PIXEL_RATIO_QUERY_PARAM));
     }
 
     @Test

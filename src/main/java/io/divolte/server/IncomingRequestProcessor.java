@@ -137,13 +137,25 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         // This is not intended to be robust against intentional tampering; it is intended to guard
         // against proxies and the like that may have truncated the request.
 
-        return queryParamFromExchange(exchange, CHECKSUM_PARAM)
+        return queryParamFromExchange(exchange, CHECKSUM_QUERY_PARAM)
                 .map(ClientSideCookieEventHandler::tryParseBase36Long)
                 .map((expectedChecksum) -> {
+                    /*
+                     * We could optimize this by calculating the checksum directly, instead of building up
+                     * the intermediate string representation. For now the debug value of the string exceeds
+                     * the benefits of going slightly faster.
+                     */
                     final String canonicalRequestString = buildNormalizedChecksumString(exchange.getQueryParameters());
                     final int requestChecksum =
                             CHECKSUM_HASH.hashString(canonicalRequestString, StandardCharsets.UTF_8).asInt();
-                    return expectedChecksum == requestChecksum;
+                    final boolean isRequestChecksumCorrect = expectedChecksum == requestChecksum;
+                    if (!isRequestChecksumCorrect && logger.isDebugEnabled()) {
+                        logger.debug("Checksum mismatch detected; expected {} but was {} for request string: {}",
+                                Long.toString(expectedChecksum, 36),
+                                Integer.toString(requestChecksum, 36),
+                                canonicalRequestString);
+                    }
+                    return isRequestChecksumCorrect;
                 })
                 .orElse(false);
     }
@@ -167,7 +179,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
          */
         final StringBuilder builder = new StringBuilder();
         queryParameters.forEach((name, values) -> {
-            if (!CHECKSUM_PARAM.equals(name)) {
+            if (!CHECKSUM_QUERY_PARAM.equals(name)) {
                 builder.append(name).append('=');
                 values.forEach((value) -> builder.append(value).append(','));
                 builder.append(';');

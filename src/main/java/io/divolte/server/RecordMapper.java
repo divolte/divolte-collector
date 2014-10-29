@@ -395,7 +395,7 @@ final class RecordMapper {
         case "screenPixelHeight":
             return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "devicePixelRatio":
-            return (c) -> c.getQueryParameter(DEVICE_PIXEL_RATIO).map(RecordMapper::tryParseBase36Int);
+            return (c) -> c.getQueryParameter(DEVICE_PIXEL_RATIO_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
         case "partyId":
             return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map((cv) -> cv.value);
         case "sessionId":
