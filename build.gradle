@@ -1,11 +1,10 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
-apply plugin: 'application'
 apply plugin: 'findbugs'
 apply plugin: 'pmd'
 apply plugin: 'jacoco'
-apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'application'
 
 defaultTasks 'clean', 'build'
 
@@ -108,7 +107,6 @@ jacoco {
     toolVersion = "0.7.1.201405082137"
 }
 
-// For now we prefer to have a HTML report instead of XML.
 findbugsMain.reports {
     xml.enabled = true
     html.enabled = false
@@ -122,17 +120,48 @@ task wrapper(type: Wrapper) {
     gradleVersion = '2.1'
 }
 
-def confDir = ""
+// This only applies to running with gradle run
+// We use a different run script when creating a distribution
 run {
-    try {
-        confDir = System.getenv("HADOOP_CONF_DIR")
-        classpath += files(confDir)
-    } catch (NullPointerException nphc) {
-        try {
-            confDir = System.getenv("YARN_CONF_DIR")
-            classpath += files(confDir)
-        } catch (NullPointerException npyc) {
-            // Do nothing
+    if (System.getenv().containsKey("HADOOP_CONF_DIR")) {
+        classpath += files(System.getenv("HADOOP_CONF_DIR"))
+    }
+    if (System.getenv().containsKey("YARN_CONF_DIR")) {
+        classpath += files(System.getenv("YARN_CONF_DIR"))
+    }
+}
+
+// Build distribution .tar.gz or .zip
+def distributionLayout = {
+    def baseDir = archiveName - (".${extension}")
+
+    into("${baseDir}/lib/") {
+        from project.configurations.runtime
+    }
+    into("${baseDir}/lib/") {
+        from(project.buildDir.path + "/libs") {
+            include "**/*.jar"
         }
     }
+
+    into("${baseDir}/conf/") {
+        from("src/dist/conf") {
+            include "**/*"
+        }
+        // Use the reference.conf as a example application.conf
+        from("src/main/resources/reference.conf") {
+            rename("reference.conf", "application.conf.example")
+        }
+    }
+}
+
+task tarball(dependsOn: build, type: Tar) {
+    compression = Compression.GZIP
+    extension = "tar.gz"
+
+    configure distributionLayout
+}
+
+task zip(dependsOn: build, type: Zip) {
+    configure distributionLayout
 }
