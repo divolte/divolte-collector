@@ -131,7 +131,12 @@ run {
     }
 }
 
-// Build distribution .tar.gz or .zip
+/*
+ * Build distribution .tar.gz or .zip. We don't use the distribution
+ * plugin as that allows for less flexibility in laying out the
+ * archive. It also conflicts in non-trivial ways with the application
+ * plugin (or the other way around).
+ */
 def distributionLayout = {
     def baseDir = archiveName - (".${extension}")
 
@@ -164,4 +169,46 @@ task tarball(dependsOn: build, type: Tar) {
 
 task zip(dependsOn: build, type: Zip) {
     configure distributionLayout
+}
+
+
+/*
+ * Generate Sphinx documentation
+ */
+task processUserDoc {
+    ext.source = file("docs")
+    ext.sphinxDir = new File(buildDir, "sphinx")
+    inputs.dir source
+    outputs.dir sphinxDir
+}
+
+import org.apache.tools.ant.filters.ReplaceTokens
+
+processUserDoc << {
+    // Copy/replace @version@
+    copy {
+        from(source) {
+            filter(ReplaceTokens, tokens: ["version": version])
+        }
+        into sphinxDir
+        exclude "**/*.png"
+    }
+    // Copy images (no replacement)
+    copy {
+        from(source)
+        into sphinxDir
+        include "**/*.png"
+    }
+}
+
+task userDoc(dependsOn: processUserDoc, type: Exec) {
+    ext.sphinxDir = processUserDoc.sphinxDir
+    ext.htmlDocDir = new File(buildDir, "userdoc/html")
+    inputs.dir sphinxDir
+    outputs.dir htmlDocDir
+
+    workingDir sphinxDir
+
+    executable "sphinx-build"
+    args '-b', 'html', sphinxDir, htmlDocDir
 }
