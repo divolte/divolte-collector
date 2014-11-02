@@ -14,7 +14,7 @@ The collector has the following features:
    your site (amongst other things).
 
 For more information you can browse the current
-[User Guide](https://github.com/divolte/divolte-collector/blob/master/docs/index.rst).
+[User Guide](docs/index.rst).
 
 Prerequisites
 -------------
@@ -31,7 +31,11 @@ Building
 
 To build the Divolte Collector server itself:
 
-    % ./gradlew build distZip
+    % ./gradlew zip
+
+or
+
+    % ./gradlew tarball
 
 This will build everything and produce an elementary distribution archive under the
 `build/distributions/` directory.
@@ -50,7 +54,7 @@ Some parts of the server are covered by automated tests. These can be executed w
     % ./gradlew test
 
 By default this will skip browser-based integration tests. Currently browser-based
-testing is supported using: 
+testing is supported using:
 
  - [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/)
  - [PhantomJS](http://phantomjs.org)
@@ -62,11 +66,11 @@ ChromeDriver must be installed locally. Under OS X this can be installed via
 HomeBrew:
 
     % brew install chromedriver
-    
+
 Tests can then be executed:
 
     % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.11/bin/chromedriver ./gradlew cleanTest test
-    
+
 ### PhantomJS ###
 
 *Note: broken pending a fix that should appear in PhantomJS 2.0.*
@@ -75,11 +79,11 @@ PhantomJS must be installed locally. Under OS X this can be installed via
 HomeBrew:
 
     % brew install phantomjs
-    
+
 Tests can then be executed:
 
     % SELENIUM_DRIVER=phantom gradle cleanTest test
- 
+
 ### SauceLabs ###
 
 If you have a SauceLabs account, you can test against a wide variety of browsers.
@@ -90,11 +94,11 @@ Once you have a username and API key, tests can then be executed:
     % SELENIUM_DRIVER=sauce ./gradle cleanTest test
 
 These tests can take quite some time to execute.
-    
+
 Deployment
 ----------
 
-Please refer to the [User Guide](https://github.com/divolte/divolte-collector/blob/master/docs/index.rst)
+Please refer to the [User Guide](docs/index.rst)
 for information on deploying and configuring the Divolte Collector, as well as information on how to work
 with the collected events.
 
