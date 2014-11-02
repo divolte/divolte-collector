@@ -1,3 +1,71 @@
 #!/bin/sh
-echo 'Whatever happens is fine!'
 
+# Attempt to set APP_HOME
+# Resolve links: $0 may be a link
+PRG="$0"
+# Need this for relative symlinks.
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+        PRG="$link"
+    else
+        PRG=`dirname "$PRG"`"/$link"
+    fi
+done
+SAVED="`pwd`"
+cd "`dirname \"$PRG\"`/.." >&-
+APP_HOME="`pwd -P`"
+cd "$SAVED" >&-
+
+
+# Locate config dir and source divolte-env.sh
+[ -n "$DIVOLTE_CONF_DIR" ] && CONF_DIR="$DIVOLTE_CONF_DIR" || CONF_DIR="$APP_HOME/conf"
+
+if [ -f "$CONF_DIR/divolte-env.sh" ]; then
+  . "$CONF_DIR/divolte-env.sh"
+fi
+
+
+# add libs to CLASSPATH
+function join { local IFS="$1"; shift; echo "$*"; }
+CLASSPATH=$(join ":" $APP_HOME/lib/*.jar)
+
+# add any present HADOOP_CONF_DIR
+[ -n "$HADOOP_CONF_DIR" ] && CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH
+
+# attempt to find java
+if [ -z "$JAVA_HOME" ]; then
+  for candidate in \
+    /usr/java/jdk1.8.0_* \
+    /usr/java/default ; do
+    if [ -e $candidate/bin/java ]; then
+      export JAVA_HOME=$candidate
+      break
+    fi
+  done
+  # if we didn't set it
+  if [ -z "$JAVA_HOME" ]; then
+    cat 1>&2 <<EOF
++======================================================================+
+|      Error: JAVA_HOME is not set and Java could not be found         |
++----------------------------------------------------------------------+
+| Please download the latest Oracle JDK from the Java web site         |
+|       > http://www.oracle.com/technetwork/java/index.html <          |
+|                                                                      |
+| Divolte Collector requires Java 1.8 or later.                        |
+| NOTE: This script will try to find Oracle Java 8 if you install      |
+|       using the the RPM based installer.                             |
++======================================================================+
+EOF
+    exit 1
+  fi
+fi
+
+JAVACMD="$JAVA_HOME/bin/java"
+
+
+# Check for user provided java opts, or use our default
+[ -n "$DIVOLTE_JAVA_OPTS" ] && JAVA_OPTS="$DIVOLTE_JAVA_OPTS" || JAVA_OPTS="-XX:+UseG1GC -Djava.awt.headless=true"
+
+$JAVACMD -cp $CLASSPATH $JAVA_OPTS -Dconfig.file="$CONF_DIR/divolte-collector.conf" io.divolte.server.Server

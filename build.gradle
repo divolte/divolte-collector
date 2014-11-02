@@ -120,8 +120,10 @@ task wrapper(type: Wrapper) {
     gradleVersion = '2.1'
 }
 
-// This only applies to running with gradle run
-// We use a different run script when creating a distribution
+/*
+ * This only applies to running with gradle run. We use a different run
+ * script when creating a distribution.
+ */
 run {
     if (System.getenv().containsKey("HADOOP_CONF_DIR")) {
         classpath += files(System.getenv("HADOOP_CONF_DIR"))
@@ -155,7 +157,13 @@ def distributionLayout = {
         }
         // Use the reference.conf as a example application.conf
         from("src/main/resources/reference.conf") {
-            rename("reference.conf", "application.conf.example")
+            rename("reference.conf", "divolte-collector.conf.example")
+        }
+    }
+
+    into("${baseDir}/bin/") {
+        from("src/scripts") {
+            include "**/*"
         }
     }
 }
