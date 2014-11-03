@@ -32,7 +32,7 @@ function join { local IFS="$1"; shift; echo "$*"; }
 CLASSPATH=$(join ":" $APP_HOME/lib/*.jar)
 
 # add any present HADOOP_CONF_DIR
-[ -n "$HADOOP_CONF_DIR" ] && CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH
+[ -n "$HADOOP_CONF_DIR" ] && CLASSPATH="$HADOOP_CONF_DIR:$CLASSPATH"
 
 # attempt to find java
 if [ -z "$JAVA_HOME" ]; then

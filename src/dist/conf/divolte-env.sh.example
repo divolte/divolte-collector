@@ -3,5 +3,5 @@
 # Uncomment and use this to set a alternative JAVA_HOME
 # JAVA_HOME="/path/to/jdk8"
 
-# Uncomment to add specific JVM options; by default Divolte Collector will use "-XX:+UseG1GC -Djava.awt.headless=true"
+# Uncomment to set specific JVM options; if not set then Divolte Collector will use "-XX:+UseG1GC -Djava.awt.headless=true"
 # DIVOLTE_JAVA_OPTS="-XX:+UseG1GC -Djava.awt.headless=true"
