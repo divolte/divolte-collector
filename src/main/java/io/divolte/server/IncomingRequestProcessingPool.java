@@ -1,5 +1,6 @@
 package io.divolte.server;
 
+import io.divolte.record.DefaultEventRecord;
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
@@ -10,7 +11,6 @@ import io.undertow.server.HttpServerExchange;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +23,6 @@ import org.apache.avro.Schema.Parser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.Resources;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -74,20 +73,22 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     }
 
     private static Schema schemaFromConfig(final Config config) {
+        final Schema schema;
         try {
-            final Parser parser = new Schema.Parser();
             if (config.hasPath("divolte.tracking.schema_file")) {
+                final Parser parser = new Schema.Parser();
                 final String schemaFileName = config.getString("divolte.tracking.schema_file");
                 logger.info("Using Avro schema from configuration: {}", schemaFileName);
-                return parser.parse(new File(schemaFileName));
+                schema = parser.parse(new File(schemaFileName));
             } else {
                 logger.info("Using built in default Avro schema.");
-                return parser.parse(Resources.toString(Resources.getResource("DefaultEventRecord.avsc"), StandardCharsets.UTF_8));
+                schema = DefaultEventRecord.getClassSchema();
             }
         } catch(IOException ioe) {
             logger.error("Failed to load Avro schema file.");
             throw new RuntimeException("Failed to load Avro schema file.", ioe);
         }
+        return schema;
     }
 
     @Nullable
