@@ -892,8 +892,40 @@ var SCRIPT_NAME = 'divolte.js';
     }
     log("Module initialized.", divolte);
 
-    // On load we always signal the 'pageView' event.
-    signal('pageView');
+    /* On load we always signal the 'pageView' event.
+     * Depending on browser support we either signal right away, or 
+     * use the Page Visibility API to only fire the initial pageView
+     * event as soon as the page is first visible.
+     */
+    var hiddenProperty;
+    var visibilityEventName = "none"; // requires a string value; otherwise the closure compiler complains
+    if (typeof document['hidden'] !== "undefined") { // Opera 12.10 and Firefox 18 and later support
+      hiddenProperty = "hidden";
+      visibilityEventName = "visibilitychange";
+    } else if (typeof document['mozHidden'] !== "undefined") {
+      hiddenProperty = "mozHidden";
+      visibilityEventName = "mozvisibilitychange";
+    } else if (typeof document['msHidden'] !== "undefined") {
+      hiddenProperty = "msHidden";
+      visibilityEventName = "msvisibilitychange";
+    } else if (typeof document['webkitHidden'] !== "undefined") {
+      hiddenProperty = "webkitHidden";
+      visibilityEventName = "webkitvisibilitychange";
+    }
+
+    if (typeof hiddenProperty !== 'undefined' && document[hiddenProperty]) {
+      // The {add|remove}EventListener function are not availbe in <= IE8;
+      // but this branch shouldn't execute in that case, since the hidden 
+      // property.
+      document.addEventListener(visibilityEventName, function() {
+        if (document[hiddenProperty] === false) {
+          signal('pageView')
+          document.removeEventListener(visibilityEventName, arguments['callee'])
+        }
+      })
+    } else {
+      signal('pageView');
+    }
   } else {
     warn("Divolte module already initialized; existing module left intact.");
   }
