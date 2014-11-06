@@ -8,8 +8,10 @@ apply plugin: 'application'
 
 defaultTasks 'clean', 'build'
 
-sourceCompatibility = 1.8
+group   = 'io.divolte'
 version = '0.1-SNAPSHOT'
+
+sourceCompatibility = 1.8
 mainClassName = 'io.divolte.server.Server'
 applicationName = 'divolte-collector'
 applicationDefaultJvmArgs = [
