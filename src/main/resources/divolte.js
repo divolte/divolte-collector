@@ -903,7 +903,7 @@ var SCRIPT_NAME = 'divolte.js';
     log("Module initialized.", divolte);
 
     /* On load we always signal the 'pageView' event.
-     * Depending on browser support we either signal right away, or 
+     * Depending on browser support we either signal right away, or
      * use the Page Visibility API to only fire the initial pageView
      * event as soon as the page is first visible.
      */
@@ -925,7 +925,7 @@ var SCRIPT_NAME = 'divolte.js';
 
     if (typeof hiddenProperty !== 'undefined' && document[hiddenProperty]) {
       // The {add|remove}EventListener function are not availbe in <= IE8;
-      // but this branch shouldn't execute in that case, since the hidden 
+      // but this branch shouldn't execute in that case, since the hidden
       // property.
       document.addEventListener(visibilityEventName, function() {
         if (document[hiddenProperty] === false) {
