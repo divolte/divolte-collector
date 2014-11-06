@@ -25,7 +25,7 @@ apply plugin: 'application'
 defaultTasks 'clean', 'build'
 
 group   = 'io.divolte'
-version = '0.1'
+version = '0.2-SNAPSHOT'
 
 sourceCompatibility = 1.8
 mainClassName = 'io.divolte.server.Server'
