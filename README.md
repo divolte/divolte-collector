@@ -20,7 +20,7 @@ Binary packages are available to download for the current release:
 
  - [RPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1-1.noarch.rpm)
    (and the [SRPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1-1.src.rpm)
-   if you need it.
+   if you need it).
  - Vanilla archives: [zip](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.zip)
    or [tar.gz](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.tar.gz)
 
