@@ -16,7 +16,7 @@ The collector has the following features:
 Downloads
 ---------
 
-Binary packages are available to download for the current release:
+The current release of Divolte Collector is 0.1.1. Binary packages are available for download:
 
  - [RPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1-1.noarch.rpm)
    (and the [SRPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1-1.src.rpm)
