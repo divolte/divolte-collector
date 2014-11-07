@@ -107,13 +107,6 @@ Once you have a username and API key, tests can then be executed:
 
 These tests can take quite some time to execute.
 
-Deployment
-----------
-
-Please refer to the [User Guide](docs/index.rst)
-for information on deploying and configuring the Divolte Collector, as well as information on how to work
-with the collected events.
-
 License
 -------
 
