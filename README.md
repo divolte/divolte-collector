@@ -13,8 +13,6 @@ The collector has the following features:
  - Custom Avro schemas supported. Fields can contain information extracted from the URLs on
    your site (amongst other things).
 
-For more information you can browse the current
-[User Guide](docs/index.rst).
 
 Prerequisites
 -------------
