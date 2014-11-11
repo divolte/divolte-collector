@@ -10,6 +10,7 @@ Contents:
 
    introduction
    deployment
+   getting_started
 
 Indices and tables
 ==================
