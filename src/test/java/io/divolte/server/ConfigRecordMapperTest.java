@@ -22,7 +22,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 import io.divolte.server.CookieValues.CookieValue;
-import io.divolte.server.RecordMapper.SchemaMappingException;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
@@ -60,7 +59,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
-public class RecordMapperTest {
+public class ConfigRecordMapperTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
@@ -69,7 +68,7 @@ public class RecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-flatfields");
 
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -108,7 +107,7 @@ public class RecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-corrupted");
 
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test");
 
@@ -122,7 +121,7 @@ public class RecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-duplicates");
 
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test");
 
@@ -136,7 +135,7 @@ public class RecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-useragent");
 
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         String ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36";
 
@@ -160,7 +159,7 @@ public class RecordMapperTest {
         expected.expectMessage("Unsupported schema mapping configuration version: 42");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-version");
-        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     @Test
@@ -169,14 +168,14 @@ public class RecordMapperTest {
         expected.expectMessage("Schema missing mapped field: fieldThatIsMissingFromSchema");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-field");
-        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     @Test
     public void shouldSetCustomCookieValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-customcookie");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
@@ -190,14 +189,14 @@ public class RecordMapperTest {
         expected.expectMessage("Cookie mapping for field customCookie requires a string 'name' property.");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-missing-cookie-name");
-        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     @Test
     public void shouldSetFieldWithMatchingRegexName() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-matchingregex");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange("Divolte/Test", "l=http://example.com/", "r=https://www.example.com/bla/");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
@@ -210,7 +209,7 @@ public class RecordMapperTest {
     public void shouldSetFieldWithCaptureGroupFromRegex() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-regex");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -227,7 +226,7 @@ public class RecordMapperTest {
     public void shouldCastValueFromComplexMappingToSchemaType() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam-types");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -256,7 +255,7 @@ public class RecordMapperTest {
     public void shouldNotBreakOnMalformedIntForCastingMapping() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam-types");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -272,7 +271,7 @@ public class RecordMapperTest {
     public void shouldSetFieldWithValueFromQueryString() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -287,7 +286,7 @@ public class RecordMapperTest {
     public void shouldNotSetFieldWithIfNotPresentInQueryString() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -303,7 +302,7 @@ public class RecordMapperTest {
     public void shouldSetFieldWithEmptyQueryParameterValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -318,7 +317,7 @@ public class RecordMapperTest {
     public void shouldSetFieldWithMissingQueryParameterValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -333,7 +332,7 @@ public class RecordMapperTest {
     public void shouldSetFieldWithFirstQueryParameterValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -348,7 +347,7 @@ public class RecordMapperTest {
     public void shouldNotFailIfQueryParameterWithMissingNameExists() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -363,7 +362,7 @@ public class RecordMapperTest {
     public void shouldSetFieldFromCustomEventParameter() throws IOException, UnirestException {
         final Schema schema = schemaFromClassPath("/TestRecord.avsc");
         final Config config = ConfigFactory.load("schema-test-customparameter");
-        final RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        final ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -379,7 +378,7 @@ public class RecordMapperTest {
         expected.expectMessage("Event parameter mapping for field customEventParameter requires a string 'name' property.");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-missing-customparameter-name");
-        new RecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
     }
 
     private void testMapping(final Optional<CityResponse> response,
@@ -393,7 +392,7 @@ public class RecordMapperTest {
         setupExchange("Arbitrary User Agent");
 
         // Perform a mapping.
-        final RecordMapper maker = new RecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+        final ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
         final GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         // Validate the results.
@@ -451,7 +450,7 @@ public class RecordMapperTest {
         setupExchange("Arbitrary User Agent");
 
         // Perform a mapping.
-        new RecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
 
         // Verify the lookup service was not invoked.
         verify(mockLookupService, never()).lookup(any());

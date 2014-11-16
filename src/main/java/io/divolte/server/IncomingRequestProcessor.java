@@ -20,6 +20,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlusher;
 import io.divolte.server.hdfs.HdfsFlushingPool;
@@ -30,6 +31,7 @@ import io.divolte.server.processing.ItemProcessor;
 import io.divolte.server.processing.ProcessingPool;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
@@ -37,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -80,10 +83,20 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         memory = new ShortTermDuplicateMemory(config.getInt("divolte.incoming_request_processor.duplicate_memory_size"));
         keepDuplicates = !config.getBoolean("divolte.incoming_request_processor.discard_duplicates");
 
-        final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));
-        mapper = new RecordMapper(Objects.requireNonNull(schema),
-                                  schemaMappingConfig, config,
-                                  Optional.ofNullable(geoipLookupService));
+        final int version = config.getInt("divolte.tracking.schema_mapping.version");
+        switch(version) {
+        case 1:
+            final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));
+            mapper = new ConfigRecordMapper(Objects.requireNonNull(schema),
+                    schemaMappingConfig, config,
+                    Optional.ofNullable(geoipLookupService));
+            break;
+        case 2:
+            mapper = new DslRecordMapper(config, Objects.requireNonNull(schema));
+            break;
+        default:
+            throw new RuntimeException("Unsupported schema mapping config version: " + version);
+        }
     }
 
     private Config schemaMappingConfigFromConfig(final Config config) {
@@ -145,6 +158,8 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         if (null != hdfsFlushingPool) {
             hdfsFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
         }
+
+        logger.debug("Record: {}", avroRecord);
     }
 
     private static final HashFunction CHECKSUM_HASH = Hashing.murmur3_32();

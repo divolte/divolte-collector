@@ -46,11 +46,11 @@ tasks.withType(JavaCompile) {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         url 'https://repository-saucelabs.forge.cloudbees.com/release'
     }
-    mavenLocal()
 }
 
 buildscript {
@@ -85,6 +85,8 @@ dependencies {
     compile group: 'org.apache.kafka', name:'kafka_2.10', version:'0.8.1.1'
 
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20140814'
+
+    compile group: 'org.codehaus.groovy', name:'groovy', version: '2.3.7'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
