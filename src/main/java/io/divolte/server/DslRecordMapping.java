@@ -81,7 +81,7 @@ public final class DslRecordMapping {
     }
 
     /*
-     * Higher level actions
+     * Higher order actions
      */
     public void when(final ValueProducer<Boolean> condition, final Runnable closure) {
         stack.add(ImmutableList.<MappingAction>builder());
@@ -279,8 +279,8 @@ public final class DslRecordMapping {
     }
 
     private static class ValueProducer<T> {
-        final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier;
-        @Nullable final String memoizeKey;
+        private final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier;
+        @Nullable private final String memoizeKey;
 
         public ValueProducer(final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, @Nullable final String memoizeKey) {
             this.supplier = supplier;
