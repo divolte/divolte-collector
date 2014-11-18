@@ -927,10 +927,10 @@ var SCRIPT_NAME = 'divolte.js';
       // The {add|remove}EventListener functions are not available in <= IE8;
       // but this branch shouldn't execute in that case, since the hidden
       // property is also undefined.
-      document.addEventListener(visibilityEventName, function() {
+      document.addEventListener(visibilityEventName, function visibilityListener() {
         if (document[hiddenProperty] === false) {
           signal('pageView');
-          document.removeEventListener(visibilityEventName, arguments['callee'])
+          document.removeEventListener(visibilityEventName, visibilityListener);
         }
       })
     } else {
