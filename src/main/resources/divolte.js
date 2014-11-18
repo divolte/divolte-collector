@@ -688,7 +688,7 @@ var SCRIPT_NAME = 'divolte.js';
    */
   var utf8encode = function(s) {
     return unescape(encodeURIComponent(s));
-  }
+  };
 
   /**
    * Produce a checksum for a multimap.
@@ -711,9 +711,9 @@ var SCRIPT_NAME = 'divolte.js';
      *  This is designed to be unambiguous in the face of many edge cases.
      */
     var keys = [];
-    for (var key in multimap) {
-      if (multimap.hasOwnProperty(key)) {
-        keys.push(key);
+    for (var k in multimap) {
+      if (multimap.hasOwnProperty(k)) {
+        keys.push(k);
       }
     }
     keys.sort();
@@ -929,7 +929,7 @@ var SCRIPT_NAME = 'divolte.js';
       // property.
       document.addEventListener(visibilityEventName, function() {
         if (document[hiddenProperty] === false) {
-          signal('pageView')
+          signal('pageView');
           document.removeEventListener(visibilityEventName, arguments['callee'])
         }
       })
