@@ -924,9 +924,9 @@ var SCRIPT_NAME = 'divolte.js';
     }
 
     if (typeof hiddenProperty !== 'undefined' && document[hiddenProperty]) {
-      // The {add|remove}EventListener function are not availbe in <= IE8;
+      // The {add|remove}EventListener functions are not available in <= IE8;
       // but this branch shouldn't execute in that case, since the hidden
-      // property.
+      // property is also undefined.
       document.addEventListener(visibilityEventName, function() {
         if (document[hiddenProperty] === false) {
           signal('pageView');
