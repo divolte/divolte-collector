@@ -70,12 +70,12 @@ public final class DslRecordMapping {
     /*
      * Standard actions
      */
-    public <T> void set(final String fieldName, final ValueProducer<T> producer) {
+    public <T> void map(final String fieldName, final ValueProducer<T> producer) {
         final Field field = schema.getField(fieldName);
         stack.getLast().add((e,c,r) -> producer.produce(e, c).ifPresent((v) -> r.set(field, v)));
     }
 
-    public <T> void set(String fieldName, T literal) {
+    public <T> void map(String fieldName, T literal) {
         final Field field = schema.getField(fieldName);
         stack.getLast().add((e,c,r) -> r.set(field, literal));
     }
