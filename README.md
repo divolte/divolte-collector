@@ -81,7 +81,7 @@ HomeBrew:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.11/bin/chromedriver ./gradlew cleanTest test
+    % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.12/bin/chromedriver ./gradlew cleanTest test
 
 ### PhantomJS ###
 
