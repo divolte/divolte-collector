@@ -81,7 +81,7 @@ HomeBrew:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.11/bin/chromedriver ./gradlew cleanTest test
+    % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.12/bin/chromedriver ./gradlew cleanTest test
 
 ### PhantomJS ###
 
@@ -99,11 +99,13 @@ Tests can then be executed:
 ### SauceLabs ###
 
 If you have a SauceLabs account, you can test against a wide variety of browsers.
-Once you have a username and API key, tests can then be executed:
+Once you have a username and API key and
+[Sauce Connect](https://docs.saucelabs.com/reference/sauce-connect/) running, tests
+can then be executed:
 
     % export SAUCE_USER_NAME=<username>
     % export SAUCE_API_KEY=<api key>
-    % SELENIUM_DRIVER=sauce ./gradle cleanTest test
+    % SELENIUM_DRIVER=sauce ./gradlew cleanTest test
 
 These tests can take quite some time to execute.
 
