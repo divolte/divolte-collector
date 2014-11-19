@@ -99,7 +99,9 @@ Tests can then be executed:
 ### SauceLabs ###
 
 If you have a SauceLabs account, you can test against a wide variety of browsers.
-Once you have a username and API key, tests can then be executed:
+Once you have a username and API key and
+[Sauce Connect](https://docs.saucelabs.com/reference/sauce-connect/) running, tests
+can then be executed:
 
     % export SAUCE_USER_NAME=<username>
     % export SAUCE_API_KEY=<api key>
