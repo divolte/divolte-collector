@@ -18,11 +18,10 @@ package io.divolte.server;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
-import groovy.util.DelegatingScript;
+import groovy.lang.Script;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -57,17 +56,18 @@ public class DslRecordMapper implements RecordMapper {
             final String groovyScript = Files.toString(new File(groovyFile), StandardCharsets.UTF_8);
 
             final CompilerConfiguration compilerConfig = new CompilerConfiguration();
-            compilerConfig.setScriptBaseClass(DelegatingScript.class.getName());
+            compilerConfig.setScriptBaseClass("io.divolte.groovyscript.MappingBase");
 
             final Binding binding = new Binding();
-            final GroovyShell shell = new GroovyShell(binding, compilerConfig);
-            final DelegatingScript script = (DelegatingScript) shell.parse(groovyScript);
+            binding.setProperty("mapping", mapping);
 
-            script.setDelegate(mapping);
+            final GroovyShell shell = new GroovyShell(binding, compilerConfig);
+            final Script script = shell.parse(groovyScript);
+
             script.run();
 
             actions = mapping.actions();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Unable to load Groovy script source from: " + groovyFile, e);
         }
     }

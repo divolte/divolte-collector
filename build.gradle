@@ -21,6 +21,7 @@ apply plugin: 'pmd'
 apply plugin: 'jacoco'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'application'
+apply plugin: 'groovy'
 
 defaultTasks 'clean', 'build'
 
