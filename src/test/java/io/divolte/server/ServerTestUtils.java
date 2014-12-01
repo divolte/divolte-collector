@@ -16,11 +16,11 @@
 
 package io.divolte.server;
 
-import com.typesafe.config.ConfigValueFactory;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -33,6 +33,7 @@ import org.apache.avro.generic.GenericRecord;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
 
 public final class ServerTestUtils {
     /*
@@ -72,12 +73,28 @@ public final class ServerTestUtils {
         final BlockingQueue<EventPayload> events;
 
         public TestServer(final String configResource) {
+            this(
+                    findFreePort(),
+                    ConfigFactory.parseResources(configResource)
+                                 .withFallback(ConfigFactory.parseResources("reference-test.conf"))
+                );
+        }
+
+        public TestServer(final String configResource, final Map<String,Object> extraConfig) {
+            this(
+                    findFreePort(),
+                    ConfigFactory.parseMap(extraConfig)
+                                 .withFallback(ConfigFactory.parseResources(configResource))
+                                 .withFallback(ConfigFactory.parseResources("reference-test.conf"))
+                );
+        }
+
+        private TestServer(final int port, final Config config) {
+            this.port = port;
+            this.config = config.withValue("divolte.server.port", ConfigValueFactory.fromAnyRef(port));
+
             events = new ArrayBlockingQueue<>(100);
-            port = findFreePort();
-            config = ConfigFactory.parseResources(configResource)
-                        .withFallback(ConfigFactory.parseResources("reference-test.conf"))
-                        .withValue("divolte.server.port", ConfigValueFactory.fromAnyRef(port));
-            server = new Server(config, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
+            server = new Server(this.config, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
         }
 
         public EventPayload waitForEvent() throws InterruptedException {

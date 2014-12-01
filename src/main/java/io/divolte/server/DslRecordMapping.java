@@ -72,13 +72,22 @@ public final class DslRecordMapping {
      * Standard actions
      */
     public <T> void map(final String fieldName, final ValueProducer<T> producer) {
-        final Field field = schema.getField(fieldName);
+        final Field field = getAndValidateField(fieldName);
         stack.getLast().add((e,c,r) -> producer.produce(e, c).ifPresent((v) -> r.set(field, v)));
     }
 
     public <T> void map(String fieldName, T literal) {
-        final Field field = schema.getField(fieldName);
+        final Field field = getAndValidateField(fieldName);
         stack.getLast().add((e,c,r) -> r.set(field, literal));
+    }
+
+    private Field getAndValidateField(String fieldName) {
+        final Field field = schema.getField(fieldName);
+        if (field == null) {
+            throw new SchemaMappingException("Attempt to map onto a non-existing field: %s", fieldName);
+        }
+
+        return field;
     }
 
     /*
@@ -178,6 +187,10 @@ public final class DslRecordMapping {
 
     public ValueProducer<Integer> screenPixelHeight() {
         return new ValueProducer<Integer>((e, c) -> queryParam(e, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int), "screenPixelHeight");
+    }
+
+    public ValueProducer<Integer> devicePixelRatio() {
+        return new ValueProducer<Integer>((e, c) -> queryParam(e, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int), "devicePixelRatio");
     }
 
     public ValueProducer<String> partyId() {

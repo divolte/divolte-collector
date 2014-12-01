@@ -83,7 +83,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
         memory = new ShortTermDuplicateMemory(config.getInt("divolte.incoming_request_processor.duplicate_memory_size"));
         keepDuplicates = !config.getBoolean("divolte.incoming_request_processor.discard_duplicates");
 
-        final int version = config.getInt("divolte.tracking.schema_mapping.version");
+        final int version = config.hasPath("divolte.tracking.schema_mapping") ? config.getInt("divolte.tracking.schema_mapping.version") : 1;
         switch(version) {
         case 1:
             final Config schemaMappingConfig = schemaMappingConfigFromConfig(Objects.requireNonNull(config));

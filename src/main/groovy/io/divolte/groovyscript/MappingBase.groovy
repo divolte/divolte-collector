@@ -55,7 +55,12 @@ abstract class MappingBase extends Script {
     ]
   }
 
-  def (int8, int16, int32, int64, fp32, fp64, bool, uri) = [Byte.TYPE, Integer.TYPE, Long.TYPE, Float.TYPE, Double.TYPE, Boolean.TYPE, URI.class]
+  def int32 = Integer.TYPE
+  def int64 = Long.TYPE
+  def fp32 = Float.TYPE
+  def fp64 = Double.TYPE
+  def bool = Boolean.TYPE
+  def uri = URI.class
 
   def parse(ValueProducer<String> producer) {
     [
