@@ -28,9 +28,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
 import org.junit.After;
 import org.junit.Test;
 
@@ -70,6 +72,8 @@ public class DslRecordMapperTest {
         final HttpServerExchange exchange = event.exchange;
 
         assertEquals(true, record.get("sessionStart"));
+        assertEquals(true, record.get("unreliable"));
+        assertEquals(false, record.get("dupe"));
         assertEquals(exchange.getAttachment(REQUEST_START_TIME_KEY), record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
@@ -96,7 +100,10 @@ public class DslRecordMapperTest {
         assertEquals(2, record.get("pixelRatio"));
         assertEquals("pageView", record.get("eventType"));
 
-        Stream.of("sessionStart",
+        Stream.of(
+                "sessionStart",
+                "unreliable",
+                "dupe",
                 "ts",
                 "location",
                 "referer",
@@ -123,6 +130,96 @@ public class DslRecordMapperTest {
               .forEach((v) -> assertNotNull(record.get(v)));
     }
 
+    @Test(expected=SchemaMappingException.class)
+    public void shouldFailOnStartupIfMappingMissingField() throws IOException {
+        setupServer("missing-field-mapping.groovy");
+    }
+
+    @Test
+    public void shouldSetCustomCookieValue() throws InterruptedException, IOException {
+        setupServer("custom-cookie-mapping.groovy");
+        EventPayload event = request("http://example.com");
+        assertEquals("custom_cookie_value", event.record.get("customCookie"));
+    }
+
+    @Test
+    public void shouldApplyActionsInClosureWhenEqualToConditionHolds() throws IOException, InterruptedException {
+        setupServer("when-mapping.groovy");
+        EventPayload event = request("http://www.example.com/", "http://www.example.com/somepage.html");
+
+        assertEquals("locationmatch", event.record.get("eventType"));
+        assertEquals("referermatch", event.record.get("client"));
+        assertEquals(new Utf8("not set"), event.record.get("queryparam"));
+    }
+
+    @Test
+    public void shouldChainValueProducersWithIntermediateNull() throws IOException, InterruptedException {
+        setupServer("chained-na-mapping.groovy");
+        EventPayload event = request("http://www.exmaple.com/");
+        assertEquals(new Utf8("not set"), event.record.get("queryparam"));
+    }
+
+    @Test
+    public void shouldMatchRegexAndExtractGroups() throws IOException, InterruptedException {
+        setupServer("regex-mapping.groovy");
+        EventPayload event = request("http://www.example.com/path/with/42/about.html", "http://www.example.com/path/with/13/contact.html");
+        assertEquals(true, event.record.get("pathBoolean"));
+        assertEquals("42", event.record.get("client"));
+        assertEquals("about", event.record.get("pageview"));
+    }
+
+    @Test
+    public void shouldParseUriComponents() throws IOException, InterruptedException {
+        setupServer("uri-mapping.groovy");
+        EventPayload event = request(
+                "https://www.example.com:8080/path/to/resource/page.html?q=multiple+words+%24%23%25%26&p=10&p=20",
+                "http://example.com/path/to/resource/page.html?q=divolte&p=42#/client/side/path?x=value&y=42");
+
+        assertEquals("https", event.record.get("uriScheme"));
+        assertEquals("/path/to/resource/page.html", event.record.get("uriPath"));
+        assertEquals("www.example.com", event.record.get("uriHost"));
+        assertEquals(8080, event.record.get("uriPort"));
+
+        assertEquals("/client/side/path?x=value&y=42", event.record.get("uriFragment"));
+
+        assertEquals("q=multiple+words+$#%&&p=10&p=20", event.record.get("uriQueryString"));
+        assertEquals("multiple words $#%&", event.record.get("uriQueryStringValue"));
+        assertEquals(Arrays.asList("10", "20"), event.record.get("uriQueryStringValues"));
+        assertEquals(
+                ImmutableMap.of("p", Arrays.asList("10","20"), "q", Arrays.asList("multiple words $#%&")),
+                event.record.get("uriQuery"));
+    }
+
+    @Test
+    public void shouldParseUriComponentsRaw() throws IOException, InterruptedException {
+        setupServer("uri-mapping-raw.groovy");
+        EventPayload event = request(
+                "http://example.com/path/to/resource%20and%20such/page.html?q=multiple+words+%24%23%25%26&p=42#/client/side/path?x=value&y=42&q=multiple+words+%24%23%25%26");
+        assertEquals("/path/to/resource%20and%20such/page.html", event.record.get("uriPath"));
+        assertEquals("q=multiple+words+%24%23%25%26&p=42", event.record.get("uriQueryString"));
+        assertEquals("/client/side/path?x=value&y=42&q=multiple+words+%24%23%25%26", event.record.get("uriFragment"));
+    }
+
+    @Test
+    public void shouldParseMinimalUri() throws IOException, InterruptedException {
+        /*
+         * Test that URI parsing works on URIs that consist of only a path and possibly a query string.
+         * This is typical for Angular style applications, where the fragment component of the location
+         * is the internal location used within the angular app. In the mapping it should be possible
+         * to parse the fragment of the location to a URI again and do path matching and such against
+         * it.
+         */
+        setupServer("uri-mapping-fragment.groovy");
+        EventPayload event = request(
+                "http://example.com/path/?q=divolte#/client/side/path?x=value&y=42&q=multiple+words+%24%23%25%26");
+        assertEquals("/client/side/path", event.record.get("uriPath"));
+        assertEquals("x=value&y=42&q=multiple+words+%24%23%25%26", event.record.get("uriQueryString"));
+        assertEquals("multiple words $#%&", event.record.get("uriQueryStringValue"));
+    }
+
+
+
+
     private EventPayload request(String location) throws IOException, InterruptedException {
         return request(location, null);
     }
@@ -142,6 +239,7 @@ public class DslRecordMapperTest {
 
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("User-Agent", USER_AGENT);
+        conn.addRequestProperty("Cookie", "custom_cookie=custom_cookie_value;");
         conn.setRequestMethod("GET");
 
         assertEquals(200, conn.getResponseCode());
@@ -167,8 +265,8 @@ public class DslRecordMapperTest {
 
     @After
     public void shutdown() {
-        server.server.shutdown();
-        mappingFile.delete();
-        avroFile.delete();
+        if (server != null) server.server.shutdown();
+        if (mappingFile != null) mappingFile.delete();
+        if (avroFile != null) avroFile.delete();
     }
 }

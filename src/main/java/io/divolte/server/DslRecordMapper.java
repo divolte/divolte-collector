@@ -22,6 +22,7 @@ import groovy.lang.Script;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -67,8 +68,8 @@ public class DslRecordMapper implements RecordMapper {
             script.run();
 
             actions = mapping.actions();
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to load Groovy script source from: " + groovyFile, e);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not load mapping script file: " + groovyFile, e);
         }
     }
 
