@@ -1,4 +1,4 @@
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -16,7 +16,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.typesafe.config.Config;
 
-final class UserAgentParserAndCache {
+public final class UserAgentParserAndCache {
     private final static Logger logger = LoggerFactory.getLogger(UserAgentParserAndCache.class);
 
     private final LoadingCache<String,ReadableUserAgent> cache;

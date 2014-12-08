@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
+import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.File;
@@ -27,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -46,13 +48,13 @@ public class DslRecordMapper implements RecordMapper {
     private final Schema schema;
     private final List<DslRecordMapping.MappingAction> actions;
 
-    public DslRecordMapper(final Config config, final Schema schema) {
+    public DslRecordMapper(final Config config, final Schema schema, final Optional<LookupService> geoipService) {
         this.schema = Objects.requireNonNull(schema);
 
         final String groovyFile = config.getString("divolte.tracking.schema_mapping.mapping_script_file");
 
         try {
-            final DslRecordMapping mapping = new DslRecordMapping(schema, new UserAgentParserAndCache(config));
+            final DslRecordMapping mapping = new DslRecordMapping(schema, new UserAgentParserAndCache(config), geoipService);
 
             final String groovyScript = Files.toString(new File(groovyFile), StandardCharsets.UTF_8);
 

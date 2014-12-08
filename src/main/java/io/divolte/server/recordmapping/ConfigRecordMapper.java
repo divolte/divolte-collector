@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.*;
+import io.divolte.server.OptionalConfig;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -79,7 +80,7 @@ import com.typesafe.config.ConfigValueType;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
-final class ConfigRecordMapper implements RecordMapper {
+public final class ConfigRecordMapper implements RecordMapper {
     private final Schema schema;
     private final Map<String, Pattern> regexes;
     private final List<FieldSetter> setters;
@@ -449,7 +450,7 @@ final class ConfigRecordMapper implements RecordMapper {
     }
 
     @Nullable
-    static Integer tryParseBase36Int(final String input) {
+    public static Integer tryParseBase36Int(final String input) {
         try {
             return Integer.valueOf(input, 36);
         } catch (final NumberFormatException ignored) {

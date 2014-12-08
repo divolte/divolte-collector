@@ -23,6 +23,8 @@ import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.recordmapping.ConfigRecordMapper;
+import io.divolte.server.recordmapping.SchemaMappingException;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
 

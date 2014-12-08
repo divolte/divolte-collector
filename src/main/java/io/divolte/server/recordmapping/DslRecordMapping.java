@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.*;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -42,12 +47,15 @@ import net.sf.uadetector.ReadableUserAgent;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.commons.lang.StringUtils;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.maxmind.geoip2.model.CityResponse;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -56,10 +64,12 @@ public final class DslRecordMapping {
     private final ArrayDeque<ImmutableList.Builder<MappingAction>> stack;
 
     private final UserAgentParserAndCache uaParser;
+    private final Optional<LookupService> geoIpService;
 
-    public DslRecordMapping(final Schema schema, final UserAgentParserAndCache uaParser) {
+    public DslRecordMapping(final Schema schema, final UserAgentParserAndCache uaParser, final Optional<LookupService> geoIpService) {
         this.schema = Objects.requireNonNull(schema);
         this.uaParser = uaParser;
+        this.geoIpService = geoIpService;
 
         stack = new ArrayDeque<>();
         stack.add(ImmutableList.<MappingAction>builder());
@@ -76,7 +86,7 @@ public final class DslRecordMapping {
         stack.getLast().add((e,c,r) -> producer.produce(e, c).ifPresent((v) -> r.set(field, v)));
     }
 
-    public <T> void map(String fieldName, T literal) {
+    public <T> void map(final String fieldName, final T literal) {
         final Field field = schema.getField(fieldName);
         if (field == null) {
             throw new SchemaMappingException("Field %s does not exist in Avro schema; error in mapping %s onto %s", fieldName, literal, fieldName);
@@ -99,6 +109,10 @@ public final class DslRecordMapping {
         });
     }
 
+
+    /*
+     * The mapping result, used by the record mapper.
+     */
     List<MappingAction> actions() {
         return stack.getLast().build();
     }
@@ -106,31 +120,31 @@ public final class DslRecordMapping {
     /*
      * Casting and conversion
      */
-    public ValueProducer<Integer> toInt(ValueProducer<String> source) {
+    public ValueProducer<Integer> toInt(final ValueProducer<String> source) {
         return new ValueProducer<Integer>(
                 "parse(" + source.identifier + " to int32)",
                 (e,c) -> source.produce(e, c).map(Ints::tryParse));
     }
 
-    public ValueProducer<Long> toLong(ValueProducer<String> source) {
+    public ValueProducer<Long> toLong(final ValueProducer<String> source) {
         return new ValueProducer<Long>(
                 "parse(" + source.identifier + " to int64)",
                 (e,c) -> source.produce(e, c).map(Longs::tryParse));
     }
 
-    public ValueProducer<Float> toFloat(ValueProducer<String> source) {
+    public ValueProducer<Float> toFloat(final ValueProducer<String> source) {
         return new ValueProducer<Float>(
                 "parse(" + source.identifier + " to fp32)",
                 (e,c) -> source.produce(e, c).map(Floats::tryParse));
     }
 
-    public ValueProducer<Double> toDouble(ValueProducer<String> source) {
+    public ValueProducer<Double> toDouble(final ValueProducer<String> source) {
         return new ValueProducer<Double>(
                 "parse(" + source.identifier + " to fp64)",
                 (e,c) -> source.produce(e, c).map(Doubles::tryParse));
     }
 
-    public ValueProducer<Boolean> toBoolean(ValueProducer<String> source) {
+    public ValueProducer<Boolean> toBoolean(final ValueProducer<String> source) {
         return new ValueProducer<Boolean>(
                 "parse(" + source.identifier + " to bool)",
                 (e,c) -> source.produce(e, c).map(Boolean::parseBoolean));
@@ -263,11 +277,11 @@ public final class DslRecordMapping {
     /*
      * Regex mapping
      */
-    public ValueProducer<Matcher> matcher(ValueProducer<String> source, String regex) {
+    public ValueProducer<Matcher> matcher(final ValueProducer<String> source, String regex) {
         return new MatcherValueProducer(source, regex);
     }
 
-    public final class MatcherValueProducer extends ValueProducer<Matcher> {
+    public final static class MatcherValueProducer extends ValueProducer<Matcher> {
         private MatcherValueProducer(final ValueProducer<String> source, final String regex) {
             super(
                     "(match " + regex + " against " + source.identifier + ")",
@@ -306,7 +320,7 @@ public final class DslRecordMapping {
         return new UriValueProducer(source);
     }
 
-    public final class UriValueProducer extends ValueProducer<URI> {
+    public final static class UriValueProducer extends ValueProducer<URI> {
         private UriValueProducer(final ValueProducer<String> source) {
             super(
                     "parse(" + source.identifier + " to uri)",
@@ -382,10 +396,10 @@ public final class DslRecordMapping {
         }
     }
 
-    public final class QueryStringValueProducer extends ValueProducer<Map<String,List<String>>> {
+    public final static class QueryStringValueProducer extends ValueProducer<Map<String,List<String>>> {
         private QueryStringValueProducer(final ValueProducer<String> source) {
             super(
-                    source.identifier + ".query()",
+                    "parse (" + source.identifier + " to querystring)",
                     (e,c) -> source.produce(e, c).map(QueryStringParser::parseQueryString),
                     true);
         }
@@ -407,7 +421,7 @@ public final class DslRecordMapping {
     /*
      * Cookie mapping
      */
-    public ValueProducer<String> cookie(String name) {
+    public ValueProducer<String> cookie(final String name) {
         return new ValueProducer<String>(
                 "cookie(" + name + ")",
                 (e,c) -> Optional.ofNullable(e.getRequestCookies().get(name)).map(Cookie::getValue));
@@ -416,10 +430,108 @@ public final class DslRecordMapping {
     /*
      * Custom event parameter mapping
      */
-    public ValueProducer<String> eventParameter(String name) {
+    public ValueProducer<String> eventParameter(final String name) {
         return new ValueProducer<String>(
                 "eventParameter(" + name + ")",
                 (e, c) -> queryParam(e, EVENT_TYPE_QUERY_PARAM + "." + name));
+    }
+
+    /*
+     * Custom header mapping
+     */
+    public HeaderValueProducer header(final String name) {
+        return new HeaderValueProducer(name);
+    }
+
+    public final static class HeaderValueProducer extends ValueProducer<HeaderValues> {
+        private final static Joiner COMMA_JOINER = Joiner.on(',');
+
+        private HeaderValueProducer(final String name) {
+            super(
+                    "header(" + name + ")",
+                    (e,c) -> Optional.ofNullable(e.getRequestHeaders().get(name)));
+        }
+
+        public ValueProducer<String> first() {
+            return new ValueProducer<String>(
+                    identifier + ".first()",
+                    (e,c) -> this.produce(e, c).map(HeaderValues::getFirst));
+        }
+
+        public ValueProducer<String> last() {
+            return new ValueProducer<String>(
+                    identifier + ".first()",
+                    (e,c) -> this.produce(e, c).map(HeaderValues::getLast));
+        }
+
+        public ValueProducer<String> commaSeparated() {
+            return new ValueProducer<String>(
+                    identifier + ".first()",
+                    (e,c) -> this.produce(e, c).map(COMMA_JOINER::join));
+        }
+    }
+
+    /*
+     * IP to geo mapping
+     */
+    public GeoIpValueProducer ip2geo(final ValueProducer<String> source) {
+        return new GeoIpValueProducer(
+                new ValueProducer<InetAddress>("parse(" + source.identifier + " to IP address)", (e,c) -> source.produce(e, c).flatMap(DslRecordMapping::tryParseIpv4)),
+                verifyAndReturnLookupService());
+    }
+
+    public GeoIpValueProducer ip2geo() {
+        return new GeoIpValueProducer(
+                new ValueProducer<InetAddress>("<remote host IP>", (e,c) -> Optional.ofNullable(e.getSourceAddress()).map(InetSocketAddress::getAddress)),
+                verifyAndReturnLookupService());
+    }
+
+    private LookupService verifyAndReturnLookupService() {
+        return geoIpService.orElseThrow(() -> new SchemaMappingException("Attempt to use a ip2geo mapping, while the ip2geo lookup service is not configured."));
+    }
+
+    public final static class GeoIpValueProducer extends ValueProducer<CityResponse> {
+        private GeoIpValueProducer(final ValueProducer<InetAddress> source, final LookupService service) {
+            super(
+                    "ip2geo(" + source.identifier + ")",
+                    (e,c) -> source.produce(e, c).flatMap((address) -> {
+                        try {
+                            return service.lookup(address);
+                        } catch (ClosedServiceException ex) {
+                            return null;
+                        }
+                    }),
+                    true);
+        }
+    }
+
+    /*
+     * Handy when using something other than the remote host as IP address (e.g. custom headers set by a load balancer).
+     * We force the address to be in the numeric IPv4 scheme, to prevent name resolution and IPv6.
+     */
+    private static Optional<InetAddress> tryParseIpv4(String ip) {
+        byte[] result = new byte[4];
+        String[] parts = StringUtils.split(ip, '.');
+        if (parts.length != 4) {
+            return Optional.empty();
+        }
+        try {
+            for (int c = 0; c < 4; c++) {
+                int x = Integer.parseInt(parts[c]);
+                if (x < 0x00 || x > 0xff) {
+                    return Optional.empty();
+                }
+                result[c] = (byte) (x & 0xff);
+            }
+        } catch(NumberFormatException nfe) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(InetAddress.getByAddress(result));
+        } catch (UnknownHostException e) {
+            return Optional.empty();
+        }
     }
 
     /*
@@ -434,8 +546,8 @@ public final class DslRecordMapping {
         private final boolean memoize;
         protected final String identifier;
 
-        public ValueProducer(final String readableName, final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, boolean memoize) {
-            this.identifier = readableName;
+        public ValueProducer(final String identifier, final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, boolean memoize) {
+            this.identifier = identifier;
             this.supplier = supplier;
             this.memoize = memoize;
         }
@@ -470,6 +582,11 @@ public final class DslRecordMapping {
                         Optional<T> left = this.produce(e, c);
                         return left.isPresent() ? Optional.of(left.get().equals(other)) : Optional.of(false);
                     });
+        }
+
+        @Override
+        public String toString() {
+            return identifier;
         }
     }
 

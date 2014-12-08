@@ -20,6 +20,7 @@ import static io.divolte.server.BaseEventHandler.*;
 import static org.junit.Assert.*;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
+import io.divolte.server.recordmapping.SchemaMappingException;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.File;
@@ -217,6 +218,15 @@ public class DslRecordMapperTest {
         assertEquals("multiple words $#%&", event.record.get("uriQueryStringValue"));
     }
 
+    @Test
+    public void shouldSetCustomHeaders() throws IOException, InterruptedException {
+        setupServer("header-mapping.groovy");
+        EventPayload event = request("http://www.example.com/");
+        assertEquals(Arrays.asList("first", "second", "last"), event.record.get("headerList"));
+        assertEquals("first", event.record.get("header"));
+        assertEquals("first,second,last", event.record.get("headers"));
+    }
+
 
 
 
@@ -240,6 +250,9 @@ public class DslRecordMapperTest {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("User-Agent", USER_AGENT);
         conn.addRequestProperty("Cookie", "custom_cookie=custom_cookie_value;");
+        conn.addRequestProperty("X-Divolte-Test", "first");
+        conn.addRequestProperty("X-Divolte-Test", "second");
+        conn.addRequestProperty("X-Divolte-Test", "last");
         conn.setRequestMethod("GET");
 
         assertEquals(200, conn.getResponseCode());

@@ -16,11 +16,8 @@
 
 package io.divolte.server;
 
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-
+import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlusher;
 import io.divolte.server.hdfs.HdfsFlushingPool;
@@ -29,25 +26,35 @@ import io.divolte.server.kafka.KafkaFlusher;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
 import io.divolte.server.processing.ProcessingPool;
+import io.divolte.server.recordmapping.ConfigRecordMapper;
+import io.divolte.server.recordmapping.DslRecordMapper;
+import io.divolte.server.recordmapping.RecordMapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Deque;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-
-import static io.divolte.server.BaseEventHandler.*;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
-final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
+public final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
     public final static AttachmentKey<Boolean> CORRUPT_EVENT_KEY = AttachmentKey.create(Boolean.class);
@@ -92,7 +99,7 @@ final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange
                     Optional.ofNullable(geoipLookupService));
             break;
         case 2:
-            mapper = new DslRecordMapper(config, Objects.requireNonNull(schema));
+            mapper = new DslRecordMapper(config, Objects.requireNonNull(schema), Optional.ofNullable(geoipLookupService));
             break;
         default:
             throw new RuntimeException("Unsupported schema mapping config version: " + version);

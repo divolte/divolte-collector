@@ -1,4 +1,4 @@
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import static java.net.URLDecoder.*;
 

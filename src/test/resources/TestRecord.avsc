@@ -163,7 +163,20 @@
             }
           ],
           "default": null
-        }
+        },
+        {
+          "name": "headerList",
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": "string"
+            }
+          ],
+          "default": null
+        },
+        { "name": "header",                           "type": ["null","string"],  "default": null },
+        { "name": "headers",                           "type": ["null","string"],  "default": null }
 
     ]
 }
