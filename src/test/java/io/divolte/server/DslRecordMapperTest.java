@@ -18,28 +18,45 @@ package io.divolte.server;
 
 import static io.divolte.server.BaseEventHandler.*;
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
+import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.SchemaMappingException;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.junit.After;
 import org.junit.Test;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
+import com.maxmind.geoip2.model.CityResponse;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 public class DslRecordMapperTest {
     private static final String DIVOLTE_URL_STRING = "http://localhost:%d/csc-event";
@@ -151,6 +168,9 @@ public class DslRecordMapperTest {
         assertEquals("locationmatch", event.record.get("eventType"));
         assertEquals("referermatch", event.record.get("client"));
         assertEquals(new Utf8("not set"), event.record.get("queryparam"));
+
+        assertEquals("absent", event.record.get("event"));
+        assertEquals("present", event.record.get("pageview"));
     }
 
     @Test
@@ -219,6 +239,24 @@ public class DslRecordMapperTest {
     }
 
     @Test
+    public void shouldNotFailOnBrokenQueryString() throws IOException, InterruptedException {
+        setupServer("funky-querystring-mapping.groovy");
+        EventPayload event = request("http://example.com/path/?a=value&=42&b=&d=word&c&=bla");
+
+        /*
+         * Query string parsing semantics:
+         * ?q=          =>   q == ""
+         * ?q=foo       =>   q == "foo"
+         * ?q&a=bar     =>   q == "" && a == "bar"
+         * ?=42&q=foo   =>   q == "foo"
+         */
+        assertEquals("value", event.record.get("uriQueryStringValue"));
+        assertEquals("", event.record.get("queryparam"));
+        assertEquals("", event.record.get("client"));
+        assertEquals("word", event.record.get("pageview"));
+    }
+
+    @Test
     public void shouldSetCustomHeaders() throws IOException, InterruptedException {
         setupServer("header-mapping.groovy");
         EventPayload event = request("http://www.example.com/");
@@ -226,6 +264,67 @@ public class DslRecordMapperTest {
         assertEquals("first", event.record.get("header"));
         assertEquals("first,second,last", event.record.get("headers"));
     }
+
+    @Test
+    public void shouldMapAllGeoIpFields() throws IOException, InterruptedException, ClosedServiceException {
+        /*
+         * Have to work around not being able to create a HttpServerExchange a bit.
+         * We setup a actual server just to do a request and capture the HttpServerExchange
+         * instance. Then we setup a DslRecordMapper instance with a mock ip2geo lookup service,
+         * we then use the previously captured exchange object against our locally created mapper
+         * instance to test the ip2geo mapping (using the a mock lookup service).
+         */
+        setupServer("minimal-mapping.groovy");
+        EventPayload event = request("http://www.example.com");
+
+        final File geoMappingFile = File.createTempFile("geo-mapping", ".groovy");
+        Files.write(Resources.toByteArray(Resources.getResource("geo-mapping.groovy")), geoMappingFile);
+
+        final ImmutableMap<String, Object> mappingConfig = ImmutableMap.of(
+                "divolte.tracking.schema_mapping.mapping_script_file", geoMappingFile.getAbsolutePath(),
+                "divolte.tracking.schema_file", avroFile.getAbsolutePath()
+                );
+
+        final Config geoConfig = ConfigFactory.parseMap(mappingConfig)
+            .withFallback(ConfigFactory.parseResources("dsl-mapping-test.conf"))
+            .withFallback(ConfigFactory.parseResources("reference-test.conf"));
+
+        final CityResponse mockResponseWithEverything = loadFromClassPath("/city-response-with-everything.json", new TypeReference<CityResponse>(){});
+        final Map<String,Object> expectedMapping = loadFromClassPath("/city-response-expected-mapping.json", new TypeReference<Map<String,Object>>(){});
+
+        final LookupService mockLookupService = mock(LookupService.class);
+        when(mockLookupService.lookup(any())).thenReturn(Optional.of(mockResponseWithEverything));
+
+        final DslRecordMapper mapper = new DslRecordMapper(
+                geoConfig,
+                (new Schema.Parser()).parse(Resources.toString(Resources.getResource("TestRecord.avsc"), StandardCharsets.UTF_8)),
+                Optional.of(mockLookupService));
+
+        final GenericRecord record = mapper.newRecordFromExchange(event.exchange);
+
+        // Validate the results.
+        verify(mockLookupService).lookup(any());
+        verifyNoMoreInteractions(mockLookupService);
+        expectedMapping.forEach((k, v) -> {
+            final Object recordValue = record.get(k);
+            assertEquals("Property " + k + " not mapped correctly.", v, recordValue);
+        });
+
+        geoMappingFile.delete();
+    }
+
+    private static final ObjectMapper MAPPER =
+            new ObjectMapper()
+                    .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
+                    .setInjectableValues(new InjectableValues.Std().addValue("locales", ImmutableList.of("en")));
+
+    private <T> T loadFromClassPath(final String resource, final TypeReference<?> typeReference) throws IOException {
+        try (final InputStream resourceStream = this.getClass().getResourceAsStream(resource)) {
+            return MAPPER.readValue(resourceStream, typeReference);
+        }
+    }
+
+
 
 
 

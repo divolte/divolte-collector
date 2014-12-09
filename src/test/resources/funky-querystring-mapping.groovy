@@ -19,8 +19,9 @@ mapping {
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
     
-    def hdr = header('X-Divolte-Test')
-    map hdr onto 'headerList'
-    map hdr.first() onto 'header'
-    map hdr.commaSeparated() onto 'headers'
+    def locationUri = parse location() to uri
+    map locationUri.query().value('a') onto 'uriQueryStringValue'
+    map locationUri.query().value('b') onto 'queryparam'
+    map locationUri.query().value('c') onto 'client'
+    map locationUri.query().value('d') onto 'pageview'
 }

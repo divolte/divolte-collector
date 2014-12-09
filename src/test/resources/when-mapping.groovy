@@ -30,4 +30,20 @@ mapping {
     when { referer() equalTo 'not the referer' } apply {
         map 'is set' onto 'queryparam'
     }
+    
+    when header('X-Non-Existing-Header-Name').isAbsent() apply {
+        map 'absent' onto 'event'
+    }
+    
+    when location().isAbsent() apply {
+        map 'should not apply' onto 'event'
+    }
+    
+    when location().isPresent() apply {
+        map 'present' onto 'pageview'
+    }
+    
+    when header('X-Non-Existing-Header-Name').isPresent() apply {
+        map 'should not apply' onto 'pageview'
+    }
 }
