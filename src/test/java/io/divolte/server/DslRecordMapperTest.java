@@ -313,6 +313,29 @@ public class DslRecordMapperTest {
         geoMappingFile.delete();
     }
 
+    @Test(expected=SchemaMappingException.class)
+    public void shouldFailOnIncompatibleTypesWithLiteral() throws IOException, InterruptedException {
+        setupServer("wrong-types-literal.groovy");
+        request("http://www.example.com/wrong");
+    }
+
+    @Test(expected=SchemaMappingException.class)
+    public void shouldFailOnIncompatibleTypesWithValueProducer() throws IOException, InterruptedException {
+        setupServer("wrong-types-producer.groovy");
+        request("http://www.example.com/wrong");
+    }
+
+    @Test
+    public void shouldMapLiteralsOntoCorrectTypes() throws IOException, InterruptedException {
+        setupServer("correct-types-literal.groovy");
+        EventPayload event = request("http://www.example.com/correct");
+        assertEquals("string value", event.record.get("queryparam"));
+        assertEquals(true, event.record.get("queryparamBoolean"));
+        assertEquals(42L, event.record.get("queryparamLong"));
+        assertEquals(42, event.record.get("pathInteger"));
+        assertEquals(42.0, event.record.get("queryparamDouble"));
+    }
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
@@ -323,11 +346,6 @@ public class DslRecordMapperTest {
             return MAPPER.readValue(resourceStream, typeReference);
         }
     }
-
-
-
-
-
 
     private EventPayload request(String location) throws IOException, InterruptedException {
         return request(location, null);
