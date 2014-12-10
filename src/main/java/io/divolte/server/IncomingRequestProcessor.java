@@ -193,8 +193,6 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
         if (null != hdfsFlushingPool) {
             hdfsFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
         }
-
-        logger.debug("Record: {}", avroRecord);
     }
 
     private static final HashFunction CHECKSUM_HASH = Hashing.murmur3_32();
