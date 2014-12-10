@@ -119,6 +119,12 @@ shadowJar {
     mergeServiceFiles()
 }
 
+tasks.withType(FindBugs) {
+    classes = classes.filter {
+        !it.path.contains("io/divolte/groovyscript/")
+    }
+}
+
 findbugs {
     toolVersion = "3.0.0"
 }

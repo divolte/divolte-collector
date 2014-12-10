@@ -19,7 +19,7 @@ import com.google.common.collect.Maps;
 public final class QueryStringParser {
     public static Map<String,List<String>> parseQueryString(final String string) {
         if (string == null) {
-            Collections.emptyMap();
+            return Collections.emptyMap();
         }
 
         Map<String,List<String>> result = Maps.newHashMapWithExpectedSize(10);

@@ -297,7 +297,7 @@ public class DslRecordMapperTest {
 
         final DslRecordMapper mapper = new DslRecordMapper(
                 geoConfig,
-                (new Schema.Parser()).parse(Resources.toString(Resources.getResource("TestRecord.avsc"), StandardCharsets.UTF_8)),
+                new Schema.Parser().parse(Resources.toString(Resources.getResource("TestRecord.avsc"), StandardCharsets.UTF_8)),
                 Optional.of(mockLookupService));
 
         final GenericRecord record = mapper.newRecordFromExchange(event.exchange);
@@ -310,7 +310,7 @@ public class DslRecordMapperTest {
             assertEquals("Property " + k + " not mapped correctly.", v, recordValue);
         });
 
-        geoMappingFile.delete();
+        java.nio.file.Files.delete(geoMappingFile.toPath());
     }
 
     @Test(expected=SchemaMappingException.class)
@@ -394,9 +394,9 @@ public class DslRecordMapperTest {
     }
 
     @After
-    public void shutdown() {
+    public void shutdown() throws IOException {
         if (server != null) server.server.shutdown();
-        if (mappingFile != null) mappingFile.delete();
-        if (avroFile != null) avroFile.delete();
+        if (mappingFile != null) java.nio.file.Files.delete(mappingFile.toPath());
+        if (avroFile != null) java.nio.file.Files.delete(avroFile.toPath());
     }
 }
