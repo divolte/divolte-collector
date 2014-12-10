@@ -228,7 +228,6 @@ public class ConfigRecordMapperTest {
     public void shouldCastValueFromComplexMappingToSchemaType() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam-types");
-        System.out.println(config.withFallback(ConfigFactory.load("reference-test.conf")));
         ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
