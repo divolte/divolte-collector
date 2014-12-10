@@ -75,6 +75,11 @@ public class DslRecordMapper implements RecordMapper {
         }
     }
 
+    public DslRecordMapper(final Schema schema, final DslRecordMapping mapping) {
+        this.schema = schema;
+        actions = mapping.actions();
+    }
+
     @Override
     public GenericRecord newRecordFromExchange(HttpServerExchange exchange) {
         final GenericRecordBuilder builder = new GenericRecordBuilder(schema);

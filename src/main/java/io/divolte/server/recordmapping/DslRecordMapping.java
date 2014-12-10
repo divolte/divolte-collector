@@ -104,14 +104,14 @@ public final class DslRecordMapping {
             throw new SchemaMappingException("Field %s does not exist in Avro schema; error in mapping %s onto %s", fieldName, producer.identifier, fieldName);
         }
         if (!producer.validateTypes(field)) {
-            throw new SchemaMappingException("Cannot map the result of %s onto a field of type %s (type of value and schema of field do not match).", producer.identifier, field.schema());
+            throw new SchemaMappingException("Type mismatch. Cannot map the result of %s onto a field of type %s (type of value and schema of field do not match).", producer.identifier, field.schema());
         }
         stack.getLast().add((e,c,r) -> producer.produce(e, c).ifPresent((v) -> r.set(field, v)));
     }
 
     public <T> void map(final String fieldName, final T literal) {
         if (!COMPATIBLE_PRIMITIVES.containsKey(literal.getClass())) {
-            throw new SchemaMappingException("Cannot map literal %s of type %s. Only primitive types are allowed.", literal.toString(), literal.getClass());
+            throw new SchemaMappingException("Type error. Cannot map literal %s of type %s. Only primitive types are allowed.", literal.toString(), literal.getClass());
         }
 
         final Field field = schema.getField(fieldName);
@@ -120,7 +120,7 @@ public final class DslRecordMapping {
         }
         Optional<Schema> targetSchema = field.schema().getType() == Type.UNION ? unpackUnion(field.schema()) : Optional.of(field.schema());
         if (!targetSchema.map((s) -> s.getType() == COMPATIBLE_PRIMITIVES.get(literal.getClass())).orElse(false)) {
-            throw new SchemaMappingException("Cannot map literal %s of type %s onto a field of type %s (type of value and schema of field do not match).", literal.toString(), literal.getClass(), field.schema());
+            throw new SchemaMappingException("Type mismatch. Cannot map literal %s of type %s onto a field of type %s (type of value and schema of field do not match).", literal.toString(), literal.getClass(), field.schema());
         }
         stack.getLast().add((e,c,r) -> r.set(field, literal));
     }
@@ -128,14 +128,14 @@ public final class DslRecordMapping {
     /*
      * Higher order actions
      */
-    public void when(final PrimitiveValueProducer<Boolean> condition, final Runnable closure) {
+    public void when(final ValueProducer<Boolean> condition, final Runnable closure) {
         stack.add(ImmutableList.<MappingAction>builder());
         closure.run();
 
         final List<MappingAction> actions = stack.removeLast().build();
         stack.getLast().add((e,c,r) -> {
            if (condition.produce(e,c).orElse(false)) {
-               actions.stream().forEach((action) -> action.perform(e,c,r));
+               actions.forEach((action) -> action.perform(e,c,r));
            }
         });
     }

@@ -89,20 +89,18 @@ public final class ConfigRecordMapper implements RecordMapper {
     private final UserAgentParserAndCache uaParser;
 
     public ConfigRecordMapper(final Schema schema,
-                        final Config schemaConfig,
-                        final Config globalConfig,
+                        final Config config,
                         final Optional<LookupService> geoipService) {
-        Objects.requireNonNull(schemaConfig);
-        Objects.requireNonNull(globalConfig);
+        Objects.requireNonNull(config);
 
-        final int version = schemaConfig.getInt("divolte.tracking.schema_mapping.version");
+        final int version = config.getInt("divolte.tracking.schema_mapping.version");
         checkVersion(version);
 
-        this.regexes = regexMapFromConfig(schemaConfig);
+        this.regexes = regexMapFromConfig(config);
         this.schema = Objects.requireNonNull(schema);
-        this.setters = setterListFromConfig(schema, schemaConfig);
+        this.setters = setterListFromConfig(schema, config);
 
-        this.uaParser = new UserAgentParserAndCache(globalConfig);
+        this.uaParser = new UserAgentParserAndCache(config);
 
         this.geoipService = Objects.requireNonNull(geoipService);
     }

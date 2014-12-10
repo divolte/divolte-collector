@@ -70,7 +70,7 @@ public class ConfigRecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-flatfields");
 
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -109,7 +109,7 @@ public class ConfigRecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-corrupted");
 
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange("Divolte/Test");
 
@@ -123,7 +123,7 @@ public class ConfigRecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-duplicates");
 
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange("Divolte/Test");
 
@@ -137,7 +137,7 @@ public class ConfigRecordMapperTest {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-useragent");
 
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         String ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36";
 
@@ -161,7 +161,7 @@ public class ConfigRecordMapperTest {
         expected.expectMessage("Unsupported schema mapping configuration version: 42");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-version");
-        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
     }
 
     @Test
@@ -170,14 +170,14 @@ public class ConfigRecordMapperTest {
         expected.expectMessage("Schema missing mapped field: fieldThatIsMissingFromSchema");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-wrong-field");
-        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
     }
 
     @Test
     public void shouldSetCustomCookieValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-customcookie");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange("Divolte/Test");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
@@ -191,14 +191,14 @@ public class ConfigRecordMapperTest {
         expected.expectMessage("Cookie mapping for field customCookie requires a string 'name' property.");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-missing-cookie-name");
-        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
     }
 
     @Test
     public void shouldSetFieldWithMatchingRegexName() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-matchingregex");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange("Divolte/Test", "l=http://example.com/", "r=https://www.example.com/bla/");
         GenericRecord record = maker.newRecordFromExchange(theExchange);
@@ -211,7 +211,7 @@ public class ConfigRecordMapperTest {
     public void shouldSetFieldWithCaptureGroupFromRegex() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-regex");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -228,7 +228,8 @@ public class ConfigRecordMapperTest {
     public void shouldCastValueFromComplexMappingToSchemaType() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam-types");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        System.out.println(config.withFallback(ConfigFactory.load("reference-test.conf")));
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -257,7 +258,7 @@ public class ConfigRecordMapperTest {
     public void shouldNotBreakOnMalformedIntForCastingMapping() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam-types");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -273,7 +274,7 @@ public class ConfigRecordMapperTest {
     public void shouldSetFieldWithValueFromQueryString() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -288,7 +289,7 @@ public class ConfigRecordMapperTest {
     public void shouldNotSetFieldWithIfNotPresentInQueryString() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -304,7 +305,7 @@ public class ConfigRecordMapperTest {
     public void shouldSetFieldWithEmptyQueryParameterValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -319,7 +320,7 @@ public class ConfigRecordMapperTest {
     public void shouldSetFieldWithMissingQueryParameterValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -334,7 +335,7 @@ public class ConfigRecordMapperTest {
     public void shouldSetFieldWithFirstQueryParameterValue() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -349,7 +350,7 @@ public class ConfigRecordMapperTest {
     public void shouldNotFailIfQueryParameterWithMissingNameExists() throws IOException, UnirestException {
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-test-queryparam");
-        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -364,7 +365,7 @@ public class ConfigRecordMapperTest {
     public void shouldSetFieldFromCustomEventParameter() throws IOException, UnirestException {
         final Schema schema = schemaFromClassPath("/TestRecord.avsc");
         final Config config = ConfigFactory.load("schema-test-customparameter");
-        final ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        final ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
 
         setupExchange(
                 "Divolte/Test",
@@ -380,7 +381,7 @@ public class ConfigRecordMapperTest {
         expected.expectMessage("Event parameter mapping for field customEventParameter requires a string 'name' property.");
         Schema schema = schemaFromClassPath("/TestRecord.avsc");
         Config config = ConfigFactory.load("schema-missing-customparameter-name");
-        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.empty());
+        new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.empty());
     }
 
     private void testMapping(final Optional<CityResponse> response,
@@ -394,7 +395,7 @@ public class ConfigRecordMapperTest {
         setupExchange("Arbitrary User Agent");
 
         // Perform a mapping.
-        final ConfigRecordMapper maker = new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+        final ConfigRecordMapper maker = new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.of(mockLookupService));
         final GenericRecord record = maker.newRecordFromExchange(theExchange);
 
         // Validate the results.
@@ -452,7 +453,7 @@ public class ConfigRecordMapperTest {
         setupExchange("Arbitrary User Agent");
 
         // Perform a mapping.
-        new ConfigRecordMapper(schema, config, ConfigFactory.load(), Optional.of(mockLookupService));
+        new ConfigRecordMapper(schema, config.withFallback(ConfigFactory.load("reference-test.conf")), Optional.of(mockLookupService));
 
         // Verify the lookup service was not invoked.
         verify(mockLookupService, never()).lookup(any());
