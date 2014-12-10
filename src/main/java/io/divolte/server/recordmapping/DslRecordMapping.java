@@ -88,8 +88,8 @@ public final class DslRecordMapping {
 
     public DslRecordMapping(final Schema schema, final UserAgentParserAndCache uaParser, final Optional<LookupService> geoIpService) {
         this.schema = Objects.requireNonNull(schema);
-        this.uaParser = uaParser;
-        this.geoIpService = geoIpService;
+        this.uaParser = Objects.requireNonNull(uaParser);
+        this.geoIpService = Objects.requireNonNull(geoIpService);
 
         stack = new ArrayDeque<>();
         stack.add(ImmutableList.<MappingAction>builder());
@@ -118,10 +118,12 @@ public final class DslRecordMapping {
         if (field == null) {
             throw new SchemaMappingException("Field %s does not exist in Avro schema; error in mapping %s onto %s", fieldName, literal, fieldName);
         }
-        Optional<Schema> targetSchema = field.schema().getType() == Type.UNION ? unpackUnion(field.schema()) : Optional.of(field.schema());
+
+        final Optional<Schema> targetSchema = unpackNullableUnion(field.schema());
         if (!targetSchema.map((s) -> s.getType() == COMPATIBLE_PRIMITIVES.get(literal.getClass())).orElse(false)) {
             throw new SchemaMappingException("Type mismatch. Cannot map literal %s of type %s onto a field of type %s (type of value and schema of field do not match).", literal.toString(), literal.getClass(), field.schema());
         }
+
         stack.getLast().add((e,c,r) -> r.set(field, literal));
     }
 
@@ -319,7 +321,7 @@ public final class DslRecordMapping {
     /*
      * Regex mapping
      */
-    public ValueProducer<Matcher> matcher(final ValueProducer<String> source, String regex) {
+    public ValueProducer<Matcher> matcher(final ValueProducer<String> source, final String regex) {
         return new MatcherValueProducer(source, regex);
     }
 
@@ -337,7 +339,7 @@ public final class DslRecordMapping {
             return new PrimitiveValueProducer<Boolean>(
                     identifier + ".matches()",
                     Boolean.class,
-                    (e,c) -> this.produce(e,c).map(Matcher::matches));
+                    (e,c) -> produce(e,c).map(Matcher::matches));
         }
 
         // Note: matches() must be called on a Matcher prior to calling group
@@ -347,14 +349,14 @@ public final class DslRecordMapping {
             return new PrimitiveValueProducer<>(
                     identifier + ".group(" + group + ")",
                     String.class,
-                    (e,c) -> this.produce(e,c).map((m) -> m.matches() ? m.group(group) : null));
+                    (e,c) -> produce(e,c).map((m) -> m.matches() ? m.group(group) : null));
         }
 
         public ValueProducer<String> group(final String group) {
             return new PrimitiveValueProducer<>(
                     identifier + ".group(" + group + ")",
                     String.class,
-                    (e,c) -> this.produce(e,c).map((m) -> m.matches() ? m.group(group) : null));
+                    (e,c) -> produce(e,c).map((m) -> m.matches() ? m.group(group) : null));
         }
 
         @Override
@@ -487,7 +489,7 @@ public final class DslRecordMapping {
 
         @Override
         boolean validateTypes(Field target) {
-            Optional<Schema> targetSchema = target.schema().getType() == Type.UNION ? unpackUnion(target.schema()) : Optional.of(target.schema());
+            Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
             return targetSchema
                 .map((s) -> s.getType() == Type.MAP &&
                             s.getValueType().getType() == Type.ARRAY &&
@@ -537,21 +539,21 @@ public final class DslRecordMapping {
             return new PrimitiveValueProducer<String>(
                     identifier + ".first()",
                     String.class,
-                    (e,c) -> this.produce(e, c).map((hv) -> ((HeaderValues) hv).getFirst()));
+                    (e,c) -> produce(e, c).map((hv) -> ((HeaderValues) hv).getFirst()));
         }
 
         public ValueProducer<String> last() {
             return new PrimitiveValueProducer<String>(
                     identifier + ".last()",
                     String.class,
-                    (e,c) -> this.produce(e, c).map((hv) -> ((HeaderValues) hv).getLast()));
+                    (e,c) -> produce(e, c).map((hv) -> ((HeaderValues) hv).getLast()));
         }
 
         public ValueProducer<String> commaSeparated() {
             return new PrimitiveValueProducer<String>(
                     identifier + ".commaSeparated()",
                     String.class,
-                    (e,c) -> this.produce(e, c).map(COMMA_JOINER::join));
+                    (e,c) -> produce(e, c).map(COMMA_JOINER::join));
         }
     }
 
@@ -563,7 +565,8 @@ public final class DslRecordMapping {
                 new PrimitiveValueProducer<InetAddress>(
                         "parse(" + source.identifier + " to IP address)",
                         InetAddress.class,
-                        (e,c) -> source.produce(e, c).flatMap(DslRecordMapping::tryParseIpv4)),
+                        (e,c) -> source.produce(e, c).flatMap(DslRecordMapping::tryParseIpv4),
+                        true),
                 verifyAndReturnLookupService());
     }
 
@@ -828,15 +831,15 @@ public final class DslRecordMapping {
      * Handy when using something other than the remote host as IP address (e.g. custom headers set by a load balancer).
      * We force the address to be in the numeric IPv4 scheme, to prevent name resolution and IPv6.
      */
-    private static Optional<InetAddress> tryParseIpv4(String ip) {
-        byte[] result = new byte[4];
-        String[] parts = StringUtils.split(ip, '.');
+    private static Optional<InetAddress> tryParseIpv4(final String ip) {
+        final byte[] result = new byte[4];
+        final String[] parts = StringUtils.split(ip, '.');
         if (parts.length != 4) {
             return Optional.empty();
         }
         try {
             for (int c = 0; c < 4; c++) {
-                int x = Integer.parseInt(parts[c]);
+                final int x = Integer.parseInt(parts[c]);
                 if (x < 0x00 || x > 0xff) {
                     return Optional.empty();
                 }
@@ -860,11 +863,15 @@ public final class DslRecordMapping {
         return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 
-    private static Optional<Schema> unpackUnion(Schema union) {
-        if (union.getTypes().size() != 2) {
-            return Optional.empty();
+    private static Optional<Schema> unpackNullableUnion(final Schema source) {
+        if (source.getType() == Type.UNION) {
+            if (source.getTypes().size() != 2) {
+                return Optional.empty();
+            } else {
+                return source.getTypes().stream().filter((t) -> t.getType() != Type.NULL).findFirst();
+            }
         } else {
-            return union.getTypes().stream().filter((t) -> t.getType() != Type.NULL).findFirst();
+            return Optional.of(source);
         }
     }
 
@@ -873,7 +880,7 @@ public final class DslRecordMapping {
         private final boolean memoize;
         protected final String identifier;
 
-        public ValueProducer(final String identifier, final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, boolean memoize) {
+        public ValueProducer(final String identifier, final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, final boolean memoize) {
             this.identifier = identifier;
             this.supplier = supplier;
             this.memoize = memoize;
@@ -893,37 +900,37 @@ public final class DslRecordMapping {
                     identifier + ".equalTo(" + other.identifier + ")",
                     Boolean.class,
                     (e, c) -> {
-                        Optional<T> left = this.produce(e, c);
-                        Optional<T> right = other.produce(e, c);
+                        final Optional<T> left = this.produce(e, c);
+                        final Optional<T> right = other.produce(e, c);
                         return left.isPresent() && right.isPresent() ? Optional.of(left.get().equals(right.get())) : Optional.of(false);
                     });
         }
 
-        public ValueProducer<Boolean> equalTo(final T other) {
+        public ValueProducer<Boolean> equalTo(final T literal) {
             return new PrimitiveValueProducer<Boolean>(
-                    identifier + ".equalTo(" + other + ")",
+                    identifier + ".equalTo(" + literal + ")",
                     Boolean.class,
                     (e, c) -> {
-                        Optional<T> left = this.produce(e, c);
-                        return left.isPresent() ? Optional.of(left.get().equals(other)) : Optional.of(false);
+                        final Optional<T> value = produce(e, c);
+                        return value.isPresent() ? Optional.of(value.get().equals(literal)) : Optional.of(false);
                     });
         }
 
         public ValueProducer<Boolean> isPresent() {
             return new PrimitiveValueProducer<Boolean>(
-                    this.identifier + ".isPresent()",
+                    identifier + ".isPresent()",
                     Boolean.class,
                     (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.TRUE).orElse(Boolean.FALSE)));
         }
 
         public ValueProducer<Boolean> isAbsent() {
             return new PrimitiveValueProducer<Boolean>(
-                    this.identifier + ".isAbsent()",
+                    identifier + ".isAbsent()",
                     Boolean.class,
                     (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.FALSE).orElse(Boolean.TRUE)));
         }
 
-        abstract boolean validateTypes(Field target);
+        abstract boolean validateTypes(final Field target);
 
         @Override
         public String toString() {
@@ -935,7 +942,7 @@ public final class DslRecordMapping {
     private final static class PrimitiveValueProducer<T> extends ValueProducer<T> {
         private final Class<T> type;
 
-        public PrimitiveValueProducer(final String identifier, final Class<T> type, final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, boolean memoize) {
+        public PrimitiveValueProducer(final String identifier, final Class<T> type, final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, final boolean memoize) {
             super(identifier, supplier, memoize);
             this.type = type;
         }
@@ -944,8 +951,8 @@ public final class DslRecordMapping {
             this(readableName, type, supplier, false);
         }
 
-        public boolean validateTypes(Field target) {
-            Optional<Schema> targetSchema = target.schema().getType() == Type.UNION ? unpackUnion(target.schema()) : Optional.of(target.schema());
+        public boolean validateTypes(final Field target) {
+            final Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
             return targetSchema
                     .map((s) -> COMPATIBLE_PRIMITIVES.get(type) == s.getType())
                     .orElse(false);
@@ -959,14 +966,14 @@ public final class DslRecordMapping {
             this(identifier, type, supplier, false);
         }
 
-        public PrimitiveListValueProducer(String identifier, Class<T> type, BiFunction<HttpServerExchange, Map<String, Object>, Optional<List<T>>> supplier, boolean memoize) {
+        public PrimitiveListValueProducer(String identifier, Class<T> type, BiFunction<HttpServerExchange, Map<String, Object>, Optional<List<T>>> supplier, final boolean memoize) {
             super(identifier, supplier, memoize);
             this.type = type;
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            Optional<Schema> targetSchema = target.schema().getType() == Type.UNION ? unpackUnion(target.schema()) : Optional.of(target.schema());
+        boolean validateTypes(final Field target) {
+            final Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
             return targetSchema
                     .map((s) -> s.getType() == Type.ARRAY && COMPATIBLE_PRIMITIVES.get(type) == s.getElementType().getType())
                     .orElse(false);
@@ -974,6 +981,6 @@ public final class DslRecordMapping {
     }
 
     static interface MappingAction {
-        void perform(HttpServerExchange echange, Map<String,Object> context, GenericRecordBuilder record);
+        void perform(final HttpServerExchange echange, final Map<String,Object> context, GenericRecordBuilder record);
     }
 }
