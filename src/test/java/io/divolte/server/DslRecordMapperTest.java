@@ -336,6 +336,78 @@ public class DslRecordMapperTest {
         assertEquals(42.0, event.record.get("queryparamDouble"));
     }
 
+    @Test
+    public void shouldStopWhenToldTo() throws IOException, InterruptedException {
+        setupServer("basic-stop.groovy");
+        EventPayload event = request("http://www.example.com");
+        assertEquals("happened", event.record.get("client"));
+        assertNull(event.record.get("session"));
+    }
+
+    @Test
+    public void shouldStopOnNestedStop() throws IOException, InterruptedException {
+        setupServer("nested-conditional-stop.groovy");
+        EventPayload event = request("http://www.example.com");
+        assertEquals("happened", event.record.get("client"));
+        assertNull(event.record.get("session"));
+    }
+
+    @Test
+    public void shouldStopOnCondition() throws IOException, InterruptedException {
+        setupServer("shorthand-conditional-stop.groovy");
+        EventPayload event = request("http://www.example.com");
+        assertEquals("happened", event.record.get("client"));
+        assertNull(event.record.get("session"));
+    }
+
+    @Test
+    public void shouldStopOnConditionClosureSyntax() throws IOException, InterruptedException {
+        setupServer("shorthand-conditional-stop-closure.groovy");
+        EventPayload event = request("http://www.example.com");
+        assertEquals("happened", event.record.get("client"));
+        assertNull(event.record.get("session"));
+    }
+
+    @Test
+    public void shouldStopOnTopLevelExit() throws IOException, InterruptedException {
+        setupServer("basic-toplevel-exit.groovy");
+        EventPayload event = request("http://www.example.com");
+        assertEquals("happened", event.record.get("client"));
+        assertNull(event.record.get("session"));
+    }
+
+    @Test
+    public void shouldExitOnCondition() throws IOException, InterruptedException {
+        setupServer("nested-conditional-exit.groovy");
+        EventPayload event = request("http://www.example.com");
+        assertEquals("happened", event.record.get("client"));
+        assertEquals("happened", event.record.get("pageview"));
+        assertEquals("happened", event.record.get("event"));
+        assertEquals("happened", event.record.get("customCookie"));
+        assertNull(event.record.get("session"));
+    }
+
+    @Test
+    public void sholdExitOnConditionClosureSyntax() throws IOException, InterruptedException {
+        setupServer("nested-conditional-exit-closure.groovy");
+        EventPayload event = request("http://www.example.com");
+        assertEquals("happened", event.record.get("client"));
+        assertEquals("happened", event.record.get("pageview"));
+        assertEquals("happened", event.record.get("event"));
+        assertEquals("happened", event.record.get("customCookie"));
+        assertNull(event.record.get("session"));
+    }
+
+    @Test
+    public void shouldApplyBooleanLogic() throws IOException, InterruptedException {
+        setupServer("boolean-logic.groovy");
+        EventPayload event = request("http://www.example.com/");
+        assertTrue((Boolean) event.record.get("unreliable"));
+        assertFalse((Boolean) event.record.get("dupe"));
+        assertTrue((Boolean) event.record.get("queryparamBoolean"));
+        assertTrue((Boolean) event.record.get("pathBoolean"));
+    }
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)

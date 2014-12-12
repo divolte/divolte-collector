@@ -96,12 +96,14 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
             final int version = config.getInt("divolte.tracking.schema_mapping.version");
             switch(version) {
             case 1:
+                logger.info("Using configuration based schema mapping.");
                 mapper = new ConfigRecordMapper(
                         Objects.requireNonNull(schema),
                         config,
                         Optional.ofNullable(geoipLookupService));
                 break;
             case 2:
+                logger.info("Using script based schema mapping.");
                 mapper = new DslRecordMapper(
                         config,
                         Objects.requireNonNull(schema),

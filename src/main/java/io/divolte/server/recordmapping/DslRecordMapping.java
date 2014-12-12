@@ -106,7 +106,10 @@ public final class DslRecordMapping {
         if (!producer.validateTypes(field)) {
             throw new SchemaMappingException("Type mismatch. Cannot map the result of %s onto a field of type %s (type of value and schema of field do not match).", producer.identifier, field.schema());
         }
-        stack.getLast().add((e,c,r) -> producer.produce(e, c).ifPresent((v) -> r.set(field, v)));
+        stack.getLast().add((e,c,r) -> {
+                producer.produce(e, c).ifPresent((v) -> r.set(field, v));
+                return MappingAction.MappingResult.CONTINUE;
+            });
     }
 
     public <T> void map(final String fieldName, final T literal) {
@@ -124,7 +127,10 @@ public final class DslRecordMapping {
             throw new SchemaMappingException("Type mismatch. Cannot map literal %s of type %s onto a field of type %s (type of value and schema of field do not match).", literal.toString(), literal.getClass(), field.schema());
         }
 
-        stack.getLast().add((e,c,r) -> r.set(field, literal));
+        stack.getLast().add((e,c,r) -> {
+            r.set(field, literal);
+            return MappingAction.MappingResult.CONTINUE;
+        });
     }
 
     /*
@@ -137,11 +143,37 @@ public final class DslRecordMapping {
         final List<MappingAction> actions = stack.removeLast().build();
         stack.getLast().add((e,c,r) -> {
            if (condition.produce(e,c).orElse(false)) {
-               actions.forEach((action) -> action.perform(e,c,r));
+               for (MappingAction action : actions) {
+                   switch (action.perform(e, c, r)) {
+                   case EXIT:
+                       return MappingAction.MappingResult.CONTINUE;
+                   case STOP:
+                       return MappingAction.MappingResult.STOP;
+                   case CONTINUE:
+                   }
+               }
            }
+           return MappingAction.MappingResult.CONTINUE;
         });
     }
 
+    /*
+     * Short circuit actions
+     */
+    public void stop() {
+        stack.getLast().add((e,c,r) -> MappingAction.MappingResult.STOP);
+    }
+
+    public void exitWhen(final ValueProducer<Boolean> condition) {
+        stack.getLast().add(
+                (e,c,r) -> condition.produce(e,c)
+                                    .map((b) -> b ? MappingAction.MappingResult.EXIT : MappingAction.MappingResult.CONTINUE)
+                                    .orElse(MappingAction.MappingResult.CONTINUE));
+    }
+
+    public void exit() {
+        stack.getLast().add((e,c,r) -> MappingAction.MappingResult.EXIT);
+    }
 
     /*
      * The mapping result, used by the record mapper.
@@ -182,9 +214,8 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<Boolean> toBoolean(final ValueProducer<String> source) {
-        return new PrimitiveValueProducer<Boolean>(
+        return new BooleanValueProducer(
                 "parse(" + source.identifier + " to bool)",
-                Boolean.class,
                 (e,c) -> source.produce(e, c).map(Boolean::parseBoolean));
     }
 
@@ -204,15 +235,15 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<Boolean> firstInSession() {
-        return new PrimitiveValueProducer<Boolean>("firstInSession()", Boolean.class, (e,c) -> Optional.ofNullable(e.getAttachment(FIRST_IN_SESSION_KEY)));
+        return new BooleanValueProducer("firstInSession()", (e,c) -> Optional.ofNullable(e.getAttachment(FIRST_IN_SESSION_KEY)));
     }
 
     public ValueProducer<Boolean> corrupt() {
-        return new PrimitiveValueProducer<Boolean>("corrupt()", Boolean.class, (e,c) -> Optional.ofNullable(e.getAttachment(CORRUPT_EVENT_KEY)));
+        return new BooleanValueProducer("corrupt()", (e,c) -> Optional.ofNullable(e.getAttachment(CORRUPT_EVENT_KEY)));
     }
 
     public ValueProducer<Boolean> duplicate() {
-        return new PrimitiveValueProducer<Boolean>("duplicate()", Boolean.class, (e,c) -> Optional.ofNullable(e.getAttachment(DUPLICATE_EVENT_KEY)));
+        return new BooleanValueProducer("duplicate()", (e,c) -> Optional.ofNullable(e.getAttachment(DUPLICATE_EVENT_KEY)));
     }
 
     public ValueProducer<Long> timestamp() {
@@ -336,9 +367,8 @@ public final class DslRecordMapping {
         }
 
         public ValueProducer<Boolean> matches() {
-            return new PrimitiveValueProducer<Boolean>(
+            return new BooleanValueProducer(
                     identifier + ".matches()",
-                    Boolean.class,
                     (e,c) -> produce(e,c).map(Matcher::matches));
         }
 
@@ -808,16 +838,14 @@ public final class DslRecordMapping {
         }
 
         public ValueProducer<Boolean> anonymousProxy() {
-            return new PrimitiveValueProducer<Boolean>(
+            return new BooleanValueProducer(
                     identifier + ".anonymousProxy()",
-                    Boolean.class,
                     (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::isAnonymousProxy));
         }
 
         public ValueProducer<Boolean> satelliteProvider() {
-            return new PrimitiveValueProducer<Boolean>(
+            return new BooleanValueProducer(
                     identifier + ".satelliteProvider()",
-                    Boolean.class,
                     (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::isSatelliteProvider));
         }
 
@@ -896,9 +924,8 @@ public final class DslRecordMapping {
         }
 
         public ValueProducer<Boolean> equalTo(final ValueProducer<T> other) {
-            return new PrimitiveValueProducer<Boolean>(
+            return new BooleanValueProducer(
                     identifier + ".equalTo(" + other.identifier + ")",
-                    Boolean.class,
                     (e, c) -> {
                         final Optional<T> left = this.produce(e, c);
                         final Optional<T> right = other.produce(e, c);
@@ -907,9 +934,8 @@ public final class DslRecordMapping {
         }
 
         public ValueProducer<Boolean> equalTo(final T literal) {
-            return new PrimitiveValueProducer<Boolean>(
+            return new BooleanValueProducer(
                     identifier + ".equalTo(" + literal + ")",
-                    Boolean.class,
                     (e, c) -> {
                         final Optional<T> value = produce(e, c);
                         return value.isPresent() ? Optional.of(value.get().equals(literal)) : Optional.of(false);
@@ -917,16 +943,14 @@ public final class DslRecordMapping {
         }
 
         public ValueProducer<Boolean> isPresent() {
-            return new PrimitiveValueProducer<Boolean>(
+            return new BooleanValueProducer(
                     identifier + ".isPresent()",
-                    Boolean.class,
                     (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.TRUE).orElse(Boolean.FALSE)));
         }
 
         public ValueProducer<Boolean> isAbsent() {
-            return new PrimitiveValueProducer<Boolean>(
+            return new BooleanValueProducer(
                     identifier + ".isAbsent()",
-                    Boolean.class,
                     (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.FALSE).orElse(Boolean.TRUE)));
         }
 
@@ -939,7 +963,7 @@ public final class DslRecordMapping {
     }
 
     @ParametersAreNonnullByDefault
-    private final static class PrimitiveValueProducer<T> extends ValueProducer<T> {
+    private static class PrimitiveValueProducer<T> extends ValueProducer<T> {
         private final Class<T> type;
 
         public PrimitiveValueProducer(final String identifier, final Class<T> type, final BiFunction<HttpServerExchange, Map<String,Object>, Optional<T>> supplier, final boolean memoize) {
@@ -980,7 +1004,50 @@ public final class DslRecordMapping {
         }
     }
 
+    private static class BooleanValueProducer extends PrimitiveValueProducer<Boolean> {
+        private BooleanValueProducer(String identifier, BiFunction<HttpServerExchange, Map<String, Object>, Optional<Boolean>> supplier, boolean memoize) {
+            super(identifier, Boolean.class, supplier, memoize);
+        }
+
+        private BooleanValueProducer(String identifier, BiFunction<HttpServerExchange, Map<String, Object>, Optional<Boolean>> supplier) {
+            super(identifier, Boolean.class, supplier);
+        }
+
+        @SuppressWarnings("unused")
+        public ValueProducer<Boolean> or(final ValueProducer<Boolean> other) {
+            return new BooleanValueProducer(
+                    identifier + ".or(" + other.identifier + ")",
+                    (e,c) -> {
+                        final Optional<Boolean> left = produce(e,c);
+                        final Optional<Boolean> right = other.produce(e,c);
+                        return left.isPresent() && right.isPresent() ? Optional.of(left.get() || right.get()) : Optional.empty();
+                    });
+        }
+
+        @SuppressWarnings("unused")
+        public ValueProducer<Boolean> and(final ValueProducer<Boolean> other) {
+            return new BooleanValueProducer(
+                    identifier + ".and(" + other.identifier + ")",
+                    (e,c) -> {
+                        final Optional<Boolean> left = produce(e,c);
+                        final Optional<Boolean> right = other.produce(e,c);
+                        return left.isPresent() && right.isPresent() ? Optional.of(left.get() && right.get()) : Optional.empty();
+                    });
+        }
+
+        @SuppressWarnings("unused")
+        public ValueProducer<Boolean> negate() {
+            return new BooleanValueProducer(
+                        "not(" + identifier + ")",
+                        (e,c) -> produce(e,c).map((b) -> !b));
+            // This would have been a fine candidate use for a method reference to BooleanUtils
+        }
+    }
+
     static interface MappingAction {
-        void perform(final HttpServerExchange echange, final Map<String,Object> context, GenericRecordBuilder record);
+        enum MappingResult {
+            STOP, EXIT, CONTINUE;
+        }
+        MappingResult perform(final HttpServerExchange echange, final Map<String,Object> context, GenericRecordBuilder record);
     }
 }

@@ -55,13 +55,17 @@ abstract class MappingBase extends Script {
       'apply': {
         Closure closure -> 
         mapping.when(producer, closure)
-      }
+      },
+      'stop': { mapping.when(producer, { mapping.stop() }) },
+      'exit': { mapping.exitWhen(producer) }
     ]
   }
 
   def when(Closure<ValueProducer<Boolean>> producer) {
     [
-      'apply': { Closure closure -> when producer.call() apply closure }
+      'apply': { Closure closure -> when producer.call() apply closure },
+      'stop': { mapping.when(producer.call(), { mapping.stop() }) },
+      'exit': { mapping.exitWhen(producer.call()) }
     ]
   }
 
@@ -69,6 +73,10 @@ abstract class MappingBase extends Script {
     [
       'against': { ValueProducer<String> producer -> mapping.matcher(producer, regex) }
     ]
+  }
+
+  def not(ValueProducer<Boolean> producer) {
+    producer.negate()
   }
 
   def int32 = Integer.TYPE
