@@ -1,4 +1,24 @@
+***************
 Getting Started
-==========
+***************
 
-Here we describe how to get started…
+Installation
+============
+
+The JavaScript tag
+==================
+
+Minimal configuration
+=====================
+
+Running and looking at the data
+===============================
+
+Writing to HDFS
+===============
+
+Writing to Kafka
+================
+
+Next steps
+==========
