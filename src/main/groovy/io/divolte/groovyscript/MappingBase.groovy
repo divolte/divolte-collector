@@ -45,9 +45,7 @@ abstract class MappingBase extends Script {
   }
 
   def map(Closure<ValueProducer> producer) {
-    [
-      'onto': { String fieldName -> map producer.call() onto fieldName }
-    ]
+    map(producer.call())
   }
 
   def when(ValueProducer<Boolean> producer) {
@@ -62,11 +60,7 @@ abstract class MappingBase extends Script {
   }
 
   def when(Closure<ValueProducer<Boolean>> producer) {
-    [
-      'apply': { Closure closure -> when producer.call() apply closure },
-      'stop': { mapping.when(producer.call(), { mapping.stop() }) },
-      'exit': { mapping.exitWhen(producer.call()) }
-    ]
+    when(producer.call())
   }
 
   def match(String regex) {

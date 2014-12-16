@@ -4,6 +4,7 @@ Mapping
 
 Why mapping?
 ============
+
 Built in default mapping
 ------------------------
 
@@ -21,22 +22,25 @@ A word on groovy
 
 Constructs
 ----------
+
 Mapping values onto fields (map)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Conditional mapping (when)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Short circuit
-^^^^^^^^^^^^^
+Sections and short circuit
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 exit
 """"
 
-stop
-""""
+Stopping execution
+^^^^^^^^^^^^^^^^^^
 
 Casting
 ^^^^^^^
+
 Types
 """""
 
@@ -131,6 +135,7 @@ Introduction
 
 Constructs
 ----------
+
 Simple values
 ^^^^^^^^^^^^^
 

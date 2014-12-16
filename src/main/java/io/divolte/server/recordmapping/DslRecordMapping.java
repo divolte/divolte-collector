@@ -146,11 +146,30 @@ public final class DslRecordMapping {
                for (MappingAction action : actions) {
                    switch (action.perform(e, c, r)) {
                    case EXIT:
-                       return MappingAction.MappingResult.CONTINUE;
+                       return MappingAction.MappingResult.EXIT;
                    case STOP:
                        return MappingAction.MappingResult.STOP;
                    case CONTINUE:
                    }
+               }
+           }
+           return MappingAction.MappingResult.CONTINUE;
+        });
+    }
+
+    public void section(final Runnable closure) {
+        stack.add(ImmutableList.<MappingAction>builder());
+        closure.run();
+
+        final List<MappingAction> actions = stack.removeLast().build();
+        stack.getLast().add((e,c,r) -> {
+           for (MappingAction action : actions) {
+               switch (action.perform(e, c, r)) {
+               case EXIT:
+                   return MappingAction.MappingResult.CONTINUE;
+               case STOP:
+                   return MappingAction.MappingResult.STOP;
+               case CONTINUE:
                }
            }
            return MappingAction.MappingResult.CONTINUE;

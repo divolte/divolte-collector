@@ -19,19 +19,23 @@ mapping {
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
     
-    when location().isPresent() apply {
-        map 'happened' onto 'client'
-        // Breaks out of this when; this hardly ever makes sense unconditionally
-        exit()
-        map 'should not happen' onto 'session'
+    section {
+        when location().isPresent() apply {
+            map 'happened' onto 'client'
+            // Breaks out of this when; this hardly ever makes sense unconditionally
+            exit()
+            map 'should not happen' onto 'session'
+        }
     }
     
-    when location().isPresent() apply {
-        map 'happened' onto 'pageview'
-        when location().isAbsent() exit() // breaks out of the enclosing when
-        map 'happened' onto 'event'
-        when location().isPresent() exit() // breaks out of the enclosing when
-        map 'should not happen' onto 'session'
+    section {
+        when location().isPresent() apply {
+            map 'happened' onto 'pageview'
+            when location().isAbsent() exit() // breaks out of the enclosing section
+            map 'happened' onto 'event'
+            when location().isPresent() exit() // breaks out of the enclosing section
+            map 'should not happen' onto 'session'
+        }
     }
     
     map 'happened' onto 'customCookie'
