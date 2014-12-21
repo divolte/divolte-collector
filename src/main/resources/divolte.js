@@ -84,7 +84,7 @@ var SCRIPT_NAME = 'divolte.js';
     var url;
     if ('undefined' === typeof myElement) {
       var regexEscape = function (s) {
-        return s.replace(/([.*+?^${}()|[\]\\])/g, "\\$1");
+        return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       };
       var scriptElements = document.getElementsByTagName('script');
       var scriptPattern = new RegExp("^(:?.*\/)?" + regexEscape(SCRIPT_NAME) + "(:?[?#].*)?$");
