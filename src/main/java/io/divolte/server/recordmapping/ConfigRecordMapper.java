@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.*;
+import io.divolte.server.OptionalConfig;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -38,8 +39,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,8 +49,6 @@ import javax.annotation.concurrent.NotThreadSafe;
 
 import net.sf.uadetector.OperatingSystem;
 import net.sf.uadetector.ReadableUserAgent;
-import net.sf.uadetector.UserAgentStringParser;
-import net.sf.uadetector.service.UADetectorServiceFactory;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
@@ -60,13 +57,8 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
@@ -88,52 +80,29 @@ import com.typesafe.config.ConfigValueType;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
-final class RecordMapper {
-    private final static Logger logger = LoggerFactory.getLogger(RecordMapper.class);
-
+public final class ConfigRecordMapper implements RecordMapper {
     private final Schema schema;
     private final Map<String, Pattern> regexes;
     private final List<FieldSetter> setters;
 
-    private final LoadingCache<String,ReadableUserAgent> uaLookupCache;
     private final Optional<LookupService> geoipService;
+    private final UserAgentParserAndCache uaParser;
 
-    public RecordMapper(final Schema schema,
-                        final Config schemaConfig,
-                        final Config globalConfig,
+    public ConfigRecordMapper(final Schema schema,
+                        final Config config,
                         final Optional<LookupService> geoipService) {
-        Objects.requireNonNull(schemaConfig);
-        Objects.requireNonNull(globalConfig);
+        Objects.requireNonNull(config);
 
-        final int version = schemaConfig.getInt("divolte.tracking.schema_mapping.version");
+        final int version = config.getInt("divolte.tracking.schema_mapping.version");
         checkVersion(version);
 
-        this.regexes = regexMapFromConfig(schemaConfig);
+        this.regexes = regexMapFromConfig(config);
         this.schema = Objects.requireNonNull(schema);
-        this.setters = setterListFromConfig(schema, schemaConfig);
+        this.setters = setterListFromConfig(schema, config);
 
-        final UserAgentStringParser parser = parserBasedOnTypeConfig(globalConfig.getString("divolte.tracking.ua_parser.type"));
-        this.uaLookupCache = sizeBoundCacheFromLoadingFunction(parser::parse, globalConfig.getInt("divolte.tracking.ua_parser.cache_size"));
+        this.uaParser = new UserAgentParserAndCache(config);
 
         this.geoipService = Objects.requireNonNull(geoipService);
-
-        logger.info("User agent parser data version: {}", parser.getDataVersion());
-    }
-
-    private static UserAgentStringParser parserBasedOnTypeConfig(String type) {
-        switch (type) {
-        case "caching_and_updating":
-            logger.info("Using caching and updating user agent parser.");
-            return UADetectorServiceFactory.getCachingAndUpdatingParser();
-        case "online_updating":
-            logger.info("Using online updating user agent parser.");
-            return UADetectorServiceFactory.getOnlineUpdatingParser();
-        case "non_updating":
-            logger.info("Using non-updating (resource module based) user agent parser.");
-            return UADetectorServiceFactory.getResourceModuleParser();
-        default:
-            throw new RuntimeException("Invalid user agent parser type. Valid values are: caching_and_updating, online_updating, non_updating.");
-        }
     }
 
     private static FieldSetter fieldSetterFromConfig(final Schema schema, final Entry<String, ConfigValue> entry) {
@@ -403,15 +372,15 @@ final class RecordMapper {
         case "location":
             return LOCATION_FIELD_PRODUCER;
         case "viewportPixelWidth":
-            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
         case "viewportPixelHeight":
-            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
+            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
         case "screenPixelWidth":
-            return (c) -> c.getQueryParameter(SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
         case "screenPixelHeight":
-            return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
+            return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
         case "devicePixelRatio":
-            return (c) -> c.getQueryParameter(DEVICE_PIXEL_RATIO_QUERY_PARAM).map(RecordMapper::tryParseBase36Int);
+            return (c) -> c.getQueryParameter(DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
         case "partyId":
             return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map((cv) -> cv.value);
         case "sessionId":
@@ -470,6 +439,7 @@ final class RecordMapper {
         Optional<T> get(Context context);
     }
 
+    @Override
     public GenericRecord newRecordFromExchange(final HttpServerExchange exchange) {
         final GenericRecordBuilder builder = new GenericRecordBuilder(schema);
         final Context context = new Context(exchange);
@@ -477,43 +447,8 @@ final class RecordMapper {
         return builder.build();
     }
 
-    @ParametersAreNonnullByDefault
-    public static class SchemaMappingException extends RuntimeException {
-        private static final long serialVersionUID = 1L;
-
-        public SchemaMappingException(String message) {
-            super(message);
-        }
-
-        public SchemaMappingException(String message, Object... args) {
-            this(String.format(message, args));
-        }
-    }
-
-    private static <K,V> LoadingCache<K, V> sizeBoundCacheFromLoadingFunction(Function<K, V> loader, int size) {
-        return CacheBuilder
-                .newBuilder()
-                .maximumSize(size)
-                .initialCapacity(size)
-                .build(new CacheLoader<K, V>() {
-                    @Override
-                    public V load(K key) throws Exception {
-                        return loader.apply(key);
-                    }
-                });
-    }
-
-    private Optional<ReadableUserAgent> parseUserAgent(final String userAgentString) {
-        try {
-            return Optional.of(uaLookupCache.get(userAgentString));
-        } catch (final ExecutionException e) {
-            logger.debug("Failed to parse user agent string for: " + userAgentString);
-            return Optional.empty();
-        }
-    }
-
     @Nullable
-    private static Integer tryParseBase36Int(final String input) {
+    public static Integer tryParseBase36Int(final String input) {
         try {
             return Integer.valueOf(input, 36);
         } catch (final NumberFormatException ignored) {
@@ -539,7 +474,7 @@ final class RecordMapper {
             this.serverExchange = Objects.requireNonNull(serverExchange);
             this.userAgent = new LazyReference<>(() ->
                 Optional.ofNullable(serverExchange.getRequestHeaders().getFirst(Headers.USER_AGENT)));
-            this.userAgentLookup = new LazyReference<>(() -> userAgent.get().flatMap(RecordMapper.this::parseUserAgent));
+            this.userAgentLookup = new LazyReference<>(() -> userAgent.get().flatMap(ConfigRecordMapper.this.uaParser::tryParse));
             this.geoLookup = new LazyReference<>(() -> geoipService.flatMap((service) -> {
                 final InetSocketAddress sourceAddress = serverExchange.getSourceAddress();
                 final InetAddress ipAddress = null != sourceAddress ? sourceAddress.getAddress() : null;

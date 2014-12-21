@@ -102,7 +102,7 @@
                     "null",
                     {
                         "type": "array",
-                        "items": ["null", "string"]
+                        "items": "string"
                     }
                 ],
             "default": null
@@ -114,7 +114,7 @@
                     "null",
                     {
                         "type": "array",
-                        "items": ["null", "int"]
+                        "items": "int"
                     }
                 ],
             "default": null
@@ -126,10 +126,57 @@
                     "null",
                     {
                         "type": "array",
-                        "items": ["null", "string"]
+                        "items": "string"
                     }
                 ],
             "default": null
-        }
+        },
+
+        { "name": "uriScheme",                        "type": ["null","string"],  "default": null },
+        { "name": "uriPath",                          "type": ["null","string"],  "default": null },
+        { "name": "uriHost",                          "type": ["null","string"],  "default": null },
+        { "name": "uriPort",                          "type": ["null","int"],     "default": null },
+        { "name": "uriQueryString",                   "type": ["null","string"],  "default": null },
+        { "name": "uriFragment",                      "type": ["null","string"],  "default": null },
+        { "name": "uriQueryStringValue",              "type": ["null","string"],  "default": null },
+        {
+          "name": "uriQueryStringValues",
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": "string"
+            }
+          ],
+          "default": null
+        },
+        {
+          "name": "uriQuery",
+          "type": [
+            "null",
+            {
+              "type": "map",
+              "values": {
+                "type": "array",
+                "items": "string"
+              }
+            }
+          ],
+          "default": null
+        },
+        {
+          "name": "headerList",
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": "string"
+            }
+          ],
+          "default": null
+        },
+        { "name": "header",                           "type": ["null","string"],  "default": null },
+        { "name": "headers",                           "type": ["null","string"],  "default": null }
+
     ]
 }

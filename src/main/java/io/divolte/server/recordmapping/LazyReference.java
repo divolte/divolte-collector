@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import java.util.Objects;
 import java.util.Optional;

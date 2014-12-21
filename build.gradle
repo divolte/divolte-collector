@@ -21,6 +21,7 @@ apply plugin: 'pmd'
 apply plugin: 'jacoco'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'application'
+apply plugin: 'groovy'
 
 defaultTasks 'clean', 'build'
 
@@ -46,11 +47,14 @@ tasks.withType(JavaCompile) {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         url 'https://repository-saucelabs.forge.cloudbees.com/release'
     }
-    mavenLocal()
+    maven {
+        url 'http://repository.codehaus.org/'
+    }
 }
 
 buildscript {
@@ -69,6 +73,20 @@ dependencies {
     compile group: 'com.typesafe', name: 'config', version: '1.2.1'
     compile group: 'com.google.guava', name: 'guava', version: '17.0'
     compile group: 'org.apache.avro', name: 'avro', version: '1.7.7'
+
+    /*
+     * We package the Avro Tools to provide an easy way to view Avro files
+     * Because the default artifact (without the nodeps classifier) contains
+     * some kind of uberjar with a old hadoop dependency, we manually include
+     * the deps that we require for the tools to work and depend on the nodeps
+     * variant of the tools itself. This is the minimal list to make the tool
+     * run and have a working tojson command. The other commands weren't fully
+     * tested with these deps.
+     */
+    compile group: 'org.apache.avro', name: 'avro-tools', version: '1.7.7', classifier: 'nodeps'
+    compile group: 'org.apache.avro', name: 'trevni-core', version: '1.7.7'
+    compile group: 'org.apache.avro', name: 'avro-mapred', version: '1.7.7'
+
     compile (group: 'org.apache.hadoop', name:'hadoop-common', version: '2.4.1') {
         exclude group: 'jline', module: 'jline'
     }
@@ -85,6 +103,8 @@ dependencies {
     compile group: 'org.apache.kafka', name:'kafka_2.10', version:'0.8.1.1'
 
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20140814'
+
+    compile group: 'org.codehaus.groovy', name:'groovy', version: '2.3.8', classifier: 'indy'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
@@ -113,7 +133,14 @@ shadowJar {
     mergeServiceFiles()
 }
 
-findbugs {
+tasks.withType(FindBugs) {
+    classes = classes.filter {
+        !it.path.contains("io/divolte/groovyscript/")
+    }
+    dependsOn = [compileJava, compileTestJava]
+}
+
+findbugs() {
     toolVersion = "3.0.0"
 }
 
