@@ -18,16 +18,16 @@ mapping {
     map firstInSession() onto 'sessionStart'
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
-    
+
     section {
         when location().isPresent() apply {
             map 'happened' onto 'client'
-            // Breaks out of this when; this hardly ever makes sense unconditionally
+            // Breaks out of this section
             exit()
             map 'should not happen' onto 'session'
         }
     }
-    
+
     section {
         when location().isPresent() apply {
             map 'happened' onto 'pageview'
@@ -37,6 +37,6 @@ mapping {
             map 'should not happen' onto 'session'
         }
     }
-    
+
     map 'happened' onto 'customCookie'
 }
