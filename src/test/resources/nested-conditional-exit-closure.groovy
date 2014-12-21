@@ -18,7 +18,7 @@ mapping {
     map firstInSession() onto 'sessionStart'
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
-    
+
     section {
         when { location().isPresent() } apply {
             map 'happened' onto 'client'
@@ -27,16 +27,16 @@ mapping {
             map 'should not happen' onto 'session'
         }
     }
-    
+
     section {
         when { location().isPresent() } apply {
             map 'happened' onto 'pageview'
-            when { location().isAbsent() } exit() // breaks out of the enclosing when
+            when { location().isAbsent() } exit() // breaks out of the enclosing section
             map 'happened' onto 'event'
-            when { location().isPresent() } exit() // breaks out of the enclosing when
+            when { location().isPresent() } exit() // breaks out of the enclosing section
             map 'should not happen' onto 'session'
         }
     }
-    
+
     map 'happened' onto 'customCookie'
 }
