@@ -73,6 +73,20 @@ dependencies {
     compile group: 'com.typesafe', name: 'config', version: '1.2.1'
     compile group: 'com.google.guava', name: 'guava', version: '17.0'
     compile group: 'org.apache.avro', name: 'avro', version: '1.7.7'
+
+    /*
+     * We package the Avro Tools to provide an easy way to view Avro files
+     * Because the default artifact (without the nodeps classifier) contains
+     * some kind of uberjar with a old hadoop dependency, we manually include
+     * the deps that we require for the tools to work and depend on the nodeps
+     * variant of the tools itself. This is the minimal list to make the tool
+     * run and have a working tojson command. The other commands weren't fully
+     * tested with these deps.
+     */
+    compile group: 'org.apache.avro', name: 'avro-tools', version: '1.7.7', classifier: 'nodeps'
+    compile group: 'org.apache.avro', name: 'trevni-core', version: '1.7.7'
+    compile group: 'org.apache.avro', name: 'avro-mapred', version: '1.7.7'
+
     compile (group: 'org.apache.hadoop', name:'hadoop-common', version: '2.4.1') {
         exclude group: 'jline', module: 'jline'
     }

@@ -19,9 +19,6 @@ Custom events
 Avro schema
 ===========
 
-A word on schema evolution
---------------------------
-
 Built in schema
 ---------------
 

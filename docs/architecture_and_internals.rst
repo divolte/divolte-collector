@@ -8,8 +8,11 @@ Architecture overview
 Events
 ======
 
-Internals
-=========
+JavaScript tag and cookies
+==========================
+
+Server internals
+================
 
 Thread pools
 ------------
@@ -32,8 +35,8 @@ User agent parsing
 Handling of downstream failures
 -------------------------------
 
-HDFS specifics
-^^^^^^^^^^^^^^
+HDFS specific
+^^^^^^^^^^^^^
 
-Kafka specifics
-^^^^^^^^^^^^^^^
+Kafka specific
+^^^^^^^^^^^^^^
