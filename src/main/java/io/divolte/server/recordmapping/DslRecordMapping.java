@@ -1018,7 +1018,9 @@ public final class DslRecordMapping {
         boolean validateTypes(final Field target) {
             final Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
             return targetSchema
-                    .map((s) -> s.getType() == Type.ARRAY && COMPATIBLE_PRIMITIVES.get(type) == s.getElementType().getType())
+                    .map((s) -> s.getType() == Type.ARRAY &&
+                        unpackNullableUnion(s.getElementType()).map((sub) -> COMPATIBLE_PRIMITIVES.get(type) == sub.getType())
+                                                               .orElse(false))
                     .orElse(false);
         }
     }
