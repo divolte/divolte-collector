@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import static io.divolte.server.ClientSideCookieEventHandler.*;
 import io.divolte.server.CookieValues.CookieValue;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -24,6 +25,7 @@ import io.undertow.util.AttachmentKey;
 
 import java.time.Duration;
 import java.util.Date;
+import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -149,5 +151,9 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
         .putAttachment(key, cookieValue);
 
         return cookieValue;
+    }
+
+    private static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
+        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 }

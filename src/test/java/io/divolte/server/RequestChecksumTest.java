@@ -137,7 +137,7 @@ public class RequestChecksumTest {
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
         assertFalse(event.exchange.getAttachment(IncomingRequestProcessor.CORRUPT_EVENT_KEY));
-        final String eventType = event.exchange.getQueryParameters().get(BaseEventHandler.EVENT_TYPE_QUERY_PARAM).getFirst();
+        final String eventType = event.exchange.getQueryParameters().get(ClientSideCookieEventHandler.EVENT_TYPE_QUERY_PARAM).getFirst();
         assertEquals("ụñ⚕©ºḌℨ", eventType);
     }
 
@@ -149,7 +149,7 @@ public class RequestChecksumTest {
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
         // The first request should be missing, and we should now have the sentinel event.
-        final String eventType = event.exchange.getQueryParameters().get(BaseEventHandler.EVENT_TYPE_QUERY_PARAM).getFirst();
+        final String eventType = event.exchange.getQueryParameters().get(ClientSideCookieEventHandler.EVENT_TYPE_QUERY_PARAM).getFirst();
         assertEquals("sentinelEvent", eventType);
     }
 

@@ -16,8 +16,8 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.BrowserLists.*;
+import static io.divolte.server.ClientSideCookieEventHandler.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import io.divolte.server.CookieValues.CookieValue;

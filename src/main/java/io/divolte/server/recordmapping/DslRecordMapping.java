@@ -30,7 +30,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -242,15 +241,15 @@ public final class DslRecordMapping {
      * Simple field mappings
      */
     public ValueProducer<String> location() {
-        return new PrimitiveValueProducer<String>("location()", String.class, (e, c) -> queryParam(e, LOCATION_QUERY_PARAM));
+        return new PrimitiveValueProducer<String>("location()", String.class, (e, c) -> e.getAttachment(LOCATION_KEY));
     }
 
     public ValueProducer<String> referer() {
-        return new PrimitiveValueProducer<String>("referer()", String.class, (e, c) -> queryParam(e, REFERER_QUERY_PARAM));
+        return new PrimitiveValueProducer<String>("referer()", String.class, (e, c) -> e.getAttachment(REFERER_KEY));
     }
 
     public ValueProducer<String> eventType() {
-        return new PrimitiveValueProducer<String>("eventType()", String.class, (e,c) -> queryParam(e, EVENT_TYPE_QUERY_PARAM));
+        return new PrimitiveValueProducer<String>("eventType()", String.class, (e,c) -> e.getAttachment(EVENT_TYPE_KEY));
     }
 
     public ValueProducer<Boolean> firstInSession() {
@@ -274,23 +273,23 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<Integer> viewportPixelWidth() {
-        return new PrimitiveValueProducer<Integer>("viewportPixelWidth()", Integer.class, (e, c) -> queryParam(e, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
+        return new PrimitiveValueProducer<Integer>("viewportPixelWidth()", Integer.class, (e, c) -> e.getAttachment(VIEWPORT_PIXEL_WIDTH_KEY));
     }
 
     public ValueProducer<Integer> viewportPixelHeight() {
-        return new PrimitiveValueProducer<Integer>("viewportPixelHeight()", Integer.class, (e, c) -> queryParam(e, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
+        return new PrimitiveValueProducer<Integer>("viewportPixelHeight()", Integer.class, (e, c) -> e.getAttachment(VIEWPORT_PIXEL_HEIGHT_KEY));
     }
 
     public ValueProducer<Integer> screenPixelWidth() {
-        return new PrimitiveValueProducer<Integer>("screenPixelWidth()", Integer.class, (e, c) -> queryParam(e, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
+        return new PrimitiveValueProducer<Integer>("screenPixelWidth()", Integer.class, (e, c) -> e.getAttachment(SCREEN_PIXEL_WIDTH_KEY));
     }
 
     public ValueProducer<Integer> screenPixelHeight() {
-        return new PrimitiveValueProducer<Integer>("screenPixelHeight()", Integer.class, (e, c) -> queryParam(e, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
+        return new PrimitiveValueProducer<Integer>("screenPixelHeight()", Integer.class, (e, c) -> e.getAttachment(SCREEN_PIXEL_HEIGHT_KEY));
     }
 
     public ValueProducer<Integer> devicePixelRatio() {
-        return new PrimitiveValueProducer<Integer>("devicePixelRatio()", Integer.class, (e, c) -> queryParam(e, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
+        return new PrimitiveValueProducer<Integer>("devicePixelRatio()", Integer.class, (e, c) -> e.getAttachment(DEVICE_PIXEL_RATIO_KEY));
     }
 
     public ValueProducer<String> partyId() {
@@ -564,7 +563,7 @@ public final class DslRecordMapping {
         return new PrimitiveValueProducer<String>(
                 "eventParameter(" + name + ")",
                 String.class,
-                (e, c) -> queryParam(e, EVENT_TYPE_QUERY_PARAM + "." + name));
+                (e, c) -> e.getAttachment(EVENT_PARAM_PRODUCER_KEY).apply(name));
     }
 
     /*
@@ -901,13 +900,6 @@ public final class DslRecordMapping {
         } catch (UnknownHostException e) {
             return Optional.empty();
         }
-    }
-
-    /*
-     * Internal methods and types
-     */
-    private static Optional<String> queryParam(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 
     private static Optional<Schema> unpackNullableUnion(final Schema source) {

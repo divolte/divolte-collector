@@ -28,9 +28,9 @@ import io.undertow.util.StatusCodes;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -52,22 +52,15 @@ public abstract class BaseEventHandler implements HttpHandler {
     public static final AttachmentKey<Long> COOKIE_UTC_OFFSET_KEY = AttachmentKey.create(Long.class);
     public static final AttachmentKey<Boolean> FIRST_IN_SESSION_KEY = AttachmentKey.create(Boolean.class);
 
-    public final static String PARTY_ID_QUERY_PARAM = "p";
-    public final static String NEW_PARTY_ID_QUERY_PARAM = "n";
-    public final static String SESSION_ID_QUERY_PARAM = "s";
-    public final static String FIRST_IN_SESSION_QUERY_PARAM = "f";
-    public final static String PAGE_VIEW_ID_QUERY_PARAM = "v";
-    public final static String EVENT_ID_QUERY_PARAM = "e";
-    public final static String EVENT_TYPE_QUERY_PARAM = "t";
-    public final static String CLIENT_TIMESTAMP_QUERY_PARAM = "c"; // chronos
-    public final static String LOCATION_QUERY_PARAM = "l";
-    public final static String REFERER_QUERY_PARAM = "r";
-    public final static String VIEWPORT_PIXEL_WIDTH_QUERY_PARAM = "w";
-    public final static String VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM = "h";
-    public final static String SCREEN_PIXEL_WIDTH_QUERY_PARAM = "i";
-    public final static String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
-    public final static String DEVICE_PIXEL_RATIO_QUERY_PARAM = "k";
-    public final static String CHECKSUM_QUERY_PARAM = "x";
+    public static final AttachmentKey<Optional<String>> LOCATION_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Optional<String>> REFERER_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Optional<String>> EVENT_TYPE_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Optional<Integer>> VIEWPORT_PIXEL_WIDTH_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Optional<Integer>> VIEWPORT_PIXEL_HEIGHT_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Optional<Integer>> SCREEN_PIXEL_WIDTH_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Optional<Integer>> SCREEN_PIXEL_HEIGHT_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Optional<Integer>> DEVICE_PIXEL_RATIO_KEY = AttachmentKey.create(Optional.class);
+    public static final AttachmentKey<Function<String,Optional<String>>> EVENT_PARAM_PRODUCER_KEY = AttachmentKey.create(Function.class);
 
     private final static ETag SENTINEL_ETAG = new ETag(false, "6b3edc43-20ec-4078-bc47-e965dd76b88a");
     private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
@@ -156,9 +149,5 @@ public abstract class BaseEventHandler implements HttpHandler {
 
     protected static class IncompleteRequestException extends Exception {
         private static final long serialVersionUID = 1L;
-    }
-
-    protected static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 }

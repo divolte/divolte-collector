@@ -17,6 +17,7 @@
 package io.divolte.server.recordmapping;
 
 import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.ClientSideCookieEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.*;
 import io.divolte.server.OptionalConfig;
 import io.divolte.server.ip2geo.LookupService;
