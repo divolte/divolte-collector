@@ -56,9 +56,12 @@ public class DslRecordMapper implements RecordMapper {
     private final List<DslRecordMapping.MappingAction> actions;
 
     public DslRecordMapper(final Config config, final Schema schema, final Optional<LookupService> geoipService) {
+        this(config, config.getString("divolte.tracking.schema_mapping.mapping_script_file"), schema, geoipService);
+    }
+
+    public DslRecordMapper(final Config config, final String groovyFile, final Schema schema, final Optional<LookupService> geoipService) {
         this.schema = Objects.requireNonNull(schema);
 
-        final String groovyFile = config.getString("divolte.tracking.schema_mapping.mapping_script_file");
         logger.info("Using mapping from script file: {}", groovyFile);
 
         try {
