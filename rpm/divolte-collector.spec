@@ -3,6 +3,7 @@
 #
 %define _topdir %(echo $PWD)/
 %define _buildrootdir %{_tmppath}/BUILDROOT
+%define snapshot %{nil}%{?snapshotVersion}
 
 Name:           divolte-collector
 Version:        0.2
@@ -16,7 +17,7 @@ Group:          Applications
 
 # (For some reason rpmbuild segfaults when trying to download this; download it manually.)
 #Source0:        https://github.com/divolte/%{name}/archive/%{version}.tar.gz
-Source0:        %{name}-%{version}-SNAPSHOT.tar.gz
+Source0:        %{name}-%{version}%{snapshot}.tar.gz
 Source1:        %{name}.default
 Source2:        %{name}.conf
 Source3:        %{name}.init
@@ -41,7 +42,7 @@ This package contains the HTTP server component that collects the click-stream
 events from browsers. It will be started automatically on system startup.
 
 %prep
-%setup
+%setup -n %{name}-%{version}%{snapshot}
 
 %build
 ./gradlew -x test build

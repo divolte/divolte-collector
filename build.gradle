@@ -270,6 +270,7 @@ def sourceFiles = copySpec {
     from('.') {
         exclude 'build'
         exclude 'docs'
+        exclude 'rpm'
         exclude 'target'
         exclude '.idea'
         exclude '.gradle'
@@ -286,7 +287,7 @@ task tarSource(type: Tar) {
     compression = Compression.GZIP
     extension = "tar.gz"
 
-    into("divolte-collector-0.2") {
+    into("divolte-collector-" + version) {
         with sourceFiles
     }
 }
@@ -304,6 +305,10 @@ task buildRpm(type:Exec) {
 
   workingDir 'rpm'
 
-  commandLine 'rpmbuild', '--target', 'noarch-redhat-linux', '-ba', 'divolte-collector.spec'
+  if (version.contains('SNAPSHOT')) {
+    commandLine 'rpmbuild', '--define', 'snapshotVersion -SNAPSHOT', '--target', 'noarch-redhat-linux', '-ba', 'divolte-collector.spec'
+  } else {
+    commandLine 'rpmbuild',  '--target', 'noarch-redhat-linux', '-ba', 'divolte-collector.spec'
+  }
   
 }
