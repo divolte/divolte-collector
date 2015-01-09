@@ -265,3 +265,45 @@ task userDoc(dependsOn: processUserDoc, type: Exec) {
     executable "sphinx-build"
     args '-b', 'html', sphinxDir, htmlDocDir
 }
+
+def sourceFiles = copySpec {
+    from('.') {
+        exclude 'build'
+        exclude 'docs'
+        exclude 'target'
+        exclude '.idea'
+        exclude '.gradle'
+        exclude '**/.git*'
+        exclude '.git*'
+        exclude '**/*.ipr'
+        exclude '**/*.iws'
+        exclude '**/*.iml'
+    }
+}
+
+task tarSource(type: Tar) {
+    description = "Tars the source distribution."
+    compression = Compression.GZIP
+    extension = "tar.gz"
+
+    into("divolte-collector-0.2") {
+        with sourceFiles
+    }
+}
+
+task copySourceTar(type: Copy) {
+    dependsOn = [tarSource]
+    from('build/distributions/') {
+        include '*.tar.gz'
+    }
+    into 'rpm/SOURCES'
+}
+
+task buildRpm(type:Exec) {
+  dependsOn = [copySourceTar]
+
+  workingDir 'rpm'
+
+  commandLine 'rpmbuild', '--target', 'noarch-redhat-linux', '-ba', 'divolte-collector.spec'
+  
+}

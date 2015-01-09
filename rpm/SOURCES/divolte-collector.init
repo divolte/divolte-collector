@@ -1,0 +1,118 @@
+#!/bin/sh
+#
+# Divolte click-stream collection agent.
+#
+# chkconfig:   2345 20 80
+# description: Divolte click-stream collection agent.
+#
+
+### BEGIN INIT INFO
+# Provides: divolte-collector
+# Required-Start: $remote_fs $network $time
+# Required-Stop: $remote_fs $network $time
+# Should-Start: zookeeper-server kafka
+# Should-Stop: zookeeper-server kafka
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Divolte click-stream collection agent.
+# Description:
+#  The Divolte click-stream collection agent provides a
+#  HTTP server that listens (by default) on port 8290. The
+#  click-stream data can be published to HDFS and Kafka for
+#  further analysis.
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+exec='/usr/bin/divolte-collector'
+prog='divolte-collector'
+config='/etc/divolte/divolte-collector.conf'
+pidfile='/var/run/divolte-collector.pid'
+
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
+lockfile=/var/lock/subsys/$prog
+
+start() {
+    [ -x $exec ] || exit 5
+    [ -f $config ] || exit 6
+    [ -f /etc/divolte/logback.xml ] && export JAVA_OPTS='-Dlogback.configurationFile=/etc/divolte/logback.xml'
+    echo -n $"Starting $prog: "
+    # Daemon doesn't let us background the script, so we do this ourselves.
+    nohup runuser -s /bin/sh divolte $exec > /var/log/divolte/divolte-collector.out 2>&1 &
+    retval=$?
+    pid=$!
+    if [ $retval -eq 0 ]
+    then
+      echo $pid > $pidfile && touch $lockfile && success $"$prog startup"
+    else
+      failure $"$prog startup"
+    fi
+    echo
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc -p $pidfile $prog
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+reload() {
+    restart
+}
+
+force_reload() {
+    restart
+}
+
+rh_status() {
+    # run checks to determine if the service is running or use generic status
+    status $prog
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    force-reload)
+        force_reload
+        ;;
+    status)
+        rh_status
+        ;;
+    condrestart|try-restart)
+        rh_status_q || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+        exit 2
+esac
+exit $?

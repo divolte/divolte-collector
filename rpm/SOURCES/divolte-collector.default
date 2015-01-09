@@ -1,0 +1,12 @@
+#
+# Settings that will be read when starting the Divolte collector.
+#
+
+# You can use DIVOLTE_COLLECTOR_OPTS to pass JVM options to the launch script.
+#
+#DIVOLTE_COLLECTOR_OPTS='-Xmx=2g'
+
+# You can point to a Hadoop cluster configuration by setting either HADOOP_CONF_DIR or YARN_CONF_DIR
+#
+#HADOOP_CONF_DIR=<path to config dir> or YARN_CONF_DIR=<path to config dir>
+
