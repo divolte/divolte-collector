@@ -34,10 +34,11 @@ pidfile='/var/run/divolte-collector.pid'
 
 lockfile=/var/lock/subsys/$prog
 
+export DIVOLTE_CONF_DIR=/etc/divolte/
+
 start() {
     [ -x $exec ] || exit 5
     [ -f $config ] || exit 6
-    [ -f /etc/divolte/logback.xml ] && export JAVA_OPTS='-Dlogback.configurationFile=/etc/divolte/logback.xml'
     echo -n $"Starting $prog: "
     # Daemon doesn't let us background the script, so we do this ourselves.
     nohup runuser -s /bin/sh divolte $exec > /var/log/divolte/divolte-collector.out 2>&1 &

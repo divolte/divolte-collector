@@ -18,10 +18,9 @@ Group:          Applications
 # (For some reason rpmbuild segfaults when trying to download this; download it manually.)
 #Source0:        https://github.com/divolte/%{name}/archive/%{version}.tar.gz
 Source0:        %{name}-%{version}%{snapshot}.tar.gz
-Source1:        %{name}.default
-Source2:        %{name}.conf
-Source3:        %{name}.init
-Source4:        %{name}.logback.xml
+Source1:        %{name}.conf
+Source2:        %{name}.init
+Source3:        %{name}.logback.xml
 BuildArch:      noarch
 
 # Although we depend on Java 8, we don't declare it to preserve the
@@ -52,7 +51,6 @@ rm -rf "%{buildroot}"
 
 ./gradlew -x test installApp
 
-%{__mkdir_p} "%{buildroot}/etc/default"
 %{__mkdir_p} "%{buildroot}/etc/divolte"
 %{__mkdir_p} "%{buildroot}/etc/init.d"
 %{__mkdir_p} "%{buildroot}/usr/bin"
@@ -60,24 +58,13 @@ rm -rf "%{buildroot}"
 %{__mkdir_p} "%{buildroot}/usr/share/divolte/lib"
 %{__mkdir_p} "%{buildroot}/var/log/divolte"
 
-%{__install} -m 0644 "%{S:1}" "%{buildroot}/etc/default/%{name}"
-%{__install} -m 0644 "%{S:2}" "%{buildroot}/etc/divolte/%{name}.conf"
-%{__install} -m 0644 "%{S:4}" "%{buildroot}/etc/divolte/logback.xml"
-%{__install} -m 0755 "%{S:3}" "%{buildroot}/etc/init.d/%{name}"
+%{__install} -m 0644 "%{S:1}" "%{buildroot}/etc/divolte/%{name}.conf"
+%{__install} -m 0644 "%{S:3}" "%{buildroot}/etc/divolte/logback.xml"
+%{__install} -m 0755 "%{S:2}" "%{buildroot}/etc/init.d/%{name}"
 %{__cp} -R build/install/%{name}/lib/* "%{buildroot}/usr/share/divolte/lib"
+%{__cp} -R src/scripts/* "%{buildroot}/usr/share/divolte/bin"
+%{__cp} -R src/dist/conf/* "%{buildroot}/etc/divolte"
 %{__ln_s} ../share/divolte/bin/%{name} "%{buildroot}/usr/bin/%{name}"
-awk '{print}
-$0~/^DEFAULT_JVM_OPTS=/ {
-  print "# Customized during RPM build."
-  print "DEFAULT_JVM_OPTS='\\\"'$DEFAULT_JVM_OPTS -Dconfig.file=/etc/divolte/divolte-collector.conf'\\\"'"
-  print "[ -r /etc/default/divolte-collector ] && . /etc/default/divolte-collector"
-}
-$0~/^CLASSPATH=/ {
-  print "# Customized during RPM build. Adding HADOOP_CONF_DIR to classpath if set."
-  print "[ -n '\\\"'$HADOOP_CONF_DIR'\\\"' ] && CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH"
-}
-' build/install/%{name}/bin/%{name} > "%{buildroot}/usr/share/divolte/bin/%{name}"
-%{__chmod} 0755 "%{buildroot}/usr/share/divolte/bin/%{name}"
 
 %check
 ./gradlew test
@@ -109,15 +96,16 @@ fi
 %files
 %defattr(-,root,root,0755)
 
-%config /etc/default/%{name}
 %dir /etc/divolte
 %config /etc/divolte/%{name}.conf
 %config /etc/divolte/logback.xml
 %config /etc/init.d/%{name}
+/etc/divolte/*.example
 /usr/bin/%{name}
 %dir /usr/share/divolte
 %dir /usr/share/divolte/bin
 /usr/share/divolte/bin/%{name}
+/usr/share/divolte/bin/*
 %dir /usr/share/divolte/lib
 /usr/share/divolte/lib/*.jar
 %attr(-,divolte,divolte)  /var/log/divolte
