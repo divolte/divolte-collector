@@ -306,9 +306,9 @@ task buildRpm(type:Exec) {
   workingDir 'rpm'
 
   if (version.contains('SNAPSHOT')) {
-    commandLine 'rpmbuild', '--define', 'snapshotVersion -SNAPSHOT', '--target', 'noarch-redhat-linux', '-ba', 'divolte-collector.spec'
+    commandLine 'rpmbuild', '-ba', '--target', 'noarch-redhat-linux', '--define', 'snapshotVersion -SNAPSHOT', 'divolte-collector.spec'
   } else {
-    commandLine 'rpmbuild',  '--target', 'noarch-redhat-linux', '-ba', 'divolte-collector.spec'
+    commandLine 'rpmbuild', '-ba',  '--target', 'noarch-redhat-linux', 'divolte-collector.spec'
   }
   
 }
