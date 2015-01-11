@@ -30,7 +30,9 @@
   <body>
     <h1 class="text-center">Divolte</h1>
     <p class="text-center"
-       onclick="divolte.signal('bannerClick',{text:this.innerText})">Click me to fire a custom event!</p>
+       onclick="divolte.signal('bannerClick',{text:this.innerText})">
+       <button type="button" class="btn btn-primary">Click me to fire a custom event!</button>
+    </p>
 
     <script src="divolte.js" defer async></script>
   </body>

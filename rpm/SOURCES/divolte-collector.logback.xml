@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This file is only used by Divolte when launched as a (background) service. -->
+<!-- Once a minute the service will check for changes at runtime. -->
+<configuration scan="true">
+  <appender name="VARLOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>/var/log/divolte/divolte-collector.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- Rollover at least daily, compressing the logs. -->
+      <fileNamePattern>/var/log/divolte/divolte-collector-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <!-- ... or when the file size reaches 512MB. -->
+        <maxFileSize>512MB</maxFileSize>
+        <!-- Keep 90 days of history. -->
+        <maxHistory>90</maxHistory>
+      </timeBasedFileNamingAndTriggeringPolicy>
+    </rollingPolicy>
+    <cleanHistoryOnStart>true</cleanHistoryOnStart>
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSSX} [%thread] %-6level[%logger{0}]: %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Divolte-specific logging. -->
+  <logger name="io.divolte" level="inherited"/>
+
+  <root level="info">
+    <appender-ref ref="VARLOG"/>
+  </root>
+</configuration>
