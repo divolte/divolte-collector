@@ -74,5 +74,7 @@ fi
 JAVACMD="$JAVA_HOME/bin/java"
 
 JAVA_OPTS="-XX:+UseG1GC -Djava.awt.headless=true"
+[ -f "$CONF_DIR/logback.xml" ] && JAVA_OPTS="$JAVA_OPTS -Dlogback.configurationFile=$CONF_DIR/logback.xml"
+[ -f "$CONF_DIR/divolte-collector.conf" ] && JAVA_OPTS="$JAVA_OPTS -Dconfig.file=$CONF_DIR/divolte-collector.conf"
 
-$JAVACMD -cp $CLASSPATH $JAVA_OPTS -Dconfig.file="$CONF_DIR/divolte-collector.conf" io.divolte.server.MappingTestServer "$@"
+$JAVACMD -cp $CLASSPATH $JAVA_OPTS io.divolte.server.MappingTestServer "$@"
