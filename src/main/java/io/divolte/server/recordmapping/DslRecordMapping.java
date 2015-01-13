@@ -1014,10 +1014,6 @@ public final class DslRecordMapping {
     }
 
     private static class BooleanValueProducer extends PrimitiveValueProducer<Boolean> {
-        private BooleanValueProducer(String identifier, BiFunction<HttpServerExchange, Map<String, Object>, Optional<Boolean>> supplier, boolean memoize) {
-            super(identifier, Boolean.class, supplier, memoize);
-        }
-
         private BooleanValueProducer(String identifier, BiFunction<HttpServerExchange, Map<String, Object>, Optional<Boolean>> supplier) {
             super(identifier, Boolean.class, supplier);
         }
