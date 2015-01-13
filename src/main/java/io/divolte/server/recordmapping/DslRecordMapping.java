@@ -378,9 +378,7 @@ public final class DslRecordMapping {
         private MatcherValueProducer(final ValueProducer<String> source, final String regex) {
             super(
                     "match(" + regex + " against " + source.identifier + ")",
-                    (e,c) -> {
-                        return source.produce(e,c).map((s) -> Pattern.compile(regex).matcher(s));
-                    },
+                    (e,c) -> source.produce(e,c).map((s) -> Pattern.compile(regex).matcher(s)),
                     true);
         }
 
@@ -425,16 +423,14 @@ public final class DslRecordMapping {
         private UriValueProducer(final ValueProducer<String> source) {
             super(
                     "parse(" + source.identifier + " to uri)",
-                    (e,c) -> {
-                        return source.produce(e, c).map((location) -> {
-                           try {
-                                return new URI(location);
-                            } catch (Exception ignored) {
-                                // When we cannot parse as URI, leave the producer empty
-                                return null;
-                            }
-                        });
-                    },
+                    (e,c) -> source.produce(e, c).map((location) -> {
+                        try {
+                            return new URI(location);
+                        } catch (Exception ignored) {
+                            // When we cannot parse as URI, leave the producer empty
+                            return null;
+                        }
+                    }),
                     true);
         }
 
