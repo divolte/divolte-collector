@@ -129,15 +129,16 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
         result.map("pageViewId", result.pageViewId());
         result.map("eventType", result.eventType());
         result.map("userAgentString", result.userAgentString());
-        result.map("userAgentName", result.userAgent().name());
-        result.map("userAgentFamily", result.userAgent().family());
-        result.map("userAgentVendor", result.userAgent().vendor());
-        result.map("userAgentType", result.userAgent().type());
-        result.map("userAgentVersion", result.userAgent().version());
-        result.map("userAgentDeviceCategory", result.userAgent().deviceCategory());
-        result.map("userAgentOsFamily", result.userAgent().osFamily());
-        result.map("userAgentOsVersion", result.userAgent().osVersion());
-        result.map("userAgentOsVendor", result.userAgent().osVendor());
+        final DslRecordMapping.UserAgentValueProducer userAgent = result.userAgent();
+        result.map("userAgentName", userAgent.name());
+        result.map("userAgentFamily", userAgent.family());
+        result.map("userAgentVendor", userAgent.vendor());
+        result.map("userAgentType", userAgent.type());
+        result.map("userAgentVersion", userAgent.version());
+        result.map("userAgentDeviceCategory", userAgent.deviceCategory());
+        result.map("userAgentOsFamily", userAgent.osFamily());
+        result.map("userAgentOsVersion", userAgent.osVersion());
+        result.map("userAgentOsVendor", userAgent.osVendor());
         return result;
     }
 
