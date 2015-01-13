@@ -310,5 +310,5 @@ task buildRpm(type:Exec) {
   } else {
     commandLine 'rpmbuild', '-ba',  '--target', 'noarch-redhat-linux', 'divolte-collector.spec'
   }
-  
+
 }
