@@ -70,9 +70,7 @@ public class MappingTestServer {
 
     private Schema loadSchema(final String schemaFilename) throws IOException {
         final Parser parser = new Schema.Parser();
-        final String schemaFileName = schemaFilename;
-        final Schema schema = parser.parse(new File(schemaFileName));
-        return schema;
+        return parser.parse(new File(schemaFilename));
     }
 
     @Nullable
