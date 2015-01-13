@@ -1059,7 +1059,7 @@ public final class DslRecordMapping {
 
     static interface MappingAction {
         enum MappingResult {
-            STOP, EXIT, CONTINUE;
+            STOP, EXIT, CONTINUE
         }
         MappingResult perform(final HttpServerExchange echange, final Map<String,Object> context, GenericRecordBuilder record);
     }
