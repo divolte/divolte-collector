@@ -1,7 +1,9 @@
 package io.divolte.server;
 
-import static io.divolte.server.BaseEventHandler.*;
-import static io.divolte.server.IncomingRequestProcessor.*;
+import com.fasterxml.jackson.jr.ob.JSON;
+import com.google.common.collect.ImmutableList;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -11,48 +13,57 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import joptsimple.ArgumentAcceptingOptionSpec;
+import joptsimple.OptionException;
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Parser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.streams.ChannelInputStream;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.annotation.Nullable;
+import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.IncomingRequestProcessor.CORRUPT_EVENT_KEY;
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Parser;
-import org.xnio.streams.ChannelInputStream;
-
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.fasterxml.jackson.jr.ob.JSON;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-
+@ParametersAreNonnullByDefault
 public class MappingTestServer {
+    private static final Logger log = LoggerFactory.getLogger(MappingTestServer.class);
+
     private final RecordMapper mapper;
     private final Undertow undertow;
 
-    public static void main(String[] args) throws IOException {
-        CliArgs cli = new CliArgs();
-        new JCommander(cli, args);
-        if (cli.help) {
-            printUsage();
-            System.exit(0);
+    public static void main(final String[] args) throws IOException {
+        final MappingTestServerOptionParser parser = new MappingTestServerOptionParser();
+        try {
+            final OptionSet options = parser.parse(args);
+            if (options.has("help")) {
+                parser.printHelpOn(System.out);
+            } else {
+                final String host = options.valueOf(parser.hostOption);
+                final Integer port = options.valueOf(parser.portOption);
+                final MappingTestServer server = new MappingTestServer(options.valueOf(parser.schemaOption),
+                                                                       options.valueOf(parser.mappingOption),
+                                                                       port, host);
+                Runtime.getRuntime().addShutdownHook(new Thread(server::stopServer));
+                log.info("Starting server on {}:{}...", host, port);
+                server.runServer();
+            }
+        } catch (final OptionException e) {
+            System.err.println(e.getLocalizedMessage());
+            parser.printHelpOn(System.err);
         }
-
-        if (cli.schemaAndMapping == null || cli.schemaAndMapping.size() != 2) {
-            printUsage();
-            System.exit(1);
-        }
-
-        MappingTestServer server = new MappingTestServer(cli.schemaAndMapping.get(0), cli.schemaAndMapping.get(1), cli.port, cli.host);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stopServer()));
-        server.runServer();
     }
 
     public MappingTestServer(final String schemaFilename, final String mappingFilename, final int port, final String host) throws IOException {
@@ -128,23 +139,22 @@ public class MappingTestServer {
         return result != null && result.getClass().isAssignableFrom(type) ? Optional.of((T) result) : Optional.empty();
     }
 
-    public static void printUsage() {
-        System.err.println(
-                  "Usage:\n"
-                + "MappingTestServer <schema file> <mapping script file> [-p port]");
-    }
+    private static class MappingTestServerOptionParser extends OptionParser {
+        final ArgumentAcceptingOptionSpec<String> schemaOption =
+                acceptsAll(ImmutableList.of("schema", "s"), "The AVRO schema of the records to generate.")
+                .withRequiredArg().required();
+        final ArgumentAcceptingOptionSpec<String> mappingOption =
+                acceptsAll(ImmutableList.of("mapping", "m"), "The mapping definition to use for processing requests.")
+                .withRequiredArg().required();
+        final ArgumentAcceptingOptionSpec<String> hostOption =
+                acceptsAll(ImmutableList.of("host", "i"), "The address of the interface to listen on.")
+                .withRequiredArg().defaultsTo("localhost");
+        final ArgumentAcceptingOptionSpec<Integer> portOption =
+                acceptsAll(ImmutableList.of("port", "p"), "The TCP port to listen on.")
+                .withRequiredArg().ofType(Integer.class).defaultsTo(8390);
 
-    private static final class CliArgs {
-        @Parameter(arity = 2, required = true)
-        private List<String> schemaAndMapping;
-
-        @Parameter(names = { "-p", "--port" }, description = "Port number", arity = 1, required = false)
-        private Integer port = 8390;
-
-        @Parameter(names = { "-i", "--host" }, description = "Host to bind on", arity = 1, required = false)
-        private String host = "localhost";
-
-        @Parameter(names = { "-h", "--help" }, description = "Help", help = true)
-        private boolean help;
+        public MappingTestServerOptionParser() {
+            acceptsAll(ImmutableList.of("help", "h"), "Display this help.").forHelp();
+        }
     }
 }
