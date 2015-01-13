@@ -105,8 +105,8 @@ public class MappingTestServer {
         exchange.putAttachment(LOCATION_KEY, get(payload, "location", String.class));
         exchange.putAttachment(REFERER_KEY, get(payload, "referer", String.class));
         exchange.putAttachment(EVENT_TYPE_KEY, get(payload, "event_type", String.class));
-        exchange.putAttachment(PARTY_COOKIE_KEY, get(payload, "party_id", String.class).flatMap((v) -> CookieValues.tryParse(v)).orElse(CookieValues.generate()));
-        exchange.putAttachment(SESSION_COOKIE_KEY, get(payload, "session_id", String.class).flatMap((v) -> CookieValues.tryParse(v)).orElse(CookieValues.generate()));
+        exchange.putAttachment(PARTY_COOKIE_KEY, get(payload, "party_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()));
+        exchange.putAttachment(SESSION_COOKIE_KEY, get(payload, "session_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()));
         exchange.putAttachment(PAGE_VIEW_ID_KEY, get(payload, "page_view_id", String.class).orElse(generatedPageViewId));
         exchange.putAttachment(EVENT_ID_KEY, get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"));
         exchange.putAttachment(FIRST_IN_SESSION_KEY, get(payload, "first_in_session", Boolean.class).orElse(false));
