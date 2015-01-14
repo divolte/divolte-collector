@@ -18,8 +18,11 @@ package io.divolte.server;
 
 import static io.divolte.server.BrowserLists.*;
 import static io.divolte.server.ClientSideCookieEventHandler.*;
+import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+
+import com.google.common.base.Strings;
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
@@ -30,6 +33,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -75,7 +79,7 @@ public class SeleniumJavaScriptTest {
 
     public final static String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
 
-    private static final long ONE_DAY = 12L * 3600L * 1000L;
+    private static final long HALF_DAY_MS = TimeUnit.DAYS.toMillis(12);
 
     public final static DesiredCapabilities LOCAL_RUN_CAPABILITIES;
     static {
@@ -190,8 +194,7 @@ public class SeleniumJavaScriptTest {
               .map((action) -> {
                   action.run();
                   final EventPayload event = unchecked(server::waitForEvent);
-                  final Map<String, Deque<String>> params = event.exchange.getQueryParameters();
-                  return params.get(PAGE_VIEW_ID_QUERY_PARAM).getFirst();
+                  return event.exchange.getAttachment(EVENT_DATA_KEY).pageViewId;
               })
               .collect(Collectors.toSet()).size();
     }
@@ -215,41 +218,37 @@ public class SeleniumJavaScriptTest {
     @Test
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
         Preconditions.checkState(null != driver && null != server);
-        final long requestStartTime = System.currentTimeMillis();
 
         final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
         driver.get(location);
 
         EventPayload viewEvent = server.waitForEvent();
 
-        final Map<String, Deque<String>> params = viewEvent.exchange.getQueryParameters();
-        assertTrue(params.containsKey(PARTY_ID_QUERY_PARAM));
+        final EventData eventData = viewEvent.exchange.getAttachment(EVENT_DATA_KEY);
 
-        assertTrue(params.containsKey(NEW_PARTY_ID_QUERY_PARAM));
-        assertEquals("t", params.get(NEW_PARTY_ID_QUERY_PARAM).getFirst());
+        assertFalse(Strings.isNullOrEmpty(eventData.partyCookie.value));
 
-        assertTrue(params.containsKey(SESSION_ID_QUERY_PARAM));
-        assertTrue(params.containsKey(FIRST_IN_SESSION_QUERY_PARAM));
-        assertEquals("t", params.get(FIRST_IN_SESSION_QUERY_PARAM).getFirst());
+        assertTrue(eventData.newPartyId);
 
-        assertTrue(params.containsKey(PAGE_VIEW_ID_QUERY_PARAM));
-        assertTrue(params.containsKey(EVENT_ID_QUERY_PARAM));
+        assertFalse(Strings.isNullOrEmpty(eventData.sessionCookie.value));
+        assertTrue(eventData.firstInSession);
 
-        assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM));
-        assertEquals("pageView", params.get(EVENT_TYPE_QUERY_PARAM).getFirst());
+        assertFalse(Strings.isNullOrEmpty(eventData.pageViewId));
+        assertFalse(Strings.isNullOrEmpty(eventData.eventId));
 
-        assertTrue(params.containsKey(LOCATION_QUERY_PARAM));
-        assertEquals(location, params.get(LOCATION_QUERY_PARAM).getFirst());
+        assertTrue(eventData.eventType.isPresent());
+        assertEquals("pageView", eventData.eventType.get());
+
+        assertTrue(eventData.location.isPresent());
+        assertEquals(location, eventData.location.get());
 
         /*
          * We don't really know anything about the clock on the executing browser,
          * but we'd expect it to be a reasonably accurate clock on the same planet.
          * So, if it is within +/- 12 hours of our clock, we think it's fine.
          */
-        assertTrue(params.containsKey(CLIENT_TIMESTAMP_QUERY_PARAM));
-        assertThat(
-                Long.parseLong(params.get(CLIENT_TIMESTAMP_QUERY_PARAM).getFirst(), 36),
-                allOf(greaterThan(requestStartTime - ONE_DAY), lessThan(requestStartTime + ONE_DAY)));
+        assertThat(eventData.clientUtcOffset,
+                   allOf(greaterThan(-HALF_DAY_MS), lessThan(HALF_DAY_MS)));
 
         /*
          * Doing true assertions against the viewport and window size
@@ -260,27 +259,17 @@ public class SeleniumJavaScriptTest {
          *
          * Hence, we just check whether these are integers greater than 50.
          */
-        assertTrue(params.containsKey(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM));
-        assertThat(
-                Integer.parseInt(params.get(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).getFirst(), 36),
-                greaterThan(50));
+        assertTrue(eventData.viewportPixelWidth.isPresent());
+        assertThat(eventData.viewportPixelWidth.get(), greaterThan(50));
 
-        assertTrue(params.containsKey(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM));
-        assertThat(
-                Integer.parseInt(params.get(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).getFirst(), 36),
-                greaterThan(50));
+        assertTrue(eventData.viewportPixelHeight.isPresent());
+        assertThat(eventData.viewportPixelHeight.get(), greaterThan(50));
 
-        assertTrue(params.containsKey(SCREEN_PIXEL_WIDTH_QUERY_PARAM));
-        assertThat(
-                Integer.parseInt(params.get(SCREEN_PIXEL_WIDTH_QUERY_PARAM).getFirst(), 36),
-                greaterThan(50));
+        assertTrue(eventData.screenPixelWidth.isPresent());
+        assertThat(eventData.screenPixelWidth.get(), greaterThan(50));
 
-        assertTrue(params.containsKey(SCREEN_PIXEL_HEIGHT_QUERY_PARAM));
-        assertThat(
-                Integer.parseInt(params.get(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).getFirst(), 36),
-                greaterThan(50));
-
-//        assertTrue(params.containsKey(DEVICE_PIXEL_RATIO_QUERY_PARAM));
+        assertTrue(eventData.screenPixelHeight.isPresent());
+        assertThat(eventData.screenPixelHeight.get(), greaterThan(50));
     }
 
     @Test
@@ -291,14 +280,14 @@ public class SeleniumJavaScriptTest {
         server.waitForEvent();
 
         driver.findElement(By.id("custom")).click();
-        EventPayload customEvent = server.waitForEvent();
+        final EventPayload customEvent = server.waitForEvent();
+        final EventData eventData = customEvent.exchange.getAttachment(EVENT_DATA_KEY);
 
-        final Map<String, Deque<String>> params = customEvent.exchange.getQueryParameters();
-        assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM));
-        assertEquals("custom", params.get(EVENT_TYPE_QUERY_PARAM).getFirst());
-
-        assertTrue(params.containsKey(EVENT_TYPE_QUERY_PARAM + ".key"));
-        assertEquals("value", params.get(EVENT_TYPE_QUERY_PARAM + ".key").getFirst());
+        assertTrue(eventData.eventType.isPresent());
+        assertEquals("custom", eventData.eventType.get());
+        final Optional<String> customEventParameter = eventData.eventParameterProducer.apply("key");
+        assertTrue(customEventParameter.isPresent());
+        assertEquals("value", customEventParameter.get());
     }
 
     @Test
@@ -327,13 +316,10 @@ public class SeleniumJavaScriptTest {
         final String location = String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", server.port);
         driver.get(location);
         EventPayload event = server.waitForEvent();
+        EventData eventData = event.exchange.getAttachment(EVENT_DATA_KEY);
 
-        final Map<String, Deque<String>> params = event.exchange.getQueryParameters();
-        assertTrue(params.containsKey(PAGE_VIEW_ID_QUERY_PARAM));
-        assertEquals("supercalifragilisticexpialidocious", params.get(PAGE_VIEW_ID_QUERY_PARAM).getFirst());
-
-        assertTrue(params.containsKey(EVENT_ID_QUERY_PARAM));
-        assertEquals("supercalifragilisticexpialidocious0", params.get(EVENT_ID_QUERY_PARAM).getFirst());
+        assertEquals("supercalifragilisticexpialidocious", eventData.pageViewId);
+        assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
     }
 
 

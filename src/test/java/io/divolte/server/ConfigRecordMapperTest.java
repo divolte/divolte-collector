@@ -17,7 +17,6 @@
 package io.divolte.server;
 
 import static io.divolte.server.IncomingRequestProcessor.*;
-import static io.divolte.server.ServerSideCookieEventHandler.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
@@ -86,16 +85,17 @@ public class ConfigRecordMapperTest {
                 );
 
         GenericRecord record = maker.newRecordFromExchange(theExchange);
+        final EventData eventData = theExchange.getAttachment(EVENT_DATA_KEY);
 
         assertEquals(true, record.get("sessionStart"));
-        assertEquals(theExchange.getAttachment(REQUEST_START_TIME_KEY), record.get("ts"));
+        assertEquals(eventData.requestStartTime, record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
         assertEquals("Divolte/Test", record.get("userAgentString"));
-        assertEquals(theExchange.getAttachment(PARTY_COOKIE_KEY).value, record.get("client"));
-        assertEquals(theExchange.getAttachment(SESSION_COOKIE_KEY).value, record.get("session"));
-        assertEquals(theExchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
-        assertEquals(theExchange.getAttachment(EVENT_ID_KEY), record.get("event"));
+        assertEquals(eventData.partyCookie.value, record.get("client"));
+        assertEquals(eventData.sessionCookie.value, record.get("session"));
+        assertEquals(eventData.pageViewId, record.get("pageview"));
+        assertEquals(eventData.eventId, record.get("event"));
         assertEquals(640, record.get("viewportWidth"));
         assertEquals(480, record.get("viewportHeight"));
         assertEquals(1024, record.get("screenWidth"));
@@ -528,13 +528,9 @@ public class ConfigRecordMapperTest {
                     CookieValue page = CookieValues.generate(theTime);
                     CookieValue event = CookieValues.generate(theTime);
 
-                    exchange.putAttachment(REQUEST_START_TIME_KEY, theTime);
-                    exchange.putAttachment(PARTY_COOKIE_KEY, party);
-                    exchange.putAttachment(SESSION_COOKIE_KEY, session);
-                    exchange.putAttachment(PAGE_VIEW_ID_KEY, page.value);
-                    exchange.putAttachment(EVENT_ID_KEY, event.value);
-                    exchange.putAttachment(FIRST_IN_SESSION_KEY, true);
-                    exchange.putAttachment(CORRUPT_EVENT_KEY, false);
+                    EventData eventData = new EventData(false, party, session, page.value, event.value,
+                                                        theTime, 0L, true, true, exchange);
+                    exchange.putAttachment(EVENT_DATA_KEY, eventData);
                     exchange.putAttachment(DUPLICATE_EVENT_KEY, false);
 
                     exchange.getResponseSender().send("OK");

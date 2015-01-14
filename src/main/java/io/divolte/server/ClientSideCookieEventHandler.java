@@ -17,8 +17,9 @@
 package io.divolte.server;
 
 import static io.divolte.server.IncomingRequestProcessor.*;
+import static io.divolte.server.QueryParameterNames.*;
+
 import io.divolte.server.CookieValues.CookieValue;
-import io.divolte.server.recordmapping.ConfigRecordMapper;
 import io.undertow.server.HttpServerExchange;
 
 import java.net.InetSocketAddress;
@@ -39,25 +40,8 @@ import com.google.common.hash.Hashing;
 
 @ParametersAreNonnullByDefault
 public final class ClientSideCookieEventHandler extends BaseEventHandler {
+    private static final Logger logger = LoggerFactory.getLogger(ClientSideCookieEventHandler.class);
     private static final String TRUE_STRING = "t";
-    private final static Logger logger = LoggerFactory.getLogger(ClientSideCookieEventHandler.class);
-
-    public final static String PARTY_ID_QUERY_PARAM = "p";
-    public final static String NEW_PARTY_ID_QUERY_PARAM = "n";
-    public final static String SESSION_ID_QUERY_PARAM = "s";
-    public final static String FIRST_IN_SESSION_QUERY_PARAM = "f";
-    public final static String PAGE_VIEW_ID_QUERY_PARAM = "v";
-    public final static String EVENT_ID_QUERY_PARAM = "e";
-    public final static String EVENT_TYPE_QUERY_PARAM = "t";
-    public final static String CLIENT_TIMESTAMP_QUERY_PARAM = "c"; // chronos
-    public final static String LOCATION_QUERY_PARAM = "l";
-    public final static String REFERER_QUERY_PARAM = "r";
-    public final static String VIEWPORT_PIXEL_WIDTH_QUERY_PARAM = "w";
-    public final static String VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM = "h";
-    public final static String SCREEN_PIXEL_WIDTH_QUERY_PARAM = "i";
-    public final static String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
-    public final static String DEVICE_PIXEL_RATIO_QUERY_PARAM = "k";
-    public final static String CHECKSUM_QUERY_PARAM = "x";
 
     public ClientSideCookieEventHandler(final IncomingRequestProcessingPool pool) {
         super(pool);
@@ -75,43 +59,23 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
 
     private void handleRequestIfComplete(final HttpServerExchange exchange) throws IncompleteRequestException {
         final boolean corrupt = !isRequestChecksumCorrect(exchange);
-        exchange.putAttachment(CORRUPT_EVENT_KEY, corrupt);
-
         final CookieValue partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
         final CookieValue sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
         final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
         final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
-        /*final boolean isNewPartyId = */queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
+        final boolean isNewPartyId = queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
         final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
         final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
 
         final long requestTime = System.currentTimeMillis();
-        exchange.putAttachment(REQUEST_START_TIME_KEY, requestTime);
-        exchange.putAttachment(COOKIE_UTC_OFFSET_KEY, clientTimeStamp - requestTime);
+        final EventData eventData = new EventData(corrupt, partyId, sessionId, pageViewId, eventId, requestTime,
+                                                  clientTimeStamp - requestTime, isNewPartyId, isFirstInSession,
+                                                  exchange);
 
-        exchange.putAttachment(PARTY_COOKIE_KEY, partyId);
-        exchange.putAttachment(SESSION_COOKIE_KEY, sessionId);
-        exchange.putAttachment(PAGE_VIEW_ID_KEY, pageViewId);
-        exchange.putAttachment(EVENT_ID_KEY, eventId);
-        exchange.putAttachment(FIRST_IN_SESSION_KEY, isFirstInSession);
-
-        exchange.putAttachment(LOCATION_KEY, queryParamFromExchange(exchange, LOCATION_QUERY_PARAM));
-        exchange.putAttachment(REFERER_KEY, queryParamFromExchange(exchange, REFERER_QUERY_PARAM));
-        exchange.putAttachment(VIEWPORT_PIXEL_WIDTH_KEY, queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
-        exchange.putAttachment(VIEWPORT_PIXEL_HEIGHT_KEY, queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
-        exchange.putAttachment(SCREEN_PIXEL_WIDTH_KEY, queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
-        exchange.putAttachment(SCREEN_PIXEL_HEIGHT_KEY, queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
-        exchange.putAttachment(DEVICE_PIXEL_RATIO_KEY, queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int));
-
-        exchange.putAttachment(EVENT_TYPE_KEY, queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM));
-        exchange.putAttachment(EVENT_PARAM_PRODUCER_KEY, (name) -> queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM + "." + name));
+        exchange.putAttachment(EVENT_DATA_KEY, eventData);
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
         processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
-    }
-
-    private static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 
     static Long tryParseBase36Long(String input) {

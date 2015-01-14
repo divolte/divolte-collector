@@ -16,7 +16,7 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.BaseEventHandler.*;
+import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
@@ -88,11 +88,12 @@ public class DslRecordMapperTest {
         EventPayload event = request("https://example.com/", "http://example.com/");
         final GenericRecord record = event.record;
         final HttpServerExchange exchange = event.exchange;
+        final EventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
 
         assertEquals(true, record.get("sessionStart"));
         assertEquals(true, record.get("unreliable"));
         assertEquals(false, record.get("dupe"));
-        assertEquals(exchange.getAttachment(REQUEST_START_TIME_KEY), record.get("ts"));
+        assertEquals(eventData.requestStartTime, record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
 
@@ -107,10 +108,10 @@ public class DslRecordMapperTest {
         assertEquals("10.10.1", record.get("userAgentOsVersion"));
         assertEquals("Apple Computer, Inc.", record.get("userAgentOsVendor"));
 
-        assertEquals(exchange.getAttachment(PARTY_COOKIE_KEY).value, record.get("client"));
-        assertEquals(exchange.getAttachment(SESSION_COOKIE_KEY).value, record.get("session"));
-        assertEquals(exchange.getAttachment(PAGE_VIEW_ID_KEY), record.get("pageview"));
-        assertEquals(exchange.getAttachment(EVENT_ID_KEY), record.get("event"));
+        assertEquals(eventData.partyCookie.value, record.get("client"));
+        assertEquals(eventData.sessionCookie.value, record.get("session"));
+        assertEquals(eventData.pageViewId, record.get("pageview"));
+        assertEquals(eventData.eventId, record.get("event"));
         assertEquals(1018, record.get("viewportWidth"));
         assertEquals(1018, record.get("viewportHeight"));
         assertEquals(1024, record.get("screenWidth"));

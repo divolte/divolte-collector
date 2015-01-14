@@ -16,8 +16,7 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.BaseEventHandler.*;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+import com.typesafe.config.Config;
 import io.divolte.record.DefaultEventRecord;
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlusher;
@@ -27,33 +26,27 @@ import io.divolte.server.kafka.KafkaFlusher;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
 import io.divolte.server.processing.ProcessingPool;
-import io.divolte.server.recordmapping.ConfigRecordMapper;
-import io.divolte.server.recordmapping.DslRecordMapper;
-import io.divolte.server.recordmapping.DslRecordMapping;
-import io.divolte.server.recordmapping.RecordMapper;
-import io.divolte.server.recordmapping.UserAgentParserAndCache;
+import io.divolte.server.recordmapping.*;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.Config;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+import java.util.Optional;
+
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
 
 @ParametersAreNonnullByDefault
 public final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
-    private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
-    public final static AttachmentKey<Boolean> CORRUPT_EVENT_KEY = AttachmentKey.create(Boolean.class);
-    public final static AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
+    public static final AttachmentKey<EventData> EVENT_DATA_KEY = AttachmentKey.create(EventData.class);
+    public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
     @Nullable
     private final ProcessingPool<KafkaFlusher, AvroRecordBuffer> kafkaFlushingPool;
@@ -144,15 +137,12 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
 
     @Override
     public ProcessingDirective process(final HttpServerExchange exchange) {
-        final boolean corrupt = exchange.getAttachment(CORRUPT_EVENT_KEY);
+        final EventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
 
-        if (!corrupt || keepCorrupted) {
-            final CookieValue party = exchange.getAttachment(PARTY_COOKIE_KEY);
-            final CookieValue session = exchange.getAttachment(SESSION_COOKIE_KEY);
-            final String pageView = exchange.getAttachment(PAGE_VIEW_ID_KEY);
-            final String event = exchange.getAttachment(EVENT_ID_KEY);
-            final Long requestStartTime = exchange.getAttachment(REQUEST_START_TIME_KEY);
-            final Long cookieUtcOffset = exchange.getAttachment(COOKIE_UTC_OFFSET_KEY);
+        if (!eventData.corruptEvent || keepCorrupted) {
+            final CookieValue party = eventData.partyCookie;
+            final CookieValue session = eventData.sessionCookie;
+            final String event = eventData.eventId;
 
             /*
              * Note: we cannot use the actual query string here,
@@ -161,7 +151,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
              * an endpoint that doesn't require a query string,
              * but rather generates these IDs on the server side.
              */
-            final boolean duplicate = memory.isProbableDuplicate(party.value, session.value, pageView, event);
+            final boolean duplicate = memory.isProbableDuplicate(party.value, session.value, eventData.pageViewId, event);
             exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
             if (!duplicate || keepDuplicates) {
@@ -169,8 +159,8 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
                 final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
                         party,
                         session,
-                        requestStartTime,
-                        cookieUtcOffset,
+                        eventData.requestStartTime,
+                        eventData.clientUtcOffset,
                         avroRecord);
                 doProcess(exchange, avroRecord, avroBuffer);
             }

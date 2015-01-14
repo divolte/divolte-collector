@@ -241,23 +241,23 @@ public final class DslRecordMapping {
      * Simple field mappings
      */
     public ValueProducer<String> location() {
-        return new PrimitiveValueProducer<>("location()", String.class, (e, c) -> e.getAttachment(LOCATION_KEY));
+        return new PrimitiveValueProducer<>("location()", String.class, (e, c) -> e.getAttachment(EVENT_DATA_KEY).location);
     }
 
     public ValueProducer<String> referer() {
-        return new PrimitiveValueProducer<>("referer()", String.class, (e, c) -> e.getAttachment(REFERER_KEY));
+        return new PrimitiveValueProducer<>("referer()", String.class, (e, c) -> e.getAttachment(EVENT_DATA_KEY).referer);
     }
 
     public ValueProducer<String> eventType() {
-        return new PrimitiveValueProducer<>("eventType()", String.class, (e,c) -> e.getAttachment(EVENT_TYPE_KEY));
+        return new PrimitiveValueProducer<>("eventType()", String.class, (e,c) -> e.getAttachment(EVENT_DATA_KEY).eventType);
     }
 
     public ValueProducer<Boolean> firstInSession() {
-        return new BooleanValueProducer("firstInSession()", (e,c) -> Optional.ofNullable(e.getAttachment(FIRST_IN_SESSION_KEY)));
+        return new BooleanValueProducer("firstInSession()", (e,c) -> Optional.ofNullable(e.getAttachment(EVENT_DATA_KEY).firstInSession));
     }
 
     public ValueProducer<Boolean> corrupt() {
-        return new BooleanValueProducer("corrupt()", (e,c) -> Optional.ofNullable(e.getAttachment(CORRUPT_EVENT_KEY)));
+        return new BooleanValueProducer("corrupt()", (e,c) -> Optional.ofNullable(e.getAttachment(EVENT_DATA_KEY).corruptEvent));
     }
 
     public ValueProducer<Boolean> duplicate() {
@@ -265,7 +265,7 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<Long> timestamp() {
-        return new PrimitiveValueProducer<>("timestamp()", Long.class, (e,c) -> Optional.of(e.getAttachment(REQUEST_START_TIME_KEY)));
+        return new PrimitiveValueProducer<>("timestamp()", Long.class, (e,c) -> Optional.of(e.getAttachment(EVENT_DATA_KEY).requestStartTime));
     }
 
     public ValueProducer<String> remoteHost() {
@@ -273,39 +273,39 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<Integer> viewportPixelWidth() {
-        return new PrimitiveValueProducer<>("viewportPixelWidth()", Integer.class, (e, c) -> e.getAttachment(VIEWPORT_PIXEL_WIDTH_KEY));
+        return new PrimitiveValueProducer<>("viewportPixelWidth()", Integer.class, (e,c) -> e.getAttachment(EVENT_DATA_KEY).viewportPixelWidth);
     }
 
     public ValueProducer<Integer> viewportPixelHeight() {
-        return new PrimitiveValueProducer<>("viewportPixelHeight()", Integer.class, (e, c) -> e.getAttachment(VIEWPORT_PIXEL_HEIGHT_KEY));
+        return new PrimitiveValueProducer<>("viewportPixelHeight()", Integer.class, (e,c) -> e.getAttachment(EVENT_DATA_KEY).viewportPixelHeight);
     }
 
     public ValueProducer<Integer> screenPixelWidth() {
-        return new PrimitiveValueProducer<>("screenPixelWidth()", Integer.class, (e, c) -> e.getAttachment(SCREEN_PIXEL_WIDTH_KEY));
+        return new PrimitiveValueProducer<>("screenPixelWidth()", Integer.class, (e,c) -> e.getAttachment(EVENT_DATA_KEY).screenPixelWidth);
     }
 
     public ValueProducer<Integer> screenPixelHeight() {
-        return new PrimitiveValueProducer<>("screenPixelHeight()", Integer.class, (e, c) -> e.getAttachment(SCREEN_PIXEL_HEIGHT_KEY));
+        return new PrimitiveValueProducer<>("screenPixelHeight()", Integer.class, (e,c) -> e.getAttachment(EVENT_DATA_KEY).screenPixelHeight);
     }
 
     public ValueProducer<Integer> devicePixelRatio() {
-        return new PrimitiveValueProducer<>("devicePixelRatio()", Integer.class, (e, c) -> e.getAttachment(DEVICE_PIXEL_RATIO_KEY));
+        return new PrimitiveValueProducer<>("devicePixelRatio()", Integer.class, (e,c) -> e.getAttachment(EVENT_DATA_KEY).devicePixelRatio);
     }
 
     public ValueProducer<String> partyId() {
-        return new PrimitiveValueProducer<>("partyId()", String.class, (e,c) -> Optional.ofNullable(e.getAttachment(PARTY_COOKIE_KEY)).map((cv) -> cv.value));
+        return new PrimitiveValueProducer<>("partyId()", String.class, (e,c) -> Optional.of(e.getAttachment(EVENT_DATA_KEY).partyCookie.value));
     }
 
     public ValueProducer<String> sessionId() {
-        return new PrimitiveValueProducer<>("sessionId()", String.class, (e,c) -> Optional.ofNullable(e.getAttachment(SESSION_COOKIE_KEY)).map((cv) -> cv.value));
+        return new PrimitiveValueProducer<>("sessionId()", String.class, (e,c) -> Optional.of(e.getAttachment(EVENT_DATA_KEY).sessionCookie.value));
     }
 
     public ValueProducer<String> pageViewId() {
-        return new PrimitiveValueProducer<>("pageViewId()", String.class, (e,c) -> Optional.ofNullable(e.getAttachment(PAGE_VIEW_ID_KEY)));
+        return new PrimitiveValueProducer<>("pageViewId()", String.class, (e,c) -> Optional.of(e.getAttachment(EVENT_DATA_KEY).pageViewId));
     }
 
     public ValueProducer<String> eventId() {
-        return new PrimitiveValueProducer<>("eventId()", String.class, (e,c) -> Optional.ofNullable(e.getAttachment(EVENT_ID_KEY)));
+        return new PrimitiveValueProducer<>("eventId()", String.class, (e,c) -> Optional.of(e.getAttachment(EVENT_DATA_KEY).eventId));
     }
 
     /*
@@ -559,7 +559,7 @@ public final class DslRecordMapping {
         return new PrimitiveValueProducer<>(
                 "eventParameter(" + name + ")",
                 String.class,
-                (e, c) -> e.getAttachment(EVENT_PARAM_PRODUCER_KEY).apply(name));
+                (e, c) -> e.getAttachment(EVENT_DATA_KEY).eventParameterProducer.apply(name));
     }
 
     /*

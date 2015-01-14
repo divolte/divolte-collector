@@ -33,9 +33,8 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.divolte.server.BaseEventHandler.*;
-import static io.divolte.server.IncomingRequestProcessor.CORRUPT_EVENT_KEY;
 import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
+import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
 
 @ParametersAreNonnullByDefault
 public class MappingTestServer {
@@ -109,24 +108,28 @@ public class MappingTestServer {
         final Map<String,Object> payload = JSON.std.<String>mapFrom(cis);
         final String generatedPageViewId = CookieValues.generate().value;
 
-        exchange.putAttachment(REQUEST_START_TIME_KEY, System.currentTimeMillis());
+        final EventData eventData = new EventData(
+                get(payload, "corrupt", Boolean.class).orElse(false),
+                get(payload, "party_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),
+                get(payload, "session_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),
+                get(payload, "page_view_id", String.class).orElse(generatedPageViewId),
+                get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
+                System.currentTimeMillis(),
+                0L,
+                get(payload, "new_party_id", Boolean.class).orElse(false),
+                get(payload, "first_in_session", Boolean.class).orElse(false),
+                get(payload, "location", String.class),
+                get(payload, "referer", String.class),
+                get(payload, "event_type", String.class),
+                get(payload, "viewport_pixel_width", Integer.class),
+                get(payload, "viewport_pixel_height", Integer.class),
+                get(payload, "screen_pixel_width", Integer.class),
+                get(payload, "screen_pixel_height", Integer.class),
+                get(payload, "device_pixel_ratio", Integer.class),
+                (name) -> get(payload, "param_" + name, String.class));
 
+        exchange.putAttachment(EVENT_DATA_KEY, eventData);
         exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
-        exchange.putAttachment(CORRUPT_EVENT_KEY, get(payload, "corrupt", Boolean.class).orElse(false));
-        exchange.putAttachment(LOCATION_KEY, get(payload, "location", String.class));
-        exchange.putAttachment(REFERER_KEY, get(payload, "referer", String.class));
-        exchange.putAttachment(EVENT_TYPE_KEY, get(payload, "event_type", String.class));
-        exchange.putAttachment(PARTY_COOKIE_KEY, get(payload, "party_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()));
-        exchange.putAttachment(SESSION_COOKIE_KEY, get(payload, "session_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()));
-        exchange.putAttachment(PAGE_VIEW_ID_KEY, get(payload, "page_view_id", String.class).orElse(generatedPageViewId));
-        exchange.putAttachment(EVENT_ID_KEY, get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"));
-        exchange.putAttachment(FIRST_IN_SESSION_KEY, get(payload, "first_in_session", Boolean.class).orElse(false));
-        exchange.putAttachment(VIEWPORT_PIXEL_WIDTH_KEY, get(payload, "viewport_pixel_width", Integer.class));
-        exchange.putAttachment(VIEWPORT_PIXEL_HEIGHT_KEY, get(payload, "viewport_pixel_height", Integer.class));
-        exchange.putAttachment(SCREEN_PIXEL_WIDTH_KEY, get(payload, "screen_pixel_width", Integer.class));
-        exchange.putAttachment(SCREEN_PIXEL_HEIGHT_KEY, get(payload, "screen_pixel_height", Integer.class));
-        exchange.putAttachment(DEVICE_PIXEL_RATIO_KEY, get(payload, "device_pixel_ratio", Integer.class));
-        exchange.putAttachment(EVENT_PARAM_PRODUCER_KEY, (name) -> get(payload, "param_" + name, String.class));
 
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
         exchange.getResponseChannel().write(ByteBuffer.wrap(mapper.newRecordFromExchange(exchange).toString().getBytes(StandardCharsets.UTF_8)));

@@ -16,14 +16,14 @@
 
 package io.divolte.server.recordmapping;
 
-import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.ClientSideCookieEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.*;
+
+import io.divolte.server.EventData;
 import io.divolte.server.OptionalConfig;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 
 import java.net.InetAddress;
@@ -33,7 +33,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -145,8 +144,7 @@ public final class ConfigRecordMapper implements RecordMapper {
         case "event_parameter":
             final String parameterName = OptionalConfig.of(config::getString, "name")
                                                        .orElseThrow(() -> new SchemaMappingException("Event parameter mapping for field %s requires a string 'name' property.", targetFieldName));
-            final String queryParameterName = EVENT_TYPE_QUERY_PARAM + "." + parameterName;
-            final FieldSupplier<String> eventParameterFieldSupplier = (FieldSupplier<String>) (c) -> c.getQueryParameter(queryParameterName);
+            final FieldSupplier<String> eventParameterFieldSupplier = (c) -> c.getEventData().eventParameterProducer.apply(parameterName);
             return castingSupplierForStringField(targetFieldName, eventParameterFieldSupplier, schema);
         case "regex_group":
             final FieldSupplier<String> regexGroupFieldSupplier = regexGroupFieldSupplier(config, targetFieldName);
@@ -240,8 +238,8 @@ public final class ConfigRecordMapper implements RecordMapper {
     private static final FieldSupplier<String> REMOTE_HOST_FIELD_PRODUCER =
             (c) -> Optional.ofNullable(c.getServerExchange().getSourceAddress())
                            .map(InetSocketAddress::getHostString);
-    private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getQueryParameter(REFERER_QUERY_PARAM);
-    private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getQueryParameter(LOCATION_QUERY_PARAM);
+    private static final FieldSupplier<String> REFERER_FIELD_PRODUCER = (c) -> c.getEventData().referer;
+    private static final FieldSupplier<String> LOCATION_FIELD_PRODUCER = (c) -> c.getEventData().location;
     private static final FieldSupplier<String> USERAGENT_FIELD_PRODUCER = (c) -> c.userAgent.get();
 
     private static FieldSupplier<String> regexFieldSupplierForName(final String name) {
@@ -273,11 +271,11 @@ public final class ConfigRecordMapper implements RecordMapper {
     private static FieldSupplier<?> simpleFieldSupplier(final String sourceFieldName) {
         switch (sourceFieldName) {
         case "eventType":
-            return (FieldSupplier<String>) (c) -> c.getQueryParameter(EVENT_TYPE_QUERY_PARAM);
+            return (FieldSupplier<String>) (c) -> c.getEventData().eventType;
         case "firstInSession":
-            return (c) -> Optional.of(c.isFirstInSession());
+            return (c) -> Optional.of(c.getEventData().firstInSession);
         case "corrupt":
-            return (c) -> Optional.of(c.isCorruptEvent());
+            return (c) -> Optional.of(c.getEventData().corruptEvent);
         case "duplicate":
             return (c) -> Optional.of(c.isDuplicateEvent());
         case "geoCityId":
@@ -345,7 +343,7 @@ public final class ConfigRecordMapper implements RecordMapper {
         case "geoSatelliteProvider":
             return (c) -> c.getTraits().map(Traits::isSatelliteProvider);
         case "timestamp":
-            return (FieldSupplier<Long>) (c) -> c.getAttachment(REQUEST_START_TIME_KEY);
+            return (c) -> Optional.of(c.getEventData().requestStartTime);
         case "userAgent":
             return USERAGENT_FIELD_PRODUCER;
         case "userAgentName":
@@ -373,23 +371,23 @@ public final class ConfigRecordMapper implements RecordMapper {
         case "location":
             return LOCATION_FIELD_PRODUCER;
         case "viewportPixelWidth":
-            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
+            return (FieldSupplier<Integer>) (c) -> c.getEventData().viewportPixelWidth;
         case "viewportPixelHeight":
-            return (c) -> c.getQueryParameter(VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
+            return (FieldSupplier<Integer>) (c) -> c.getEventData().viewportPixelHeight;
         case "screenPixelWidth":
-            return (c) -> c.getQueryParameter(SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
+            return (FieldSupplier<Integer>) (c) -> c.getEventData().screenPixelWidth;
         case "screenPixelHeight":
-            return (c) -> c.getQueryParameter(SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
+            return (FieldSupplier<Integer>) (c) -> c.getEventData().screenPixelHeight;
         case "devicePixelRatio":
-            return (c) -> c.getQueryParameter(DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int);
+            return (FieldSupplier<Integer>) (c) -> c.getEventData().devicePixelRatio;
         case "partyId":
-            return (c) -> c.getAttachment(PARTY_COOKIE_KEY).map((cv) -> cv.value);
+            return (c) -> Optional.of(c.getEventData().partyCookie.value);
         case "sessionId":
-            return (c) -> c.getAttachment(SESSION_COOKIE_KEY).map((cv) -> cv.value);
+            return (c) -> Optional.of(c.getEventData().sessionCookie.value);
         case "pageViewId":
-            return (FieldSupplier<String>) (c) -> c.getAttachment(PAGE_VIEW_ID_KEY);
+            return (c) -> Optional.of(c.getEventData().pageViewId);
         case "eventId":
-            return (FieldSupplier<String>) (c) -> c.getAttachment(EVENT_ID_KEY);
+            return (c) -> Optional.of(c.getEventData().eventId);
         default:
             throw new SchemaMappingException("Unknown field in schema mapping: %s", sourceFieldName);
         }
@@ -520,20 +518,8 @@ public final class ConfigRecordMapper implements RecordMapper {
             return serverExchange;
         }
 
-        public Optional<String> getQueryParameter(final String parameterName) {
-            return Optional.ofNullable(serverExchange.getQueryParameters().get(parameterName)).map(Deque::getFirst);
-        }
-
-        public <T> Optional<T> getAttachment(final AttachmentKey<T> key) {
-            return Optional.of(serverExchange.getAttachment(key));
-        }
-
-        public boolean isFirstInSession() {
-            return serverExchange.getAttachment(FIRST_IN_SESSION_KEY);
-        }
-
-        public boolean isCorruptEvent() {
-            return serverExchange.getAttachment(CORRUPT_EVENT_KEY);
+        public EventData getEventData() {
+            return serverExchange.getAttachment(EVENT_DATA_KEY);
         }
 
         public boolean isDuplicateEvent() {

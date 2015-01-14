@@ -16,18 +16,16 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.ClientSideCookieEventHandler.*;
+import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
+import static io.divolte.server.QueryParameterNames.PAGE_VIEW_ID_QUERY_PARAM;
+
 import io.divolte.server.CookieValues.CookieValue;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
-import io.undertow.util.AttachmentKey;
 
 import java.time.Duration;
-import java.util.Date;
-import java.util.Deque;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -64,7 +62,6 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
     private final Duration sessionTimeout;
     private final OptionalConfig<String> cookieDomain;
 
-
     public ServerSideCookieEventHandler(final String partyCookieName,
                                final Duration partyTimeout,
                                final String sessionCookieName,
@@ -99,20 +96,20 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
 
         // 1
         final long requestTime = System.currentTimeMillis();
-        exchange.putAttachment(REQUEST_START_TIME_KEY, requestTime);
-        // Server side generated cookies are UTC, so offset = 0
-        exchange.putAttachment(COOKIE_UTC_OFFSET_KEY, 0L);
-
-        final CookieValue partyId = prepareTrackingIdentifierAndReturnCookieValue(exchange, partyCookieName, PARTY_COOKIE_KEY, partyTimeout, requestTime);
-        final CookieValue sessionId = prepareTrackingIdentifierAndReturnCookieValue(exchange, sessionCookieName, SESSION_COOKIE_KEY, sessionTimeout, requestTime);
-
+        final CookieValue partyId = prepareTrackingIdentifierAndReturnCookieValue(exchange, partyCookieName, partyTimeout, requestTime);
+        final CookieValue sessionId = prepareTrackingIdentifierAndReturnCookieValue(exchange, sessionCookieName, sessionTimeout, requestTime);
         final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseGet(() -> CookieValues.generate(requestTime).value);
-        exchange.putAttachment(PAGE_VIEW_ID_KEY, pageViewId);
-        exchange.putAttachment(EVENT_ID_KEY, pageViewId);
 
         // required for the RecordMapper; the logic to determine whether a event is first in session
         // differs between the server side and client side cookie endpoint
-        exchange.putAttachment(FIRST_IN_SESSION_KEY, !exchange.getRequestCookies().containsKey(sessionCookieName));
+        final Map<String, Cookie> requestCookies = exchange.getRequestCookies();
+        final boolean firstInSession = !requestCookies.containsKey(sessionCookieName);
+        final boolean newPartyId = !requestCookies.containsKey(partyCookieName);
+
+        // Server side generated cookies are UTC, so offset = 0
+        final EventData eventData = new EventData(false, partyId, sessionId, pageViewId, pageViewId,
+                                                  requestTime, 0L, newPartyId, firstInSession, exchange);
+        exchange.putAttachment(EVENT_DATA_KEY, eventData);
 
         // 2
         logger.debug("Enqueuing event (server generated cookies): {}/{}/{}", partyId, sessionId, pageViewId);
@@ -120,17 +117,16 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
     }
 
     private CookieValue prepareTrackingIdentifierAndReturnCookieValue(final HttpServerExchange exchange,
-                                                final String cookieName,
-                                                final AttachmentKey<CookieValue> key,
-                                                final Duration timeout,
-                                                final long currentTime) {
+                                                                      final String cookieName,
+                                                                      final Duration timeout,
+                                                                      final long currentTime) {
 
         final Cookie existingCookie = exchange.getRequestCookies().get(cookieName);
 
         final CookieValue cookieValue = Optional.ofNullable(existingCookie)
-        .map(Cookie::getValue)
-        .flatMap(CookieValues::tryParse)
-        .orElseGet(() -> CookieValues.generate(currentTime));
+            .map(Cookie::getValue)
+            .flatMap(CookieValues::tryParse)
+            .orElseGet(() -> CookieValues.generate(currentTime));
 
         final Cookie newCookie = new CookieImpl(cookieName, cookieValue.value);
         cookieDomain.ifPresent(newCookie::setDomain);
@@ -142,18 +138,12 @@ final class ServerSideCookieEventHandler extends BaseEventHandler {
         }
 
         newCookie
-        .setVersion(1)
-        .setHttpOnly(true)
-        .setExpires(new Date(currentTime + TimeUnit.SECONDS.toMillis(maxAge)));
+            .setVersion(1)
+            .setHttpOnly(true)
+            .setExpires(new Date(currentTime + TimeUnit.SECONDS.toMillis(maxAge)));
 
-        exchange
-        .setResponseCookie(newCookie)
-        .putAttachment(key, cookieValue);
+        exchange.setResponseCookie(newCookie);
 
         return cookieValue;
-    }
-
-    private static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 }

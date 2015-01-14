@@ -16,51 +16,28 @@
 
 package io.divolte.server;
 
-import io.divolte.server.CookieValues.CookieValue;
+import com.google.common.base.Strings;
+import com.google.common.io.Resources;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Function;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Strings;
-import com.google.common.io.Resources;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.Deque;
+import java.util.Objects;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public abstract class BaseEventHandler implements HttpHandler {
-    private static Logger logger = LoggerFactory.getLogger(BaseEventHandler.class);
-
-    public static final AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    public static final AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    public static final AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
-    public static final AttachmentKey<String> EVENT_ID_KEY = AttachmentKey.create(String.class);
-    public static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
-    public static final AttachmentKey<Long> COOKIE_UTC_OFFSET_KEY = AttachmentKey.create(Long.class);
-    public static final AttachmentKey<Boolean> FIRST_IN_SESSION_KEY = AttachmentKey.create(Boolean.class);
-
-    public static final AttachmentKey<Optional<String>> LOCATION_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Optional<String>> REFERER_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Optional<String>> EVENT_TYPE_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Optional<Integer>> VIEWPORT_PIXEL_WIDTH_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Optional<Integer>> VIEWPORT_PIXEL_HEIGHT_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Optional<Integer>> SCREEN_PIXEL_WIDTH_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Optional<Integer>> SCREEN_PIXEL_HEIGHT_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Optional<Integer>> DEVICE_PIXEL_RATIO_KEY = AttachmentKey.create(Optional.class);
-    public static final AttachmentKey<Function<String,Optional<String>>> EVENT_PARAM_PRODUCER_KEY = AttachmentKey.create(Function.class);
+    private static final Logger logger = LoggerFactory.getLogger(BaseEventHandler.class);
 
     private final static ETag SENTINEL_ETAG = new ETag(false, "6b3edc43-20ec-4078-bc47-e965dd76b88a");
     private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
@@ -133,6 +110,10 @@ public abstract class BaseEventHandler implements HttpHandler {
         return Strings.isNullOrEmpty(queryString)
                 ? requestUrl
                 : requestUrl + '?' + queryString;
+    }
+
+    static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
+        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 
     /**
