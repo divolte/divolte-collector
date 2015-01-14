@@ -45,7 +45,7 @@ import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CON
 public final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
     private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
-    public static final AttachmentKey<EventData> EVENT_DATA_KEY = AttachmentKey.create(EventData.class);
+    public static final AttachmentKey<BrowserEventData> EVENT_DATA_KEY = AttachmentKey.create(BrowserEventData.class);
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
     @Nullable
@@ -137,7 +137,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
 
     @Override
     public ProcessingDirective process(final HttpServerExchange exchange) {
-        final EventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
+        final BrowserEventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
 
         if (!eventData.corruptEvent || keepCorrupted) {
             final CookieValue party = eventData.partyCookie;

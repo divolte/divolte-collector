@@ -68,9 +68,9 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
         final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
 
         final long requestTime = System.currentTimeMillis();
-        final EventData eventData = new EventData(corrupt, partyId, sessionId, pageViewId, eventId, requestTime,
-                                                  clientTimeStamp - requestTime, isNewPartyId, isFirstInSession,
-                                                  exchange);
+        final BrowserEventData eventData = new BrowserEventData(corrupt, partyId, sessionId, pageViewId, eventId,
+                                                                requestTime, clientTimeStamp - requestTime,
+                                                                isNewPartyId, isFirstInSession, exchange);
 
         exchange.putAttachment(EVENT_DATA_KEY, eventData);
 

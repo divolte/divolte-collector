@@ -88,7 +88,7 @@ public class DslRecordMapperTest {
         EventPayload event = request("https://example.com/", "http://example.com/");
         final GenericRecord record = event.record;
         final HttpServerExchange exchange = event.exchange;
-        final EventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
+        final BrowserEventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
 
         assertEquals(true, record.get("sessionStart"));
         assertEquals(true, record.get("unreliable"));

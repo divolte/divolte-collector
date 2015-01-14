@@ -137,7 +137,7 @@ public class RequestChecksumTest {
         request(URL_QUERY_CHECKSUM_UNICODE);
         Preconditions.checkState(null != server);
         final EventPayload event = server.waitForEvent();
-        final EventData eventData = event.exchange.getAttachment(EVENT_DATA_KEY);
+        final BrowserEventData eventData = event.exchange.getAttachment(EVENT_DATA_KEY);
         assertFalse(eventData.corruptEvent);
         assertEquals("ụñ⚕©ºḌℨ", eventData.eventType.get());
     }

@@ -224,7 +224,7 @@ public class SeleniumJavaScriptTest {
 
         EventPayload viewEvent = server.waitForEvent();
 
-        final EventData eventData = viewEvent.exchange.getAttachment(EVENT_DATA_KEY);
+        final BrowserEventData eventData = viewEvent.exchange.getAttachment(EVENT_DATA_KEY);
 
         assertFalse(Strings.isNullOrEmpty(eventData.partyCookie.value));
 
@@ -281,7 +281,7 @@ public class SeleniumJavaScriptTest {
 
         driver.findElement(By.id("custom")).click();
         final EventPayload customEvent = server.waitForEvent();
-        final EventData eventData = customEvent.exchange.getAttachment(EVENT_DATA_KEY);
+        final BrowserEventData eventData = customEvent.exchange.getAttachment(EVENT_DATA_KEY);
 
         assertTrue(eventData.eventType.isPresent());
         assertEquals("custom", eventData.eventType.get());
@@ -316,7 +316,7 @@ public class SeleniumJavaScriptTest {
         final String location = String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", server.port);
         driver.get(location);
         EventPayload event = server.waitForEvent();
-        EventData eventData = event.exchange.getAttachment(EVENT_DATA_KEY);
+        BrowserEventData eventData = event.exchange.getAttachment(EVENT_DATA_KEY);
 
         assertEquals("supercalifragilisticexpialidocious", eventData.pageViewId);
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);

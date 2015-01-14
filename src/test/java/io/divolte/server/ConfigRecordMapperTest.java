@@ -85,7 +85,7 @@ public class ConfigRecordMapperTest {
                 );
 
         GenericRecord record = maker.newRecordFromExchange(theExchange);
-        final EventData eventData = theExchange.getAttachment(EVENT_DATA_KEY);
+        final BrowserEventData eventData = theExchange.getAttachment(EVENT_DATA_KEY);
 
         assertEquals(true, record.get("sessionStart"));
         assertEquals(eventData.requestStartTime, record.get("ts"));
@@ -528,8 +528,8 @@ public class ConfigRecordMapperTest {
                     CookieValue page = CookieValues.generate(theTime);
                     CookieValue event = CookieValues.generate(theTime);
 
-                    EventData eventData = new EventData(false, party, session, page.value, event.value,
-                                                        theTime, 0L, true, true, exchange);
+                    BrowserEventData eventData = new BrowserEventData(false, party, session, page.value, event.value,
+                                                                      theTime, 0L, true, true, exchange);
                     exchange.putAttachment(EVENT_DATA_KEY, eventData);
                     exchange.putAttachment(DUPLICATE_EVENT_KEY, false);
 

@@ -108,7 +108,7 @@ public class MappingTestServer {
         final Map<String,Object> payload = JSON.std.<String>mapFrom(cis);
         final String generatedPageViewId = CookieValues.generate().value;
 
-        final EventData eventData = new EventData(
+        final BrowserEventData eventData = new BrowserEventData(
                 get(payload, "corrupt", Boolean.class).orElse(false),
                 get(payload, "party_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),
                 get(payload, "session_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),

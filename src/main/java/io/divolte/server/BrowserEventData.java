@@ -28,7 +28,7 @@ import static io.divolte.server.BaseEventHandler.*;
 import static io.divolte.server.QueryParameterNames.*;
 
 @ParametersAreNonnullByDefault
-public class EventData {
+public class BrowserEventData {
     public final boolean corruptEvent;
     public final CookieValues.CookieValue partyCookie;
     public final CookieValues.CookieValue sessionCookie;
@@ -48,24 +48,24 @@ public class EventData {
     public final Optional<Integer> devicePixelRatio;
     public final Function<String, Optional<String>> eventParameterProducer;
 
-    EventData(final boolean corruptEvent,
-              final CookieValues.CookieValue partyCookie,
-              final CookieValues.CookieValue sessionCookie,
-              final String pageViewId,
-              final String eventId,
-              final long requestStartTime,
-              final long clientUtcOffset,
-              final boolean newPartyId,
-              final boolean firstInSession,
-              final Optional<String> location,
-              final Optional<String> referer,
-              final Optional<String> eventType,
-              final Optional<Integer> viewportPixelWidth,
-              final Optional<Integer> viewportPixelHeight,
-              final Optional<Integer> screenPixelWidth,
-              final Optional<Integer> screenPixelHeight,
-              final Optional<Integer> devicePixelRatio,
-              final Function<String, Optional<String>> eventParameterProducer) {
+    BrowserEventData(final boolean corruptEvent,
+                     final CookieValues.CookieValue partyCookie,
+                     final CookieValues.CookieValue sessionCookie,
+                     final String pageViewId,
+                     final String eventId,
+                     final long requestStartTime,
+                     final long clientUtcOffset,
+                     final boolean newPartyId,
+                     final boolean firstInSession,
+                     final Optional<String> location,
+                     final Optional<String> referer,
+                     final Optional<String> eventType,
+                     final Optional<Integer> viewportPixelWidth,
+                     final Optional<Integer> viewportPixelHeight,
+                     final Optional<Integer> screenPixelWidth,
+                     final Optional<Integer> screenPixelHeight,
+                     final Optional<Integer> devicePixelRatio,
+                     final Function<String, Optional<String>> eventParameterProducer) {
         this.corruptEvent           = corruptEvent;
         this.partyCookie            = Objects.requireNonNull(partyCookie);
         this.sessionCookie          = Objects.requireNonNull(sessionCookie);
@@ -86,16 +86,16 @@ public class EventData {
         this.eventParameterProducer = Objects.requireNonNull(eventParameterProducer);
     }
 
-    EventData(final boolean corruptEvent,
-              final CookieValues.CookieValue partyCookie,
-              final CookieValues.CookieValue sessionCookie,
-              final String pageViewId,
-              final String eventId,
-              final long requestStartTime,
-              final long clientUtcOffset,
-              final boolean newPartyId,
-              final boolean firstInSession,
-              final HttpServerExchange exchange) {
+    BrowserEventData(final boolean corruptEvent,
+                     final CookieValues.CookieValue partyCookie,
+                     final CookieValues.CookieValue sessionCookie,
+                     final String pageViewId,
+                     final String eventId,
+                     final long requestStartTime,
+                     final long clientUtcOffset,
+                     final boolean newPartyId,
+                     final boolean firstInSession,
+                     final HttpServerExchange exchange) {
         this(corruptEvent,
              partyCookie,
              sessionCookie,

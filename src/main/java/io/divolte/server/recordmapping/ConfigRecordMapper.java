@@ -19,7 +19,7 @@ package io.divolte.server.recordmapping;
 import static io.divolte.server.ClientSideCookieEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.*;
 
-import io.divolte.server.EventData;
+import io.divolte.server.BrowserEventData;
 import io.divolte.server.OptionalConfig;
 import io.divolte.server.ip2geo.LookupService;
 import io.undertow.server.HttpServerExchange;
@@ -518,7 +518,7 @@ public final class ConfigRecordMapper implements RecordMapper {
             return serverExchange;
         }
 
-        public EventData getEventData() {
+        public BrowserEventData getEventData() {
             return serverExchange.getAttachment(EVENT_DATA_KEY);
         }
 
