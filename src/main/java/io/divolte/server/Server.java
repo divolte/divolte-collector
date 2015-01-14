@@ -64,9 +64,6 @@ public final class Server implements Runnable {
         port = config.getInt("divolte.server.port");
 
         processingPool = new IncomingRequestProcessingPool(config, listener);
-        // Disabled for now.
-        //final ServerSideCookieEventHandler serverSideCookieEventHandler =
-        //        new ServerSideCookieEventHandler(config, processingPool);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
                 new ClientSideCookieEventHandler(processingPool);
         final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(config);
@@ -75,9 +72,6 @@ public final class Server implements Runnable {
         final PathHandler handler = new PathHandler();
         handler.addExactPath("/csc-event",
                              new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
-        // Disabled; see above.
-        //handler.addExactPath("/ssc-event",
-        //                     new AllowedMethodsHandler(serverSideCookieEventHandler, Methods.GET));
         handler.addExactPath('/' + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
         if (config.getBoolean("divolte.server.serve_static_resources")) {
