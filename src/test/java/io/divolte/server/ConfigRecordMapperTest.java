@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import static io.divolte.server.ClientSideCookieEventHandler.buildBrowserEventData;
 import static io.divolte.server.IncomingRequestProcessor.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
@@ -528,8 +529,8 @@ public class ConfigRecordMapperTest {
                     CookieValue page = CookieValues.generate(theTime);
                     CookieValue event = CookieValues.generate(theTime);
 
-                    BrowserEventData eventData = new BrowserEventData(false, party, session, page.value, event.value,
-                                                                      theTime, 0L, true, true, exchange);
+                    BrowserEventData eventData = buildBrowserEventData(false, party, session, page.value, event.value,
+                                                                       theTime, 0L, true, true, exchange);
                     exchange.putAttachment(EVENT_DATA_KEY, eventData);
                     exchange.putAttachment(DUPLICATE_EVENT_KEY, false);
 

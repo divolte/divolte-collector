@@ -17,9 +17,9 @@
 package io.divolte.server;
 
 import static io.divolte.server.IncomingRequestProcessor.*;
-import static io.divolte.server.QueryParameterNames.*;
 
 import io.divolte.server.CookieValues.CookieValue;
+import io.divolte.server.recordmapping.ConfigRecordMapper;
 import io.undertow.server.HttpServerExchange;
 
 import java.net.InetSocketAddress;
@@ -42,6 +42,23 @@ import com.google.common.hash.Hashing;
 public final class ClientSideCookieEventHandler extends BaseEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(ClientSideCookieEventHandler.class);
     private static final String TRUE_STRING = "t";
+
+    private static final String PARTY_ID_QUERY_PARAM = "p";
+    private static final String NEW_PARTY_ID_QUERY_PARAM = "n";
+    private static final String SESSION_ID_QUERY_PARAM = "s";
+    private static final String FIRST_IN_SESSION_QUERY_PARAM = "f";
+    private static final String EVENT_ID_QUERY_PARAM = "e";
+    private static final String CLIENT_TIMESTAMP_QUERY_PARAM = "c"; // chronos
+    private static final String CHECKSUM_QUERY_PARAM = "x";
+    private static final String PAGE_VIEW_ID_QUERY_PARAM = "v";
+    private static final String EVENT_TYPE_QUERY_PARAM = "t";
+    private static final String LOCATION_QUERY_PARAM = "l";
+    private static final String REFERER_QUERY_PARAM = "r";
+    private static final String VIEWPORT_PIXEL_WIDTH_QUERY_PARAM = "w";
+    private static final String VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM = "h";
+    private static final String SCREEN_PIXEL_WIDTH_QUERY_PARAM = "i";
+    private static final String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
+    private static final String DEVICE_PIXEL_RATIO_QUERY_PARAM = "k";
 
     public ClientSideCookieEventHandler(final IncomingRequestProcessingPool pool) {
         super(pool);
@@ -68,14 +85,44 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
         final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
 
         final long requestTime = System.currentTimeMillis();
-        final BrowserEventData eventData = new BrowserEventData(corrupt, partyId, sessionId, pageViewId, eventId,
-                                                                requestTime, clientTimeStamp - requestTime,
-                                                                isNewPartyId, isFirstInSession, exchange);
+        final BrowserEventData eventData = buildBrowserEventData(corrupt, partyId, sessionId, pageViewId, eventId,
+                                                                 requestTime, clientTimeStamp - requestTime,
+                                                                 isNewPartyId, isFirstInSession, exchange);
 
         exchange.putAttachment(EVENT_DATA_KEY, eventData);
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
         processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
+    }
+
+    static BrowserEventData buildBrowserEventData(final boolean corruptEvent,
+                                                  final CookieValues.CookieValue partyCookie,
+                                                  final CookieValues.CookieValue sessionCookie,
+                                                  final String pageViewId,
+                                                  final String eventId,
+                                                  final long requestStartTime,
+                                                  final long clientUtcOffset,
+                                                  final boolean newPartyId,
+                                                  final boolean firstInSession,
+                                                  final HttpServerExchange exchange) {
+        return new BrowserEventData(corruptEvent,
+                                    partyCookie,
+                                    sessionCookie,
+                                    pageViewId,
+                                    eventId,
+                                    requestStartTime,
+                                    clientUtcOffset,
+                                    newPartyId,
+                                    firstInSession,
+                                    queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
+                                    queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
+                                    queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
+                                    queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
+                                    (name) -> queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM + "." + name));
     }
 
     static Long tryParseBase36Long(String input) {

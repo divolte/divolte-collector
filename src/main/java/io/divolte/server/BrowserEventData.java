@@ -16,16 +16,10 @@
 
 package io.divolte.server;
 
-import io.divolte.server.recordmapping.ConfigRecordMapper;
-import io.undertow.server.HttpServerExchange;
-
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-
-import static io.divolte.server.BaseEventHandler.*;
-import static io.divolte.server.QueryParameterNames.*;
 
 @ParametersAreNonnullByDefault
 public class BrowserEventData {
@@ -84,35 +78,5 @@ public class BrowserEventData {
         this.screenPixelHeight      = Objects.requireNonNull(screenPixelHeight);
         this.devicePixelRatio       = Objects.requireNonNull(devicePixelRatio);
         this.eventParameterProducer = Objects.requireNonNull(eventParameterProducer);
-    }
-
-    BrowserEventData(final boolean corruptEvent,
-                     final CookieValues.CookieValue partyCookie,
-                     final CookieValues.CookieValue sessionCookie,
-                     final String pageViewId,
-                     final String eventId,
-                     final long requestStartTime,
-                     final long clientUtcOffset,
-                     final boolean newPartyId,
-                     final boolean firstInSession,
-                     final HttpServerExchange exchange) {
-        this(corruptEvent,
-             partyCookie,
-             sessionCookie,
-             pageViewId,
-             eventId,
-             requestStartTime,
-             clientUtcOffset,
-             newPartyId,
-             firstInSession,
-             queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
-             queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
-             queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-             queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-             queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-             queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-             queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-             queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-             (name) -> queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM + "." + name));
     }
 }
