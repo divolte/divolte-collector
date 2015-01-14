@@ -17,7 +17,6 @@
 package io.divolte.server;
 
 import static io.divolte.server.BrowserLists.*;
-import static io.divolte.server.ClientSideCookieEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -30,8 +29,6 @@ import io.divolte.server.ServerTestUtils.TestServer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
-import java.util.Deque;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;

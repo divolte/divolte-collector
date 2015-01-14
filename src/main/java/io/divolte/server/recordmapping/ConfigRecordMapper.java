@@ -16,7 +16,6 @@
 
 package io.divolte.server.recordmapping;
 
-import static io.divolte.server.ClientSideCookieEventHandler.*;
 import static io.divolte.server.IncomingRequestProcessor.*;
 
 import io.divolte.server.BrowserEventData;
