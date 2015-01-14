@@ -76,7 +76,7 @@ public class SeleniumJavaScriptTest {
 
     public final static String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
 
-    private static final long HALF_DAY_MS = TimeUnit.DAYS.toMillis(12);
+    private static final long HALF_DAY_MS = TimeUnit.HOURS.toMillis(12);
 
     public final static DesiredCapabilities LOCAL_RUN_CAPABILITIES;
     static {
