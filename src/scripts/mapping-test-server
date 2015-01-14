@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-# This is a convenience script for running the avro-tool
+# This is a convenience script for running the mapping-test-server
 
 # Attempt to set APP_HOME
 # Resolve links: $0 may be a link
