@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 GoDataDriven B.V.
+ * Copyright 2014 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package io.divolte.server.recordmapping;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
-import io.divolte.server.BrowserEventData;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapping.MappingAction;
 import io.divolte.server.recordmapping.DslRecordMapping.MappingAction.MappingResult;
@@ -30,6 +29,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -43,10 +43,9 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.typesafe.config.Config;
-
-import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -95,10 +94,9 @@ public class DslRecordMapper implements RecordMapper {
     @Override
     public GenericRecord newRecordFromExchange(HttpServerExchange exchange) {
         final GenericRecordBuilder builder = new GenericRecordBuilder(schema);
-        final BrowserEventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
+        Map<String,Object> context = Maps.newHashMapWithExpectedSize(20);
 
-        for (final Iterator<MappingAction> itr = actions.iterator();
-             itr.hasNext() && itr.next().perform(exchange, eventData, builder) == MappingResult.CONTINUE;);
+        for (Iterator<MappingAction> itr = actions.iterator(); itr.hasNext() && itr.next().perform(exchange, context, builder) == MappingResult.CONTINUE; );
 
         return builder.build();
     }
