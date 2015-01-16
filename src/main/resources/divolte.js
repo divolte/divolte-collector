@@ -44,7 +44,7 @@ var SCRIPT_NAME = 'divolte.js';
   var document = window.document,
       navigator = window.navigator,
       documentElement = document.documentElement,
-      bodyElement = document.getElementsByName('body')[0],
+      bodyElement = document.getElementsByName('body').item(0),
       console = window.console,
       // On some browsers, logging functions are methods that expect to access the console as 'this'.
       bound = function(method, instance) {
