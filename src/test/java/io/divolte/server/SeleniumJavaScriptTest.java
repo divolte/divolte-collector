@@ -18,6 +18,9 @@ package io.divolte.server;
 
 import static io.divolte.server.BrowserLists.*;
 import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
+import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.BASIC;
+import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.BASIC_COPY;
+import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.PAGE_VIEW_SUPPLIED;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
@@ -28,7 +31,9 @@ import io.divolte.server.ServerTestUtils.TestServer;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -95,20 +100,32 @@ public class SeleniumJavaScriptTest {
     @Parameter(1)
     public String capabilityDescription;
 
-    @Parameters(name = "Selenium JS test: {1}")
+    @Parameter(2)
+    public boolean quirksMode;
+
+    @Parameters(name = "Selenium JS test: {1} (quirks-mode={2})")
     public static Iterable<Object[]> sauceLabBrowsersToTest() {
+        final Collection<Object[]> browserList;
         if (!System.getenv().containsKey(DRIVER_ENV_VAR)) {
-            return Collections.emptyList();
+            browserList = Collections.emptyList();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
+            browserList = SAUCE_BROWSER_LIST;
             System.out.println("Selenium test running on SauceLabs with these browsers:\n" + browserNameList(SAUCE_BROWSER_LIST));
-            return SAUCE_BROWSER_LIST;
         } else if (BS_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
+            browserList = BS_BROWSER_LIST;
             System.out.println("Selenium test running on BrowserStack with these browsers:\n" + browserNameList(BS_BROWSER_LIST));
-            return BS_BROWSER_LIST;
         } else {
             // Parameters are not used for non-sauce tests
-            return ImmutableList.of(new Object[] { (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run" });
+            browserList = ImmutableList.of(new Object[] {
+                    (Supplier<DesiredCapabilities>) () -> LOCAL_RUN_CAPABILITIES, "Local JS test run"
+            });
         }
+        // For each browser, we need to run in and out of quirks mode.
+        return browserList.stream()
+                .flatMap((browser) ->
+                        ImmutableList.of(new Object[] { browser[0], browser[1], false },
+                                         new Object[] { browser[0], browser[1], true  }).stream())
+                .collect(Collectors.toList());
     }
 
     @Test
@@ -118,9 +135,9 @@ public class SeleniumJavaScriptTest {
         // do a sequence of explicit navigation by setting the browser location
         // and then check that all requests generated a unique pageview ID
         final Runnable[] actions = {
-                () -> driver.navigate().to(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
-                () -> driver.navigate().to(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
-                () -> driver.navigate().to(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port))
+                () -> driver.navigate().to(urlOf(BASIC)),
+                () -> driver.navigate().to(urlOf(BASIC_COPY)),
+                () -> driver.navigate().to(urlOf(BASIC))
                 };
 
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
@@ -133,7 +150,7 @@ public class SeleniumJavaScriptTest {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                () -> driver.get(urlOf(BASIC)),
                 driver.navigate()::refresh
                 };
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
@@ -146,9 +163,9 @@ public class SeleniumJavaScriptTest {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                () -> driver.get(urlOf(BASIC)),
+                () -> driver.get(urlOf(BASIC_COPY)),
+                () -> driver.get(urlOf(BASIC)),
                 driver.navigate()::back,
                 driver.navigate()::back,
                 driver.navigate()::forward,
@@ -166,18 +183,18 @@ public class SeleniumJavaScriptTest {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-copy.html", server.port)),
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page.html", server.port)),
+                () -> driver.get(urlOf(BASIC)),
+                () -> driver.get(urlOf(BASIC_COPY)),
+                () -> driver.get(urlOf(BASIC)),
+                () -> driver.get(urlOf(BASIC_COPY)),
+                () -> driver.get(urlOf(BASIC)),
                 driver.navigate()::back,
                 driver.navigate()::back,
                 () -> driver.findElement(By.id("custom")).click(),
                 driver.navigate()::forward,
                 driver.navigate()::refresh,
                 driver.navigate()::back,
-                () -> driver.get(String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", server.port)),
+                () -> driver.get(urlOf(PAGE_VIEW_SUPPLIED)),
                 driver.navigate()::back
                 };
 
@@ -216,7 +233,7 @@ public class SeleniumJavaScriptTest {
     public void shouldSignalWhenOpeningPage() throws InterruptedException {
         Preconditions.checkState(null != driver && null != server);
 
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
+        final String location = urlOf(BASIC);
         driver.get(location);
 
         EventPayload viewEvent = server.waitForEvent();
@@ -245,7 +262,7 @@ public class SeleniumJavaScriptTest {
          * So, if it is within +/- 12 hours of our clock, we think it's fine.
          */
         assertThat(eventData.clientUtcOffset,
-                   allOf(greaterThan(-HALF_DAY_MS), lessThan(HALF_DAY_MS)));
+                allOf(greaterThan(-HALF_DAY_MS), lessThan(HALF_DAY_MS)));
 
         /*
          * Doing true assertions against the viewport and window size
@@ -272,8 +289,7 @@ public class SeleniumJavaScriptTest {
     @Test
     public void shouldSendCustomEvent() throws RuntimeException, InterruptedException {
         Preconditions.checkState(null != driver && null != server);
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
-        driver.get(location);
+        driver.get(urlOf(BASIC));
         server.waitForEvent();
 
         driver.findElement(By.id("custom")).click();
@@ -290,8 +306,7 @@ public class SeleniumJavaScriptTest {
     @Test
     public void shouldSetAppropriateCookies() throws RuntimeException, InterruptedException {
         Preconditions.checkState(null != driver && null != server);
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page.html", server.port);
-        driver.get(location);
+        driver.get(urlOf(BASIC));
         server.waitForEvent();
 
         Optional<CookieValue> parsedPartyCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
@@ -310,8 +325,7 @@ public class SeleniumJavaScriptTest {
     @Test
     public void shouldPickupProvidedPageViewIdFromHash() throws RuntimeException, InterruptedException {
         Preconditions.checkState(null != driver && null != server);
-        final String location = String.format("http://127.0.0.1:%d/test-basic-page-provided-pv-id.html", server.port);
-        driver.get(location);
+        driver.get(urlOf(PAGE_VIEW_SUPPLIED));
         EventPayload event = server.waitForEvent();
         BrowserEventData eventData = event.exchange.getAttachment(EVENT_DATA_KEY);
 
@@ -319,6 +333,23 @@ public class SeleniumJavaScriptTest {
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
     }
 
+    enum TEST_PAGES {
+        BASIC("test-basic-page"),
+        BASIC_COPY("test-basic-page-copy"),
+        PAGE_VIEW_SUPPLIED("test-basic-page-provided-pv-id");
+
+        private final String resourceName;
+
+        private TEST_PAGES(final String resourceName) {
+            this.resourceName = Objects.requireNonNull(resourceName);
+        }
+    }
+
+    private String urlOf(final TEST_PAGES page) {
+        final String modeString = quirksMode ? "quirks" : "strict";
+        return String.format("http://127.0.0.1:%d/%s/%s.html",
+                             server.port, modeString, page.resourceName);
+    }
 
     @Before
     public void setUp() throws Exception {

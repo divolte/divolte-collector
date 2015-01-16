@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import java.util.Collection;
 import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
 
@@ -25,7 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 public final class BrowserLists {
-    public static final Iterable<Object[]> SAUCE_BROWSER_LIST = ImmutableList.of(
+    public static final Collection<Object[]> SAUCE_BROWSER_LIST = ImmutableList.of(
     // Windows XP
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
@@ -173,7 +174,7 @@ public final class BrowserLists {
                 return caps;
             }, "iOS 6.1 on iPhone" });
 
-    public static final Iterable<Object[]> BS_BROWSER_LIST = ImmutableList.of(
+    public static final Collection<Object[]> BS_BROWSER_LIST = ImmutableList.of(
     // Windows XP
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = new DesiredCapabilities();
