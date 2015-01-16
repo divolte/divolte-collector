@@ -101,10 +101,10 @@ dependencies {
         exclude group: 'com.google.http-client', module: 'google-http-client'
     }
     compile group: 'org.apache.kafka', name:'kafka_2.10', version:'0.8.1.1'
-
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20140814'
-
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.3.8', classifier: 'indy'
+    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.8'
+    compile group: 'com.fasterxml.jackson.jr', name: 'jackson-jr-objects', version: '2.4.0'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
@@ -310,5 +310,5 @@ task buildRpm(type:Exec) {
   } else {
     commandLine 'rpmbuild', '-ba',  '--target', 'noarch-redhat-linux', 'divolte-collector.spec'
   }
-  
+
 }

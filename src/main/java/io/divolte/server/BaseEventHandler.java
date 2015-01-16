@@ -16,15 +16,18 @@
 
 package io.divolte.server;
 
-import io.divolte.server.CookieValues.CookieValue;
+import com.google.common.base.Strings;
+import com.google.common.io.Resources;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -32,42 +35,9 @@ import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
-import com.google.common.io.Resources;
-
 @ParametersAreNonnullByDefault
 public abstract class BaseEventHandler implements HttpHandler {
-    private static Logger logger = LoggerFactory.getLogger(BaseEventHandler.class);
-
-    public static final AttachmentKey<CookieValue> PARTY_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    public static final AttachmentKey<CookieValue> SESSION_COOKIE_KEY = AttachmentKey.create(CookieValue.class);
-    public static final AttachmentKey<String> PAGE_VIEW_ID_KEY = AttachmentKey.create(String.class);
-    public static final AttachmentKey<String> EVENT_ID_KEY = AttachmentKey.create(String.class);
-    public static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
-    public static final AttachmentKey<Long> COOKIE_UTC_OFFSET_KEY = AttachmentKey.create(Long.class);
-    public static final AttachmentKey<Boolean> FIRST_IN_SESSION_KEY = AttachmentKey.create(Boolean.class);
-
-    public final static String PARTY_ID_QUERY_PARAM = "p";
-    public final static String NEW_PARTY_ID_QUERY_PARAM = "n";
-    public final static String SESSION_ID_QUERY_PARAM = "s";
-    public final static String FIRST_IN_SESSION_QUERY_PARAM = "f";
-    public final static String PAGE_VIEW_ID_QUERY_PARAM = "v";
-    public final static String EVENT_ID_QUERY_PARAM = "e";
-    public final static String EVENT_TYPE_QUERY_PARAM = "t";
-    public final static String CLIENT_TIMESTAMP_QUERY_PARAM = "c"; // chronos
-    public final static String LOCATION_QUERY_PARAM = "l";
-    public final static String REFERER_QUERY_PARAM = "r";
-    public final static String VIEWPORT_PIXEL_WIDTH_QUERY_PARAM = "w";
-    public final static String VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM = "h";
-    public final static String SCREEN_PIXEL_WIDTH_QUERY_PARAM = "i";
-    public final static String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
-    public final static String DEVICE_PIXEL_RATIO_QUERY_PARAM = "k";
-    public final static String CHECKSUM_QUERY_PARAM = "x";
+    private static final Logger logger = LoggerFactory.getLogger(BaseEventHandler.class);
 
     private final static ETag SENTINEL_ETAG = new ETag(false, "6b3edc43-20ec-4078-bc47-e965dd76b88a");
     private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
@@ -142,6 +112,10 @@ public abstract class BaseEventHandler implements HttpHandler {
                 : requestUrl + '?' + queryString;
     }
 
+    static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
+        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
+    }
+
     /**
      * Log this event.
      *
@@ -156,9 +130,5 @@ public abstract class BaseEventHandler implements HttpHandler {
 
     protected static class IncompleteRequestException extends Exception {
         private static final long serialVersionUID = 1L;
-    }
-
-    protected static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 }
