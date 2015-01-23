@@ -269,7 +269,7 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<Long> clientTimestamp() {
-        return new PrimitiveValueProducer<>("timestamp()", Long.class, (h,e,c) -> Optional.of(e.requestStartTime + e.clientUtcOffset));
+        return new PrimitiveValueProducer<>("clientTimestamp()", Long.class, (h,e,c) -> Optional.of(e.requestStartTime + e.clientUtcOffset));
     }
 
     public ValueProducer<String> remoteHost() {
