@@ -300,15 +300,28 @@ task copySourceTar(type: Copy) {
     into 'rpm/SOURCES'
 }
 
+import java.text.SimpleDateFormat
+
+def buildTime() {
+    final SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss")
+    df.setTimeZone(TimeZone.getTimeZone("GMT"))
+    return df.format(new Date())
+}
+
 task buildRpm(type:Exec) {
   dependsOn = [copySourceTar]
 
   workingDir 'rpm'
 
   if (version.contains('SNAPSHOT')) {
-    commandLine 'rpmbuild', '-ba', '--target', 'noarch-redhat-linux', '--define', 'snapshotVersion -SNAPSHOT', 'divolte-collector.spec'
+      commandLine 'rpmbuild', '-ba',
+            '--target', 'noarch-redhat-linux',
+            '--define', 'snapshotVersion -SNAPSHOT',
+            '--define', 'dist _' + buildTime(),
+            'divolte-collector.spec'
   } else {
-    commandLine 'rpmbuild', '-ba',  '--target', 'noarch-redhat-linux', 'divolte-collector.spec'
+    commandLine 'rpmbuild', '-ba',
+            '--target', 'noarch-redhat-linux',
+            'divolte-collector.spec'
   }
-
 }
