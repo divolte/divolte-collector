@@ -474,6 +474,20 @@ timestamp
 :Type:
   long
 
+clientTimestamp
+"""""""""
+:Usage:
+
+  ::
+
+    map clientTimestamp() onto 'timeField'
+
+:Description:
+  The timestamp that was recorded on the client side immediately prior to sending the request, in milliseconds since the UNIX epoch.
+
+:Type:
+  long
+
 remoteHost
 """"""""""
 :Usage:

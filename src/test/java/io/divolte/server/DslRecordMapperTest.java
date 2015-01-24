@@ -59,13 +59,14 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class DslRecordMapperTest {
+    private static final String CLIENT_SIDE_TIME = "i0rjfnxd";
     private static final String DIVOLTE_URL_STRING = "http://localhost:%d/csc-event";
     private static final String DIVOLTE_URL_QUERY_STRING = "?"
             + "p=0%3Ai0rjfnxc%3AJLOvH9Nda2c1uV8M~vmdhPGFEC3WxVNq&"
             + "s=0%3Ai0rjfnxc%3AFPpXFMdcEORvvaP_HbpDgABG3Iu5__4d&"
             + "v=0%3AOxVC1WJ4PZNEGIUuzdXPsy_bztnKMuoH&"
             + "e=0%3AOxVC1WJ4PZNEGIUuzdXPsy_bztnKMuoH0&"
-            + "c=i0rjfnxd&"
+            + "c=" + CLIENT_SIDE_TIME + "&"
             + "n=t&"
             + "f=t&"
             + "i=sg&"
@@ -147,6 +148,16 @@ public class DslRecordMapperTest {
                 "pixelRatio",
                 "eventType")
               .forEach((v) -> assertNotNull(record.get(v)));
+    }
+
+    @Test
+    public void shouldMapClientTimestamp() throws IOException, InterruptedException {
+        setupServer("client-timestamp.groovy");
+
+        final EventPayload event = request("https://example.com/", "http://example.com/");
+        final GenericRecord record = event.record;
+
+        assertEquals(ClientSideCookieEventHandler.tryParseBase36Long(CLIENT_SIDE_TIME), record.get("ts"));
     }
 
     @Test(expected=SchemaMappingException.class)

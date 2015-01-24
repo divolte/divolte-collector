@@ -268,6 +268,10 @@ public final class DslRecordMapping {
         return new PrimitiveValueProducer<>("timestamp()", Long.class, (h,e,c) -> Optional.of(e.requestStartTime));
     }
 
+    public ValueProducer<Long> clientTimestamp() {
+        return new PrimitiveValueProducer<>("clientTimestamp()", Long.class, (h,e,c) -> Optional.of(e.requestStartTime + e.clientUtcOffset));
+    }
+
     public ValueProducer<String> remoteHost() {
         return new PrimitiveValueProducer<>("remoteHost()", String.class, (h,e,c) -> Optional.ofNullable(h.getSourceAddress()).map(InetSocketAddress::getHostString));
     }
