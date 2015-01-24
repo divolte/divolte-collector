@@ -110,6 +110,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
         result.map("detectedDuplicate", result.duplicate());
         result.map("firstInSession", result.firstInSession());
         result.map("timestamp", result.timestamp());
+        result.map("clientTimestamp", result.clientTimestamp());
         result.map("remoteHost", result.remoteHost());
         result.map("referer", result.referer());
         result.map("location", result.location());
