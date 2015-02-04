@@ -85,8 +85,6 @@ Tests can then be executed:
 
 ### PhantomJS ###
 
-*Note: broken pending a fix that should appear in PhantomJS 2.0.*
-
 PhantomJS must be installed locally. Under OS X this can be installed via
 HomeBrew:
 
