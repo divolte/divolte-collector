@@ -94,7 +94,7 @@ HomeBrew:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=phantom gradle cleanTest test
+    % SELENIUM_DRIVER=phantom ./gradlew cleanTest test
 
 ### SauceLabs ###
 
