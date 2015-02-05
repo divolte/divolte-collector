@@ -85,8 +85,7 @@ Tests can then be executed:
 
 ### PhantomJS ###
 
-PhantomJS must be installed locally. Under OS X this can be installed via
-HomeBrew:
+PhantomJS must be installed locally. Under OS X this can be installed via HomeBrew:
 
     % brew install phantomjs
 
