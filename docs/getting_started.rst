@@ -264,7 +264,7 @@ In order to use the custom events in your mapping, map values onto fields like t
 
 Writing to HDFS
 ===============
-So far, we've been writing our data to the local filesystem in /tmp. While this works, this is not the idea of Divolte Collector. The aim is to write the clickstream data to HDFS, such that it is safely and redundantly stored and, above all, is available for processing using any tool available that knows how to process Avro files (e.g. Apache Hive or Apache Spark). It is trivial to configure Divolte Collector to write to HDFS. Of course you will need to have a working HDFS instance setup, but setting this up is out of the scope of this getting started guide. There are many great resources to be found on the internet about getting started with and running Hadoop and HDFS.
+So far, we've been writing our data to the local filesystem in /tmp. Although this works, this is not the intended use of Divolte Collector. The aim is to write the clickstream data to HDFS, such that it is safely and redundantly stored and, above all, is available for processing using any tool available that knows how to process Avro files (e.g. Apache Hive or Apache Spark). It is trivial to configure Divolte Collector to write to HDFS. Of course you will need to have a working HDFS instance setup, but setting this up is out of the scope of this getting started guide. There are many great resources to be found on the internet about getting started with and running Hadoop and HDFS.
 
 Assuming you have a HDFS instance running somewhere, there are two ways of making Divolte Collector write files to it: 1) by direct configuration or 2) by setting the HADOOP_CONF_DIR environment variable to point to a directory containing valid Hadoop configuration files. While the first option works, it is recommended to use the latter, as this is easier to maintain when your HDFS parameters change over time.
 
@@ -301,6 +301,8 @@ First, we'll change the configuration to write files to HDFS. Add the following 
       }
     }
   }
+
+Note that you need to create these directories on HDFS prior to starting Divolte Collector. It will not startup if the directories do not exist.
 
 If you have a working HDFS setup and a directory with the appropriate configuration files, Divolte Collector will use them automatically if a HADOOP_CONF_DIR environment variable is set pointing to that directory. Otherwise, it is possible to tell Divolte Collector directly about your HDFS location from the configuration::
 
