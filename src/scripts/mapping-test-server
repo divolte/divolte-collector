@@ -40,7 +40,7 @@ cd "$SAVED" >&-
 [ -n "$DIVOLTE_CONF_DIR" ] && CONF_DIR="$DIVOLTE_CONF_DIR" || CONF_DIR="$APP_HOME/conf"
 
 # add libs to CLASSPATH
-function join { local IFS="$1"; shift; echo "$*"; }
+join() { local IFS="$1"; shift; echo "$*"; }
 CLASSPATH=$(join ":" $APP_HOME/lib/*.jar)
 
 # attempt to find java
