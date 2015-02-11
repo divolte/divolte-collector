@@ -748,7 +748,8 @@ var SCRIPT_NAME = 'divolte.js';
    * asynchronously.
    *
    * @param {!string} type The type of event to log.
-   * @param {Object=} [customParameters] Optional object containing custom parameters to log alongside the event.
+   * @param {Object.<string,(string|boolean|number)>=} [customParameters]
+   *    Optional object containing custom parameters to log alongside the event.
    *
    * @return {string} the unique event identifier for this event.
    */
