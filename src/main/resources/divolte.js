@@ -43,8 +43,6 @@ var SCRIPT_NAME = 'divolte.js';
   // Alias some references that we frequently use.
   var document = window.document,
       navigator = window.navigator,
-      documentElement = document.documentElement,
-      bodyElement = document.getElementsByTagName('body').item(0),
       console = window.console,
       // On some browsers, logging functions are methods that expect to access the console as 'this'.
       bound = function(method, instance) {
@@ -119,6 +117,17 @@ var SCRIPT_NAME = 'divolte.js';
   }(divolteScriptUrl);
   info("Divolte base URL detected", divolteUrl);
 
+  /**
+   * Obtain the body element for the current document.
+   * This needs to be retrieved on demand: the body element can be
+   * replaced in the DOM, and may also be unavailable duringn initial
+   * page loading.
+   * @returns {?(HTMLElement|Node)}
+   */
+  var bodyElement = function() {
+    return document.body || document.getElementsByTagName('body').item(0);
+  };
+
   /* Some current browser features that we send to Divolte. */
   var
       /**
@@ -138,14 +147,14 @@ var SCRIPT_NAME = 'divolte.js';
        * @return {?number}
        */
       windowWidth = function() {
-        return window['innerWidth'] || documentElement['clientWidth'] || bodyElement['clientWidth'] || documentElement['offsetWidth'] || bodyElement['offsetWidth'];
+        return window['innerWidth'] || document.documentElement['clientWidth'] || bodyElement()['clientWidth'] || document.documentElement['offsetWidth'] || bodyElement()['offsetWidth'];
       },
       /**
        * Query the current height of the browser window.
        * @return {?number}
        */
       windowHeight = function() {
-        return window['innerHeight'] || documentElement['clientHeight'] || bodyElement['clientHeight'] || documentElement['offsetHeight'] || bodyElement['offsetHeight'];
+        return window['innerHeight'] || document.documentElement['clientHeight'] || bodyElement()['clientHeight'] || document.documentElement['offsetHeight'] || bodyElement()['offsetHeight'];
       };
 
   /**
@@ -934,6 +943,7 @@ var SCRIPT_NAME = 'divolte.js';
         }
       })
     } else {
+      // TODO: Possibly defer until the DOM is ready?
       signal('pageView');
     }
   } else {
