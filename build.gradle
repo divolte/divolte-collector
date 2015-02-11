@@ -22,6 +22,7 @@ apply plugin: 'jacoco'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'application'
 apply plugin: 'groovy'
+apply plugin: 'com.github.ben-manes.versions'
 
 defaultTasks 'clean', 'build'
 
@@ -64,6 +65,7 @@ buildscript {
     }
     dependencies {
         classpath group: 'com.github.jengelman.gradle.plugins', name: 'shadow', version: '1.1.1'
+        classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.7'
     }
 }
 
