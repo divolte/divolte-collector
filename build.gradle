@@ -325,17 +325,3 @@ task buildRpm(type:Exec) {
             'divolte-collector.spec'
   }
 }
-
-clean {
-    delete 'rpm/RPMS/noarch'
-
-    // Gradle delete does not support globs. This is really the only way.
-    // See: http://gradle.1045684.n5.nabble.com/Delete-with-wildcard-td4550586.html
-    ant.delete (includeEmptyDirs: 'false') { 
-        fileset(dir: file('rpm/SRPMS'), includes: '*.rpm') 
-    }
-
-    ant.delete (includeEmptyDirs: 'false') { 
-        fileset(dir: file('rpm/SOURCES'), includes: '*.tar.gz') 
-    }
-}
