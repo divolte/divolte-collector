@@ -144,14 +144,14 @@ var SCRIPT_NAME = 'divolte.js';
       screenHeight = window.screen.availHeight,
       /**
        * Query the current width of the browser window.
-       * @return {?number}
+       * @type {function():?number}
        */
       windowWidth = function() {
         return window['innerWidth'] || document.documentElement['clientWidth'] || bodyElement()['clientWidth'] || document.documentElement['offsetWidth'] || bodyElement()['offsetWidth'];
       },
       /**
        * Query the current height of the browser window.
-       * @return {?number}
+       * @type {function():?number}
        */
       windowHeight = function() {
         return window['innerHeight'] || document.documentElement['clientHeight'] || bodyElement()['clientHeight'] || document.documentElement['offsetHeight'] || bodyElement()['offsetHeight'];
@@ -392,8 +392,7 @@ var SCRIPT_NAME = 'divolte.js';
         /**
          * Generate a sequence of random numbers.
          * Each random number is between 0 and 255, inclusive.
-         * @param {number} length the number of random numbers to generate.
-         * @return {!(Uint8Array|Array.<number>)}
+         * @type {function(number):!(Uint8Array|Array.<number>)}
          */
         generateRandomNumbers = hasSecureRandom
             ? function(length) {
@@ -414,8 +413,7 @@ var SCRIPT_NAME = 'divolte.js';
          * Generate a string with random character.
          * Each character is a code-point in the range between
          * 0 and 255, inclusive.
-         * @param {number} length the number of random numbers to generate.
-         * @return {string}
+         * @type {function(number):string}
          */
         generateRandomString = function(length) {
           var numbers = generateRandomNumbers(length),
@@ -449,7 +447,7 @@ var SCRIPT_NAME = 'divolte.js';
         ],
         /**
          * Generate a string that varies depending on some of the MIME-types that are available.
-         * @return {string}
+         * @type {function():string}
          */
         getMimeTypeInformation = function() {
           var plugins,
@@ -482,7 +480,7 @@ var SCRIPT_NAME = 'divolte.js';
         /**
          * Generate a string that varies depending on some of the ActiveX controls that
          * are available.
-         * @return {string}
+         * @type {function():string}
          */
         getActiveXTypeInformation = function() {
           var plugins;
@@ -510,7 +508,7 @@ var SCRIPT_NAME = 'divolte.js';
         /**
          * Return an array containing strings that are based on local
          * information.
-         * @return {!Array.<string>}
+         * @type {function():!Array.<string>}
          */
         getAdditionalLocalFacts = function() {
           var winWidth = windowWidth(),
@@ -535,7 +533,7 @@ var SCRIPT_NAME = 'divolte.js';
          * Generate a string that is globally unique.
          * This is based on a cryptographic hash of local information
          * that should be random.
-         * @return {string}
+         * @type {function():string}
          */
         generateRandomDigest = function() {
           var message = [
@@ -559,7 +557,7 @@ var SCRIPT_NAME = 'divolte.js';
         digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789~_',
         /**
          * Generate a random identifier.
-         * @return {string} a random identifier.
+         * @type {function():string}
          */
         generateDigits = function() {
           var randomData = generateRandomDigest();
@@ -800,8 +798,7 @@ var SCRIPT_NAME = 'divolte.js';
           params = {},
           /**
            * Add a parameter to the query string being built up.
-           * @param name  {string} the name of the query parameter.
-           * @param value {string} the value of the query parameter.
+           * @type {function(string,string)}
            */
           addParam = function(name,value) {
             if (queryString.length > 0) {
@@ -842,13 +839,23 @@ var SCRIPT_NAME = 'divolte.js';
         case 'object':
           for (var customName in customParameters) {
             if (customParameters.hasOwnProperty(customName)) {
-              var customParameter = customParameters[customName];
-              switch (typeof customParameter) {
+              var customParameter = customParameters[customName],
+                  customParameterType = typeof customParameter,
+                  parameterValue;
+              switch (customParameterType) {
                 case 'string':
+                  parameterValue = customParameter;
+                  break;
                 case 'number':
+                  parameterValue = customParameter.toString(36);
+                  break;
                 case 'boolean':
-                  addParam('t.' + customName, customParameter);
+                  parameterValue = customParameter ? 't' : 'f';
+                  break;
+                default:
+                  throw "Parameter '" + customName + "' is of unsupported type: " + customParameterType;
               }
+              addParam('t.' + customName, parameterValue);
             }
           }
           break;
