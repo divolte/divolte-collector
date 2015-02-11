@@ -325,3 +325,9 @@ task buildRpm(type:Exec) {
             'divolte-collector.spec'
   }
 }
+
+clean {
+    delete 'rpm/RPMS/noarch'
+    delete 'rpm/SRPMS/noarch'
+    delete 'rpm/SOURCES/*.tar.gz'
+}
