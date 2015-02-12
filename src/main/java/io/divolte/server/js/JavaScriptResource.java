@@ -106,7 +106,7 @@ public class JavaScriptResource {
 
         options.setDefineReplacements(scriptConstants);
 
-        final SourceFile source = SourceFile.fromInputStream(filename, javascript);
+        final SourceFile source = SourceFile.fromInputStream(filename, javascript, StandardCharsets.UTF_8);
         final Compiler compiler = new Compiler();
         final ErrorManager errorManager = new Slf4jErrorManager(compiler);
         compiler.setErrorManager(errorManager);
