@@ -670,8 +670,12 @@ eventType
 :Type:
   string
 
-eventParameter
-""""""""""""""
+Complex values
+^^^^^^^^^^^^^^
+Complex values return objects that you can in turn use to extract derived, simple values from. Complex values are either the result of parsing something (e.g. the user agent string) or matching regular expressions against another value.
+
+eventParameters
+"""""""""""""""
 :Usage:
 
   ::
@@ -680,20 +684,51 @@ eventParameter
     divolte.signal('myEvent', { foo: 'hello', bar: 42 });
 
     // in the mapping
-    map eventParameter('foo') onto 'fooField'
+    map eventParameters() onto 'parametersField'
+
+:Description:
+  The value for all parameters that were sent as part of a custom event from JavaScript. Note that these are always strings, regardless of the type used on the client side.
+
+  Use the following Avro type to map the event parameters:
+
+    {
+      "name": "parametersField",
+      "type": [
+        "null",
+        {
+          "type": "map",
+          "values": {
+            "type": "string"
+          }
+        }
+      ],
+      "default": null
+    }
+
+
+:Type:
+  map<string,string>
+
+eventParameters value
+"""""""""""""""""""""
+:Usage:
+
+  ::
+
+    // on the client in JavaScript:
+    divolte.signal('myEvent', { foo: 'hello', bar: 42 });
+
+    // in the mapping
+    map eventParameters().value('foo') onto 'fooField'
 
     // or with a cast
-    map { parse eventParameter('bar') to int32 } onto 'barField'
+    map { parse eventParameters().value('bar') to int32 } onto 'barField'
 
 :Description:
   The value for a parameter that was sent as part of a custom event from JavaScript. Note that this is always a string, regardless of the type used on the client side. In the case that you are certain a parameter has a specific type, you can explicitly cast it as in the example above.
 
 :Type:
   string
-
-Complex values
-^^^^^^^^^^^^^^
-Complex values return objects that you can in turn use to extract derived, simple values from. Complex values are either the result of parsing something (e.g. the user agent string) or matching regular expressions against another value.
 
 URI
 """

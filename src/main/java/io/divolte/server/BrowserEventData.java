@@ -16,10 +16,13 @@
 
 package io.divolte.server;
 
-import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
 public class BrowserEventData {
@@ -41,6 +44,7 @@ public class BrowserEventData {
     public final Optional<Integer> screenPixelHeight;
     public final Optional<Integer> devicePixelRatio;
     public final Function<String, Optional<String>> eventParameterProducer;
+    public final Supplier<Map<String,String>> eventParametersProducer;
 
     BrowserEventData(final boolean corruptEvent,
                      final CookieValues.CookieValue partyCookie,
@@ -59,24 +63,26 @@ public class BrowserEventData {
                      final Optional<Integer> screenPixelWidth,
                      final Optional<Integer> screenPixelHeight,
                      final Optional<Integer> devicePixelRatio,
-                     final Function<String, Optional<String>> eventParameterProducer) {
-        this.corruptEvent           = corruptEvent;
-        this.partyCookie            = Objects.requireNonNull(partyCookie);
-        this.sessionCookie          = Objects.requireNonNull(sessionCookie);
-        this.pageViewId             = Objects.requireNonNull(pageViewId);
-        this.eventId                = Objects.requireNonNull(eventId);
-        this.requestStartTime       = requestStartTime;
-        this.clientUtcOffset        = clientUtcOffset;
-        this.newPartyId             = newPartyId;
-        this.firstInSession         = firstInSession;
-        this.location               = Objects.requireNonNull(location);
-        this.referer                = Objects.requireNonNull(referer);
-        this.eventType              = Objects.requireNonNull(eventType);
-        this.viewportPixelWidth     = Objects.requireNonNull(viewportPixelWidth);
-        this.viewportPixelHeight    = Objects.requireNonNull(viewportPixelHeight);
-        this.screenPixelWidth       = Objects.requireNonNull(screenPixelWidth);
-        this.screenPixelHeight      = Objects.requireNonNull(screenPixelHeight);
-        this.devicePixelRatio       = Objects.requireNonNull(devicePixelRatio);
-        this.eventParameterProducer = Objects.requireNonNull(eventParameterProducer);
+                     final Function<String, Optional<String>> eventParameterProducer,
+                     Supplier<Map<String,String>> eventParametersProducer) {
+        this.corruptEvent            = corruptEvent;
+        this.partyCookie             = Objects.requireNonNull(partyCookie);
+        this.sessionCookie           = Objects.requireNonNull(sessionCookie);
+        this.pageViewId              = Objects.requireNonNull(pageViewId);
+        this.eventId                 = Objects.requireNonNull(eventId);
+        this.requestStartTime        = requestStartTime;
+        this.clientUtcOffset         = clientUtcOffset;
+        this.newPartyId              = newPartyId;
+        this.firstInSession          = firstInSession;
+        this.location                = Objects.requireNonNull(location);
+        this.referer                 = Objects.requireNonNull(referer);
+        this.eventType               = Objects.requireNonNull(eventType);
+        this.viewportPixelWidth      = Objects.requireNonNull(viewportPixelWidth);
+        this.viewportPixelHeight     = Objects.requireNonNull(viewportPixelHeight);
+        this.screenPixelWidth        = Objects.requireNonNull(screenPixelWidth);
+        this.screenPixelHeight       = Objects.requireNonNull(screenPixelHeight);
+        this.devicePixelRatio        = Objects.requireNonNull(devicePixelRatio);
+        this.eventParameterProducer  = Objects.requireNonNull(eventParameterProducer);
+        this.eventParametersProducer = Objects.requireNonNull(eventParametersProducer);
     }
 }

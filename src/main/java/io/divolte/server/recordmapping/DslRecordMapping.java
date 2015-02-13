@@ -562,6 +562,36 @@ public final class DslRecordMapping {
     /*
      * Custom event parameter mapping
      */
+    public final static class EventParameterValueProducer extends ValueProducer<Map<String,String>> {
+        private EventParameterValueProducer() {
+            super("eventParameters()", (h,e,c) -> Optional.of(e.eventParametersProducer.get()));
+        }
+
+        public ValueProducer<String> value(String name) {
+            return new PrimitiveValueProducer<String>(
+                    identifier + ".value(" + name + ")",
+                    String.class,
+                    (h,e,c) -> e.eventParameterProducer.apply(name));
+        }
+
+        @Override
+        boolean validateTypes(Field target) {
+            Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
+            return targetSchema
+                .map((s) -> s.getType() == Type.MAP &&
+                            s.getValueType().getType() == Type.STRING)
+                .orElse(false);
+        }
+    }
+
+    public EventParameterValueProducer eventParameters() {
+        return new EventParameterValueProducer();
+    }
+
+    /*
+     * Remove this at some point. It is not documented, but used in mappings
+     * on some installations.
+     */
     public ValueProducer<String> eventParameter(final String name) {
         return new PrimitiveValueProducer<>("eventParameter(" + name + ")",
                                             String.class,
