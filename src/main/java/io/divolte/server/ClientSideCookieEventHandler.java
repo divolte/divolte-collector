@@ -17,7 +17,6 @@
 package io.divolte.server;
 
 import static io.divolte.server.IncomingRequestProcessor.*;
-
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.recordmapping.ConfigRecordMapper;
 import io.undertow.server.HttpServerExchange;
@@ -29,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -122,7 +122,15 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                     queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
                                     queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
                                     queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-                                    (name) -> queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM + "." + name));
+                                    (name) -> queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM + "." + name),
+                                    () -> exchange.getQueryParameters()
+                                                  .entrySet()
+                                                  .stream()
+                                                  .filter((e) -> e.getKey().startsWith(EVENT_TYPE_QUERY_PARAM + "."))
+                                                  .collect(Collectors.<Map.Entry<String, Deque<String>>, String, String>toMap(
+                                                          (e) -> e.getKey().substring(2),
+                                                          (e) -> e.getValue().getFirst())
+                                                   ));
     }
 
     static Long tryParseBase36Long(String input) {

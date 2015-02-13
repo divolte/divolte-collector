@@ -74,7 +74,9 @@ public class DslRecordMapperTest {
             + "k=2&"
             + "w=sa&"
             + "h=sa&"
-            + "t=pageView";
+            + "t=pageView&"
+            + "t.foo=string&"
+            + "t.bar=42";
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 
@@ -275,6 +277,14 @@ public class DslRecordMapperTest {
         assertEquals(Arrays.asList("first", "second", "last"), event.record.get("headerList"));
         assertEquals("first", event.record.get("header"));
         assertEquals("first,second,last", event.record.get("headers"));
+    }
+
+    @Test
+    public void shouldSetCustomEventParameters() throws IOException, InterruptedException {
+        setupServer("event-param-mapping.groovy");
+        EventPayload event = request("http://www.example.com/");
+        assertEquals(ImmutableMap.of("foo", "string", "bar", "42"), event.record.get("paramMap"));
+        assertEquals("string", event.record.get("paramValue"));
     }
 
     @Test

@@ -1,9 +1,6 @@
 package io.divolte.server;
 
-import com.fasterxml.jackson.jr.ob.JSON;
-import com.google.common.collect.ImmutableList;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import static io.divolte.server.IncomingRequestProcessor.*;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -13,18 +10,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import joptsimple.ArgumentAcceptingOptionSpec;
-import joptsimple.OptionException;
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Parser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xnio.streams.ChannelInputStream;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,9 +18,26 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
-import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import joptsimple.ArgumentAcceptingOptionSpec;
+import joptsimple.OptionException;
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Parser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.streams.ChannelInputStream;
+
+import com.fasterxml.jackson.jr.ob.JSON;
+import com.google.common.collect.ImmutableList;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
 public class MappingTestServer {
@@ -126,7 +129,13 @@ public class MappingTestServer {
                 get(payload, "screen_pixel_width", Integer.class),
                 get(payload, "screen_pixel_height", Integer.class),
                 get(payload, "device_pixel_ratio", Integer.class),
-                (name) -> get(payload, "param_" + name, String.class));
+                (name) -> get(payload, "param_" + name, String.class),
+                () -> payload.entrySet()
+                .stream()
+                .filter((e) -> e.getKey().startsWith("param_"))
+                .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                (e) -> (String) e.getValue())));
 
         exchange.putAttachment(EVENT_DATA_KEY, eventData);
         exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
