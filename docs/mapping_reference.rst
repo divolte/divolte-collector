@@ -475,7 +475,7 @@ timestamp
   long
 
 clientTimestamp
-"""""""""
+"""""""""""""""
 :Usage:
 
   ::
@@ -691,6 +691,8 @@ eventParameters
 
   Use the following Avro type to map the event parameters:
 
+  ::
+  
     {
       "name": "parametersField",
       "type": [
