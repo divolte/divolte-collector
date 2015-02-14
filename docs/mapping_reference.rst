@@ -1560,6 +1560,3 @@ Geo IP subdivisionNames
 
   Geo IP satelliteProvider
   ~~~~~~~~~~~~~~~~~~~~~~~~
-
-Examples
-========
