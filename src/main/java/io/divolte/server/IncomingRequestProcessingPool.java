@@ -109,7 +109,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
 
     @Nullable
     private static LookupService lookupServiceFromConfig(final Config config) {
-        return OptionalConfig.of(config::getString, "divolte.geodb")
+        return OptionalConfig.of(config::getString, "divolte.tracking.ip2geo_database")
                 .map((path) -> {
                     try {
                         return new ExternalDatabaseLookupService(Paths.get(path));
