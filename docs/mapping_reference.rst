@@ -29,6 +29,7 @@ Mapped value                     Avro schema field
 `corrupt`_                       detectedCorruption
 `firstInSession`_                firstInSession
 `timestamp`_                     timestamp
+`clientTimestamp`_               clientTimestamp
 `remoteHost`_                    remoteHost
 `referer`_                       referer
 `location`_                      location
