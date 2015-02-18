@@ -29,6 +29,7 @@ Mapped value                     Avro schema field
 `corrupt`_                       detectedCorruption
 `firstInSession`_                firstInSession
 `timestamp`_                     timestamp
+`clientTimestamp`_               clientTimestamp
 `remoteHost`_                    remoteHost
 `referer`_                       referer
 `location`_                      location
@@ -475,7 +476,7 @@ timestamp
   long
 
 clientTimestamp
-"""""""""
+"""""""""""""""
 :Usage:
 
   ::
@@ -691,6 +692,8 @@ eventParameters
 
   Use the following Avro type to map the event parameters:
 
+  ::
+  
     {
       "name": "parametersField",
       "type": [
@@ -1558,6 +1561,3 @@ Geo IP subdivisionNames
 
   Geo IP satelliteProvider
   ~~~~~~~~~~~~~~~~~~~~~~~~
-
-Examples
-========

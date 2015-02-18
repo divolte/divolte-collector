@@ -17,7 +17,6 @@ Contents
 
    introduction
    getting_started
-   architecture_and_internals
    configuration
    mapping_reference
    deployment
