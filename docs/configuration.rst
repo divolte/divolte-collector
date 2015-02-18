@@ -13,7 +13,7 @@ The configuration for Divolte Collector consists of three files:
 
 Configuration directory
 -----------------------
-Divolte Collector will try to find configuration files at startup in the configuration directory. Typically this is the /conf directory nested under the Divolte Collector installation. Divolte Collector will try to locate the configuration directory at ../conf relative to the startup script. The configuration directory can be overridden by setting the DIVOLTE_CONF_DIR environment variable. If set the value will be used as configuration directory. If you have installed Divolte Collector from a RPM, the init script will set this variable to /etc/divolte-collector.
+Divolte Collector will try to find configuration files at startup in the configuration directory. Typically this is the /conf directory nested under the Divolte Collector installation. Divolte Collector will try to locate the configuration directory at ../conf relative to the startup script. The configuration directory can be overridden by setting the DIVOLTE_CONF_DIR environment variable. If set, the value will be used as configuration directory. If you have installed Divolte Collector from a RPM, the init script will set this variable to /etc/divolte-collector.
 
 divolte-env.sh
 --------------
@@ -33,7 +33,7 @@ HADOOP_CONF_DIR
 JAVA_HOME
 ^^^^^^^^^
 :Description:
-  The directory where the JRE/JDK is located. Divolte Collector will uses $JAVA_HOME/bin/java as Java executable for startup. If this is not set, Divolte Collector will attempt to find a suitable JDK in a number of common Java installation locations on Linux systems. It is however not recommended to rely on this mechanism for production use.
+  The directory where the JRE/JDK is located. Divolte Collector will use $JAVA_HOME/bin/java as Java executable for startup. If this is not set, Divolte Collector will attempt to find a suitable JDK in a number of common Java installation locations on Linux systems. It is however not recommended to rely on this mechanism for production use.
 
 :Example:
 
@@ -98,7 +98,7 @@ For a full overview of the HOCON features and specification, see here: https://g
 
 Configuration reference
 =======================
-The following sections and settings are available in the divolte-collector.conf file. Nota that in this documentation the path notation for configuration options is used (e.g. divolte.server), but in examples the path and nested notation is used interchangeably.
+The following sections and settings are available in the divolte-collector.conf file. Note that in this documentation the path notation for configuration options is used (e.g. divolte.server), but in examples the path and nested notation is used interchangeably.
 
 divolte.server
 --------------
@@ -135,7 +135,7 @@ divolte.server.port
 divolte.server.use_x_forwarded_for
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  Whether to use the X-Forwarded-For header HTTP header for determining the source IP of a request if present. When a X-Forwared-For header is present, the rightmost IP address of the value is used as source IP when when multiple IP addresses are separated by a comma. When the header is present more than once, the last value will be used.
+  Whether to use the X-Forwarded-For header HTTP header for determining the source IP of a request, if present. When set to true and a X-Forwared-For header is present, the rightmost IP address of the value is used as source IP when multiple IP addresses are separated by a comma. When the header is present more than once, the last value will be used.
 
   | E.g.:
   | "X-Forwarded-For: 10.200.13.28, 11.45.82.30" ==> 11.45.82.30
@@ -230,7 +230,7 @@ divolte.tracking.session_timeout
 divolte.tracking.cookie_domain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  The cookie domain that is assigned to the cookies. When left empty, the cookie will have no domain explicitly associated with it, which effectively  sets it to the website domain of the page that contains the Divolte Collector JavaScript.
+  The cookie domain that is assigned to the cookies. When left empty, the cookies will have no domain explicitly associated with them, which effectively sets it to the website domain of the page that contains the Divolte Collector JavaScript.
 :Default:
   '' (empty)
 :Example:
@@ -442,7 +442,7 @@ divolte.incoming_request_processor.max_enqueue_delay
 divolte.incoming_request_processor.discard_corrupted
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  The incoming request handler attempts to parse out all relevant information from the request as passed by the JavaScript. If the incoming request appears corrupt, for example because of a truncated URL or incorrect data in the fields, the request is flagged as corrupt. The detection of corrupt requests is enforced by appending a hash of all fields to the request from the JavaScript. This hash is validated on the server side. If this setting is true, events that are flagged as corrupt will be dropped from the stream, instead of processed further. It is common not to drop the corrupt events, but instead include them for later analysis.
+  The incoming request handler attempts to parse out all relevant information from the request as passed by the JavaScript. If the incoming request appears corrupt, for example because of a truncated URL or incorrect data in the fields, the request is flagged as corrupt. The detection of corrupt requests is enforced by appending a hash of all fields to the request from the JavaScript. This hash is validated on the server side. If this setting is true, events that are flagged as corrupt will be dropped from the stream, instead of being processed further. It is common not to drop the corrupt events, but instead include them for later analysis.
 :Default:
   false
 :Example:
@@ -456,7 +456,7 @@ divolte.incoming_request_processor.discard_corrupted
 divolte.incoming_request_processor.duplicate_memory_size
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  Browsers and other clients (e.g. anti-virus software, proxies) will sometimes send the exact same request twice. Divolte Collector attempts to flag these duplicate events, by using a internal probabilistic data structure with a finite memory size. The memory consists internally of an array of 64 bit integers. This the memory required in bytes is the memory size times 8 (8 megabytes for 1 million entries). *Note that the memory size is per thread.*
+  Browsers and other clients (e.g. anti-virus software, proxies) will sometimes send the exact same request twice. Divolte Collector attempts to flag these duplicate events by using a internal probabilistic data structure with a fixed memory size. The memory consists internally of an array of 64 bit integers. This the memory required in bytes is the memory size times 8 (8 megabytes for 1 million entries). *Note that the memory size is per thread.*
 :Default:
   1000000
 :Example:
@@ -470,7 +470,7 @@ divolte.incoming_request_processor.duplicate_memory_size
 divolte.incoming_request_processor.discard_duplicates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  If this setting is true, events that are flagged as duplicate will be dropped from the stream, instead of processed further. It is common not to drop the duplicate events, but instead include them for later analysis.
+  If this setting is true, events that are flagged as duplicate will be dropped from the stream, instead of being processed further. It is common not to drop the duplicate events, but instead include them for later analysis.
 :Default:
   false
 :Example:
@@ -516,7 +516,7 @@ divolte.kafka_flusher.threads
 divolte.kafka_flusher.max_write_queue
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  The maximum queue of incoming requests to keep before starting to drop incoming requests. Note that when this queue is full, requests are dropped and a warning is logged. No errors are reported to the client side. Divolte Collector will always respond with a HTTP 200 status code and the image payload. *Note that the queue size is per thread.*
+  The maximum length of the queue of events to keep in the case that Kafka is unavailable before starting to drop incoming events. Note that when this queue is full, events are dropped and a warning is logged. No errors are reported to the client side. Divolte Collector will always respond with a HTTP 200 status code and the image payload. *Note that the queue size is per thread.*
 :Default:
   200000
 :Example:
@@ -530,7 +530,7 @@ divolte.kafka_flusher.max_write_queue
 divolte.kafka_flusher.max_enqueue_delay
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  The maximum delay to block before an incoming request is dropped in case of a full queue.
+  The maximum delay to block before an incoming event is dropped in case of a full queue.
 :Default:
   1 second
 :Example:
@@ -623,7 +623,7 @@ divolte.hdfs_flusher.threads
 divolte.hdfs_flusher.max_write_queue
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  The maximum queue of incoming requests to keep before starting to drop incoming requests. Note that when this queue is full, requests are dropped and a warning is logged. No errors are reported to the client side. Divolte Collector will always respond with a HTTP 200 status code and the image payload. *Note that the queue size is per thread.*
+  The maximum length of the queue of events to keep in the case that HDFS is unavailable before starting to drop incoming events. Note that when this queue is full, events are dropped and a warning is logged. No errors are reported to the client side. Divolte Collector will always respond with a HTTP 200 status code and the image payload. *Note that the queue size is per thread.*
 :Default:
   100000
 :Example:
@@ -637,7 +637,7 @@ divolte.hdfs_flusher.max_write_queue
 divolte.hdfs_flusher.max_enqueue_delay
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  The maximum delay to block before an incoming request is dropped in case of a full queue.
+  The maximum delay to block before an incoming event is dropped in case of a full queue.
 :Default:
   1 second
 :Example:
@@ -650,7 +650,7 @@ divolte.hdfs_flusher.max_enqueue_delay
 
 divolte.hdfs_flusher.hdfs
 -------------------------
-HDFS specific settings. Although it's possible to configure a HDFS URI here, it is more advisable to configure HDFS settings by specifying a HADOOP_CONF_DIR environment variable which will be added to the classpath on startup and as such configure the HDFS client automatically.
+HDFS specific settings. Although it is possible to configure a HDFS URI here, it is more advisable to configure HDFS settings by specifying a HADOOP_CONF_DIR environment variable which will be added to the classpath on startup and as such configure the HDFS client automatically.
 
 divolte.hdfs_flusher.hdfs.uri
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -683,7 +683,7 @@ divolte.hdfs_flusher.hdfs.replication
 
 divolte.hdfs.simple_rolling_file_strategy
 -----------------------------------------
-Divolte Collector has two strategies for creating files on HDFS and flushing data. Either one of these must be configured, but not both. By default, a simple rolling file strategy is employed. This opens one file per thread and rolls on to a new file after a configurable interval. Files that are being written to, have a extension of .avro.partial and are written the the directory configured in the working_dir setting. When a file is closed, it will be renamed to have a .avro extension and is moved to the directory configured in the publish_dir settins. This happens in a single (atomic) filesystem move operation.
+Divolte Collector has two strategies for creating files on HDFS and flushing data. Either one of these must be configured, but not both. By default, a simple rolling file strategy is employed. This opens one file per thread and rolls on to a new file after a configurable interval. Files that are being written to have a extension of .avro.partial and are created in the the directory configured in the working_dir setting. When a file is closed, it is renamed to have a .avro extension and is moved to the directory configured in the publish_dir setting. This happens in a single (atomic) filesystem move operation.
 
 divolte.hdfs.simple_rolling_file_strategy.roll_every
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -702,7 +702,7 @@ divolte.hdfs.simple_rolling_file_strategy.roll_every
 divolte.hdfs.simple_rolling_file_strategy.sync_file_after_records
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  Issue a hsync against files each time this number of records has been flushed to it. 
+  Issue a hsync against files each time this number of records has been flushed to it.
 :Default:
   1000
 :Example:
@@ -716,7 +716,7 @@ divolte.hdfs.simple_rolling_file_strategy.sync_file_after_records
 divolte.hdfs.simple_rolling_file_strategy.sync_file_after_duration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  If less than sync_file_after_records records have been flushed, issue a hsync when this amount of time passes, regardless of how much data was written.
+  Issue a hsync at least when this amount of time passes, regardless of how much data was written to a file.
 :Default:
   30 seconds
 :Example:
@@ -759,7 +759,7 @@ divolte.hdfs.session_binning_file_strategy
 ------------------------------------------
 Next to the rolling file strategy, there is a more complex strategy called session binning file strategy. The general idea of this strategy is to provide a best effort to put events that belong to the same session in the same file.
 
-This strategy assigns event to files as such:
+This strategy assigns events to files as such:
 
 - Each event is assigned to a round based on timestamp, defined as timestamp_in_millis / session_timeout_in_millis.
 
@@ -777,7 +777,7 @@ This strategy assigns event to files as such:
 
   * This happens for exceptionally long sessions
 
-This strategy attempts to write events that belong to the same session to the same file. Do note that in case of failures, this guarantee not longer holds. For this reason, in failure scenario's or at shutdown, this strategy DOES NOT move files to the publish directory. Users have to setup a separate process to periodically move these files out of the way. 
+This strategy attempts to write events that belong to the same session to the same file. Do note that in case of failures, this guarantee no longer holds. For this reason, in failure scenarios or at shutdown, this strategy DOES NOT move files to the publish directory. Users have to setup a separate process to periodically move these files out of the way. 
 
 divolte.hdfs.session_binning_file_strategy.sync_file_after_records
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -796,7 +796,7 @@ divolte.hdfs.session_binning_file_strategy.sync_file_after_records
 divolte.hdfs.session_binning_file_strategy.sync_file_after_duration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  If less than sync_file_after_records records have been flushed, issue a hsync when this amount of time passes, regardless of how much data was written.
+  Issue a hsync at least when this amount of time passes, regardless of how much data was written to a file.
 :Default:
   30 seconds
 :Example:
@@ -834,6 +834,10 @@ divolte.hdfs.session_binning_file_strategy.publish_dir
     divolte.hdfs.session_binning_file_strategy {
       publish_dir = /webdata/published
     }
+
+logback.xml
+-----------
+Divolte Collector uses the `Logback Project <http://logback.qos.ch>`_ as its logging provider. This provider is configured through the logback.xml file in the configuration directory. For more information about the settings in this file, review the `Configuration chapter in the Logback Manual <http://logback.qos.ch/manual/configuration.html>`_.
 
 Website integration
 ===================

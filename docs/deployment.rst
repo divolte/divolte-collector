@@ -1,21 +1,21 @@
 **********
 Deployment
 **********
-This chapter describes common steps for depoying Divolte Colector in production.
+This chapter describes common steps for deploying Divolte Colector in production.
 
 Installtion / packages
 ======================
-The distributions provided for Divolte Collector are at this point:
+The distributions provided for Divolte Collector are:
 
 - A .tar.gz archive distribution containing the binaries and startup scripts.
 - A .zip archive distribution containing the binaries and startup scripts.
 - A RPM that can be installed onto Redhat / CentOS systems. This includes startup and init scripts.
 
-At this point there is no .deb distribution. This will be added in a next release.
+Currently, there is no .deb distribution. This will be added in a next release.
 
 Load balancers
 ==============
-In a production scenario, Divolte Collector is typically deployed behind a load balancer, both for fail-over and load balancing. For high availability, users need to ensure that their load balancing infrastructure is highly available. This can be achieved by specialized hardware load balancers or through DNS load balancing. The exact implementation of these are beyond the scope of this document.
+In a production scenario, Divolte Collector is typically deployed behind a load balancer, both for fail-over and load balancing. For high availability, users need to ensure that the load balancing infrastructure is highly available. This can be achieved by specialized hardware load balancers or through DNS load balancing. The exact implementation of these are beyond the scope of this document.
 
 Divolte Collector is semi-stateless. This means that it is not required that requests form the same client always go to the same instance; the event will be logged in all cases. Divolte Collector does however build up some soft state during operation for detecting duplicate events and caching parsed user agents. This means that there is benefit in stickyness, but it is not a requirement.
 
@@ -25,11 +25,11 @@ Divolte Collector keeps a short term memory for detecting duplicate requests. In
 
 Consistent hashing and event de-duplication
 -------------------------------------------
-If possible, load balancers should use a so called consistent hashing scheme when performing URI hash based routing. This ensures that when a instance of Divolte Collector dies, the re-hashing amongst the remaining instances is only minimally disrupted. The benefit of this is that the duplicate memory kept by Divolte Collector nodes remains effective on the still running nodes.
+If possible, load balancers should use a so called consistent hashing scheme when performing URI hash based routing. This ensures that when a instance of Divolte Collector dies, the re-hashing amongst the remaining instances only minimally disrupts the event assignments. The benefit of this is that the duplicate memory kept by Divolte Collector nodes remains effective on the still running nodes.
 
 SSL
 ===
-Divolte Collector does not handle SSL in any way. SSL off loading needs to happen by the load balancer or a reverse proxy server. These systems are generally more capable of offloading SSL and since there will always be a load balancer in front of Divolte Collector in production setups, it was decided not to add this functionality to the internal HTTP server.
+Divolte Collector does not handle SSL in any way. SSL offloading needs to be done by a load balancer or a reverse proxy server. These systems are generally capable of offloading SSL and since there will always be a load balancer in front of Divolte Collector in production setups, it was decided not to add this functionality to the internal HTTP server.
 
 Example nginx configuration
 ===========================
