@@ -37,16 +37,6 @@ applicationDefaultJvmArgs = [
         "-Djava.awt.headless=true"
 ]
 
-// This applies to all JavaCompile tasks, not just :compileJava
-// (which is the delegate for compileJava {}).
-tasks.withType(JavaCompile) {
-    // All our files are UTF-8 encoded.
-    options.encoding = 'UTF-8'
-
-    // Log details about usage of deprecated symbols.
-    options.deprecation = true
-}
-
 repositories {
     mavenLocal()
     mavenCentral()
@@ -135,6 +125,16 @@ configurations {
 
 shadowJar {
     mergeServiceFiles()
+}
+
+// This applies to all JavaCompile tasks, not just :compileJava
+// (which is the delegate for compileJava {}).
+tasks.withType(JavaCompile) {
+    // All our files are UTF-8 encoded.
+    options.encoding = 'UTF-8'
+
+    // Log details about usage of deprecated symbols.
+    options.deprecation = true
 }
 
 tasks.withType(FindBugs) {
