@@ -2,8 +2,6 @@ Divolte Collector
 =================
 
 ### *Scalable clickstream collection for Hadoop and Kafka* ###
-
-
 &nbsp;
 
 Divolte Collector is a scalable and performant server for collecting clickstream data in HDFS and on Kafka topics. It uses a JavaScript tag on the client side to gather user interaction data, similar to many other web tracking solutions. Divolte Collector can be used as the foundation to build anything from basic web analytics dashboarding to real-time recommender engines or banner optimization systems.
@@ -14,10 +12,12 @@ Divolte Collector is a scalable and performant server for collecting clickstream
 
 Online documentation and downloads
 ----------------------------------
+
 You can find the latest downloads and documentation on our [project website](http://divolte.io). There is a series of examples for working with collected data in Spark, Hive / Impala, and Kafka in this repository: [https://github.com/divolte/divolte-examples](https://github.com/divolte/divolte-examples).
 
 Features
 --------
+
 - **Single tag site integration**: Including Divolte Collector is a HTML one-liner. Just load the JavaScript at the end of your document body.
 - **Built for Hadoop and Kafka**: All data is collected directly in HDFS and on Kafka queues. Divolte Collector is both a HDFS client and a Kafka producer. No ETL or intermediate storage.
 - **Structured data collection**: All data is captured in Apache Avro records using your own schema definition. Divolte Collector does not enforce a particular structure on your data.
@@ -27,7 +27,6 @@ Features
 - **Custom events**: Just like any web analytics solution, you can log any event. Supply custom parameters in your page or JavaScript and map them onto your Avro schema.
 - **Integrate with anything**: Work with anything that understands Avro and either HDFS or Kafka. Hive, Impala, Spark, Spark Streaming, Storm, etc. No log file parsing is required.
 - **Open source**: Divolte Collector is hosted on GitHub and released under the Apache License, Version 2.0.
-
 
 Building Prerequisites
 ----------------------
