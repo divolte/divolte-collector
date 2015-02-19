@@ -42,6 +42,7 @@ events from browsers. It will be started automatically on system startup.
 
 %prep
 %setup -n %{name}-%{version}%{snapshot}
+sed -e "s/scmVersion\.version/'%{version}%{snapshot}'/g" build.gradle > build.gradle.$$ && mv build.gradle.$$ build.gradle
 
 %build
 ./gradlew -x test build
