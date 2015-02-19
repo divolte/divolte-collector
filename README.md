@@ -16,13 +16,13 @@ The collector has the following features:
 Downloads
 ---------
 
-The current release of Divolte Collector is 0.1.1. Binary packages are available for download:
+The current release of Divolte Collector is 0.2.0. Binary packages are available for download:
 
- - [RPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1-1.noarch.rpm)
-   (and the [SRPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1-1.src.rpm)
+ - [RPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.2.0-1.noarch.rpm)
+   (and the [SRPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.2.0-1.src.rpm)
    if you need it).
- - Vanilla archives: [zip](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1.zip)
-   or [tar.gz](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1.tar.gz)
+ - Vanilla archives: [zip](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.2.0.zip)
+   or [tar.gz](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.2.0.tar.gz)
 
 To use these packages you need to have
 [Java 8](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html)
