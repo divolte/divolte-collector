@@ -1,32 +1,32 @@
 Divolte Collector
 =================
 
-This repository contains the source for the Divolte Collector, and its User Guide. This is an 
-open-source component for collecting your own clickstream data on Apache Hadoop and Apache Kafka 
-to allow custom analytics.
+*Scalable clickstream collection for Hadoop and Kafka*
+------------------------------------------------------
+&nbsp;
 
-The collector has the following features:
+Divolte Collector is a scalable and performant server for collecting clickstream data in HDFS and on Kafka topics. It uses a JavaScript tag on the client side to gather user interaction data, similar to many other web tracking solutions. Divolte Collector can be used as the foundation to build anything from basic web analytics dashboarding to real-time recommender engines or banner optimization systems.
 
- - Single-line deployment: your HTML pages only need one new line of HTML.
- - Events can be published to HDFS for bulk analytics and/or Kafka for real-time processing.
- - Events are published as Avro records for convenient down-stream processing.
- - Custom Avro schemas supported. Fields can contain information extracted from the URLs on
-   your site (amongst other things).
+[http://divolte.io](http://divolte.io)
 
-Downloads
----------
+![Divolte Collector](http://divolte-website.s3-website-eu-west-1.amazonaws.com/images/architecture.png)
 
-The current release of Divolte Collector is 0.1.1. Binary packages are available for download:
+Online documentation and downloads
+----------------------------------
+You can find the latest downloads and documentation on our [project website](http://divolte.io). There is a series of examples for working with collected data in Spark, Hive / Impala, and Kafka in this repository: [https://github.com/divolte/divolte-examples](https://github.com/divolte/divolte-examples).
 
- - [RPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1-1.noarch.rpm)
-   (and the [SRPM](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1-1.src.rpm)
-   if you need it).
- - Vanilla archives: [zip](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1.zip)
-   or [tar.gz](https://s3-eu-west-1.amazonaws.com/divolte-releases/divolte-collector-0.1.1.tar.gz)
+Features
+--------
+- **Single tag site integration**: Including Divolte Collector is a HTML one-liner. Just load the JavaScript at the end of your document body.
+- **Built for Hadoop and Kafka**: All data is collected directly in HDFS and on Kafka queues. Divolte Collector is both a HDFS client and a Kafka producer. No ETL or intermediate storage.
+- **Structured data collection**: All data is captured in Apache Avro records using your own schema definition. Divolte Collector does not enforce a particular structure on your data.
+- **User agent parsing**: It's not just a string. Add rich user-agent information to your click event records on the fly.
+- **ip2geo lookup**: Attach geo-coordinates to requests on the fly. (This requires a third-party database; a free version is available.)
+- **Fast**: Handle many thousands of requests per second on a single node. Scale out as you need.
+- **Custom events**: Just like any web analytics solution, you can log any event. Supply custom parameters in your page or JavaScript and map them onto your Avro schema.
+- **Integrate with anything**: Work with anything that understands Avro and either HDFS or Kafka. Hive, Impala, Spark, Spark Streaming, Storm, etc. No log file parsing is required.
+- **Open source**: Divolte Collector is hosted on GitHub and released under the Apache License, Version 2.0.
 
-To use these packages you need to have
-[Java 8](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html)
-installed on your system.
 
 Building Prerequisites
 ----------------------
@@ -61,7 +61,7 @@ This will build the documentation and place it under the `build/userdoc/html/` d
 Testing
 -------
 
-Some parts of the server are covered by automated tests. These can be executed with:
+Unit tests can be executed with:
 
     % ./gradlew test
 
