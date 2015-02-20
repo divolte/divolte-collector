@@ -2,7 +2,6 @@ Divolte Collector
 =================
 
 ### *Scalable clickstream collection for Hadoop and Kafka* ###
-&nbsp;
 
 Divolte Collector is a scalable and performant server for collecting clickstream data in HDFS and on Kafka topics. It uses a JavaScript tag on the client side to gather user interaction data, similar to many other web tracking solutions. Divolte Collector can be used as the foundation to build anything from basic web analytics dashboarding to real-time recommender engines or banner optimization systems.
 
