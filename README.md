@@ -1,9 +1,10 @@
 Divolte Collector
 =================
 
-This repository contains the source for the Divolte Collector, and its User Guide. This is an 
-open-source component for collecting your own clickstream data on Apache Hadoop and Apache Kafka 
-to allow custom analytics.
+This repository contains the source for the [Divolte Collector](http://divolte.io), and its
+[User Guide](http://divolte-releases.s3-website-eu-west-1.amazonaws.com/divolte-collector/0.2.0/userdoc/html/index.html).
+This is an open-source component for collecting your own clickstream data on Apache Hadoop
+and Apache Kafka to allow custom analytics.
 
 The collector has the following features:
 
