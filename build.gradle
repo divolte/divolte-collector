@@ -51,7 +51,9 @@ defaultTasks 'clean', 'build'
 
 group   = 'io.divolte'
 // Order matters: the version has to be after the scmVersion extension has determined the version.
-project.version = scmVersion.version
+//project.version = scmVersion.version
+// Disable version resolution via the plugin; we're reevaluating the release process.
+project.version = '0.3.0-SNAPSHOT'
 
 sourceCompatibility = 1.8
 mainClassName = 'io.divolte.server.Server'
