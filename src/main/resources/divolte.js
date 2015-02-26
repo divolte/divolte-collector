@@ -805,6 +805,12 @@ var SCRIPT_NAME = 'divolte.js';
             if (queryString.length > 0) {
               queryString += '&';
             }
+            var paramValues = params[name];
+            if ('undefined' === typeof paramValues) {
+              paramValues = [];
+              params[name] = paramValues;
+            }
+            paramValues.push(value);
             // Value can safely contain '&' and '=' without any problems.
             queryString += name + '=' + encodeURIComponent(value);
           };
