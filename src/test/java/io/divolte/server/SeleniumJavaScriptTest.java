@@ -17,6 +17,7 @@
 package io.divolte.server;
 
 import static io.divolte.server.BrowserLists.*;
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
 import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.BASIC;
 import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.BASIC_COPY;
@@ -239,6 +240,10 @@ public class SeleniumJavaScriptTest {
         EventPayload viewEvent = server.waitForEvent();
 
         final BrowserEventData eventData = viewEvent.exchange.getAttachment(EVENT_DATA_KEY);
+        final Boolean detectedDuplicate = viewEvent.exchange.getAttachment(DUPLICATE_EVENT_KEY);
+
+        assertFalse(eventData.corruptEvent);
+        assertFalse(detectedDuplicate);
 
         assertFalse(Strings.isNullOrEmpty(eventData.partyCookie.value));
 
