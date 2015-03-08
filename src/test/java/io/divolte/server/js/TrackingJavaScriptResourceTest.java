@@ -16,6 +16,7 @@
 
 package io.divolte.server.js;
 
+import io.divolte.server.ValidatedConfiguration;
 import io.undertow.util.ETag;
 
 import java.io.IOException;
@@ -41,7 +42,8 @@ public class TrackingJavaScriptResourceTest {
     @Before
     public void setup() throws IOException {
         // Essential test to ensure at build-time that our JavaScript can be compiled.
-        trackingJavaScript = new TrackingJavaScriptResource(config);
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
+        trackingJavaScript = new TrackingJavaScriptResource(vc);
     }
 
     @After

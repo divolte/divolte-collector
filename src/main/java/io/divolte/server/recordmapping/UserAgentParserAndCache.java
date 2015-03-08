@@ -1,29 +1,30 @@
 package io.divolte.server.recordmapping;
 
+import io.divolte.server.ValidatedConfiguration;
+
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import net.sf.uadetector.ReadableUserAgent;
 import net.sf.uadetector.UserAgentStringParser;
 import net.sf.uadetector.service.UADetectorServiceFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.typesafe.config.Config;
 
 public final class UserAgentParserAndCache {
     private final static Logger logger = LoggerFactory.getLogger(UserAgentParserAndCache.class);
 
     private final LoadingCache<String,ReadableUserAgent> cache;
 
-    public UserAgentParserAndCache(final Config config) {
-        final UserAgentStringParser parser = parserBasedOnTypeConfig(config.getString("divolte.tracking.ua_parser.type"));
-        this.cache = sizeBoundCacheFromLoadingFunction(parser::parse, config.getInt("divolte.tracking.ua_parser.cache_size"));
+    public UserAgentParserAndCache(final ValidatedConfiguration vc) {
+        final UserAgentStringParser parser = parserBasedOnTypeConfig(vc.configuration().tracking.uaParser.type);
+        this.cache = sizeBoundCacheFromLoadingFunction(parser::parse, vc.configuration().tracking.uaParser.cacheSize);
         logger.info("User agent parser data version: {}", parser.getDataVersion());
     }
 

@@ -19,7 +19,7 @@ package io.divolte.server.hdfs;
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.OptionalConfig;
+import io.divolte.server.ValidatedConfiguration;
 import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
 import io.divolte.server.processing.ItemProcessor;
 
@@ -37,8 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.Config;
-
 @ParametersAreNonnullByDefault
 @NotThreadSafe
 public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
@@ -47,12 +45,12 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     private final FileCreateAndSyncStrategy fileStrategy;
     private HdfsOperationResult lastHdfsResult;
 
-    public HdfsFlusher(final Config config, final Schema schema) {
-        Objects.requireNonNull(config);
+    public HdfsFlusher(final ValidatedConfiguration vc, final Schema schema) {
+        Objects.requireNonNull(vc);
 
         final FileSystem hadoopFs;
         final Configuration hdfsConfiguration = new Configuration();
-        final short hdfsReplication = (short) config.getInt("divolte.hdfs_flusher.hdfs.replication");
+        final short hdfsReplication = (short) vc.configuration().hdfsFlusher.hdfs.replication;
 
         /*
          * The HDFS client creates a JVM shutdown hook, which interferes with our own server shutdown hook.
@@ -61,7 +59,7 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
          */
         hdfsConfiguration.setBoolean("fs.automatic.close", false);
         try {
-            hadoopFs = OptionalConfig.of(config::getString, "divolte.hdfs_flusher.hdfs.uri").map(uri -> {
+            hadoopFs = vc.configuration().hdfsFlusher.hdfs.uri.map(uri -> {
                 try {
                     return FileSystem.get(new URI(uri), hdfsConfiguration);
                 } catch (IOException | URISyntaxException e) {
@@ -86,7 +84,7 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
             throw new RuntimeException("Could not initialize HDFS filesystem", ioe);
         }
 
-        fileStrategy = FileCreateAndSyncStrategy.create(config, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
+        fileStrategy = FileCreateAndSyncStrategy.create(vc, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
         lastHdfsResult = fileStrategy.setup();
     }
 

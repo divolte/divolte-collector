@@ -17,28 +17,26 @@
 package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import com.typesafe.config.Config;
-
 @ParametersAreNonnullByDefault
 public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBuffer> {
-    public KafkaFlushingPool(final Config config) {
+    public KafkaFlushingPool(final ValidatedConfiguration vc) {
         this(
-                Objects.requireNonNull(config),
-                config.getInt("divolte.kafka_flusher.threads"),
-                config.getInt("divolte.kafka_flusher.max_write_queue"),
-                config.getDuration("divolte.kafka_flusher.max_enqueue_delay", TimeUnit.MILLISECONDS)
+                Objects.requireNonNull(vc),
+                vc.configuration().kafkaFlusher.threads,
+                vc.configuration().kafkaFlusher.maxWriteQueue,
+                vc.configuration().kafkaFlusher.maxEnqueueDelay.toMillis()
                 );
     }
 
-    public KafkaFlushingPool(Config config, int numThreads, int maxWriteQueue, long maxEnqueueDelay) {
-        super(numThreads, maxWriteQueue, maxEnqueueDelay, "Kafka Flusher", () -> new KafkaFlusher(config));
+    public KafkaFlushingPool(ValidatedConfiguration vc, int numThreads, int maxWriteQueue, long maxEnqueueDelay) {
+        super(numThreads, maxWriteQueue, maxEnqueueDelay, "Kafka Flusher", () -> new KafkaFlusher(vc));
     }
 
     public void enqueueRecord(final AvroRecordBuffer record) {

@@ -18,7 +18,6 @@ package io.divolte.server;
 
 import static io.divolte.server.IncomingRequestProcessor.*;
 import io.divolte.server.CookieValues.CookieValue;
-import io.divolte.server.recordmapping.ConfigRecordMapper;
 import io.undertow.server.HttpServerExchange;
 
 import java.net.InetSocketAddress;
@@ -30,6 +29,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
@@ -117,11 +117,11 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                     queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
                                     queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
                                     queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-                                    queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-                                    queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-                                    queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-                                    queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
-                                    queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ConfigRecordMapper::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                    queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
                                     (name) -> queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM + "." + name),
                                     () -> exchange.getQueryParameters()
                                                   .entrySet()
@@ -197,5 +197,15 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
             }
         });
         return builder.toString();
+    }
+
+    @Nullable
+    private static Integer tryParseBase36Int(final String input) {
+        try {
+            return Integer.valueOf(input, 36);
+        } catch (final NumberFormatException ignored) {
+            // We expect parsing to fail; signal via null.
+            return null;
+        }
     }
 }

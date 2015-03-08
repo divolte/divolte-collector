@@ -17,11 +17,11 @@
 package io.divolte.server.hdfs;
 
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.ValidatedConfiguration.FileStrategyConfiguration.Types;
 
 import org.apache.avro.Schema;
 import org.apache.hadoop.fs.FileSystem;
-
-import com.typesafe.config.Config;
 
 /*
  * Used by the HdfsFlusher to actually flush events to HDFS. Different implementation
@@ -37,13 +37,13 @@ interface FileCreateAndSyncStrategy {
     HdfsOperationResult append(final AvroRecordBuffer record);
     void cleanup();
 
-    public static FileCreateAndSyncStrategy create(final Config config, final FileSystem fs, final short hdfsReplication, final Schema schema) {
-        if (config.hasPath("divolte.hdfs_flusher.session_binning_file_strategy")) {
-            return new SessionBinningFileStrategy(config, fs, hdfsReplication, schema);
-        } else if (config.hasPath("divolte.hdfs_flusher.simple_rolling_file_strategy")) {
-            // always make sure that this config has the lowest prio, as it is present in the reference.conf
-            return new SimpleRollingFileStrategy(config, fs, hdfsReplication, schema);
+    public static FileCreateAndSyncStrategy create(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
+        if (vc.configuration().hdfsFlusher.fileStrategy.type == Types.SESSION_BINNING) {
+            return new SessionBinningFileStrategy(vc, fs, hdfsReplication, schema);
+        } else if (vc.configuration().hdfsFlusher.fileStrategy.type == Types.SIMPLE_ROLLING_FILE) {
+            return new SimpleRollingFileStrategy(vc, fs, hdfsReplication, schema);
         } else {
+            // Should not occur with a validate configuration.
             throw new RuntimeException("No valid HDFS file flushing strategy was configured.");
         }
     }

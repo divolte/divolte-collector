@@ -29,7 +29,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -39,9 +38,6 @@ import org.apache.avro.Schema.Parser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, HttpServerExchange> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
@@ -49,20 +45,20 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     private final Optional<KafkaFlushingPool> kafkaPool;
     private final Optional<HdfsFlushingPool> hdfsPool;
 
-    public IncomingRequestProcessingPool() {
-        this(ConfigFactory.load(), (e,b,r) -> {});
-    }
+//    public IncomingRequestProcessingPool() {
+//        this(ConfigFactory.load(), (e,b,r) -> {});
+//    }
 
-    public IncomingRequestProcessingPool(final Config config, IncomingRequestListener listener) {
+    public IncomingRequestProcessingPool(final ValidatedConfiguration vc, IncomingRequestListener listener) {
         this (
-                config.getInt("divolte.incoming_request_processor.threads"),
-                config.getInt("divolte.incoming_request_processor.max_write_queue"),
-                config.getDuration("divolte.incoming_request_processor.max_enqueue_delay", TimeUnit.MILLISECONDS),
-                config,
-                schemaFromConfig(config),
-                config.getBoolean("divolte.kafka_flusher.enabled") ? new KafkaFlushingPool(config) : null,
-                config.getBoolean("divolte.hdfs_flusher.enabled") ? new HdfsFlushingPool(config, schemaFromConfig(config)) : null,
-                lookupServiceFromConfig(config),
+                vc.configuration().incomingRequestProcessor.threads,
+                vc.configuration().incomingRequestProcessor.maxWriteQueue,
+                vc.configuration().incomingRequestProcessor.maxEnqueueDelay.toMillis(),
+                vc,
+                schemaFromConfig(vc),
+                vc.configuration().kafkaFlusher.enabled ? new KafkaFlushingPool(vc) : null,
+                vc.configuration().hdfsFlusher.enabled ? new HdfsFlushingPool(vc, schemaFromConfig(vc)) : null,
+                lookupServiceFromConfig(vc),
                 listener
                 );
     }
@@ -71,7 +67,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             final int numThreads,
             final int maxQueueSize,
             final long maxEnqueueDelay,
-            final Config config,
+            final ValidatedConfiguration vc,
             final Schema schema,
             @Nullable final KafkaFlushingPool kafkaFlushingPool,
             @Nullable final HdfsFlushingPool hdfsFlushingPool,
@@ -82,42 +78,42 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                 maxQueueSize,
                 maxEnqueueDelay,
                 "Incoming Request Processor",
-                () -> new IncomingRequestProcessor(config, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema, listener));
+                () -> new IncomingRequestProcessor(vc, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema, listener));
 
         this.kafkaPool = Optional.ofNullable(kafkaFlushingPool);
         this.hdfsPool = Optional.ofNullable(hdfsFlushingPool);
     }
 
-    private static Schema schemaFromConfig(final Config config) {
-        final Schema schema;
-        try {
-            if (config.hasPath("divolte.tracking.schema_file")) {
+    private static Schema schemaFromConfig(final ValidatedConfiguration vc) {
+        return vc.configuration().tracking.schemaFile
+            .map((schemaFileName) -> {
                 final Parser parser = new Schema.Parser();
-                final String schemaFileName = config.getString("divolte.tracking.schema_file");
                 logger.info("Using Avro schema from configuration: {}", schemaFileName);
-                schema = parser.parse(new File(schemaFileName));
-            } else {
+                try {
+                    return parser.parse(new File(schemaFileName));
+                } catch(IOException ioe) {
+                    logger.error("Failed to load Avro schema file.");
+                    throw new RuntimeException("Failed to load Avro schema file.", ioe);
+                }
+            })
+            .orElseGet(() -> {
                 logger.info("Using built in default Avro schema.");
-                schema = DefaultEventRecord.getClassSchema();
-            }
-        } catch(IOException ioe) {
-            logger.error("Failed to load Avro schema file.");
-            throw new RuntimeException("Failed to load Avro schema file.", ioe);
-        }
-        return schema;
+                return DefaultEventRecord.getClassSchema();
+            });
     }
 
     @Nullable
-    private static LookupService lookupServiceFromConfig(final Config config) {
-        return OptionalConfig.of(config::getString, "divolte.tracking.ip2geo_database")
-                .map((path) -> {
-                    try {
-                        return new ExternalDatabaseLookupService(Paths.get(path));
-                    } catch (final IOException e) {
-                        logger.error("Failed to configure GeoIP database: " + path, e);
-                        throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
-                    }
-                }).orElse(null);
+    private static LookupService lookupServiceFromConfig(final ValidatedConfiguration vc) {
+        return vc.configuration().tracking.ip2geoDatabase
+            .map((path) -> {
+                try {
+                    return new ExternalDatabaseLookupService(Paths.get(path));
+                } catch (final IOException e) {
+                    logger.error("Failed to configure GeoIP database: " + path, e);
+                    throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
+                }
+            })
+            .orElse(null);
     }
 
     public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {

@@ -19,6 +19,7 @@ package io.divolte.server.hdfs;
 import static org.junit.Assert.*;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.CookieValues;
+import io.divolte.server.ValidatedConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,14 +76,15 @@ public class SessionBinningFileStrategyTest {
 
     @Test
     public void shouldCreateFilePerRound() throws IOException {
-        Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
+        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
+        final Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
                 "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
                 + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
-        HdfsFlusher flusher = new HdfsFlusher(config, schema);
+        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
 
-        List<Record> records = LongStream.range(0, 5)
+        final List<Record> records = LongStream.range(0, 5)
         .mapToObj((time) -> new GenericRecordBuilder(schema)
         .set("ts", time * 1000 + 100)
         .set("remoteHost", ARBITRARY_IP)
@@ -100,11 +102,11 @@ public class SessionBinningFileStrategyTest {
 
         flusher.cleanup();
 
-        List<Path> inflightFiles = Files.walk(tempInflightDir)
+        final List<Path> inflightFiles = Files.walk(tempInflightDir)
                 .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
                 .filter((p) -> p.toString().endsWith(".avro.partial"))
                 .collect(Collectors.toList());
-        List<Path> publishedFiles = Files.walk(tempPublishDir)
+        final List<Path> publishedFiles = Files.walk(tempPublishDir)
                 .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
                 .filter((p) -> p.toString().endsWith(".avro"))
                 .collect(Collectors.toList());
@@ -127,14 +129,15 @@ public class SessionBinningFileStrategyTest {
 
     @Test
     public void eventsShouldStickWithSessionStartTimeRound() throws IOException {
-        Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
+        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
+        final Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
                 "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
                 + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
-        HdfsFlusher flusher = new HdfsFlusher(config, schema);
+        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
 
-        List<Record> records = LongStream.range(0, 2)
+        final List<Record> records = LongStream.range(0, 2)
         .mapToObj((time) -> new GenericRecordBuilder(schema)
         .set("ts", time * 1000 + 100)
         .set("remoteHost", ARBITRARY_IP)
@@ -161,7 +164,7 @@ public class SessionBinningFileStrategyTest {
 
         flusher.cleanup();
 
-        List<Path> avroFiles = Files.walk(tempInflightDir)
+        final List<Path> avroFiles = Files.walk(tempInflightDir)
         .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
         .filter((p) -> p.toString().endsWith(".avro.partial"))
         .collect(Collectors.toList());
@@ -173,14 +176,15 @@ public class SessionBinningFileStrategyTest {
 
     @Test
     public void eventsShouldMoveToNextRoundFileIfSessionStartTimeRoundFileIsNoLongerOpen() throws IOException {
-        Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
+        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
+        final Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
                 "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
                 + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
-        HdfsFlusher flusher = new HdfsFlusher(config, schema);
+        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
 
-        List<Record> records = Arrays.asList(
+        final List<Record> records = Arrays.asList(
                 new GenericRecordBuilder(schema).set("ts", 100L).set("session", CookieValues.generate(100).value).set("remoteHost", ARBITRARY_IP).build(),
                 new GenericRecordBuilder(schema).set("ts", 1100L).set("session", CookieValues.generate(1100).value).set("remoteHost", ARBITRARY_IP).build(),
                 new GenericRecordBuilder(schema).set("ts", 2100L).set("session", CookieValues.generate(2100).value).set("remoteHost", ARBITRARY_IP).build(),
@@ -191,7 +195,7 @@ public class SessionBinningFileStrategyTest {
                 new GenericRecordBuilder(schema).set("ts", 3180L).set("session", CookieValues.generate(3100).value).set("remoteHost", ARBITRARY_IP).build()
                 );
 
-        List<AvroRecordBuffer> buffers = records
+        final List<AvroRecordBuffer> buffers = records
         .stream()
         .map((r) -> AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.tryParse((String) r.get("session")).get(), (Long) r.get("ts"), 0, r))
         .collect(Collectors.toList());
@@ -199,11 +203,11 @@ public class SessionBinningFileStrategyTest {
         buffers.forEach(flusher::process);
         flusher.cleanup();
 
-        List<Path> inflightFiles = Files.walk(tempInflightDir)
+        final List<Path> inflightFiles = Files.walk(tempInflightDir)
             .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
             .filter((p) -> p.toString().endsWith(".avro.partial"))
             .collect(Collectors.toList());
-        List<Path> publishedFiles = Files.walk(tempPublishDir)
+        final List<Path> publishedFiles = Files.walk(tempPublishDir)
             .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
             .filter((p) -> p.toString().endsWith(".avro"))
             .collect(Collectors.toList());
@@ -219,17 +223,19 @@ public class SessionBinningFileStrategyTest {
 
     @Test
     public void shouldNotPublishInflightFilesOnCleanup() throws IOException {
-        Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
+        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
+        final Config config = ConfigFactory.parseResources("hdfs-flusher-binning-test.conf").withFallback(ConfigFactory.parseString(
                 "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
                 + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"'));
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
-        HdfsFlusher flusher = new HdfsFlusher(config, schema);
+        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
 
         final Record record = new GenericRecordBuilder(schema)
                 .set("ts", 100L)
                 .set("remoteHost", ARBITRARY_IP)
                 .build();
+
         flusher.process(AvroRecordBuffer.fromRecord(
                                 CookieValues.generate((Long) record.get("ts")),
                                 CookieValues.generate((Long) record.get("ts")),
@@ -238,11 +244,11 @@ public class SessionBinningFileStrategyTest {
                                 record));
         flusher.cleanup();
 
-        List<Path> inflightFiles = Files.walk(tempInflightDir)
+        final List<Path> inflightFiles = Files.walk(tempInflightDir)
                 .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
                 .filter((p) -> p.toString().endsWith(".avro.partial"))
                 .collect(Collectors.toList());
-        List<Path> publishedFiles = Files.walk(tempPublishDir)
+        final List<Path> publishedFiles = Files.walk(tempPublishDir)
                 .sorted((l, r) -> l.toString().compareTo(r.toString())) // files sort lexicographically in time order
                 .filter((p) -> p.toString().endsWith(".avro"))
                 .collect(Collectors.toList());
@@ -260,14 +266,15 @@ public class SessionBinningFileStrategyTest {
     }
 
     private void verifyAvroFile(List<Record> expected, Schema schema, Path avroFile) {
-        List<Record> result = StreamSupport.stream(readAvroFile(schema, avroFile.toFile()).spliterator(), false)
-        .collect(Collectors.toList());
+        final List<Record> result = StreamSupport
+                .stream(readAvroFile(schema, avroFile.toFile()).spliterator(), false)
+                .collect(Collectors.toList());
 
         assertEquals(expected, result);
     }
 
     private DataFileReader<Record> readAvroFile(Schema schema, File file) {
-        DatumReader<Record> dr = new GenericDatumReader<>(schema);
+        final DatumReader<Record> dr = new GenericDatumReader<>(schema);
         try {
             return new DataFileReader<>(file, dr);
         } catch (IOException e) {

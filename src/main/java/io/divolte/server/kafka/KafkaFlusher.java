@@ -16,36 +16,30 @@
 
 package io.divolte.server.kafka;
 
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.ValidatedConfiguration;
 import io.divolte.server.processing.ItemProcessor;
-import kafka.common.FailedToSendMessageException;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Queue;
 import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import kafka.common.FailedToSendMessageException;
+import kafka.javaapi.producer.Producer;
+import kafka.producer.KeyedMessage;
+import kafka.producer.ProducerConfig;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Joiner;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigList;
-import com.typesafe.config.ConfigValue;
-
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -59,10 +53,10 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     // During heartbeats it will be retried until success.
     private Optional<KafkaSender> pendingOperation = Optional.empty();
 
-    public KafkaFlusher(final Config config) {
+    public KafkaFlusher(final ValidatedConfiguration config) {
         Objects.requireNonNull(config);
-        final ProducerConfig producerConfig = new ProducerConfig(getProperties(config, "divolte.kafka_flusher.producer"));
-        topic = config.getString("divolte.kafka_flusher.topic");
+        final ProducerConfig producerConfig = new ProducerConfig(config.configuration().kafkaFlusher.producer);
+        topic = config.configuration().kafkaFlusher.topic;
         producer = new Producer<>(producerConfig);
     }
 
@@ -139,33 +133,5 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
         avroBuffer.get(avroBytes);
         final String partyId = record.getPartyId().value;
         return new KeyedMessage<>(topic, partyId.getBytes(StandardCharsets.UTF_8), partyId, avroBytes);
-    }
-
-    private static final Joiner COMMA_JOINER = Joiner.on(',');
-
-    private static Properties getProperties(final Config config, final String path) {
-        final Properties properties = new Properties();
-        for (final Map.Entry<String,ConfigValue> entry : config.getConfig(path).entrySet()) {
-            final ConfigValue configValue = entry.getValue();
-            final String value;
-            switch (configValue.valueType()) {
-                case STRING:
-                case BOOLEAN:
-                case NUMBER:
-                    value = configValue.unwrapped().toString();
-                    break;
-                case LIST:
-                    final ConfigList configList = (ConfigList)configValue;
-                    // We only need to support 'simple' types here.
-                    value = COMMA_JOINER.join(configList.unwrapped());
-                    break;
-                case OBJECT:
-                case NULL:
-                default:
-                    throw new IllegalStateException("Property type not supported for Kafka configuration: " + entry);
-            }
-            properties.setProperty(entry.getKey(), value);
-        }
-        return properties;
     }
 }
