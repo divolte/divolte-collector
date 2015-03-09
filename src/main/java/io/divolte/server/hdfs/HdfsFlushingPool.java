@@ -28,10 +28,6 @@ import org.apache.avro.Schema;
 
 @ParametersAreNonnullByDefault
 public final class HdfsFlushingPool extends ProcessingPool<HdfsFlusher, AvroRecordBuffer>{
-//    public HdfsFlushingPool(final Schema schema) {
-//        this(ConfigFactory.load(), schema);
-//    }
-
     public HdfsFlushingPool(final ValidatedConfiguration vc, final Schema schema) {
         this(
                 Objects.requireNonNull(vc),
