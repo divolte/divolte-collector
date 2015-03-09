@@ -45,10 +45,6 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     private final Optional<KafkaFlushingPool> kafkaPool;
     private final Optional<HdfsFlushingPool> hdfsPool;
 
-//    public IncomingRequestProcessingPool() {
-//        this(ConfigFactory.load(), (e,b,r) -> {});
-//    }
-
     public IncomingRequestProcessingPool(final ValidatedConfiguration vc, IncomingRequestListener listener) {
         this (
                 vc.configuration().incomingRequestProcessor.threads,
