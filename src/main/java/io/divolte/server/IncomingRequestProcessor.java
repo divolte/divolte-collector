@@ -65,7 +65,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
     private final ShortTermDuplicateMemory memory;
     private final boolean keepDuplicates;
 
-    public IncomingRequestProcessor(final ValidatedConfiguration config,
+    public IncomingRequestProcessor(final ValidatedConfiguration vc,
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
                                     @Nullable final HdfsFlushingPool hdfsFlushingPool,
                                     @Nullable final LookupService geoipLookupService,
@@ -76,12 +76,12 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
         this.hdfsFlushingPool = hdfsFlushingPool;
         this.listener = listener;
 
-        keepCorrupted = !config.configuration().incomingRequestProcessor.discardCorrupted;
+        keepCorrupted = !vc.configuration().incomingRequestProcessor.discardCorrupted;
 
-        memory = new ShortTermDuplicateMemory(config.configuration().incomingRequestProcessor.duplicateMemorySize);
-        keepDuplicates = !config.configuration().incomingRequestProcessor.discardDuplicates;
+        memory = new ShortTermDuplicateMemory(vc.configuration().incomingRequestProcessor.duplicateMemorySize);
+        keepDuplicates = !vc.configuration().incomingRequestProcessor.discardDuplicates;
 
-        mapper = config.configuration().tracking.schemaMapping
+        mapper = vc.configuration().tracking.schemaMapping
             .map((smc) -> {
                 final int version = smc.version;
                 switch(version) {
@@ -91,7 +91,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
                 case 2:
                     logger.info("Using script based schema mapping.");
                     return new DslRecordMapper(
-                            config,
+                            vc,
                             Objects.requireNonNull(schema),
                             Optional.ofNullable(geoipLookupService));
                 default:
@@ -100,7 +100,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
             })
             .orElseGet(() -> {
                 logger.info("Using built in default schema mapping.");
-                return new DslRecordMapper(DefaultEventRecord.getClassSchema(), defaultRecordMapping(config));
+                return new DslRecordMapper(DefaultEventRecord.getClassSchema(), defaultRecordMapping(vc));
             });
     }
 
