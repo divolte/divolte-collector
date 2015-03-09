@@ -72,13 +72,13 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     private boolean isHdfsAlive;
     private long lastFixAttempt;
 
-    public SimpleRollingFileStrategy(final ValidatedConfiguration config, final FileSystem fs, final short hdfsReplication, final Schema schema) {
-        Objects.requireNonNull(config);
+    public SimpleRollingFileStrategy(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
+        Objects.requireNonNull(vc);
         this.schema = Objects.requireNonNull(schema);
 
-        syncEveryMillis = config.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterDuration.toMillis();
-        syncEveryRecords = config.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncDileAfterRecords;
-        newFileEveryMillis = config.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().rollEvery.toMillis();
+        syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterDuration.toMillis();
+        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncDileAfterRecords;
+        newFileEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().rollEvery.toMillis();
 
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
         hostString = findLocalHostName();
@@ -86,8 +86,8 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         this.hdfs = fs;
         this.hdfsReplication = hdfsReplication;
 
-        hdfsWorkingDir = config.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().workingDir;
-        hdfsPublishDir = config.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().publishDir;
+        hdfsWorkingDir = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().workingDir;
+        hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().publishDir;
 
         throwsIoException(() -> {
             if (!hdfs.isDirectory(new Path(hdfsWorkingDir))) {
