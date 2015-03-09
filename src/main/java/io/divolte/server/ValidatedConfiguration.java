@@ -52,20 +52,20 @@ import com.typesafe.config.ConfigValue;
  */
 @ParametersAreNonnullByDefault
 public final class ValidatedConfiguration {
-	private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
-	
+    private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
+
     private final List<ConfigException> exceptions;
     private final DivolteConfiguration divolteConfiguration;
 
     /**
-	 * Creates an instance of a validated configuration. The underlying
-	 * {@code Config} object is passed through a supplier, instead of directly.
-	 * The constructor will catch any {@code ConfigException} thrown from the
-	 * supplier's getter.
-	 * 
-	 * @param configLoader
-	 *            Supplier of the underlying {@code Config} instance.
-	 */
+     * Creates an instance of a validated configuration. The underlying
+     * {@code Config} object is passed through a supplier, instead of directly.
+     * The constructor will catch any {@code ConfigException} thrown from the
+     * supplier's getter.
+     * 
+     * @param configLoader
+     *            Supplier of the underlying {@code Config} instance.
+     */
     public ValidatedConfiguration(Supplier<Config> configLoader) {
         final List<ConfigException> exceptions = new ArrayList<>();
 
@@ -74,7 +74,7 @@ public final class ValidatedConfiguration {
             final Config config = configLoader.get();
             divolteConfiguration = validateAndLoad(config, exceptions);
         } catch(ConfigException ce) {
-        	logger.debug("Configuration error caught during validation.", ce);
+            logger.debug("Configuration error caught during validation.", ce);
             exceptions.add(ce);
             divolteConfiguration = null;
         }
@@ -98,7 +98,7 @@ public final class ValidatedConfiguration {
         final Optional<SchemaMappingConfiguration> schemaMapping = !config.hasPath("divolte.tracking.schema_mapping") ?
             Optional.empty() :
             Optional.of(new SchemaMappingConfiguration(
-                getOrAddException(              config::getInt,         "divolte.tracking.schema_mapping.version",  			exceptions),
+                getOrAddException(              config::getInt,         "divolte.tracking.schema_mapping.version",              exceptions),
                 getOrAddException(              config::getString,      "divolte.tracking.schema_mapping.mapping_script_file",  exceptions)));
 
         final TrackingConfiguration tracking = new TrackingConfiguration(
@@ -120,11 +120,11 @@ public final class ValidatedConfiguration {
 
         if (javascript.name != null && !javascript.name.matches("^[A-Za-z0-9_-]+\\.js$")) {
             ConfigException.Generic wrongJsNameException = new ConfigException.Generic(
-			        String.format("Script name (divolte.javascript.name) must contain only letters, "
-			                + "numbers, underscores and dashes. It must also end in '.js'. Found: %s",
-			                javascript.name));
-        	logger.debug("Configuration error caught during validation.", wrongJsNameException);
-			exceptions.add(wrongJsNameException);
+                    String.format("Script name (divolte.javascript.name) must contain only letters, "
+                            + "numbers, underscores and dashes. It must also end in '.js'. Found: %s",
+                            javascript.name));
+            logger.debug("Configuration error caught during validation.", wrongJsNameException);
+            exceptions.add(wrongJsNameException);
         }
 
         final IncomingRequestProcessorConfiguration incomingRequestProcessor = new IncomingRequestProcessorConfiguration(
@@ -156,8 +156,8 @@ public final class ValidatedConfiguration {
         if (!simpleStrategyPresent && !sbStrategyPresent) {
             fileStrategy = null;
             ConfigException.Generic missingStrategyException = new ConfigException.Generic("Either simple_rolling_file_strategy or session_binning_file_strategy should be configured. None found.");
-        	logger.debug("Configuration error caught during validation.", missingStrategyException);
-			exceptions.add(missingStrategyException);
+            logger.debug("Configuration error caught during validation.", missingStrategyException);
+            exceptions.add(missingStrategyException);
         } else if (sbStrategyPresent) {
             // if both strategies are present in the config, the session binning one takes precedence
             fileStrategy = new SessionBinningFileStrategyConfiguration(
@@ -194,7 +194,7 @@ public final class ValidatedConfiguration {
         try {
             return getter.apply(path);
         } catch(ConfigException ce) {
-        	logger.debug("Configuration error caught during validation.", ce);
+            logger.debug("Configuration error caught during validation.", ce);
             exceptions.add(ce);
             return null;
         }
@@ -207,7 +207,7 @@ public final class ValidatedConfiguration {
             }
             return Optional.of(getter.apply(path));
         } catch(ConfigException ce) {
-        	logger.debug("Configuration error caught during validation.", ce);
+            logger.debug("Configuration error caught during validation.", ce);
             exceptions.add(ce);
             return Optional.empty();
         }
@@ -242,39 +242,39 @@ public final class ValidatedConfiguration {
     }
 
     /**
-	 * Returns the validated configuration object tree. This is only returned
-	 * when no validation errors exist. The method throws
-	 * {@code IllegalStateException} otherwise.
-	 * 
-	 * @return The validated configuration.
-	 * @throws IllegalStateException
-	 *             When validation errors exist.
-	 */
+     * Returns the validated configuration object tree. This is only returned
+     * when no validation errors exist. The method throws
+     * {@code IllegalStateException} otherwise.
+     * 
+     * @return The validated configuration.
+     * @throws IllegalStateException
+     *             When validation errors exist.
+     */
     public DivolteConfiguration configuration() {
-        if (exceptions.size() > 0) {
+        if (!exceptions.isEmpty()) {
             throw new IllegalStateException("Attempt to access invalid configuration.");
         }
         return divolteConfiguration;
     }
 
     /**
-	 * Returns a list of {@code ConfigException} that were thrown during
-	 * configuration validation.
-	 * 
-	 * @return A list of {@code ConfigException} that were thrown during
-	 *         configuration validation.
-	 */
+     * Returns a list of {@code ConfigException} that were thrown during
+     * configuration validation.
+     * 
+     * @return A list of {@code ConfigException} that were thrown during
+     *         configuration validation.
+     */
     public List<ConfigException> errors() {
         return exceptions;
     }
 
     /**
-	 * Returns false if validation errors exist, true otherwise.
-	 * 
-	 * @return false if validation errors exist, true otherwise.
-	 */
+     * Returns false if validation errors exist, true otherwise.
+     * 
+     * @return false if validation errors exist, true otherwise.
+     */
     public boolean isValid() {
-        return exceptions.size() == 0;
+        return exceptions.isEmpty();
     }
 
     @ParametersAreNullableByDefault
@@ -286,7 +286,7 @@ public final class ValidatedConfiguration {
         public final KafkaFlusherConfiguration kafkaFlusher;
         public final HdfsFlusherConfiguration hdfsFlusher;
 
-        public DivolteConfiguration(
+        private DivolteConfiguration(
                 final ServerConfiguration server,
                 final TrackingConfiguration tracking,
                 final JavascriptConfiguration javascript,
@@ -479,7 +479,7 @@ public final class ValidatedConfiguration {
         public final String workingDir;
         public final String publishDir;
 
-        protected FileStrategyConfiguration (
+        private FileStrategyConfiguration (
                 final Types type,
                 final Integer syncFileAfterRecords,
                 final Duration syncFileAfterDuration,
