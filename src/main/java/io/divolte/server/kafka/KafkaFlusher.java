@@ -53,10 +53,10 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     // During heartbeats it will be retried until success.
     private Optional<KafkaSender> pendingOperation = Optional.empty();
 
-    public KafkaFlusher(final ValidatedConfiguration config) {
-        Objects.requireNonNull(config);
-        final ProducerConfig producerConfig = new ProducerConfig(config.configuration().kafkaFlusher.producer);
-        topic = config.configuration().kafkaFlusher.topic;
+    public KafkaFlusher(final ValidatedConfiguration vc) {
+        Objects.requireNonNull(vc);
+        final ProducerConfig producerConfig = new ProducerConfig(vc.configuration().kafkaFlusher.producer);
+        topic = vc.configuration().kafkaFlusher.topic;
         producer = new Producer<>(producerConfig);
     }
 
