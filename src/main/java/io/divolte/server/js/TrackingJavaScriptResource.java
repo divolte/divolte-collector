@@ -47,7 +47,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
         builder.put("PARTY_COOKIE_NAME", vc.configuration().tracking.partyCookie);
         builder.put("PARTY_ID_TIMEOUT_SECONDS", trimLongToMaxInt(vc.configuration().tracking.partyTimeout.get(ChronoUnit.SECONDS)));
         builder.put("SESSION_COOKIE_NAME", vc.configuration().tracking.sessionCookie);
-        builder.put("SESSION_ID_TIMEOUT2_SECONDS", trimLongToMaxInt(vc.configuration().tracking.sessionTimeout.get(ChronoUnit.SECONDS)));
+        builder.put("SESSION_ID_TIMEOUT_SECONDS", trimLongToMaxInt(vc.configuration().tracking.sessionTimeout.get(ChronoUnit.SECONDS)));
         vc.configuration().tracking.cookieDomain
                       .ifPresent((v) -> builder.put("COOKIE_DOMAIN", v));
         builder.put("LOGGING", vc.configuration().javascript.logging);

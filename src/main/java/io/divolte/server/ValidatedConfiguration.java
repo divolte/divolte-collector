@@ -26,6 +26,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.typesafe.config.Config;
@@ -33,10 +39,33 @@ import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
 
+/**
+ * Container for a validated configuration loaded from a {@code Config}
+ * instance. This container allows access to the underlying configuration values
+ * through a {@link DivolteConfiguration} instance which can be obtained from
+ * calling {@link #configuration()}, only if the configuration is valid. This
+ * method throws an exception otherwise. checking the validity of the
+ * configuration must first be done through the {@link #isValid()} method. When
+ * the configuration is not valid, a list of {@code ConfigException} instances
+ * that were thrown during configuration parsing / loading is available by
+ * calling {@link #errors()}.
+ */
+@ParametersAreNonnullByDefault
 public final class ValidatedConfiguration {
+	private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
+	
     private final List<ConfigException> exceptions;
     private final DivolteConfiguration divolteConfiguration;
 
+    /**
+	 * Creates an instance of a validated configuration. The underlying
+	 * {@code Config} object is passed through a supplier, instead of directly.
+	 * The constructor will catch any {@code ConfigException} thrown from the
+	 * supplier's getter.
+	 * 
+	 * @param configLoader
+	 *            Supplier of the underlying {@code Config} instance.
+	 */
     public ValidatedConfiguration(Supplier<Config> configLoader) {
         final List<ConfigException> exceptions = new ArrayList<>();
 
@@ -45,6 +74,7 @@ public final class ValidatedConfiguration {
             final Config config = configLoader.get();
             divolteConfiguration = validateAndLoad(config, exceptions);
         } catch(ConfigException ce) {
+        	logger.debug("Configuration error caught during validation.", ce);
             exceptions.add(ce);
             divolteConfiguration = null;
         }
@@ -68,8 +98,8 @@ public final class ValidatedConfiguration {
         final Optional<SchemaMappingConfiguration> schemaMapping = !config.hasPath("divolte.tracking.schema_mapping") ?
             Optional.empty() :
             Optional.of(new SchemaMappingConfiguration(
-                getOrAddException(              config::getInt,         "divolte.tracking.schema_mapping.cache_size",   exceptions),
-                getOrAddException(              config::getString,      "divolte.tracking.schema_mapping.type",         exceptions)));
+                getOrAddException(              config::getInt,         "divolte.tracking.schema_mapping.version",  			exceptions),
+                getOrAddException(              config::getString,      "divolte.tracking.schema_mapping.mapping_script_file",  exceptions)));
 
         final TrackingConfiguration tracking = new TrackingConfiguration(
                 getOrAddException(              config::getString,      "divolte.tracking.party_cookie",                exceptions),
@@ -86,16 +116,15 @@ public final class ValidatedConfiguration {
         final JavascriptConfiguration javascript = new JavascriptConfiguration(
                 getOrAddException(              config::getString,      "divolte.javascript.name",                      exceptions),
                 getOrAddException(              config::getBoolean,     "divolte.javascript.logging",                   exceptions),
-                getOrAddException(              config::getBoolean,     "divolte.javascript.debug",                     exceptions)
-                );
+                getOrAddException(              config::getBoolean,     "divolte.javascript.debug",                     exceptions));
 
-        if (!javascript.name.matches("^[A-Za-z0-9_-]+\\.js$")) {
-            exceptions.add(
-                    new ConfigException.Generic(
-                            String.format("Script name (divolte.javascript.name) must contain only letters, "
-                                    + "numbers, underscores and dashes. It must also end in '.js'. Found: %s",
-                                    javascript.name)
-                            ));
+        if (javascript.name != null && !javascript.name.matches("^[A-Za-z0-9_-]+\\.js$")) {
+            ConfigException.Generic wrongJsNameException = new ConfigException.Generic(
+			        String.format("Script name (divolte.javascript.name) must contain only letters, "
+			                + "numbers, underscores and dashes. It must also end in '.js'. Found: %s",
+			                javascript.name));
+        	logger.debug("Configuration error caught during validation.", wrongJsNameException);
+			exceptions.add(wrongJsNameException);
         }
 
         final IncomingRequestProcessorConfiguration incomingRequestProcessor = new IncomingRequestProcessorConfiguration(
@@ -118,7 +147,7 @@ public final class ValidatedConfiguration {
 
         final HdfsConfiguration hdfs = new HdfsConfiguration(
                 getOptionalOrAddException(      config::getString,      "divolte.hdfs_flusher.hdfs.uri",                              exceptions, config),
-                getOrAddException(              config::getInt,         "divolte.hdfs_flusher.hdfs.replication",                      exceptions)
+                getOrAddException((p) -> (short) config.getInt(p),      "divolte.hdfs_flusher.hdfs.replication",                      exceptions)
                 );
 
         final FileStrategyConfiguration fileStrategy;
@@ -126,14 +155,16 @@ public final class ValidatedConfiguration {
         final boolean sbStrategyPresent = config.hasPath("divolte.hdfs_flusher.session_binning_file_strategy");
         if (!simpleStrategyPresent && !sbStrategyPresent) {
             fileStrategy = null;
-            exceptions.add(new ConfigException.Generic("Either simple_rolling_file_strategy or session_binning_file_strategy should be configured. None found."));
+            ConfigException.Generic missingStrategyException = new ConfigException.Generic("Either simple_rolling_file_strategy or session_binning_file_strategy should be configured. None found.");
+        	logger.debug("Configuration error caught during validation.", missingStrategyException);
+			exceptions.add(missingStrategyException);
         } else if (sbStrategyPresent) {
             // if both strategies are present in the config, the session binning one takes precedence
             fileStrategy = new SessionBinningFileStrategyConfiguration(
-                    getOrAddException(              config::getInt,      "divolte.hdfs_flusher.simple_rolling_file_strategy.sync_file_after_records",   exceptions),
-                    getOrAddException(              duration(config),    "divolte.hdfs_flusher.simple_rolling_file_strategy.sync_file_after_duration",  exceptions),
-                    getOrAddException(              config::getString,   "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir",               exceptions),
-                    getOrAddException(              config::getString,   "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir",               exceptions));
+                    getOrAddException(              config::getInt,      "divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_records",   exceptions),
+                    getOrAddException(              duration(config),    "divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_duration",  exceptions),
+                    getOrAddException(              config::getString,   "divolte.hdfs_flusher.session_binning_file_strategy.working_dir",               exceptions),
+                    getOrAddException(              config::getString,   "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir",               exceptions));
         } else {
             fileStrategy = new SimpleRollingFileStrategyConfiguration(
                     getOrAddException(              duration(config),    "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every",                exceptions),
@@ -163,6 +194,7 @@ public final class ValidatedConfiguration {
         try {
             return getter.apply(path);
         } catch(ConfigException ce) {
+        	logger.debug("Configuration error caught during validation.", ce);
             exceptions.add(ce);
             return null;
         }
@@ -175,6 +207,7 @@ public final class ValidatedConfiguration {
             }
             return Optional.of(getter.apply(path));
         } catch(ConfigException ce) {
+        	logger.debug("Configuration error caught during validation.", ce);
             exceptions.add(ce);
             return Optional.empty();
         }
@@ -208,6 +241,15 @@ public final class ValidatedConfiguration {
         return properties;
     }
 
+    /**
+	 * Returns the validated configuration object tree. This is only returned
+	 * when no validation errors exist. The method throws
+	 * {@code IllegalStateException} otherwise.
+	 * 
+	 * @return The validated configuration.
+	 * @throws IllegalStateException
+	 *             When validation errors exist.
+	 */
     public DivolteConfiguration configuration() {
         if (exceptions.size() > 0) {
             throw new IllegalStateException("Attempt to access invalid configuration.");
@@ -215,14 +257,27 @@ public final class ValidatedConfiguration {
         return divolteConfiguration;
     }
 
+    /**
+	 * Returns a list of {@code ConfigException} that were thrown during
+	 * configuration validation.
+	 * 
+	 * @return A list of {@code ConfigException} that were thrown during
+	 *         configuration validation.
+	 */
     public List<ConfigException> errors() {
         return exceptions;
     }
 
+    /**
+	 * Returns false if validation errors exist, true otherwise.
+	 * 
+	 * @return false if validation errors exist, true otherwise.
+	 */
     public boolean isValid() {
         return exceptions.size() == 0;
     }
 
+    @ParametersAreNullableByDefault
     public final static class DivolteConfiguration {
         public final ServerConfiguration server;
         public final TrackingConfiguration tracking;
@@ -247,13 +302,14 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public final static class ServerConfiguration {
         public final String host;
-        public final int port;
-        public final boolean useXForwardedFor;
-        public final boolean serveStaticResources;
+        public final Integer port;
+        public final Boolean useXForwardedFor;
+        public final Boolean serveStaticResources;
 
-        private ServerConfiguration(final String host, final int port, final boolean useXForwardedFor, final boolean serveStaticResources) {
+        private ServerConfiguration(final String host, final Integer port, final Boolean useXForwardedFor, final Boolean serveStaticResources) {
             this.host = host;
             this.port = port;
             this.useXForwardedFor = useXForwardedFor;
@@ -261,6 +317,7 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public final static class TrackingConfiguration {
         public final String partyCookie;
         public final Duration partyTimeout;
@@ -294,53 +351,57 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public final static class UaParserConfiguration {
         public final String type;
-        public final int cacheSize;
+        public final Integer cacheSize;
 
-        private UaParserConfiguration(final String type, final int cacheSize) {
+        private UaParserConfiguration(final String type, final Integer cacheSize) {
             this.type = type;
             this.cacheSize = cacheSize;
         }
     }
 
+    @ParametersAreNullableByDefault
     public final static class SchemaMappingConfiguration {
-        public final int version;
+        public final Integer version;
         public final String mappingScriptFile;
 
-        private SchemaMappingConfiguration(final int version, final String mappingScriptFile) {
+        private SchemaMappingConfiguration(final Integer version, final String mappingScriptFile) {
             this.version = version;
             this.mappingScriptFile = mappingScriptFile;
         }
     }
 
+    @ParametersAreNullableByDefault
     public final static class JavascriptConfiguration {
         public final String name;
-        public final boolean logging;
-        public final boolean debug;
+        public final Boolean logging;
+        public final Boolean debug;
 
-        private JavascriptConfiguration(final String name, final boolean logging, final boolean debug) {
+        private JavascriptConfiguration(final String name, final Boolean logging, final Boolean debug) {
             this.name = name;
             this.logging = logging;
             this.debug = debug;
         }
     }
 
+    @ParametersAreNullableByDefault
     public final static class IncomingRequestProcessorConfiguration {
-        public final int threads;
-        public final int maxWriteQueue;
+        public final Integer threads;
+        public final Integer maxWriteQueue;
         public final Duration maxEnqueueDelay;
-        public final boolean discardCorrupted;
-        public final int duplicateMemorySize;
-        public final boolean discardDuplicates;
+        public final Boolean discardCorrupted;
+        public final Integer duplicateMemorySize;
+        public final Boolean discardDuplicates;
 
         private IncomingRequestProcessorConfiguration(
-                final int threads,
-                final int maxWriteQueue,
+                final Integer threads,
+                final Integer maxWriteQueue,
                 final Duration maxEnqueueDelay,
-                final boolean discardCorrupted,
-                final int duplicateMemorySize,
-                final boolean discardDuplicates) {
+                final Boolean discardCorrupted,
+                final Integer duplicateMemorySize,
+                final Boolean discardDuplicates) {
             this.threads = threads;
             this.maxWriteQueue = maxWriteQueue;
             this.maxEnqueueDelay = maxEnqueueDelay;
@@ -350,17 +411,18 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public static final class KafkaFlusherConfiguration {
-        public final boolean enabled;
-        public final int threads;
-        public final int maxWriteQueue;
+        public final Boolean enabled;
+        public final Integer threads;
+        public final Integer maxWriteQueue;
         public final Duration maxEnqueueDelay;
         public final String topic;
         public final Properties producer;
 
         private KafkaFlusherConfiguration(
-                final boolean enabled, int threads,
-                final int maxWriteQueue,
+                final Boolean enabled, Integer threads,
+                final Integer maxWriteQueue,
                 final Duration maxEnqueueDelay,
                 final String topic,
                 final Properties producer) {
@@ -373,18 +435,19 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public static final class HdfsFlusherConfiguration {
-        public final boolean enabled;
-        public final int threads;
-        public final int maxWriteQueue;
+        public final Boolean enabled;
+        public final Integer threads;
+        public final Integer maxWriteQueue;
         public final Duration maxEnqueueDelay;
         public final HdfsConfiguration hdfs;
         public final FileStrategyConfiguration fileStrategy;
 
         private HdfsFlusherConfiguration(
-                final boolean enabled,
-                final int threads,
-                final int maxWriteQueue,
+                final Boolean enabled,
+                final Integer threads,
+                final Integer maxWriteQueue,
                 final Duration maxEnqueueDelay,
                 final HdfsConfiguration hdfs,
                 final FileStrategyConfiguration fileStrategy) {
@@ -397,26 +460,28 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public static final class HdfsConfiguration {
         public final Optional<String> uri;
-        public final int replication;
+        public final Short replication;
 
-        private HdfsConfiguration(Optional<String> uri, int replication) {
+        private HdfsConfiguration(Optional<String> uri, Short replication) {
             this.uri = uri;
             this.replication = replication;
         }
     }
 
+    @ParametersAreNullableByDefault
     public static class FileStrategyConfiguration {
         public final Types type;
-        public final int syncDileAfterRecords;
+        public final Integer syncDileAfterRecords;
         public final Duration syncFileAfterDuration;
         public final String workingDir;
         public final String publishDir;
 
         protected FileStrategyConfiguration (
                 final Types type,
-                final int syncFileAfterRecords,
+                final Integer syncFileAfterRecords,
                 final Duration syncFileAfterDuration,
                 final String workingDir,
                 final String publishDir) {
@@ -442,12 +507,13 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public static final class SimpleRollingFileStrategyConfiguration extends FileStrategyConfiguration {
         public final Duration rollEvery;
 
         private SimpleRollingFileStrategyConfiguration(
                 final Duration rollEvery,
-                final int syncFileAfterRecords,
+                final Integer syncFileAfterRecords,
                 final Duration syncFileAfterDuration,
                 final String workingDir,
                 final String publishDir) {
@@ -456,9 +522,10 @@ public final class ValidatedConfiguration {
         }
     }
 
+    @ParametersAreNullableByDefault
     public static final class SessionBinningFileStrategyConfiguration extends FileStrategyConfiguration {
         private SessionBinningFileStrategyConfiguration(
-                final int syncFileAfterRecords,
+                final Integer syncFileAfterRecords,
                 final Duration syncFileAfterDuration,
                 final String workingDir,
                 final String publishDir) {
