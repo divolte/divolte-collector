@@ -72,7 +72,8 @@ public class MappingTestServer {
         final Schema schema = loadSchema(schemaFilename);
         final Config config = ConfigFactory.load();
 
-        mapper = new DslRecordMapper(config, mappingFilename, schema, Optional.ofNullable(lookupServiceFromConfig(config)));
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
+        mapper = new DslRecordMapper(vc, mappingFilename, schema, Optional.ofNullable(lookupServiceFromConfig(vc)));
 
         final HttpHandler handler = new AllowedMethodsHandler(this::handleEvent, Methods.POST);
         undertow = Undertow.builder()
@@ -87,8 +88,8 @@ public class MappingTestServer {
     }
 
     @Nullable
-    private static LookupService lookupServiceFromConfig(final Config config) {
-        return OptionalConfig.of(config::getString, "divolte.geodb")
+    private static LookupService lookupServiceFromConfig(final ValidatedConfiguration vc) {
+        return vc.configuration().tracking.ip2geoDatabase
                 .map((path) -> {
                     try {
                         return new ExternalDatabaseLookupService(Paths.get(path));

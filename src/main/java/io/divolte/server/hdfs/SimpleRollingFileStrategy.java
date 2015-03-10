@@ -18,6 +18,7 @@ package io.divolte.server.hdfs;
 
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.ValidatedConfiguration;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -27,7 +28,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -42,8 +42,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.typesafe.config.Config;
 
 @NotThreadSafe
 @ParametersAreNonnullByDefault
@@ -74,13 +72,13 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     private boolean isHdfsAlive;
     private long lastFixAttempt;
 
-    public SimpleRollingFileStrategy(final Config config, final FileSystem fs, final short hdfsReplication, final Schema schema) {
-        Objects.requireNonNull(config);
+    public SimpleRollingFileStrategy(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
+        Objects.requireNonNull(vc);
         this.schema = Objects.requireNonNull(schema);
 
-        syncEveryMillis = config.getDuration("divolte.hdfs_flusher.simple_rolling_file_strategy.sync_file_after_duration", TimeUnit.MILLISECONDS);
-        syncEveryRecords = config.getInt("divolte.hdfs_flusher.simple_rolling_file_strategy.sync_file_after_records");
-        newFileEveryMillis = config.getDuration("divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every", TimeUnit.MILLISECONDS);
+        syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterDuration.toMillis();
+        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterRecords;
+        newFileEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().rollEvery.toMillis();
 
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
         hostString = findLocalHostName();
@@ -88,8 +86,8 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         this.hdfs = fs;
         this.hdfsReplication = hdfsReplication;
 
-        hdfsWorkingDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir");
-        hdfsPublishDir = config.getString("divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir");
+        hdfsWorkingDir = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().workingDir;
+        hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().publishDir;
 
         throwsIoException(() -> {
             if (!hdfs.isDirectory(new Path(hdfsWorkingDir))) {

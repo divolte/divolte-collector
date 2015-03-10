@@ -16,7 +16,7 @@
 
 package io.divolte.server;
 
-import com.typesafe.config.Config;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.record.DefaultEventRecord;
 import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlusher;
@@ -26,20 +26,23 @@ import io.divolte.server.kafka.KafkaFlusher;
 import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.ItemProcessor;
 import io.divolte.server.processing.ProcessingPool;
-import io.divolte.server.recordmapping.*;
+import io.divolte.server.recordmapping.DslRecordMapper;
+import io.divolte.server.recordmapping.DslRecordMapping;
+import io.divolte.server.recordmapping.RecordMapper;
+import io.divolte.server.recordmapping.UserAgentParserAndCache;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Objects;
-import java.util.Optional;
-
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
 
 @ParametersAreNonnullByDefault
 public final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
@@ -62,7 +65,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
     private final ShortTermDuplicateMemory memory;
     private final boolean keepDuplicates;
 
-    public IncomingRequestProcessor(final Config config,
+    public IncomingRequestProcessor(final ValidatedConfiguration vc,
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
                                     @Nullable final HdfsFlushingPool hdfsFlushingPool,
                                     @Nullable final LookupService geoipLookupService,
@@ -73,39 +76,36 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
         this.hdfsFlushingPool = hdfsFlushingPool;
         this.listener = listener;
 
-        keepCorrupted = !config.getBoolean("divolte.incoming_request_processor.discard_corrupted");
+        keepCorrupted = !vc.configuration().incomingRequestProcessor.discardCorrupted;
 
-        memory = new ShortTermDuplicateMemory(config.getInt("divolte.incoming_request_processor.duplicate_memory_size"));
-        keepDuplicates = !config.getBoolean("divolte.incoming_request_processor.discard_duplicates");
+        memory = new ShortTermDuplicateMemory(vc.configuration().incomingRequestProcessor.duplicateMemorySize);
+        keepDuplicates = !vc.configuration().incomingRequestProcessor.discardDuplicates;
 
-        if (config.hasPath("divolte.tracking.schema_mapping")) {
-            final int version = config.getInt("divolte.tracking.schema_mapping.version");
-            switch(version) {
-            case 1:
-                logger.info("Using configuration based schema mapping.");
-                mapper = new ConfigRecordMapper(
-                        Objects.requireNonNull(schema),
-                        config,
-                        Optional.ofNullable(geoipLookupService));
-                break;
-            case 2:
-                logger.info("Using script based schema mapping.");
-                mapper = new DslRecordMapper(
-                        config,
-                        Objects.requireNonNull(schema),
-                        Optional.ofNullable(geoipLookupService));
-                break;
-            default:
-                throw new RuntimeException("Unsupported schema mapping config version: " + version);
-            }
-        } else {
-            logger.info("Using built in default schema mapping.");
-            mapper = new DslRecordMapper(DefaultEventRecord.getClassSchema(), defaultRecordMapping(config));
-        }
+        mapper = vc.configuration().tracking.schemaMapping
+            .map((smc) -> {
+                final int version = smc.version;
+                switch(version) {
+                case 1:
+                    logger.error("Version 1 configuration version had been deprecated and is no longer supported.");
+                    throw new RuntimeException("Unsupported schema mapping config version: " + version);
+                case 2:
+                    logger.info("Using script based schema mapping.");
+                    return new DslRecordMapper(
+                            vc,
+                            Objects.requireNonNull(schema),
+                            Optional.ofNullable(geoipLookupService));
+                default:
+                    throw new RuntimeException("Unsupported schema mapping config version: " + version);
+                }
+            })
+            .orElseGet(() -> {
+                logger.info("Using built in default schema mapping.");
+                return new DslRecordMapper(DefaultEventRecord.getClassSchema(), defaultRecordMapping(vc));
+            });
     }
 
-    private DslRecordMapping defaultRecordMapping(final Config config) {
-        final DslRecordMapping result = new DslRecordMapping(DefaultEventRecord.getClassSchema(), new UserAgentParserAndCache(config), Optional.empty());
+    private DslRecordMapping defaultRecordMapping(final ValidatedConfiguration vc) {
+        final DslRecordMapping result = new DslRecordMapping(DefaultEventRecord.getClassSchema(), new UserAgentParserAndCache(vc), Optional.empty());
         result.map("detectedCorruption", result.corrupt());
         result.map("detectedDuplicate", result.duplicate());
         result.map("firstInSession", result.firstInSession());

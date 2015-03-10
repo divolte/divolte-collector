@@ -19,6 +19,7 @@ package io.divolte.server.hdfs;
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import static java.util.Calendar.*;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.ValidatedConfiguration;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -31,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -48,7 +48,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
-import com.typesafe.config.Config;
 
 /*
  * The general idea of this file strategy is to provide a best effort to put events that belong to the same session in the same file.
@@ -101,16 +100,16 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private int recordsSinceLastSync;
 
 
-    public SessionBinningFileStrategy(final Config config, final FileSystem hdfs, final short hdfsReplication, final Schema schema) {
-        sessionTimeoutMillis = config.getDuration("divolte.tracking.session_timeout", TimeUnit.MILLISECONDS);
+    public SessionBinningFileStrategy(final ValidatedConfiguration vc, final FileSystem hdfs, final short hdfsReplication, final Schema schema) {
+        sessionTimeoutMillis = vc.configuration().tracking.sessionTimeout.toMillis();
 
         hostString = findLocalHostName();
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
-        hdfsWorkingDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.working_dir");
-        hdfsPublishDir = config.getString("divolte.hdfs_flusher.session_binning_file_strategy.publish_dir");
+        hdfsWorkingDir = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().workingDir;
+        hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().publishDir;
 
-        syncEveryMillis = config.getDuration("divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_duration", TimeUnit.MILLISECONDS);
-        syncEveryRecords = config.getInt("divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_records");
+        syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterDuration.toMillis();
+        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterRecords;
 
         this.hdfs = hdfs;
         this.hdfsReplication = hdfsReplication;

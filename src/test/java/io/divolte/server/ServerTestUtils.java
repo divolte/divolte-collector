@@ -94,7 +94,8 @@ public final class ServerTestUtils {
             this.config = config.withValue("divolte.server.port", ConfigValueFactory.fromAnyRef(port));
 
             events = new ArrayBlockingQueue<>(100);
-            server = new Server(this.config, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
+            final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);
+            server = new Server(vc, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
         }
 
         public EventPayload waitForEvent() throws InterruptedException {

@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
@@ -55,18 +55,18 @@ public final class Server implements Runnable {
     private final String host;
     private final int port;
 
-    public Server(final Config config) {
-        this(config, (e,b,r) -> {});
+    public Server(final ValidatedConfiguration vc) {
+        this(vc, (e,b,r) -> {});
     }
 
-    Server(final Config config, IncomingRequestListener listener) {
-        host = config.getString("divolte.server.host");
-        port = config.getInt("divolte.server.port");
+    Server(final ValidatedConfiguration vc, IncomingRequestListener listener) {
+        host = vc.configuration().server.host;
+        port = vc.configuration().server.port;
 
-        processingPool = new IncomingRequestProcessingPool(config, listener);
+        processingPool = new IncomingRequestProcessingPool(vc, listener);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
                 new ClientSideCookieEventHandler(processingPool);
-        final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(config);
+        final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(vc);
         final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
 
         final PathHandler handler = new PathHandler();
@@ -74,7 +74,7 @@ public final class Server implements Runnable {
                              new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
         handler.addExactPath('/' + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
-        if (config.getBoolean("divolte.server.serve_static_resources")) {
+        if (vc.configuration().server.serveStaticResources) {
             // Catch-all handler; must be last if present.
             handler.addPrefixPath("/", createStaticResourceHandler());
         }
@@ -82,7 +82,7 @@ public final class Server implements Runnable {
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
         final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
-                config.getBoolean("divolte.server.use_x_forwarded_for") ?
+                vc.configuration().server.useXForwardedFor ?
                 new ProxyAdjacentPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
                 );
 
@@ -93,9 +93,9 @@ public final class Server implements Runnable {
                            .build();
     }
 
-    private TrackingJavaScriptResource loadTrackingJavaScript(final Config config) {
+    private TrackingJavaScriptResource loadTrackingJavaScript(final ValidatedConfiguration vc) {
         try {
-            return new TrackingJavaScriptResource(config);
+            return new TrackingJavaScriptResource(vc);
         } catch (final IOException e) {
             throw new RuntimeException("Could not precompile tracking JavaScript.", e);
         }
@@ -145,10 +145,19 @@ public final class Server implements Runnable {
     }
 
     public static void main(final String[] args) {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
+        if (!vc.isValid()) {
+            System.err.println("There are configuration errors. Details:");
+            for (ConfigException ce : vc.errors()) {
+                System.err.println(ce.getMessage());
+            }
+            System.exit(1);
+        }
+
         // Tell Undertow to use Slf4J for logging by default.
         if (null == System.getProperty("org.jboss.logging.provider")) {
             System.setProperty("org.jboss.logging.provider", "slf4j");
         }
-        new Server(ConfigFactory.load()).run();
+        new Server(vc).run();
     }
 }

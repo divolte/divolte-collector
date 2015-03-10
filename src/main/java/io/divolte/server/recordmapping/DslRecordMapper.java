@@ -16,11 +16,12 @@
 
 package io.divolte.server.recordmapping;
 
-import com.google.common.collect.Maps;
+import static io.divolte.server.IncomingRequestProcessor.*;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import io.divolte.server.BrowserEventData;
+import io.divolte.server.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapping.MappingAction;
 import io.divolte.server.recordmapping.DslRecordMapping.MappingAction.MappingResult;
@@ -29,7 +30,11 @@ import io.undertow.server.HttpServerExchange;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -41,10 +46,8 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import com.typesafe.config.Config;
-
-import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -54,17 +57,17 @@ public class DslRecordMapper implements RecordMapper {
     private final Schema schema;
     private final List<DslRecordMapping.MappingAction> actions;
 
-    public DslRecordMapper(final Config config, final Schema schema, final Optional<LookupService> geoipService) {
-        this(config, config.getString("divolte.tracking.schema_mapping.mapping_script_file"), schema, geoipService);
+    public DslRecordMapper(final ValidatedConfiguration vc, final Schema schema, final Optional<LookupService> geoipService) {
+        this(vc, vc.configuration().tracking.schemaMapping.get().mappingScriptFile, schema, geoipService);
     }
 
-    public DslRecordMapper(final Config config, final String groovyFile, final Schema schema, final Optional<LookupService> geoipService) {
+    public DslRecordMapper(final ValidatedConfiguration vc, final String groovyFile, final Schema schema, final Optional<LookupService> geoipService) {
         this.schema = Objects.requireNonNull(schema);
 
         logger.info("Using mapping from script file: {}", groovyFile);
 
         try {
-            final DslRecordMapping mapping = new DslRecordMapping(schema, new UserAgentParserAndCache(config), geoipService);
+            final DslRecordMapping mapping = new DslRecordMapping(schema, new UserAgentParserAndCache(vc), geoipService);
 
             final String groovyScript = Files.toString(new File(groovyFile), StandardCharsets.UTF_8);
 

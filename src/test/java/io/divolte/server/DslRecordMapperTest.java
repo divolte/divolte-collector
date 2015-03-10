@@ -310,6 +310,7 @@ public class DslRecordMapperTest {
         final Config geoConfig = ConfigFactory.parseMap(mappingConfig)
             .withFallback(ConfigFactory.parseResources("dsl-mapping-test.conf"))
             .withFallback(ConfigFactory.parseResources("reference-test.conf"));
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> geoConfig);
 
         final CityResponse mockResponseWithEverything = loadFromClassPath("/city-response-with-everything.json", new TypeReference<CityResponse>(){});
         final Map<String,Object> expectedMapping = loadFromClassPath("/city-response-expected-mapping.json", new TypeReference<Map<String,Object>>(){});
@@ -318,7 +319,7 @@ public class DslRecordMapperTest {
         when(mockLookupService.lookup(any())).thenReturn(Optional.of(mockResponseWithEverything));
 
         final DslRecordMapper mapper = new DslRecordMapper(
-                geoConfig,
+                vc,
                 new Schema.Parser().parse(Resources.toString(Resources.getResource("TestRecord.avsc"), StandardCharsets.UTF_8)),
                 Optional.of(mockLookupService));
 
