@@ -1,10 +1,10 @@
 **********
 Deployment
 **********
-This chapter describes common steps for deploying Divolte Colector in production.
+This chapter describes common steps for deploying Divolte Collector in production.
 
-Installtion / packages
-======================
+Installation / packages
+=======================
 The distributions provided for Divolte Collector are:
 
 - A .tar.gz archive distribution containing the binaries and startup scripts.
