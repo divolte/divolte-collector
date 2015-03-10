@@ -421,7 +421,8 @@ public final class ValidatedConfiguration {
         public final Properties producer;
 
         private KafkaFlusherConfiguration(
-                final Boolean enabled, Integer threads,
+                final Boolean enabled,
+                Integer threads,
                 final Integer maxWriteQueue,
                 final Duration maxEnqueueDelay,
                 final String topic,
