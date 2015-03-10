@@ -109,7 +109,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
         hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().publishDir;
 
         syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterDuration.toMillis();
-        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncDileAfterRecords;
+        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterRecords;
 
         this.hdfs = hdfs;
         this.hdfsReplication = hdfsReplication;

@@ -77,7 +77,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         this.schema = Objects.requireNonNull(schema);
 
         syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterDuration.toMillis();
-        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncDileAfterRecords;
+        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterRecords;
         newFileEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().rollEvery.toMillis();
 
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();

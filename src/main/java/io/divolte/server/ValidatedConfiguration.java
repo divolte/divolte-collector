@@ -474,7 +474,7 @@ public final class ValidatedConfiguration {
     @ParametersAreNullableByDefault
     public static class FileStrategyConfiguration {
         public final Types type;
-        public final Integer syncDileAfterRecords;
+        public final Integer syncFileAfterRecords;
         public final Duration syncFileAfterDuration;
         public final String workingDir;
         public final String publishDir;
@@ -486,7 +486,7 @@ public final class ValidatedConfiguration {
                 final String workingDir,
                 final String publishDir) {
             this.type = type;
-            this.syncDileAfterRecords = syncFileAfterRecords;
+            this.syncFileAfterRecords = syncFileAfterRecords;
             this.syncFileAfterDuration = syncFileAfterDuration;
             this.workingDir = workingDir;
             this.publishDir = publishDir;
