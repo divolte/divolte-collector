@@ -268,7 +268,7 @@ Any boolean value can be used as a condition. In order to be able to create flex
 
 Sections and short circuit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Sections are useful for grouping together parts of the mapping that somehow form a logical subset of the entire mapping. This makes it possible to conditionally jump out of a section as well. To define a section, just use the secion keyword followed by a closure that contains the section::
+Sections are useful for grouping together parts of the mapping that somehow form a logical subset of the entire mapping. This makes it possible to conditionally jump out of a section as well. To define a section, just use the section keyword followed by a closure that contains the section::
 
   section {
     // Section's mappings go here
@@ -330,7 +330,7 @@ Which in turn is equals to this::
   def i = 42
   println(i.plus(2))
 
-When chaining sinle argument methods, this works out well. However, with nested method calls, this can be more problematic. Let's say we have a method called increment which increments the argument by one; so increment(10) will return 11. For example the following will not compile::
+When chaining single argument methods, this works out well. However, with nested method calls, this can be more problematic. Let's say we have a method called increment which increments the argument by one; so increment(10) will return 11. For example the following will not compile::
 
   println increment 10
 
