@@ -18,7 +18,7 @@ package io.divolte.server.recordmapping;
 
 import static io.divolte.server.IncomingRequestProcessor.*;
 
-import io.divolte.server.BrowserEventData;
+import io.divolte.server.DivolteEvent;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
 import io.undertow.server.HttpServerExchange;
@@ -241,11 +241,11 @@ public final class DslRecordMapping {
      * Simple field mappings
      */
     public ValueProducer<String> location() {
-        return new PrimitiveValueProducer<>("location()", String.class, (h,e,c) -> e.location);
+        return browserEventValueProducer("location()", String.class, e -> e.location);
     }
 
     public ValueProducer<String> referer() {
-        return new PrimitiveValueProducer<>("referer()", String.class, (h,e,c) -> e.referer);
+        return browserEventValueProducer("referer()", String.class, e -> e.referer);
     }
 
     public ValueProducer<String> eventType() {
@@ -277,23 +277,23 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<Integer> viewportPixelWidth() {
-        return new PrimitiveValueProducer<>("viewportPixelWidth()", Integer.class, (h,e,c) -> e.viewportPixelWidth);
+        return browserEventValueProducer("viewportPixelWidth()", Integer.class, e -> e.viewportPixelWidth);
     }
 
     public ValueProducer<Integer> viewportPixelHeight() {
-        return new PrimitiveValueProducer<>("viewportPixelHeight()", Integer.class, (h,e,c) -> e.viewportPixelHeight);
+        return browserEventValueProducer("viewportPixelHeight()", Integer.class, e -> e.viewportPixelHeight);
     }
 
     public ValueProducer<Integer> screenPixelWidth() {
-        return new PrimitiveValueProducer<>("screenPixelWidth()", Integer.class, (h,e,c) -> e.screenPixelWidth);
+        return browserEventValueProducer("screenPixelWidth()", Integer.class, e -> e.screenPixelWidth);
     }
 
     public ValueProducer<Integer> screenPixelHeight() {
-        return new PrimitiveValueProducer<>("screenPixelHeight()", Integer.class, (h,e,c) -> e.screenPixelHeight);
+        return browserEventValueProducer("screenPixelHeight()", Integer.class, e -> e.screenPixelHeight);
     }
 
     public ValueProducer<Integer> devicePixelRatio() {
-        return new PrimitiveValueProducer<>("devicePixelRatio()", Integer.class, (h,e,c) -> e.devicePixelRatio);
+        return browserEventValueProducer("devicePixelRatio()", Integer.class, e -> e.devicePixelRatio);
     }
 
     public ValueProducer<String> partyId() {
@@ -305,7 +305,7 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<String> pageViewId() {
-        return new PrimitiveValueProducer<>("pageViewId()", String.class, (h,e,c) -> Optional.of(e.pageViewId));
+        return browserEventValueProducer("pageViewId()", String.class, e -> Optional.of(e.pageViewId));
     }
 
     public ValueProducer<String> eventId() {
@@ -907,13 +907,24 @@ public final class DslRecordMapping {
         }
     }
 
+    @FunctionalInterface
+    private interface BrowserFieldSupplier<T> {
+        Optional<T> apply(DivolteEvent.BrowserEventData event);
+    }
+
+    private static <T> ValueProducer<T> browserEventValueProducer(final String readableName,
+                                                                  final Class<T> type,
+                                                                  final BrowserFieldSupplier<T> fieldSupplier) {
+        return new PrimitiveValueProducer<T>(readableName, type,
+                                             (h,e,c) -> e.browserEventData.flatMap(fieldSupplier::apply));
+    }
+
     @ParametersAreNonnullByDefault
     private static abstract class ValueProducer<T> {
 
-        @FunctionalInterface
-        protected static interface FieldSupplier<T> {
+        protected interface FieldSupplier<T> {
             Optional<T> apply(HttpServerExchange httpServerExchange,
-                              BrowserEventData eventData,
+                              DivolteEvent eventData,
                               Map<String,Optional<?>> context);
         }
 
@@ -935,12 +946,12 @@ public final class DslRecordMapping {
         }
 
         public Optional<T> produce(final HttpServerExchange exchange,
-                                   final BrowserEventData eventData,
+                                   final DivolteEvent divolteEvent,
                                    final Map<String,Optional<?>> context) {
             @SuppressWarnings("unchecked")
             final Optional<T> result = memoize
-                    ? (Optional<T>)context.computeIfAbsent(identifier, (x) -> supplier.apply(exchange, eventData, context))
-                    : supplier.apply(exchange, eventData, context);
+                    ? (Optional<T>)context.computeIfAbsent(identifier, (x) -> supplier.apply(exchange, divolteEvent, context))
+                    : supplier.apply(exchange, divolteEvent, context);
             return result;
         }
 
@@ -1081,7 +1092,7 @@ public final class DslRecordMapping {
             STOP, EXIT, CONTINUE
         }
         MappingResult perform(HttpServerExchange exchange,
-                              BrowserEventData eventData,
+                              DivolteEvent divolteEvent,
                               Map<String,Optional<?>> context,
                               GenericRecordBuilder record);
     }

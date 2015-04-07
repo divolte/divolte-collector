@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
 public final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
     private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
-    public static final AttachmentKey<BrowserEventData> EVENT_DATA_KEY = AttachmentKey.create(BrowserEventData.class);
+    public static final AttachmentKey<DivolteEvent> DIVOLTE_EVENT_KEY = AttachmentKey.create(DivolteEvent.class);
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
     @Nullable
@@ -138,7 +138,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
 
     @Override
     public ProcessingDirective process(final HttpServerExchange exchange) {
-        final BrowserEventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
+        final DivolteEvent eventData = exchange.getAttachment(DIVOLTE_EVENT_KEY);
 
         if (!eventData.corruptEvent || keepCorrupted) {
             final CookieValue party = eventData.partyCookie;
@@ -152,7 +152,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
              * an endpoint that doesn't require a query string,
              * but rather generates these IDs on the server side.
              */
-            final boolean duplicate = memory.isProbableDuplicate(party.value, session.value, eventData.pageViewId, event);
+            final boolean duplicate = memory.isProbableDuplicate(party.value, session.value, event);
             exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
             if (!duplicate || keepDuplicates) {
