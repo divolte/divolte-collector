@@ -568,7 +568,7 @@ public final class DslRecordMapping {
         }
 
         public ValueProducer<String> value(String name) {
-            return new PrimitiveValueProducer<String>(
+            return new PrimitiveValueProducer<>(
                     identifier + ".value(" + name + ")",
                     String.class,
                     (h,e,c) -> e.eventParameterProducer.apply(name));
@@ -627,7 +627,7 @@ public final class DslRecordMapping {
         }
 
         public ValueProducer<String> commaSeparated() {
-            return new PrimitiveValueProducer<String>(identifier + ".commaSeparated()",
+            return new PrimitiveValueProducer<>(identifier + ".commaSeparated()",
                                                 String.class,
                                                 (h,e,c) -> produce(h, e, c).map(COMMA_JOINER::join));
         }
