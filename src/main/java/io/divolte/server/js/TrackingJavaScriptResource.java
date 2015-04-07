@@ -35,7 +35,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
     private static final String SCRIPT_CONSTANT_NAME = "SCRIPT_NAME";
 
     public TrackingJavaScriptResource(final ValidatedConfiguration vc) throws IOException {
-        super("divolte.js", createScriptConstants(vc), vc.configuration().javascript.debug);
+        super("divolte.js", createScriptConstants(vc), vc.configuration().javascript.minify);
     }
 
     public String getScriptName() {

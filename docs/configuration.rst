@@ -378,7 +378,7 @@ divolte.tracking.javascript.logging
       logging = true
     }
 
-divolte.tracking.javascript.debug
+divolte.tracking.javascript.minify
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   When true, the served JavaScript will be compiled, but not minified, improving readability when debugging in the browser.
@@ -389,7 +389,7 @@ divolte.tracking.javascript.debug
   ::
 
     divolte.tracking.javascript {
-      debug = true
+     minify = true
     }
 
 
