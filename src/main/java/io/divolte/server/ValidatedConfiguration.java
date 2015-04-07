@@ -116,7 +116,7 @@ public final class ValidatedConfiguration {
         final JavascriptConfiguration javascript = new JavascriptConfiguration(
                 getOrAddException(              config::getString,      "divolte.javascript.name",                      exceptions),
                 getOrAddException(              config::getBoolean,     "divolte.javascript.logging",                   exceptions),
-                getOrAddException(              config::getBoolean,     "divolte.javascript.debug",                     exceptions));
+                getOrAddException(              config::getBoolean,     "divolte.javascript.minify",                     exceptions));
 
         if (javascript.name != null && !javascript.name.matches("^[A-Za-z0-9_-]+\\.js$")) {
             ConfigException.Generic wrongJsNameException = new ConfigException.Generic(
