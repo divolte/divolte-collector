@@ -32,8 +32,8 @@ import java.util.function.Supplier;
 public final class DivolteEvent {
     // Events from all sources support these attributes.
     public final boolean corruptEvent;
-    public final CookieValues.CookieValue partyCookie;
-    public final CookieValues.CookieValue sessionCookie;
+    public final DivolteIdentifier partyCookie;
+    public final DivolteIdentifier sessionCookie;
     public final String eventId;
     public final String eventSource;
     public final Optional<String> eventType;
@@ -81,8 +81,8 @@ public final class DivolteEvent {
     }
 
     DivolteEvent(final boolean corruptEvent,
-                 final CookieValues.CookieValue partyCookie,
-                 final CookieValues.CookieValue sessionCookie,
+                 final DivolteIdentifier partyCookie,
+                 final DivolteIdentifier sessionCookie,
                  final String eventId,
                  final String eventSource,
                  final long requestStartTime,

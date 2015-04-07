@@ -17,7 +17,7 @@
 package io.divolte.server.hdfs;
 
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.CookieValues;
+import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.ValidatedConfiguration;
 
 import java.io.File;
@@ -95,7 +95,7 @@ public class HdfsFlusherTest {
         .build())
         .collect(Collectors.toList());
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
 
         flusher.cleanup();
 
@@ -125,7 +125,7 @@ public class HdfsFlusherTest {
                                                  .build())
                                          .collect(Collectors.toList());
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
 
         assertTrue(Files.walk(tempInflightDir)
              .filter((p) -> p.toString().endsWith(".avro.partial"))
@@ -153,14 +153,14 @@ public class HdfsFlusherTest {
 
         final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
 
         for (int c = 0; c < 2; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
 
         flusher.cleanup();
 
@@ -195,14 +195,14 @@ public class HdfsFlusherTest {
 
         final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
 
         for (int c = 0; c < 4; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.generate(), System.currentTimeMillis(), 0, record)));
+        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
 
         flusher.cleanup();
 

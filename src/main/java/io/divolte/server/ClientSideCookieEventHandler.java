@@ -18,7 +18,6 @@ package io.divolte.server;
 
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import io.divolte.server.CookieValues.CookieValue;
 import io.undertow.server.HttpServerExchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,8 +71,8 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
 
     private void handleRequestIfComplete(final HttpServerExchange exchange) throws IncompleteRequestException {
         final boolean corrupt = !isRequestChecksumCorrect(exchange);
-        final CookieValue partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
-        final CookieValue sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(CookieValues::tryParse).orElseThrow(IncompleteRequestException::new);
+        final DivolteIdentifier partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
+        final DivolteIdentifier sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
         final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
         final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
         final boolean isNewPartyId = queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
@@ -92,8 +91,8 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
     }
 
     static DivolteEvent buildBrowserEventData(final boolean corruptEvent,
-                                              final CookieValues.CookieValue partyCookie,
-                                              final CookieValues.CookieValue sessionCookie,
+                                              final DivolteIdentifier partyCookie,
+                                              final DivolteIdentifier sessionCookie,
                                               final String pageViewId,
                                               final String eventId,
                                               final long requestStartTime,

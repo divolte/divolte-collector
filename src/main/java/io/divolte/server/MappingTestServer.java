@@ -108,7 +108,7 @@ public class MappingTestServer {
     private void handleEvent(HttpServerExchange exchange) throws Exception {
         final ChannelInputStream cis = new ChannelInputStream(exchange.getRequestChannel());
         final Map<String,Object> payload = JSON.std.<String>mapFrom(cis);
-        final String generatedPageViewId = CookieValues.generate().value;
+        final String generatedPageViewId = DivolteIdentifier.generate().value;
 
         final DivolteEvent.BrowserEventData browserEventData = new DivolteEvent.BrowserEventData(
                 get(payload, "page_view_id", String.class).orElse(generatedPageViewId),
@@ -121,8 +121,8 @@ public class MappingTestServer {
                 get(payload, "device_pixel_ratio", Integer.class));
         final DivolteEvent divolteEvent = new DivolteEvent(
                 get(payload, "corrupt", Boolean.class).orElse(false),
-                get(payload, "party_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),
-                get(payload, "session_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),
+                get(payload, "party_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
+                get(payload, "session_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
                 get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
                 ClientSideCookieEventHandler.EVENT_SOURCE_NAME,
                 System.currentTimeMillis(),

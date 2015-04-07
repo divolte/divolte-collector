@@ -18,7 +18,6 @@ package io.divolte.server;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.record.DefaultEventRecord;
-import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlusher;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.LookupService;
@@ -141,8 +140,8 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
         final DivolteEvent eventData = exchange.getAttachment(DIVOLTE_EVENT_KEY);
 
         if (!eventData.corruptEvent || keepCorrupted) {
-            final CookieValue party = eventData.partyCookie;
-            final CookieValue session = eventData.sessionCookie;
+            final DivolteIdentifier party = eventData.partyCookie;
+            final DivolteIdentifier session = eventData.sessionCookie;
             final String event = eventData.eventId;
 
             /*

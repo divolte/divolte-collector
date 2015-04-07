@@ -18,7 +18,7 @@ package io.divolte.server.hdfs;
 
 import static org.junit.Assert.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.CookieValues;
+import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.ValidatedConfiguration;
 
 import java.io.File;
@@ -96,8 +96,8 @@ public class SessionBinningFileStrategyTest {
         records.forEach(
                 (record) -> flusher.process(
                         AvroRecordBuffer.fromRecord(
-                                CookieValues.generate((Long) record.get("ts")),
-                                CookieValues.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
                                 0,
                                 record)));
@@ -151,8 +151,8 @@ public class SessionBinningFileStrategyTest {
         records.forEach(
                 (record) -> flusher.process(
                         AvroRecordBuffer.fromRecord(
-                                CookieValues.generate((Long) record.get("ts")),
-                                CookieValues.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
                                 0,
                                 record)));
@@ -160,8 +160,8 @@ public class SessionBinningFileStrategyTest {
         records.forEach(
                 (record) -> flusher.process(
                         AvroRecordBuffer.fromRecord(
-                                CookieValues.generate((Long) record.get("ts")),
-                                CookieValues.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
                                 0,
                                 record)));
@@ -191,19 +191,19 @@ public class SessionBinningFileStrategyTest {
         final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
 
         final List<Record> records = Arrays.asList(
-                new GenericRecordBuilder(schema).set("ts", 100L).set("session", CookieValues.generate(100).value).set("remoteHost", ARBITRARY_IP).build(),
-                new GenericRecordBuilder(schema).set("ts", 1100L).set("session", CookieValues.generate(1100).value).set("remoteHost", ARBITRARY_IP).build(),
-                new GenericRecordBuilder(schema).set("ts", 2100L).set("session", CookieValues.generate(2100).value).set("remoteHost", ARBITRARY_IP).build(),
-                new GenericRecordBuilder(schema).set("ts", 3100L).set("session", CookieValues.generate(3100).value).set("remoteHost", ARBITRARY_IP).build(),
-                new GenericRecordBuilder(schema).set("ts", 3150L).set("session", CookieValues.generate(100).value).set("remoteHost", ARBITRARY_IP).build(),
-                new GenericRecordBuilder(schema).set("ts", 3160L).set("session", CookieValues.generate(1100).value).set("remoteHost", ARBITRARY_IP).build(),
-                new GenericRecordBuilder(schema).set("ts", 3170L).set("session", CookieValues.generate(2100).value).set("remoteHost", ARBITRARY_IP).build(),
-                new GenericRecordBuilder(schema).set("ts", 3180L).set("session", CookieValues.generate(3100).value).set("remoteHost", ARBITRARY_IP).build()
+                new GenericRecordBuilder(schema).set("ts", 100L).set("session", DivolteIdentifier.generate(100).value).set("remoteHost", ARBITRARY_IP).build(),
+                new GenericRecordBuilder(schema).set("ts", 1100L).set("session", DivolteIdentifier.generate(1100).value).set("remoteHost", ARBITRARY_IP).build(),
+                new GenericRecordBuilder(schema).set("ts", 2100L).set("session", DivolteIdentifier.generate(2100).value).set("remoteHost", ARBITRARY_IP).build(),
+                new GenericRecordBuilder(schema).set("ts", 3100L).set("session", DivolteIdentifier.generate(3100).value).set("remoteHost", ARBITRARY_IP).build(),
+                new GenericRecordBuilder(schema).set("ts", 3150L).set("session", DivolteIdentifier.generate(100).value).set("remoteHost", ARBITRARY_IP).build(),
+                new GenericRecordBuilder(schema).set("ts", 3160L).set("session", DivolteIdentifier.generate(1100).value).set("remoteHost", ARBITRARY_IP).build(),
+                new GenericRecordBuilder(schema).set("ts", 3170L).set("session", DivolteIdentifier.generate(2100).value).set("remoteHost", ARBITRARY_IP).build(),
+                new GenericRecordBuilder(schema).set("ts", 3180L).set("session", DivolteIdentifier.generate(3100).value).set("remoteHost", ARBITRARY_IP).build()
                 );
 
         final List<AvroRecordBuffer> buffers = records
         .stream()
-        .map((r) -> AvroRecordBuffer.fromRecord(CookieValues.generate(), CookieValues.tryParse((String) r.get("session")).get(), (Long) r.get("ts"), 0, r))
+        .map((r) -> AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.tryParse((String) r.get("session")).get(), (Long) r.get("ts"), 0, r))
         .collect(Collectors.toList());
 
         buffers.forEach(flusher::process);
@@ -245,8 +245,8 @@ public class SessionBinningFileStrategyTest {
                 .build();
 
         flusher.process(AvroRecordBuffer.fromRecord(
-                                CookieValues.generate((Long) record.get("ts")),
-                                CookieValues.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
+                                DivolteIdentifier.generate((Long) record.get("ts")),
                                 (Long) record.get("ts"),
                                 0,
                                 record));

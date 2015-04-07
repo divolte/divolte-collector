@@ -26,7 +26,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 import com.google.common.base.Strings;
-import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
 
@@ -317,17 +316,17 @@ public class SeleniumJavaScriptTest {
         driver.get(urlOf(BASIC));
         server.waitForEvent();
 
-        Optional<CookieValue> parsedPartyCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
+        Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
         assertTrue(parsedPartyCookieOption.isPresent());
         assertThat(
                 parsedPartyCookieOption.get(),
-                isA(CookieValue.class));
+                isA(DivolteIdentifier.class));
 
-        Optional<CookieValue> parsedSessionCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
+        Optional<DivolteIdentifier> parsedSessionCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
         assertTrue(parsedSessionCookieOption.isPresent());
         assertThat(
                 parsedSessionCookieOption.get(),
-                isA(CookieValue.class));
+                isA(DivolteIdentifier.class));
     }
 
     @Test
