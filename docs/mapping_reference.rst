@@ -105,7 +105,7 @@ This is most often used in combination with `Conditional mapping (when)`_, like 
 
 Value presence and nulls
 """"""""""""""""""""""""
-Not all values are present in each request. For example when using a custom cookie value, there could be incoming requests where the cookie is not sent by the client. In this case, the cookie value is said to absent. Divolte Collector will never actively set a null value. Instead for absent values it does nothing at all; i.e. the mapped field is not set on the Avro record. When values that are absent are used in subsequent constructs, the resulting values will also be absent. In the following example, if the incoming request has no referer, the field 'intField' will never be set, but no error occurs::
+Not all values are present in each request. For example when using a custom cookie value, there could be incoming requests where the cookie is not sent by the client. In this case, the cookie value is said to absent. Divolte Collector will never actively set a null value. Instead for absent values it does nothing at all; i.e. the mapped field is not set on the Avro record. When values that are absent are used in subsequent constructs, the resulting values will also be absent. In the following example, if the incoming request has no referrer, the field 'intField' will never be set, but no error occurs::
 
   def u = parse referer() to uri              // parse a URI out of the referer
   def q = u.query()                           // parse the query string of the URI
@@ -229,7 +229,7 @@ A more concrete example of using this construct would be::
     map true onto 'directTraffic'
   }
 
-Here we check whether the referer value is absent and if so, map a literal value onto a boolean field.
+Here we check whether the referrer value is absent and if so, map a literal value onto a boolean field.
 
 As an alternative syntax, it is possible to use a closure that produces the boolean value as well, just like in `Mapping values onto fields (map)`_. In this example we check if a query parameter called clientId is present in the location and on that condition perform a mapping::
 
