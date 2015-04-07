@@ -40,6 +40,36 @@ var SCRIPT_NAME = 'divolte.js';
 }('undefined' !== typeof window ? window : this, function(window) {
   "use strict";
 
+  /**
+   * Get the value of a cookie.
+   *
+   * @param {string} name   The name of the cookie to retrieve.
+   * @return {?string}      the value of the cookie, if the cookie exists, or null otherwise.
+   */
+  var getCookie = function(name) {
+        // Assumes cookie name and value are sensible.
+        return document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + name + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1") || null;
+      };
+  /**
+   * Set a cookie.
+   *
+   * @param {string} name          The name of the cookie to set.
+   * @param {string} value         The value to assign to the cookie.
+   * @param {number} maxAgeSeconds The expiry (age) of the cookie, in seconds from now.
+   * @param {number} nowMs         The current time, in milliseconds since the Unix epoch.
+   * @param {string} domain        The domain to set the cookies for, if non-zero in length.
+   */
+  var setCookie = function(name, value, maxAgeSeconds, nowMs, domain) {
+        var expiry = new Date(nowMs + 1000 * maxAgeSeconds);
+        // Assumes cookie name and value are sensible. (For our use they are.)
+        // Note: No domain means these are always first-party cookies.
+        var cookieString = name + '=' + value + "; path=/; expires=" + expiry.toUTCString() + "; max-age=" + maxAgeSeconds;
+        if (domain) {
+          cookieString += "; domain=" + domain;
+        }
+        document.cookie = cookieString;
+      };
+
   // Alias some references that we frequently use.
   var document = window.document,
       navigator = window.navigator,
@@ -48,10 +78,11 @@ var SCRIPT_NAME = 'divolte.js';
       bound = function(method, instance) {
         return method.bind ? method.bind(instance) : method;
       },
-      log = LOGGING && console ? bound(console.log, console) : function() {},
-      info = LOGGING && console ? bound(console.info, console) : function() {},
-      warn = LOGGING && console ? bound(console.warn, console) : function() {},
-      error = LOGGING && console ? bound(console.error, console) : function() {};
+      LOGGING_ENABLED = (getCookie("_dvp_logging") && LOGGING) ? true : false,
+      log = LOGGING_ENABLED && console ? bound(console.log, console) : function() {},
+      info = LOGGING_ENABLED && console ? bound(console.info, console) : function() {},
+      warn = LOGGING_ENABLED && console ? bound(console.warn, console) : function() {},
+      error = LOGGING_ENABLED && console ? bound(console.error, console) : function() {};
 
   log("Initializing Divolte.");
 
@@ -65,7 +96,7 @@ var SCRIPT_NAME = 'divolte.js';
   var divolteScriptUrl = function() {
     var couldNotInitialize = function(reason) {
       var error = "Divolte could not initialize itself";
-      if (LOGGING) {
+      if (LOGGING_ENABLED) {
         error += '; ' + reason;
       }
       error += '.';
@@ -155,36 +186,6 @@ var SCRIPT_NAME = 'divolte.js';
        */
       windowHeight = function() {
         return window['innerHeight'] || document.documentElement['clientHeight'] || bodyElement()['clientHeight'] || document.documentElement['offsetHeight'] || bodyElement()['offsetHeight'];
-      };
-
-  /**
-   * Get the value of a cookie.
-   *
-   * @param {string} name   The name of the cookie to retrieve.
-   * @return {?string}      the value of the cookie, if the cookie exists, or null otherwise.
-   */
-  var getCookie = function(name) {
-        // Assumes cookie name and value are sensible.
-        return document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + name + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1") || null;
-      };
-  /**
-   * Set a cookie.
-   *
-   * @param {string} name          The name of the cookie to set.
-   * @param {string} value         The value to assign to the cookie.
-   * @param {number} maxAgeSeconds The expiry (age) of the cookie, in seconds from now.
-   * @param {number} nowMs         The current time, in milliseconds since the Unix epoch.
-   * @param {string} domain        The domain to set the cookies for, if non-zero in length.
-   */
-  var setCookie = function(name, value, maxAgeSeconds, nowMs, domain) {
-        var expiry = new Date(nowMs + 1000 * maxAgeSeconds);
-        // Assumes cookie name and value are sensible. (For our use they are.)
-        // Note: No domain means these are always first-party cookies.
-        var cookieString = name + '=' + value + "; path=/; expires=" + expiry.toUTCString() + "; max-age=" + maxAgeSeconds;
-        if (domain) {
-          cookieString += "; domain=" + domain;
-        }
-        document.cookie = cookieString;
       };
 
   /**
