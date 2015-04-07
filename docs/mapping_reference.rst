@@ -116,7 +116,7 @@ Because absent values result in fields not being set, your schema must have defa
 
 Types
 ^^^^^
-Values in the mapping are typed and the value type must match the type of the Avro field that they are mapped onto. Divolte Collector checks the type compatibility during startup and will report an error if there is a mismatch. The type for a value can be found in the documentation below. 
+Values in the mapping are typed and the value type must match the type of the Avro field that they are mapped onto. Divolte Collector checks the type compatibility during startup and will report an error if there is a mismatch. The type for a value can be found in the documentation below.
 
 Below is a table of all types that can be produced in a mapping and the corresponding Avro schema's that match them:
 
@@ -693,7 +693,7 @@ eventParameters
   Use the following Avro type to map the event parameters:
 
   ::
-  
+
     {
       "name": "parametersField",
       "type": [
