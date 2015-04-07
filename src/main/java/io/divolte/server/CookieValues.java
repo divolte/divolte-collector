@@ -88,7 +88,9 @@ public final class CookieValues {
         private CookieValue(final long timestamp, final String id) {
             this.version = VERSION;
             this.timestamp = timestamp;
-            this.value = VERSION_STRING + SEPARATOR_CHAR + Long.toString(timestamp, 36) + SEPARATOR_CHAR + id;
+            this.value = VERSION_STRING + SEPARATOR_CHAR
+                       + Long.toString(timestamp, 36) + SEPARATOR_CHAR
+                       + Objects.requireNonNull(id);
         }
 
         @Override
