@@ -23,9 +23,9 @@ import java.util.Set;
 
 import org.junit.Test;
 
-public class CookieValuesTest {
+public class DivolteIdentifierTest {
     @Test
-    public void cookieValuesShouldBeUnique() {
+    public void divolteIdentifiersShouldBeUnique() {
         final int num = 100000;
         final Set<String> values = new HashSet<>(num + num / 2);
         for (int c = 0; c < num; c++) {
@@ -36,7 +36,7 @@ public class CookieValuesTest {
     }
 
     @Test
-    public void cookieValuesShouldEncodeTimestamp() {
+    public void divolteIdentifiersShouldEncodeTimestamp() {
         DivolteIdentifier cv = DivolteIdentifier.generate(42);
         assertEquals(42, DivolteIdentifier.tryParse(cv.value).get().timestamp);
     }
@@ -53,7 +53,7 @@ public class CookieValuesTest {
     }
 
     @Test
-    public void cookieValuesShouldParseVersionAndTimestamp() {
+    public void divolteIdentifiersShouldParseVersionAndTimestamp() {
         String stringValue = "0:16:5mRCeUO4p2_6R7u1m9ZoxXG2AfBeJeHD";
         DivolteIdentifier value = DivolteIdentifier.tryParse(stringValue).get();
         assertEquals(42, value.timestamp);
