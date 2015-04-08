@@ -16,7 +16,7 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
+import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
@@ -91,7 +91,7 @@ public class DslRecordMapperTest {
         EventPayload event = request("https://example.com/", "http://example.com/");
         final GenericRecord record = event.record;
         final HttpServerExchange exchange = event.exchange;
-        final BrowserEventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
+        final DivolteEvent eventData = exchange.getAttachment(DIVOLTE_EVENT_KEY);
 
         assertEquals(true, record.get("sessionStart"));
         assertEquals(true, record.get("unreliable"));
@@ -113,7 +113,7 @@ public class DslRecordMapperTest {
 
         assertEquals(eventData.partyCookie.value, record.get("client"));
         assertEquals(eventData.sessionCookie.value, record.get("session"));
-        assertEquals(eventData.pageViewId, record.get("pageview"));
+        assertEquals(eventData.browserEventData.get().pageViewId, record.get("pageview"));
         assertEquals(eventData.eventId, record.get("event"));
         assertEquals(1018, record.get("viewportWidth"));
         assertEquals(1018, record.get("viewportHeight"));

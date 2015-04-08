@@ -20,7 +20,7 @@ import static io.divolte.server.IncomingRequestProcessor.*;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
-import io.divolte.server.BrowserEventData;
+import io.divolte.server.DivolteEvent;
 import io.divolte.server.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapping.MappingAction;
@@ -96,7 +96,7 @@ public class DslRecordMapper implements RecordMapper {
     @Override
     public GenericRecord newRecordFromExchange(HttpServerExchange exchange) {
         final GenericRecordBuilder builder = new GenericRecordBuilder(schema);
-        final BrowserEventData eventData = exchange.getAttachment(EVENT_DATA_KEY);
+        final DivolteEvent eventData = exchange.getAttachment(DIVOLTE_EVENT_KEY);
         final Map<String,Optional<?>> context = Maps.newHashMapWithExpectedSize(20);
 
         for (final Iterator<MappingAction> itr = actions.iterator();

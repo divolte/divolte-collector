@@ -18,7 +18,7 @@ package io.divolte.server;
 
 import static io.divolte.server.BrowserLists.*;
 import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
-import static io.divolte.server.IncomingRequestProcessor.EVENT_DATA_KEY;
+import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
 import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.BASIC;
 import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.BASIC_COPY;
 import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.PAGE_VIEW_SUPPLIED;
@@ -26,7 +26,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 import com.google.common.base.Strings;
-import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
 
@@ -206,12 +205,13 @@ public class SeleniumJavaScriptTest {
 
     private int uniquePageViewIdsForSeriesOfActions(final Runnable[] actions) {
         return Stream.of(actions)
-              .map((action) -> {
-                  action.run();
-                  final EventPayload event = unchecked(server::waitForEvent);
-                  return event.exchange.getAttachment(EVENT_DATA_KEY).pageViewId;
-              })
-              .collect(Collectors.toSet()).size();
+                .flatMap((action) -> {
+                    action.run();
+                    final EventPayload payload = unchecked(server::waitForEvent);
+                    final DivolteEvent event = payload.exchange.getAttachment(DIVOLTE_EVENT_KEY);
+                    return event.browserEventData.map(b -> b.pageViewId).map(Stream::of).orElse(null);
+                })
+                .collect(Collectors.toSet()).size();
     }
 
     @FunctionalInterface
@@ -239,7 +239,7 @@ public class SeleniumJavaScriptTest {
 
         EventPayload viewEvent = server.waitForEvent();
 
-        final BrowserEventData eventData = viewEvent.exchange.getAttachment(EVENT_DATA_KEY);
+        final DivolteEvent eventData = viewEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
         final Boolean detectedDuplicate = viewEvent.exchange.getAttachment(DUPLICATE_EVENT_KEY);
 
         assertFalse(eventData.corruptEvent);
@@ -252,14 +252,16 @@ public class SeleniumJavaScriptTest {
         assertFalse(Strings.isNullOrEmpty(eventData.sessionCookie.value));
         assertTrue(eventData.firstInSession);
 
-        assertFalse(Strings.isNullOrEmpty(eventData.pageViewId));
+        assertTrue(eventData.browserEventData.isPresent());
+        final DivolteEvent.BrowserEventData browserEventData = eventData.browserEventData.get();
+        assertFalse(Strings.isNullOrEmpty(browserEventData.pageViewId));
         assertFalse(Strings.isNullOrEmpty(eventData.eventId));
 
         assertTrue(eventData.eventType.isPresent());
         assertEquals("pageView", eventData.eventType.get());
 
-        assertTrue(eventData.location.isPresent());
-        assertEquals(location, eventData.location.get());
+        assertTrue(browserEventData.location.isPresent());
+        assertEquals(location, browserEventData.location.get());
 
         /*
          * We don't really know anything about the clock on the executing browser,
@@ -278,17 +280,17 @@ public class SeleniumJavaScriptTest {
          *
          * Hence, we just check whether these are integers greater than 50.
          */
-        assertTrue(eventData.viewportPixelWidth.isPresent());
-        assertThat(eventData.viewportPixelWidth.get(), greaterThan(50));
+        assertTrue(browserEventData.viewportPixelWidth.isPresent());
+        assertThat(browserEventData.viewportPixelWidth.get(), greaterThan(50));
 
-        assertTrue(eventData.viewportPixelHeight.isPresent());
-        assertThat(eventData.viewportPixelHeight.get(), greaterThan(50));
+        assertTrue(browserEventData.viewportPixelHeight.isPresent());
+        assertThat(browserEventData.viewportPixelHeight.get(), greaterThan(50));
 
-        assertTrue(eventData.screenPixelWidth.isPresent());
-        assertThat(eventData.screenPixelWidth.get(), greaterThan(50));
+        assertTrue(browserEventData.screenPixelWidth.isPresent());
+        assertThat(browserEventData.screenPixelWidth.get(), greaterThan(50));
 
-        assertTrue(eventData.screenPixelHeight.isPresent());
-        assertThat(eventData.screenPixelHeight.get(), greaterThan(50));
+        assertTrue(browserEventData.screenPixelHeight.isPresent());
+        assertThat(browserEventData.screenPixelHeight.get(), greaterThan(50));
     }
 
     @Test
@@ -299,7 +301,7 @@ public class SeleniumJavaScriptTest {
 
         driver.findElement(By.id("custom")).click();
         final EventPayload customEvent = server.waitForEvent();
-        final BrowserEventData eventData = customEvent.exchange.getAttachment(EVENT_DATA_KEY);
+        final DivolteEvent eventData = customEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
 
         assertTrue(eventData.eventType.isPresent());
         assertEquals("custom", eventData.eventType.get());
@@ -314,17 +316,17 @@ public class SeleniumJavaScriptTest {
         driver.get(urlOf(BASIC));
         server.waitForEvent();
 
-        Optional<CookieValue> parsedPartyCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
+        Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
         assertTrue(parsedPartyCookieOption.isPresent());
         assertThat(
                 parsedPartyCookieOption.get(),
-                isA(CookieValue.class));
+                isA(DivolteIdentifier.class));
 
-        Optional<CookieValue> parsedSessionCookieOption = CookieValues.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
+        Optional<DivolteIdentifier> parsedSessionCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
         assertTrue(parsedSessionCookieOption.isPresent());
         assertThat(
                 parsedSessionCookieOption.get(),
-                isA(CookieValue.class));
+                isA(DivolteIdentifier.class));
     }
 
     @Test
@@ -332,9 +334,9 @@ public class SeleniumJavaScriptTest {
         Preconditions.checkState(null != driver && null != server);
         driver.get(urlOf(PAGE_VIEW_SUPPLIED));
         EventPayload event = server.waitForEvent();
-        BrowserEventData eventData = event.exchange.getAttachment(EVENT_DATA_KEY);
+        DivolteEvent eventData = event.exchange.getAttachment(DIVOLTE_EVENT_KEY);
 
-        assertEquals("supercalifragilisticexpialidocious", eventData.pageViewId);
+        assertEquals("supercalifragilisticexpialidocious", eventData.browserEventData.get().pageViewId);
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
     }
 

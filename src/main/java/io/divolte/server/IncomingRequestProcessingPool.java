@@ -17,7 +17,6 @@
 package io.divolte.server;
 
 import io.divolte.record.DefaultEventRecord;
-import io.divolte.server.CookieValues.CookieValue;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
@@ -112,7 +111,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             .orElse(null);
     }
 
-    public void enqueueIncomingExchangeForProcessing(final CookieValue partyId, final HttpServerExchange exchange) {
+    public void enqueueIncomingExchangeForProcessing(final DivolteIdentifier partyId, final HttpServerExchange exchange) {
         enqueue(partyId.value, exchange);
     }
 

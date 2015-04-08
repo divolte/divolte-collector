@@ -1,6 +1,9 @@
 package io.divolte.server;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
+import com.fasterxml.jackson.jr.ob.JSON;
+import com.google.common.collect.ImmutableList;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -10,7 +13,18 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import joptsimple.ArgumentAcceptingOptionSpec;
+import joptsimple.OptionException;
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Parser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.streams.ChannelInputStream;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,24 +34,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import joptsimple.ArgumentAcceptingOptionSpec;
-import joptsimple.OptionException;
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Parser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xnio.streams.ChannelInputStream;
-
-import com.fasterxml.jackson.jr.ob.JSON;
-import com.google.common.collect.ImmutableList;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
+import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 public class MappingTestServer {
@@ -110,35 +108,38 @@ public class MappingTestServer {
     private void handleEvent(HttpServerExchange exchange) throws Exception {
         final ChannelInputStream cis = new ChannelInputStream(exchange.getRequestChannel());
         final Map<String,Object> payload = JSON.std.<String>mapFrom(cis);
-        final String generatedPageViewId = CookieValues.generate().value;
+        final String generatedPageViewId = DivolteIdentifier.generate().value;
 
-        final BrowserEventData eventData = new BrowserEventData(
-                get(payload, "corrupt", Boolean.class).orElse(false),
-                get(payload, "party_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),
-                get(payload, "session_id", String.class).flatMap(CookieValues::tryParse).orElse(CookieValues.generate()),
+        final DivolteEvent.BrowserEventData browserEventData = new DivolteEvent.BrowserEventData(
                 get(payload, "page_view_id", String.class).orElse(generatedPageViewId),
-                get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
-                System.currentTimeMillis(),
-                0L,
-                get(payload, "new_party_id", Boolean.class).orElse(false),
-                get(payload, "first_in_session", Boolean.class).orElse(false),
                 get(payload, "location", String.class),
                 get(payload, "referer", String.class),
-                get(payload, "event_type", String.class),
                 get(payload, "viewport_pixel_width", Integer.class),
                 get(payload, "viewport_pixel_height", Integer.class),
                 get(payload, "screen_pixel_width", Integer.class),
                 get(payload, "screen_pixel_height", Integer.class),
-                get(payload, "device_pixel_ratio", Integer.class),
+                get(payload, "device_pixel_ratio", Integer.class));
+        final DivolteEvent divolteEvent = new DivolteEvent(
+                get(payload, "corrupt", Boolean.class).orElse(false),
+                get(payload, "party_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
+                get(payload, "session_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
+                get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
+                ClientSideCookieEventHandler.EVENT_SOURCE_NAME,
+                System.currentTimeMillis(),
+                0L,
+                get(payload, "new_party_id", Boolean.class).orElse(false),
+                get(payload, "first_in_session", Boolean.class).orElse(false),
+                get(payload, "event_type", String.class),
                 (name) -> get(payload, "param_" + name, String.class),
                 () -> payload.entrySet()
-                .stream()
-                .filter((e) -> e.getKey().startsWith("param_"))
-                .collect(Collectors.toMap(
+                        .stream()
+                        .filter((e) -> e.getKey().startsWith("param_"))
+                        .collect(Collectors.toMap(
                                 Map.Entry::getKey,
-                                (e) -> (String) e.getValue())));
+                                (e) -> (String) e.getValue())),
+                Optional.of(browserEventData));
 
-        exchange.putAttachment(EVENT_DATA_KEY, eventData);
+        exchange.putAttachment(DIVOLTE_EVENT_KEY, divolteEvent);
         exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
 
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
