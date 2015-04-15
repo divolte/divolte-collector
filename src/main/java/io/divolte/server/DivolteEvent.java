@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,7 +29,7 @@ import java.util.function.Supplier;
  * All Divolte events support a minimum set of data, with
  * sources providing additional data.
  */
-@NotNullByDefault
+@ParametersAreNonnullByDefault
 public final class DivolteEvent {
     // Events from all sources support these attributes.
     public final boolean corruptEvent;
@@ -50,7 +51,7 @@ public final class DivolteEvent {
     // Extra data provided for browser events.
     public final Optional<BrowserEventData> browserEventData;
 
-    @NotNullByDefault
+    @ParametersAreNonnullByDefault
     public static final class BrowserEventData {
         public final String pageViewId;
         public final Optional<String> location;
