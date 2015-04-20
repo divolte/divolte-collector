@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright 2014 GoDataDriven B.V.
+# Copyright 2014-2015 GoDataDriven B.V.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,4 +86,5 @@ JAVACMD="$JAVA_HOME/bin/java"
 [ -f "$CONF_DIR/logback.xml" ] && JAVA_OPTS="$JAVA_OPTS -Dlogback.configurationFile=$CONF_DIR/logback.xml"
 [ -f "$CONF_DIR/divolte-collector.conf" ] && JAVA_OPTS="$JAVA_OPTS -Dconfig.file=$CONF_DIR/divolte-collector.conf"
 
-$JAVACMD -cp $CLASSPATH $JAVA_OPTS io.divolte.server.Server
+# Replace this launch script with the server process.
+exec $JAVACMD $JAVA_OPTS -cp $CLASSPATH io.divolte.server.Server
