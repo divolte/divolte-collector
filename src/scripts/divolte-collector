@@ -87,4 +87,4 @@ JAVACMD="$JAVA_HOME/bin/java"
 [ -f "$CONF_DIR/divolte-collector.conf" ] && JAVA_OPTS="$JAVA_OPTS -Dconfig.file=$CONF_DIR/divolte-collector.conf"
 
 # Replace this launch script with the server process.
-exec $JAVACMD -cp $CLASSPATH $JAVA_OPTS io.divolte.server.Server
+exec $JAVACMD $JAVA_OPTS -cp $CLASSPATH io.divolte.server.Server
