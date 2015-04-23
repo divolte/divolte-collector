@@ -748,7 +748,7 @@ var SCRIPT_NAME = 'divolte.js';
    * asynchronously.
    *
    * @param {!string} type The type of event to log.
-   * @param {Object.<string,(string|boolean|number)>=} [customParameters]
+   * @param {Object=} [customParameters]
    *    Optional object containing custom parameters to log alongside the event.
    *
    * @return {string} the unique event identifier for this event.
@@ -832,36 +832,9 @@ var SCRIPT_NAME = 'divolte.js';
           }
         }
       }
-      // These are the custom parameters that may have been supplied.
-      switch (typeof customParameters) {
-        case 'undefined':
-          // No custom parameters were supplied.
-          break;
-        case 'object':
-          for (var customName in customParameters) {
-            if (customParameters.hasOwnProperty(customName)) {
-              var customParameter = customParameters[customName],
-                  customParameterType = typeof customParameter,
-                  parameterValue;
-              switch (customParameterType) {
-                case 'string':
-                  parameterValue = customParameter;
-                  break;
-                case 'number':
-                  parameterValue = customParameter.toString(36);
-                  break;
-                case 'boolean':
-                  parameterValue = customParameter ? 't' : 'f';
-                  break;
-                default:
-                  throw "Parameter '" + customName + "' is of unsupported type: " + customParameterType;
-              }
-              addParam('t.' + customName, parameterValue);
-            }
-          }
-          break;
-        default:
-          error("Ignoring non-object custom event parameters", customParameters);
+      // Custom parameters are supplied, render as JSON to send to the server.
+      if (typeof customParameters !== 'undefined') {
+        addParam('u', JSON.stringify(customParameters));
       }
 
       // After the first request it's neither a new party nor a new session,

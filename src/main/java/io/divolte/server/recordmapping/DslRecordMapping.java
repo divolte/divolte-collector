@@ -16,39 +16,7 @@
 
 package io.divolte.server.recordmapping;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
-
-import io.divolte.server.DivolteEvent;
-import io.divolte.server.ip2geo.LookupService;
-import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.util.ArrayDeque;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
-import net.sf.uadetector.ReadableUserAgent;
-
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Field;
-import org.apache.avro.Schema.Type;
-import org.apache.avro.generic.GenericRecordBuilder;
-import org.apache.commons.lang.StringUtils;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,14 +25,36 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.jayway.jsonpath.WriteContext;
 import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.record.City;
-import com.maxmind.geoip2.record.Continent;
-import com.maxmind.geoip2.record.Country;
-import com.maxmind.geoip2.record.Location;
-import com.maxmind.geoip2.record.Postal;
-import com.maxmind.geoip2.record.Subdivision;
-import com.maxmind.geoip2.record.Traits;
+import com.maxmind.geoip2.record.*;
+import io.divolte.server.DivolteEvent;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import net.sf.uadetector.ReadableUserAgent;
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
+import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.commons.lang.StringUtils;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -564,14 +554,26 @@ public final class DslRecordMapping {
      */
     public final static class EventParameterValueProducer extends ValueProducer<Map<String,String>> {
         private EventParameterValueProducer() {
-            super("eventParameters()", (h,e,c) -> Optional.of(e.eventParametersProducer.get()));
+            super("eventParameters()", (h,e,c) -> {
+                final Optional<JsonNode> parameters = e.eventParametersProducer.get().map(WriteContext::json);
+                return parameters.map(parameterNodes ->
+                    StreamSupport.stream(Spliterators.spliterator(parameterNodes.fields(),
+                                                                  parameterNodes.size(),
+                                                                  Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.NONNULL),
+                                         false)
+                            .filter(entry -> entry.getValue().isValueNode())
+                            .collect(Collectors.toMap(Map.Entry::getKey,
+                                                      entry -> entry.getValue().asText()))
+                );
+            });
         }
 
         public ValueProducer<String> value(String name) {
             return new PrimitiveValueProducer<>(
                     identifier + ".value(" + name + ")",
                     String.class,
-                    (h,e,c) -> e.eventParameterProducer.apply(name));
+                    (h,e,c) -> e.eventParametersProducer.get()
+                                .map(dc -> dc.<JsonNode>json().path(name).asText()));
         }
 
         @Override
@@ -595,7 +597,8 @@ public final class DslRecordMapping {
     public ValueProducer<String> eventParameter(final String name) {
         return new PrimitiveValueProducer<>("eventParameter(" + name + ")",
                                             String.class,
-                                            (h,e,c) -> e.eventParameterProducer.apply(name));
+                                            (h,e,c) -> e.eventParametersProducer.get()
+                                                        .map(dc -> dc.<JsonNode>json().path(name).asText()));
     }
 
     /*

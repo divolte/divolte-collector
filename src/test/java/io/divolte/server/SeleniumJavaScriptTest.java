@@ -25,7 +25,9 @@ import static io.divolte.server.SeleniumJavaScriptTest.TEST_PAGES.PAGE_VIEW_SUPP
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Strings;
+import com.jayway.jsonpath.WriteContext;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
 
@@ -305,7 +307,10 @@ public class SeleniumJavaScriptTest {
 
         assertTrue(eventData.eventType.isPresent());
         assertEquals("custom", eventData.eventType.get());
-        final Optional<String> customEventParameter = eventData.eventParameterProducer.apply("key");
+        final Optional<JsonNode> customEventParameters =
+                eventData.eventParametersProducer.get().map(WriteContext::json);
+        final Optional<String> customEventParameter =
+                customEventParameters.map(json -> json.path("key").asText());
         assertTrue(customEventParameter.isPresent());
         assertEquals("value", customEventParameter.get());
     }

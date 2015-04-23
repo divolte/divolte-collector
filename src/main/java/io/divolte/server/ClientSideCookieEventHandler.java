@@ -16,6 +16,8 @@
 
 package io.divolte.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.undertow.server.HttpServerExchange;
@@ -24,10 +26,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
 
@@ -45,6 +47,7 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
     private static final String CHECKSUM_QUERY_PARAM = "x";
     private static final String PAGE_VIEW_ID_QUERY_PARAM = "v";
     private static final String EVENT_TYPE_QUERY_PARAM = "t";
+    private static final String EVENT_PARAMETERS_QUERY_PARAM = "u";
     private static final String LOCATION_QUERY_PARAM = "l";
     private static final String REFERER_QUERY_PARAM = "r";
     private static final String VIEWPORT_PIXEL_WIDTH_QUERY_PARAM = "w";
@@ -52,6 +55,8 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
     private static final String SCREEN_PIXEL_WIDTH_QUERY_PARAM = "i";
     private static final String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
     private static final String DEVICE_PIXEL_RATIO_QUERY_PARAM = "k";
+
+    private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper().reader();
 
     static final String EVENT_SOURCE_NAME = "browser";
 
@@ -110,15 +115,17 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                 newPartyId,
                                 firstInSession,
                                 queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-                                (name) -> queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM + '.' + name),
-                                () -> exchange.getQueryParameters()
-                                        .entrySet()
-                                        .stream()
-                                        .filter((e) -> e.getKey().startsWith(EVENT_TYPE_QUERY_PARAM + "."))
-                                        .collect(Collectors.<Map.Entry<String, Deque<String>>, String, String>toMap(
-                                                        (e) -> e.getKey().substring(2),
-                                                        (e) -> e.getValue().getFirst())
-                                        ),
+                                () -> queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
+                                            .map(encodedParameters -> {
+                                                try {
+                                                    return JsonPathSupport.asDocumentContext(EVENT_PARAMETERS_READER.readTree(encodedParameters));
+                                                } catch (final IOException e) {
+                                                    if (logger.isDebugEnabled()) {
+                                                        logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
+                                                    }
+                                                    return null;
+                                                }
+                                            }),
                                 Optional.of(new DivolteEvent.BrowserEventData(pageViewId,
                                                                           queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
                                                                           queryParamFromExchange(exchange, REFERER_QUERY_PARAM),

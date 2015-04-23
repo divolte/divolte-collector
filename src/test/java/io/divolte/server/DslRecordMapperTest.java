@@ -75,8 +75,7 @@ public class DslRecordMapperTest {
             + "w=sa&"
             + "h=sa&"
             + "t=pageView&"
-            + "t.foo=string&"
-            + "t.bar=42";
+            + "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%7D&";
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 
