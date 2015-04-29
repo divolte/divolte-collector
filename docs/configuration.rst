@@ -392,6 +392,20 @@ divolte.tracking.javascript.debug
       debug = true
     }
 
+divolte.tracking.javascript.auto_page_view_event
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:Description:
+  When false, the served JavaScript will not automatically send a pageView event after being loaded. This way clients can send a initial event themselves and have full control over the event type and the custom parameters that are sent with the initial event.
+:Default:
+  true
+:Example:
+
+  ::
+
+    divolte.tracking.javascript {
+      auto_page_view_event = false
+    }
+
 
 divolte.incoming_request_processor
 ----------------------------------

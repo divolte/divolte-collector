@@ -52,6 +52,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
                       .ifPresent((v) -> builder.put("COOKIE_DOMAIN", v));
         builder.put("LOGGING", vc.configuration().javascript.logging);
         builder.put(SCRIPT_CONSTANT_NAME, vc.configuration().javascript.name);
+        builder.put("AUTO_PAGE_VIEW_EVENT", vc.configuration().javascript.autoPageViewEvent);
         return builder.build();
     }
 
