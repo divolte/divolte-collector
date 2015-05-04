@@ -640,6 +640,8 @@ public final class DslRecordMapping {
      * Remove this at some point. It is not documented, but used in mappings
      * on some installations.
      */
+    @Deprecated
+    @SuppressWarnings("unused")
     public ValueProducer<String> eventParameter(final String name) {
         return new PrimitiveValueProducer<>("eventParameter(" + name + ")",
                                             String.class,
@@ -964,8 +966,8 @@ public final class DslRecordMapping {
     private static <T> ValueProducer<T> browserEventValueProducer(final String readableName,
                                                                   final Class<T> type,
                                                                   final BrowserFieldSupplier<T> fieldSupplier) {
-        return new PrimitiveValueProducer<T>(readableName, type,
-                                             (h,e,c) -> e.browserEventData.flatMap(fieldSupplier::apply));
+        return new PrimitiveValueProducer<>(readableName, type,
+                                            (h,e,c) -> e.browserEventData.flatMap(fieldSupplier::apply));
     }
 
     @ParametersAreNonnullByDefault
@@ -1141,7 +1143,7 @@ public final class DslRecordMapping {
         }
     }
 
-    static interface MappingAction {
+    interface MappingAction {
         enum MappingResult {
             STOP, EXIT, CONTINUE
         }
