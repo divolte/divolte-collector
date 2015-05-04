@@ -592,6 +592,8 @@ public final class DslRecordMapping {
      * Remove this at some point. It is not documented, but used in mappings
      * on some installations.
      */
+    @Deprecated
+    @SuppressWarnings("unused")
     public ValueProducer<String> eventParameter(final String name) {
         return new PrimitiveValueProducer<>("eventParameter(" + name + ")",
                                             String.class,
