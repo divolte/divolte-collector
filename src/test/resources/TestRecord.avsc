@@ -177,20 +177,19 @@
         },
         { "name": "header",                           "type": ["null","string"],  "default": null },
         { "name": "headers",                          "type": ["null","string"],  "default": null },
-	    {
-	      "name": "paramMap",
-	      "type": [
-	        "null",
-	        {
-	          "type": "map",
-	          "values": {
-	            "type": "string"
-	          }
-	        }
-	      ],
-	      "default": null
-	    },
-	    { "name": "paramValue",                       "type": ["null","string"],  "default": null }
-
+        {
+          "name": "paramMap",
+          "type": [
+            "null",
+            {
+              "type": "map",
+              "values": {
+                "type": "string"
+              }
+            }
+          ],
+          "default": null
+        },
+        { "name": "paramValue",                       "type": ["null","string"],  "default": null }
     ]
 }
