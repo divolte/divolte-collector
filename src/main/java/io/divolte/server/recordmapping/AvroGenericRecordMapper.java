@@ -176,14 +176,14 @@ public class AvroGenericRecordMapper {
                     if (null != field) {
                         final Object fieldValue = read(parser, field.schema());
                         result.put(field.pos(), fieldValue);
-                        // Advance to next token, in preparation of next field.
-                        parser.nextToken();
                     } else if (reader.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)) {
                         throw unrecognizedPropertyException(parser, result, fieldName);
                     } else {
                         // We're ignoring unknown properties; skip over this one.
                         parser.skipChildren();
                     }
+                    // Advance to next token, in preparation of next field.
+                    parser.nextToken();
                 }
                 break;
             default:

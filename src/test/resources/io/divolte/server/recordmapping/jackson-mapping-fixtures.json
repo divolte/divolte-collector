@@ -254,11 +254,85 @@
         { "name": "baz", "type": "string" }
       ]
     },
+    "json": { "foo": "bar", "extraField": "foobar", "baz": "daz"},
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test record mapping with complex unknown field ignored",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "extraField": { "foo": "x", "baz": "y" }, "baz": "daz"},
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test record mapping with unknown last field ignored",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
     "json": { "foo": "bar", "baz": "daz", "extraField": "foobar" },
     "deserialization_features": {
       "FAIL_ON_UNKNOWN_PROPERTIES": false
     },
     "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test record mapping with complex unknown last field ignored",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "baz": "daz", "extraField": { "foo": "x", "baz": "y" }, "baz": "daz"},
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test array of records mapping",
+    "schema": {
+      "type": "array",
+      "items": {
+        "type": "record",
+        "name": "TestRecord",
+        "fields": [
+          { "name": "field1", "type": ["null", "string"],  "default": null },
+          { "name": "field2", "type": ["null", "int"],     "default": null },
+          { "name": "field3", "type": ["null", "boolean"], "default": null }
+        ]
+      }
+    },
+    "json": [
+      { "field1": "foo", "field2": 42,   "extra": "ignored"      },
+      { "field1": "bar", "field3": true, "more":  "also ignored" }
+    ],
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": [
+      { "field1": "foo", "field2": 42,   "field3": null },
+      { "field1": "bar", "field2": null, "field3": true }
+    ]
   },
   {
     "title": "Test nested record mapping",
