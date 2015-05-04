@@ -35,6 +35,7 @@ import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.SchemaMappingException;
 import io.undertow.server.HttpServerExchange;
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.junit.After;
@@ -75,7 +76,7 @@ public class DslRecordMapperTest {
             + "w=sa&"
             + "h=sa&"
             + "t=pageView&"
-            + "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%7D&";
+            + "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%2C%22items%22%3A%5B%7B%22name%22%3A%22apple%22%2C%22count%22%3A3%2C%22price%22%3A1.23%2C%22extra1%22%3A%22ignored%22%7D%2C%7B%22name%22%3A%22pear%22%2C%22count%22%3A1%2C%22price%22%3A0.89%2C%22extra2%22%3A%22ignored%22%7D%5D%7D";
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 
@@ -292,6 +293,11 @@ public class DslRecordMapperTest {
         final EventPayload event = request("http://www.example.com/");
         assertEquals("string", event.record.get("paramValue"));
         assertEquals(42, event.record.get("paramIntValue"));
+        assertEquals(Arrays.asList(1.23, 0.89), event.record.get("itemPrices"));
+        // Doing a proper check would require accessing the schema and building everything by hand.
+        // This is simpler and sufficient for the purposes of testing.
+        assertEquals("[{\"name\": \"apple\", \"count\": 3, \"price\": 1.23}, {\"name\": \"pear\", \"count\": 1, \"price\": 0.89}]",
+                     GenericData.get().toString(event.record.get("items")));
     }
 
     @Test

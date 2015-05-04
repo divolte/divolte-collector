@@ -191,6 +191,36 @@
           "default": null
         },
         { "name": "paramValue",                       "type": ["null","string"],  "default": null },
-        { "name": "paramIntValue",                    "type": ["null","int"],     "default": null }
+        { "name": "paramIntValue",                    "type": ["null","int"],     "default": null },
+        {
+          "name": "items",
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": {
+                "type": "record",
+                "name": "BasketItem",
+                "fields": [
+                  { "name": "name", "type": "string" },
+                  { "name": "count", "type": "int" },
+                  { "name": "price", "type": "double" }
+                ]
+              }
+            }
+          ],
+          "default": null
+        },
+        {
+          "name": "itemPrices",
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": "double"
+            }
+          ],
+          "default": null
+        }
     ]
 }

@@ -21,4 +21,6 @@ mapping {
 
     map eventParameters().path('$.foo') onto 'paramValue'
     map eventParameters().path('$.bar') onto 'paramIntValue'
+    map eventParameters().path('$.items[*].price') onto 'itemPrices'
+    map eventParameters().path('$.items') onto 'items'
 }
