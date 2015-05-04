@@ -50,13 +50,16 @@ public class ExternalDatabaseLookupService implements LookupService {
 
     public ExternalDatabaseLookupService(final Path location) throws IOException {
         final Path absoluteLocation = location.toAbsolutePath();
+        final Path locationParent = absoluteLocation.getParent();
+        if (null == locationParent) {
+            throw new IllegalArgumentException("Could not determine parent directory of GeoIP2 database: " + absoluteLocation);
+        }
         this.location = absoluteLocation;
         // Do this first, so that if it fails we don't need to clean up resources.
         databaseLookupService = new AtomicReference<>(new DatabaseLookupService(absoluteLocation));
 
         // Set things up so that we can reload the database if it changes.
         watcher = FileSystems.getDefault().newWatchService();
-        final Path locationParent = location.getParent();
         logger.debug("Monitoring {} for changes affecting {}.", locationParent, location);
         locationParent.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
         // The database will be loaded in the background.

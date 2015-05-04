@@ -160,10 +160,11 @@ tasks.withType(FindBugs) {
 }
 
 findbugs() {
-    toolVersion = "3.0.0"
+    toolVersion = "3.0.1"
 }
 
 pmd {
+    // Gradle 2.3 isn't compatible with PMD 5.2+
     toolVersion = "5.1.3"
 }
 
