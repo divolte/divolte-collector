@@ -270,29 +270,34 @@ public class AvroGenericRecordMapper {
          * and try to read as each possible schema type, until something succeeds.
          * This would be very expensive though, so for now it's not supported.
          */
-        final Object result;
         final Iterator<Schema> possibleSchemesIterator = possibleSchemas.iterator();
+        final Schema resolvedSchema;
         switch (possibleSchemas.size()) {
             case 2:
-                final Schema nullSchema = possibleSchemesIterator.next();
-                if (nullSchema.getType() != Schema.Type.NULL) {
-                    throw unsupportedUnionException(parser, targetSchema);
-                }
-                // Check if we're on null.
-                if (parser.getCurrentToken() == JsonToken.VALUE_NULL) {
-                    result = null;
+                final Schema firstSchema = possibleSchemesIterator.next();
+                if (firstSchema.getType() != Schema.Type.NULL) {
+                    final Schema secondSchema = possibleSchemesIterator.next();
+                    if (secondSchema.getType() != Schema.Type.NULL) {
+                        throw unsupportedUnionException(parser, targetSchema);
+                    }
+                    resolvedSchema = firstSchema;
                     break;
                 }
                 // Intentional fall-through.
             case 1:
-                final Schema resolvedSchema = possibleSchemesIterator.next();
-                result = read(parser, resolvedSchema);
+                resolvedSchema = possibleSchemesIterator.next();
                 break;
             default:
                 // Not acceptable.
                 throw unsupportedUnionException(parser, targetSchema);
         }
-        return result;
+        /*
+         * Even though we've resolved to the non-null half of the union,
+         * this works because Jackson will always return null if the
+         * parser is positioned on a null token irrespective of what type
+         * you're trying to read.
+         */
+        return read(parser, resolvedSchema);
     }
 
     private GenericFixed readFixed(final JsonParser parser,

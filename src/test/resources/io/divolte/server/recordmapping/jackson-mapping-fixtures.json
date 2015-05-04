@@ -192,6 +192,18 @@
     "result": "a value"
   },
   {
+    "title": "Test null-second union mapping null",
+    "schema": ["string", "null"],
+    "json": null,
+    "result": null
+  },
+  {
+    "title": "Test null-second union mapping value",
+    "schema": ["string", "null"],
+    "json": "a value",
+    "result": "a value"
+  },
+  {
     "title": "Test singleton union mapping",
     "schema": ["string"],
     "json": "some value",
