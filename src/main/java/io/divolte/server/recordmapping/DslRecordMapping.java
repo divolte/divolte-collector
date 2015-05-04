@@ -16,6 +16,7 @@
 
 package io.divolte.server.recordmapping;
 
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -25,6 +26,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.WriteContext;
 import com.maxmind.geoip2.model.CityResponse;
 import com.maxmind.geoip2.record.*;
@@ -44,6 +46,7 @@ import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -96,9 +99,11 @@ public final class DslRecordMapping {
             throw new SchemaMappingException("Type mismatch. Cannot map the result of %s onto a field of type %s (type of value and schema of field do not match).", producer.identifier, field.schema());
         }
         stack.getLast().add((h,e,c,r) -> {
-                producer.produce(h, e, c).ifPresent((v) -> r.set(field, v));
-                return MappingAction.MappingResult.CONTINUE;
-            });
+            producer.produce(h,e,c)
+                    .ifPresent((v) -> r.set(field,
+                                            producer.mapToGenericRecord(v, field.schema())));
+            return MappingAction.MappingResult.CONTINUE;
+        });
     }
 
     public <T> void map(final String fieldName, final T literal) {
@@ -576,6 +581,11 @@ public final class DslRecordMapping {
                                 .map(dc -> dc.<JsonNode>json().path(name).asText()));
         }
 
+        public ValueProducer<TreeNode> path(final String path) {
+            final JsonPath jsonPath = JsonPath.compile(path);
+            return new JsonPathValueProducer(identifier, jsonPath);
+        }
+
         @Override
         boolean validateTypes(Field target) {
             Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
@@ -583,6 +593,42 @@ public final class DslRecordMapping {
                 .map((s) -> s.getType() == Type.MAP &&
                             s.getValueType().getType() == Type.STRING)
                 .orElse(false);
+        }
+    }
+
+    @ParametersAreNonnullByDefault
+    private static class JsonPathValueProducer extends ValueProducer<com.fasterxml.jackson.core.TreeNode> {
+        public JsonPathValueProducer(final String identifierPrefix,
+                                     final JsonPath jsonPath) {
+            super(identifierPrefix + ".path(" + jsonPath.getPath() + ')',
+                  (h, e, c) -> e.eventParametersProducer.get().map(dc -> dc.read(jsonPath)));
+        }
+
+        @Override
+        boolean validateTypes(final Field target) {
+            /*
+             * There's not a lot we can do here, since the expression
+             * at runtime can return anything depending on the event
+             * contents.
+             */
+            // TODO: Validate the schema is supported for mappings.
+            return true;
+        }
+
+        @Override
+        public Object mapToGenericRecord(final TreeNode value,
+                                         final Schema schema) throws SchemaMappingException {
+            try {
+                return JacksonSupport.AVRO_MAPPER.read(value, schema);
+            } catch (final IOException e) {
+                throw withCause(new SchemaMappingException("Error mapping JSON value %s to schema: %s", value, schema),
+                                e);
+            }
+        }
+
+        private static <T extends Throwable > T withCause(final T throwable, final Throwable cause) {
+            throwable.initCause(cause);
+            return throwable;
         }
     }
 
@@ -994,6 +1040,11 @@ public final class DslRecordMapping {
         }
 
         abstract boolean validateTypes(final Field target);
+
+        public Object mapToGenericRecord(final T value, final Schema schema) {
+            // Default mapping is the identity mapping.
+            return value;
+        }
 
         @Override
         public String toString() {

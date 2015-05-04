@@ -190,6 +190,7 @@
           ],
           "default": null
         },
-        { "name": "paramValue",                       "type": ["null","string"],  "default": null }
+        { "name": "paramValue",                       "type": ["null","string"],  "default": null },
+        { "name": "paramIntValue",                    "type": ["null","int"],     "default": null }
     ]
 }

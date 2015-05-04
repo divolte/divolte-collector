@@ -16,36 +16,6 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.*;
-import io.divolte.server.ServerTestUtils.EventPayload;
-import io.divolte.server.ServerTestUtils.TestServer;
-import io.divolte.server.ip2geo.LookupService;
-import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
-import io.divolte.server.recordmapping.DslRecordMapper;
-import io.divolte.server.recordmapping.SchemaMappingException;
-import io.undertow.server.HttpServerExchange;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
-
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.util.Utf8;
-import org.junit.After;
-import org.junit.Test;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -57,6 +27,36 @@ import com.google.common.io.Resources;
 import com.maxmind.geoip2.model.CityResponse;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import io.divolte.server.ServerTestUtils.EventPayload;
+import io.divolte.server.ServerTestUtils.TestServer;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
+import io.divolte.server.recordmapping.DslRecordMapper;
+import io.divolte.server.recordmapping.SchemaMappingException;
+import io.undertow.server.HttpServerExchange;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
+import org.junit.After;
+import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 public class DslRecordMapperTest {
     private static final String CLIENT_SIDE_TIME = "i0rjfnxd";
@@ -284,6 +284,14 @@ public class DslRecordMapperTest {
         EventPayload event = request("http://www.example.com/");
         assertEquals(ImmutableMap.of("foo", "string", "bar", "42"), event.record.get("paramMap"));
         assertEquals("string", event.record.get("paramValue"));
+    }
+
+    @Test
+    public void shouldExtractJsonPathFromCustomEventParameters() throws IOException, InterruptedException {
+        setupServer("event-param-jsonpath-mapping.groovy");
+        final EventPayload event = request("http://www.example.com/");
+        assertEquals("string", event.record.get("paramValue"));
+        assertEquals(42, event.record.get("paramIntValue"));
     }
 
     @Test
