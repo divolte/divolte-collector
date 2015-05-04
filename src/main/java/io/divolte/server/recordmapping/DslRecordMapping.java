@@ -1087,7 +1087,7 @@ public final class DslRecordMapping {
         }
     }
 
-    static interface MappingAction {
+    interface MappingAction {
         enum MappingResult {
             STOP, EXIT, CONTINUE
         }
