@@ -36,6 +36,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -221,7 +222,7 @@ public class DslRecordMapperTest {
         assertEquals("multiple words $#%&", event.record.get("uriQueryStringValue"));
         assertEquals(Arrays.asList("10", "20"), event.record.get("uriQueryStringValues"));
         assertEquals(
-                ImmutableMap.of("p", Arrays.asList("10","20"), "q", Arrays.asList("multiple words $#%&")),
+                ImmutableMap.of("p", Arrays.asList("10","20"), "q", Collections.singletonList("multiple words $#%&")),
                 event.record.get("uriQuery"));
     }
 
