@@ -915,8 +915,8 @@ public final class DslRecordMapping {
     private static <T> ValueProducer<T> browserEventValueProducer(final String readableName,
                                                                   final Class<T> type,
                                                                   final BrowserFieldSupplier<T> fieldSupplier) {
-        return new PrimitiveValueProducer<T>(readableName, type,
-                                             (h,e,c) -> e.browserEventData.flatMap(fieldSupplier::apply));
+        return new PrimitiveValueProducer<>(readableName, type,
+                                            (h,e,c) -> e.browserEventData.flatMap(fieldSupplier::apply));
     }
 
     @ParametersAreNonnullByDefault
