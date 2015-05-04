@@ -21,5 +21,5 @@ import io.undertow.server.HttpServerExchange;
 import org.apache.avro.generic.GenericRecord;
 
 public interface RecordMapper {
-    public GenericRecord newRecordFromExchange(final HttpServerExchange exchange);
+    GenericRecord newRecordFromExchange(final HttpServerExchange exchange);
 }
