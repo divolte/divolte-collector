@@ -221,7 +221,7 @@ public class DslRecordMapperTest {
         assertEquals("multiple words $#%&", event.record.get("uriQueryStringValue"));
         assertEquals(Arrays.asList("10", "20"), event.record.get("uriQueryStringValues"));
         assertEquals(
-                ImmutableMap.of("p", Arrays.asList("10","20"), "q", Arrays.asList("multiple words $#%&")),
+                ImmutableMap.of("p", Arrays.asList("10","20"), "q", Collections.singletonList("multiple words $#%&")),
                 event.record.get("uriQuery"));
     }
 
