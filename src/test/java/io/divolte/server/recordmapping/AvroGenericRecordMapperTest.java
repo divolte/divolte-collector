@@ -48,6 +48,8 @@ public class AvroGenericRecordMapperTest {
         JSON_MAPPER = new ObjectMapper();
         JSON_MAPPER.registerModules(new Jdk8Module(), new ParameterNamesModule());
         JSON_MAPPER.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
+        JSON_MAPPER.configure(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, true);
+        JSON_MAPPER.configure(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS, true);
         JSON_MAPPER.setPropertyNamingStrategy(new PropertyNamingStrategy.LowerCaseWithUnderscoresStrategy());
     }
 

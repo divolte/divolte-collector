@@ -48,6 +48,12 @@
     "result": 10.1
   },
   {
+    "title": "Test lossless numeric mapping",
+    "schema": { "type": "string" },
+    "json": 9999999.4999999999,
+    "result": "9999999.4999999999"
+  },
+  {
     "title": "Test null mapping",
     "schema": { "type": "null" },
     "json": null,
