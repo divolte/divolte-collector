@@ -1058,6 +1058,14 @@ public final class DslRecordMapping {
     private static class PrimitiveValueProducer<T> extends ValueProducer<T> {
         private final Class<T> type;
 
+        /**
+         * Construct a value producer that will produce a primitive value.
+         * @param readableName  A human-readable description of this producer, used in error messages.
+         * @param type          The type of value that this producer will produce.
+         * @param supplier      A supplier that can be used to calculate the value on demand.
+         * @param memoize       Whether the value should be calculated once and remembered, or on every requeast.
+         *                      This should only be set to true when calculating the value is expensive.
+         */
         public PrimitiveValueProducer(final String readableName,
                                       final Class<T> type,
                                       final FieldSupplier<T> supplier,
