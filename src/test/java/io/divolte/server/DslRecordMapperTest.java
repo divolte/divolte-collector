@@ -41,26 +41,22 @@ import org.apache.avro.util.Utf8;
 import org.junit.After;
 import org.junit.Test;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
 public class DslRecordMapperTest {
@@ -79,8 +75,10 @@ public class DslRecordMapperTest {
             + "k=2&"
             + "w=sa&"
             + "h=sa&"
-            + "t=pageView&"
-            + "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%2C%22items%22%3A%5B%7B%22name%22%3A%22apple%22%2C%22count%22%3A3%2C%22price%22%3A1.23%2C%22extra1%22%3A%22ignored%22%7D%2C%7B%22name%22%3A%22pear%22%2C%22count%22%3A1%2C%22price%22%3A0.89%2C%22extra2%22%3A%22ignored%22%7D%5D%7D";
+            + "t=pageView";
+
+    private static final String HOMOGENOUS_EVENT_PARAMS =   "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%7D";
+    private static final String HETEROGENOUS_EVENT_PARAMS = "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%2C%22items%22%3A%5B%7B%22name%22%3A%22apple%22%2C%22count%22%3A3%2C%22price%22%3A1.23%2C%22extra1%22%3A%22ignored%22%7D%2C%7B%22name%22%3A%22pear%22%2C%22count%22%3A1%2C%22price%22%3A0.89%2C%22extra2%22%3A%22ignored%22%7D%5D%7D";
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 
@@ -286,7 +284,7 @@ public class DslRecordMapperTest {
     @Test
     public void shouldSetCustomEventParameters() throws IOException, InterruptedException {
         setupServer("event-param-mapping.groovy");
-        EventPayload event = request("http://www.example.com/");
+        EventPayload event = request("http://www.example.com/", Collections.singletonList(HOMOGENOUS_EVENT_PARAMS));
         assertEquals(ImmutableMap.of("foo", "string", "bar", "42"), event.record.get("paramMap"));
         assertEquals("string", event.record.get("paramValue"));
     }
@@ -294,7 +292,7 @@ public class DslRecordMapperTest {
     @Test
     public void shouldExtractJsonPathFromCustomEventParameters() throws IOException, InterruptedException {
         setupServer("event-param-jsonpath-mapping.groovy");
-        final EventPayload event = request("http://www.example.com/");
+        final EventPayload event = request("http://www.example.com/", Collections.singletonList(HETEROGENOUS_EVENT_PARAMS));
         assertEquals("string", event.record.get("paramValue"));
         assertEquals(42, event.record.get("paramIntValue"));
         assertEquals(Arrays.asList(1.23, 0.89), event.record.get("itemPrices"));
@@ -315,7 +313,7 @@ public class DslRecordMapperTest {
     @Test
     public void shouldSupportPresenceTestingOfJsonPathExpressions() throws IOException, InterruptedException {
         setupServer("event-param-jsonpath-presence.groovy");
-        final EventPayload event = request("http://www.example.com/");
+        final EventPayload event = request("http://www.example.com/", Collections.singletonList(HOMOGENOUS_EVENT_PARAMS));
         assertTrue((Boolean) event.record.get("flag1"));
         assertFalse((Boolean) event.record.get("flag2"));
     }
@@ -475,24 +473,22 @@ public class DslRecordMapperTest {
         }
     }
 
-    private EventPayload request(String location) throws IOException, InterruptedException {
-        return request(location, null);
+    private EventPayload request(final String location) throws IOException, InterruptedException {
+        return request(location, Collections.emptyList());
     }
 
-    private EventPayload request(String location, @Nullable String referer) throws IOException, InterruptedException {
-        final URL url = referer == null ?
-                new URL(
-                        String.format(DIVOLTE_URL_STRING, server.port) +
-                        DIVOLTE_URL_QUERY_STRING +
-                        "&l=" + URLEncoder.encode(location, StandardCharsets.UTF_8.name()))
-                :
-                new URL(
-                        String.format(DIVOLTE_URL_STRING, server.port) +
-                        DIVOLTE_URL_QUERY_STRING +
-                        "&l=" + URLEncoder.encode(location, StandardCharsets.UTF_8.name()) +
-                        "&r=" + URLEncoder.encode(referer, StandardCharsets.UTF_8.name()));
+    private EventPayload request(final String location, final String referer) throws IOException, InterruptedException {
+        return request(location, Collections.singletonList("r=" + encodeUrl(referer)));
+    }
 
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    private EventPayload request(final String location,
+                                 final List<String> extraEncodedQueryParameters) throws IOException, InterruptedException {
+        final StringBuilder urlBuilder = new StringBuilder(String.format(DIVOLTE_URL_STRING, server.port));
+        urlBuilder.append(DIVOLTE_URL_QUERY_STRING)
+                  .append("&l=").append(encodeUrl(location));
+        extraEncodedQueryParameters.forEach(s -> urlBuilder.append('&').append(s));
+        final URL url = new URL(urlBuilder.toString());
+        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("User-Agent", USER_AGENT);
         conn.addRequestProperty("Cookie", "custom_cookie=custom_cookie_value;");
         conn.addRequestProperty("X-Divolte-Test", "first");
@@ -503,6 +499,15 @@ public class DslRecordMapperTest {
         assertEquals(200, conn.getResponseCode());
 
         return server.waitForEvent();
+    }
+
+    private static String encodeUrl(final String s) {
+        try {
+            return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
+        } catch (final UnsupportedEncodingException e) {
+            // This should never happen: all platforms must support UTF-8.
+            throw new RuntimeException(e);
+        }
     }
 
     private void setupServer(final String mapping) throws IOException {
