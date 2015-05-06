@@ -52,6 +52,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -95,8 +96,10 @@ public final class DslRecordMapping {
         if (field == null) {
             throw new SchemaMappingException("Field %s does not exist in Avro schema; error in mapping %s onto %s", fieldName, producer.identifier, fieldName);
         }
-        if (!producer.validateTypes(field)) {
-            throw new SchemaMappingException("Type mismatch. Cannot map the result of %s onto a field of type %s (type of value and schema of field do not match).", producer.identifier, field.schema());
+        final Optional<ValidationError> validationError = producer.validateTypes(field);
+        if (validationError.isPresent()) {
+            throw new SchemaMappingException("Cannot map the result of %s onto field %s: %s",
+                                             producer.identifier, fieldName, validationError.get().message);
         }
         stack.getLast().add((h,e,c,r) -> {
             producer.produce(h,e,c)
@@ -381,9 +384,9 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
+        Optional<ValidationError> validateTypes(final Field target) {
             // this field cannot be directly mapped onto a Avro schema
-            return false;
+            return validationError("cannot map a parsed user-agent directly; map one of its properties instead.", target.schema());
         }
     }
 
@@ -422,9 +425,9 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
+        Optional<ValidationError> validateTypes(final Field target) {
             // this field cannot be directly mapped onto a Avro schema
-            return false;
+            return validationError("cannot map a regular expression match directly; map using group() or matches() instead.", target.schema());
         }
     }
 
@@ -508,9 +511,8 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            // this field cannot be directly mapped onto a Avro schema
-            return false;
+        Optional<ValidationError> validateTypes(final Field target) {
+            return validationError("cannot map an URI directly; map one of its properties.", target.schema());
         }
     }
 
@@ -535,13 +537,12 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                .map((s) -> s.getType() == Type.MAP &&
-                            s.getValueType().getType() == Type.ARRAY &&
-                            s.getValueType().getElementType().getType() == Type.STRING)
-                .orElse(false);
+        Optional<ValidationError> validateTypes(final Field target) {
+            return validateTrivialUnion(target.schema(),
+                                        s -> s.getType() == Type.MAP &&
+                                             s.getValueType().getType() == Type.ARRAY &&
+                                             s.getValueType().getElementType().getType() == Type.STRING,
+                                        "query strings can only be mapped to an Avro map where the values are arrays of strings");
         }
     }
 
@@ -587,12 +588,11 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                .map((s) -> s.getType() == Type.MAP &&
-                            s.getValueType().getType() == Type.STRING)
-                .orElse(false);
+        Optional<ValidationError> validateTypes(final Field target) {
+            return validateTrivialUnion(target.schema(),
+                                        s -> s.getType() == Type.MAP &&
+                                             s.getValueType().getType() == Type.STRING,
+                                        "event parameters can only be mapped to an Avro map where the values are strings");
         }
     }
 
@@ -605,14 +605,14 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(final Field target) {
+        Optional<ValidationError> validateTypes(final Field target) {
             /*
              * There's not a lot we can do here, since the expression
              * at runtime can return anything depending on the event
              * contents.
              */
             // TODO: Validate the schema is supported for mappings.
-            return true;
+            return Optional.empty();
         }
 
         @Override
@@ -912,8 +912,8 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            return false;
+        Optional<ValidationError> validateTypes(Field target) {
+            return validationError("cannot map a GeoIP lookup result directly; map one of its properties instead.", target.schema());
         }
     }
 
@@ -1041,7 +1041,7 @@ public final class DslRecordMapping {
                     (h,e,c) -> Optional.of(produce(h, e, c).map((x) -> Boolean.FALSE).orElse(Boolean.TRUE)));
         }
 
-        abstract boolean validateTypes(final Field target);
+        abstract Optional<ValidationError> validateTypes(final Field target);
 
         public Object mapToGenericRecord(final T value, final Schema schema) {
             // Default mapping is the identity mapping.
@@ -1080,11 +1080,11 @@ public final class DslRecordMapping {
             this(readableName, type, supplier, false);
         }
 
-        public boolean validateTypes(final Field target) {
-            final Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                    .map((s) -> COMPATIBLE_PRIMITIVES.get(type) == s.getType())
-                    .orElse(false);
+        @Override
+        public Optional<ValidationError> validateTypes(final Field target) {
+            return validateTrivialUnion(target.schema(),
+                                        s -> COMPATIBLE_PRIMITIVES.get(type) == s.getType(),
+                                        "type must be compatible with %s", type);
         }
     }
 
@@ -1100,13 +1100,17 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(final Field target) {
-            final Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                    .map((s) -> s.getType() == Type.ARRAY &&
-                        unpackNullableUnion(s.getElementType()).map((sub) -> COMPATIBLE_PRIMITIVES.get(type) == sub.getType())
-                                                               .orElse(false))
-                    .orElse(false);
+        Optional<ValidationError> validateTypes(final Field target) {
+            final Schema targetSchema = target.schema();
+            final Optional<ValidationError> validationError =
+                    validateTrivialUnion(targetSchema,
+                                         s -> s.getType() == Type.ARRAY,
+                                         "must map to an Avro array, not %s", target);
+            return validationError.isPresent()
+                    ? validationError
+                    : validateTrivialUnion(unpackNullableUnion(targetSchema).get().getElementType(),
+                                           s -> COMPATIBLE_PRIMITIVES.get(type) == s.getType(),
+                                           "array type must be compatible with %s", type);
         }
     }
 
@@ -1149,6 +1153,23 @@ public final class DslRecordMapping {
                         (h,e,c) -> produce(h,e,c).map((b) -> !b));
             // This would have been a fine candidate use for a method reference to BooleanUtils
         }
+    }
+
+    private static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,
+                                                                  final Function<Schema, Boolean> validator,
+                                                                  final String messageIfInvalid,
+                                                                  Object... messageParameters) {
+        final Optional<Schema> resolvedSchema = unpackNullableUnion(targetSchema);
+        final Optional<Optional<ValidationError>> unionValidation =
+                resolvedSchema.map(s -> validator.apply(s)
+                        ? Optional.empty()
+                        : validationError(String.format(messageIfInvalid, messageParameters), targetSchema));
+        return unionValidation.orElseGet(() -> validationError("mapping to non-trivial unions (" + targetSchema + ") is not supported", targetSchema));
+    }
+
+    private static Optional<ValidationError> validationError(final String message,
+                                                             final Schema schema) {
+        return Optional.of(new ValidationError(message, schema));
     }
 
     interface MappingAction {
