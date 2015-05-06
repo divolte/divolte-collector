@@ -95,9 +95,6 @@ public class AvroGenericRecordMapper {
                        final Schema targetSchema) throws IOException {
         final Object result;
         switch (targetSchema.getType()) {
-            case NULL:
-                result = readNull(parser, targetSchema);
-                break;
             case RECORD:
                 result = readRecord(parser, targetSchema);
                 break;
@@ -137,20 +134,13 @@ public class AvroGenericRecordMapper {
             case BOOLEAN:
                 result = reader.readValue(parser, Boolean.class);
                 break;
+            case NULL:
+                result = readNull(parser, targetSchema);
+                break;
             default:
                 throw JsonMappingException.from(parser, "Unknown schema type: " + targetSchema);
         }
         return result;
-    }
-
-    @Nullable
-    private <T> T readNull(final JsonParser parser,
-                           final Schema targetSchema) throws IOException {
-        Preconditions.checkArgument(targetSchema.getType() == Schema.Type.NULL);
-        if (parser.getCurrentToken() != JsonToken.VALUE_NULL) {
-            throw mappingException(parser, targetSchema);
-        }
-        return null;
     }
 
     private GenericRecord readRecord(final JsonParser parser,
@@ -305,6 +295,16 @@ public class AvroGenericRecordMapper {
         Preconditions.checkArgument(targetSchema.getType() == Schema.Type.FIXED);
         final byte[] bytes = reader.readValue(parser, byte[].class);
         return new GenericData.Fixed(targetSchema, bytes);
+    }
+
+    @Nullable
+    private <T> T readNull(final JsonParser parser,
+                           final Schema targetSchema) throws IOException {
+        Preconditions.checkArgument(targetSchema.getType() == Schema.Type.NULL);
+        if (parser.getCurrentToken() != JsonToken.VALUE_NULL) {
+            throw mappingException(parser, targetSchema);
+        }
+        return null;
     }
 
     private static JsonMappingException mappingException(final JsonParser parser,
