@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,8 +51,9 @@ public class ExternalDatabaseLookupService implements LookupService {
     public ExternalDatabaseLookupService(final Path location) throws IOException {
         final Path absoluteLocation = location.toAbsolutePath();
         final Path locationParent = absoluteLocation.getParent();
-        Preconditions.checkArgument(null != locationParent,
-                                    "Could not determine parent directory of GeoIP2 database: %s", absoluteLocation);
+        if (null == locationParent) {
+            throw new IllegalArgumentException("Could not determine parent directory of GeoIP2 database: " + absoluteLocation);
+        }
         this.location = absoluteLocation;
         // Do this first, so that if it fails we don't need to clean up resources.
         databaseLookupService = new AtomicReference<>(new DatabaseLookupService(absoluteLocation));
