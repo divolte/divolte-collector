@@ -571,16 +571,9 @@ public final class DslRecordMapping {
 
         public ValueProducer<TreeNode> path(final String path) {
             final JsonPath jsonPath = JsonPath.compile(path);
-            return new JsonPathValueProducer(identifier + ".path(" + path + ')', jsonPath);
-        }
-    }
-
-    @ParametersAreNonnullByDefault
-    private static class JsonPathValueProducer extends JsonValueProducer {
-        public JsonPathValueProducer(final String identifier,
-                                     final JsonPath jsonPath) {
-            super(identifier,
-                  (h, e, c) -> e.eventParametersProducer.get().map(dc -> dc.read(jsonPath)));
+            return new JsonValueProducer(
+                    identifier + ".path(" + path + ')',
+                    (h,e,c) -> e.eventParametersProducer.get().map(dc -> dc.read(jsonPath)));
         }
     }
 
