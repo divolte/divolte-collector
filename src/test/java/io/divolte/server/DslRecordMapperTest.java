@@ -440,7 +440,7 @@ public class DslRecordMapperTest {
     }
 
     @Test
-    public void sholdExitFromSectionOnConditionClosureSyntax() throws IOException, InterruptedException {
+    public void shouldExitFromSectionOnConditionClosureSyntax() throws IOException, InterruptedException {
         setupServer("nested-conditional-exit-closure.groovy");
         EventPayload event = request("http://www.example.com");
         assertEquals("happened", event.record.get("client"));
