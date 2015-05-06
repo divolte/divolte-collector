@@ -59,6 +59,10 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public class DslRecordMapperTest {
     private static final String CLIENT_SIDE_TIME = "i0rjfnxd";
     private static final String DIVOLTE_URL_STRING = "http://localhost:%d/csc-event";
@@ -475,7 +479,7 @@ public class DslRecordMapperTest {
         return request(location, null);
     }
 
-    private EventPayload request(String location, String referer) throws IOException, InterruptedException {
+    private EventPayload request(String location, @Nullable String referer) throws IOException, InterruptedException {
         final URL url = referer == null ?
                 new URL(
                         String.format(DIVOLTE_URL_STRING, server.port) +
