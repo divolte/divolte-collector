@@ -77,8 +77,13 @@ public class DslRecordMapperTest {
             + "h=sa&"
             + "t=pageView";
 
-    private static final String HOMOGENOUS_EVENT_PARAMS =   "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%7D";
-    private static final String HETEROGENOUS_EVENT_PARAMS = "u=%7B%22foo%22%3A%22string%22%2C%22bar%22%3A42%2C%22items%22%3A%5B%7B%22name%22%3A%22apple%22%2C%22count%22%3A3%2C%22price%22%3A1.23%2C%22extra1%22%3A%22ignored%22%7D%2C%7B%22name%22%3A%22pear%22%2C%22count%22%3A1%2C%22price%22%3A0.89%2C%22extra2%22%3A%22ignored%22%7D%5D%7D";
+    private static final String HOMOGENOUS_EVENT_PARAMS =
+            "u=" + encodeUrl("{\"foo\":\"string\",\"bar\":42}");
+    private static final String HETEROGENOUS_EVENT_PARAMS =
+            "u=" + encodeUrl("{\"foo\":\"string\",\"bar\":42,\"items\":[" +
+                    "  {\"name\":\"apple\",\"count\":3,\"price\":1.23,\"extra1\":\"ignored\"}," +
+                    "  {\"name\":\"pear\", \"count\":1,\"price\":0.89,\"extra2\":\"ignored\"}" +
+                    "]}");
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 
