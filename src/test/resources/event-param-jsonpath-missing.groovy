@@ -19,8 +19,7 @@ mapping {
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
 
-    map eventParameters().path('$.foo') onto 'paramValue'
-    map eventParameters().path('$.bar') onto 'paramIntValue'
-    map eventParameters().path('$.items[*].price') onto 'itemPrices'
-    map eventParameters().path('$.items') onto 'items'
+    map 'value that should not be overwritten' onto 'paramValue'
+    // This should be a no-op.
+    map eventParameters().path('$.missing') onto 'paramValue'
 }
