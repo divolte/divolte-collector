@@ -597,7 +597,7 @@ public final class DslRecordMapping {
     }
 
     @ParametersAreNonnullByDefault
-    private static class JsonPathValueProducer extends ValueProducer<com.fasterxml.jackson.core.TreeNode> {
+    private static class JsonPathValueProducer extends ValueProducer<TreeNode> {
         public JsonPathValueProducer(final String identifierPrefix,
                                      final JsonPath jsonPath) {
             super(identifierPrefix + ".path(" + jsonPath.getPath() + ')',
