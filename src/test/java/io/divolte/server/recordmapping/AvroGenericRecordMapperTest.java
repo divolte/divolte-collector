@@ -131,21 +131,9 @@ public class AvroGenericRecordMapperTest {
     public void testValidation() {
         /*
          * Test what happens when schemas are validated.
-         *
-         * If invalid, we expect IllegalArgumentException.
          */
-        try {
-            reader.checkValid(testFixture.avroSchema);
-            // If we expected an exception, fail...
-            if (testFixture.schemaUnsupported) {
-                fail("Schema is not supported; expected IllegalArgumentException: " + testFixture.avroSchema);
-            }
-        } catch (final IllegalArgumentException e) {
-            // Rethrow if the schema was supposed to be valid.
-            if (!testFixture.schemaUnsupported) {
-                throw e;
-            }
-        }
+        final Optional<ValidationError> validationError = reader.checkValid(testFixture.avroSchema);
+        assertEquals(testFixture.schemaUnsupported, validationError.isPresent());
     }
 
     @Test
