@@ -340,6 +340,6 @@ public class AvroGenericRecordMapper {
     private static JsonMappingException unsupportedUnionException(final JsonParser parser,
                                                                   final Schema targetSchema) {
         return JsonMappingException.from(parser,
-                                         "Unsupported union " + targetSchema.getName() + " encountered; unions are only supported with null as the first type.");
+                                         "Unsupported union encountered; unions are only supported with null: " + targetSchema);
     }
 }
