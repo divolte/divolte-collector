@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.TreeNode;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -27,7 +28,10 @@ import javax.annotation.ParametersAreNonnullByDefault;
 @ParametersAreNonnullByDefault
 public final class JsonPathSupport {
     private static final Configuration JSON_PATH_CONFIGURATION =
-            Configuration.builder().jsonProvider(new JacksonJsonNodeJsonProvider()).build();
+            Configuration.builder()
+                         .options(Option.SUPPRESS_EXCEPTIONS)
+                         .jsonProvider(new JacksonJsonNodeJsonProvider())
+                         .build();
 
     public static DocumentContext asDocumentContext(final TreeNode jsonDocument) {
         return JsonPath.parse(jsonDocument, JSON_PATH_CONFIGURATION);

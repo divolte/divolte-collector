@@ -301,6 +301,15 @@ public class DslRecordMapperTest {
     }
 
     @Test
+    public void shouldTreatEmptyJsonPathResultAsNonPresent() throws IOException, InterruptedException {
+        setupServer("event-param-jsonpath-mapping.groovy");
+        final EventPayload event = request("http://www.example.com/");
+        // The 'items' should be filled in from another property. Hence not null.
+        assertEquals("[{\"name\": \"apple\", \"count\": 3, \"price\": 1.23}, {\"name\": \"pear\", \"count\": 1, \"price\": 0.89}]",
+                GenericData.get().toString(event.record.get("items")));
+    }
+
+    @Test
     public void shouldMapAllGeoIpFields() throws IOException, InterruptedException, ClosedServiceException {
         /*
          * Have to work around not being able to create a HttpServerExchange a bit.

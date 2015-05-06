@@ -23,4 +23,6 @@ mapping {
     map eventParameters().path('$.bar') onto 'paramIntValue'
     map eventParameters().path('$.items[*].price') onto 'itemPrices'
     map eventParameters().path('$.items') onto 'items'
+    // This should be a no-op.
+    map eventParameters().path('$.missing') onto 'items'
 }
