@@ -922,7 +922,7 @@ public final class DslRecordMapping {
     }
 
     @ParametersAreNonnullByDefault
-    private static abstract class ValueProducer<T> {
+    public static abstract class ValueProducer<T> {
 
         protected interface FieldSupplier<T> {
             Optional<T> apply(HttpServerExchange httpServerExchange,
