@@ -310,6 +310,14 @@ public class DslRecordMapperTest {
     }
 
     @Test
+    public void shouldSupportPresenceTestingOfJsonPathExpressions() throws IOException, InterruptedException {
+        setupServer("event-param-jsonpath-presence.groovy");
+        final EventPayload event = request("http://www.example.com/");
+        assertTrue((Boolean) event.record.get("flag1"));
+        assertFalse((Boolean) event.record.get("flag2"));
+    }
+
+    @Test
     public void shouldMapAllGeoIpFields() throws IOException, InterruptedException, ClosedServiceException {
         /*
          * Have to work around not being able to create a HttpServerExchange a bit.

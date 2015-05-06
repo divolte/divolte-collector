@@ -177,6 +177,8 @@
         },
         { "name": "header",                           "type": ["null","string"],  "default": null },
         { "name": "headers",                          "type": ["null","string"],  "default": null },
+        { "name": "flag1",                            "type": ["null","boolean"], "default": null },
+        { "name": "flag2",                            "type": ["null","boolean"], "default": null },
         {
           "name": "paramMap",
           "type": [
