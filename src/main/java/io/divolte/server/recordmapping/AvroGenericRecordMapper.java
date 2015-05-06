@@ -61,6 +61,69 @@ public class AvroGenericRecordMapper {
     }
 
     /**
+     * Check whether a specific schema is supported or not.
+     *
+     * @param targetSchema the schema to check.
+     * @return a validation error describing why the schema is valid, or {@link Optional#empty()}
+     *         if the schema is valid.
+     */
+    public Optional<ValidationError> checkValid(final Schema targetSchema) {
+        // Schemas can be recursive, so we need to track work already underway/completed.
+        return checkValid(targetSchema, new HashSet<>());
+    }
+
+    private Optional<ValidationError> checkValid(final Schema targetSchema, final Set<Schema> alreadyChecked) {
+        final Optional<ValidationError> validationError;
+        if (alreadyChecked.add(targetSchema)) {
+            switch (targetSchema.getType()) {
+                case RECORD:
+                    validationError = checkRecordValid(targetSchema, alreadyChecked);
+                    break;
+                case ARRAY:
+                    // An array is valid if its elements also are.
+                    validationError = checkValid(targetSchema.getElementType(), alreadyChecked);
+                    break;
+                case MAP:
+                    // A map is valid if its values also are.
+                    validationError = checkValid(targetSchema.getValueType(), alreadyChecked);
+                    break;
+                case UNION:
+                    validationError = checkValidUnion(targetSchema, alreadyChecked);
+                    break;
+                case ENUM:
+                case FIXED:
+                case STRING:
+                case BYTES:
+                case INT:
+                case LONG:
+                case FLOAT:
+                case DOUBLE:
+                case BOOLEAN:
+                case NULL:
+                    // These are all fine.
+                    validationError = Optional.empty();
+                    break;
+                default:
+                    validationError = Optional.of(new ValidationError("Unknown schema type: " + targetSchema.getType(), targetSchema));
+            }
+        } else {
+            validationError = Optional.empty();
+        }
+        return validationError;
+    }
+
+    private Optional<ValidationError> checkRecordValid(Schema targetSchema, Set<Schema> alreadyChecked) {
+        // A record is valid if all its fields also are.
+        for (final Schema.Field field : targetSchema.getFields()) {
+            final Optional<ValidationError> fieldValidationResult = checkValid(field.schema(), alreadyChecked);
+            if (fieldValidationResult.isPresent()) {
+                return fieldValidationResult;
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Convert a JSON node tree into an Avro datum using the supplied schema.
      *
      * @param jsonNode the JSON node to convert.
@@ -247,47 +310,56 @@ public class AvroGenericRecordMapper {
         return result;
     }
 
-    private Object readUnion(final JsonParser parser,
-                             final Schema targetSchema) throws IOException {
+    private static Optional<Schema> resolveUnion(final Schema targetSchema) {
         Preconditions.checkArgument(targetSchema.getType() == Schema.Type.UNION);
         final List<Schema> possibleSchemas = targetSchema.getTypes();
+        final Iterator<Schema> possibleSchemesIterator = possibleSchemas.iterator();
+        final Optional<Schema> resolvedSchema;
         /*
-         * We only allow unions of a specific type with null, and null must
-         * be first. (It normally is, because that's the only way the field
-         * can default to null.)
+         * We only allow unions of a specific type with null.
          *
          * The alternative here would be to replace the JsonParser with a TokenBuffer
          * and try to read as each possible schema type, until something succeeds.
          * This would be very expensive though, so for now it's not supported.
          */
-        final Iterator<Schema> possibleSchemesIterator = possibleSchemas.iterator();
-        final Schema resolvedSchema;
         switch (possibleSchemas.size()) {
             case 2:
                 final Schema firstSchema = possibleSchemesIterator.next();
                 if (firstSchema.getType() != Schema.Type.NULL) {
                     final Schema secondSchema = possibleSchemesIterator.next();
-                    if (secondSchema.getType() != Schema.Type.NULL) {
-                        throw unsupportedUnionException(parser, targetSchema);
-                    }
-                    resolvedSchema = firstSchema;
+                    resolvedSchema = (secondSchema.getType() == Schema.Type.NULL)
+                            ? Optional.of(firstSchema)
+                            : Optional.empty();
                     break;
                 }
                 // Intentional fall-through.
             case 1:
-                resolvedSchema = possibleSchemesIterator.next();
+                resolvedSchema = Optional.of(possibleSchemesIterator.next());
                 break;
             default:
                 // Not acceptable.
-                throw unsupportedUnionException(parser, targetSchema);
+                resolvedSchema = Optional.empty();
         }
+        return resolvedSchema;
+    }
+
+    private Optional<ValidationError> checkValidUnion(final Schema targetSchema,
+                                                      final Set<Schema> alreadyChecked) {
+        final Optional<Schema> resolvedSchema = resolveUnion(targetSchema);
+        return resolvedSchema.map(s -> checkValid(s, alreadyChecked))
+                             .orElseGet(() -> Optional.of(new ValidationError("Unsupported union encountered; only trivial unions with null are supported: " + targetSchema, targetSchema)));
+    }
+
+    private Object readUnion(final JsonParser parser,
+                             final Schema targetSchema) throws IOException {
+        final Optional<Schema> resolvedSchema = resolveUnion(targetSchema);
         /*
          * Even though we've resolved to the non-null half of the union,
          * this works because Jackson will always return null if the
          * parser is positioned on a null token irrespective of what type
          * you're trying to read.
          */
-        return read(parser, resolvedSchema);
+        return read(parser, resolvedSchema.orElseThrow(() -> unsupportedUnionException(parser, targetSchema)));
     }
 
     private GenericFixed readFixed(final JsonParser parser,

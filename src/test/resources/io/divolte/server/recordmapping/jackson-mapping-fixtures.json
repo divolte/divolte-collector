@@ -212,12 +212,14 @@
   {
     "title": "Test illegal union mapping #1",
     "schema": ["string", "int"],
+    "unsupported": "true",
     "json": "some value",
     "exception": "com.fasterxml.jackson.databind.JsonMappingException"
   },
   {
-    "title": "Test illegal union mapping #1",
+    "title": "Test illegal union mapping #2",
     "schema": ["string", "int", "long"],
+    "unsupported": "true",
     "json": "some value",
     "exception": "com.fasterxml.jackson.databind.JsonMappingException"
   },

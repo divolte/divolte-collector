@@ -26,6 +26,8 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -56,6 +58,7 @@ public class AvroGenericRecordMapperTest {
     @JsonIgnoreProperties("title")
     private static class Fixture {
         public final Schema avroSchema;
+        public final boolean schemaUnsupported;
         public final JsonNode jsonToMap;
         public final Map<DeserializationFeature,Boolean> deserializationFeatures;
         public final JsonNode expectedJson;
@@ -63,11 +66,13 @@ public class AvroGenericRecordMapperTest {
 
         @JsonCreator
         public Fixture(final JsonNode schema,
+                       @JsonProperty("unsupported") final boolean schemaUnsupported,
                        @JsonProperty("json") final JsonNode jsonToMap,
                        final Optional<Map<DeserializationFeature,Boolean>> deserializationFeatures,
                        @JsonProperty("result") final JsonNode expectedJson,
                        @JsonProperty("exception") final Optional<Class<? extends Exception>> expectedException) throws JsonProcessingException {
             this.avroSchema = new Schema.Parser().parse(JSON_MAPPER.writeValueAsString(schema));
+            this.schemaUnsupported = schemaUnsupported;
             this.jsonToMap = Objects.requireNonNull(jsonToMap);
             this.deserializationFeatures = deserializationFeatures.orElse(Collections.emptyMap());
             this.expectedJson = Objects.requireNonNull(expectedJson);
@@ -98,9 +103,49 @@ public class AvroGenericRecordMapperTest {
 
     private final Fixture testFixture;
 
+    private AvroGenericRecordMapper reader;
+
     public AvroGenericRecordMapperTest(@SuppressWarnings("unused") final String sampleTitle,
                                        final Fixture testFixture) {
         this.testFixture = Objects.requireNonNull(testFixture);
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        ObjectReader objectReader = JSON_MAPPER.reader();
+        for (final Map.Entry<DeserializationFeature,Boolean> entry : testFixture.deserializationFeatures.entrySet()) {
+            final DeserializationFeature feature = entry.getKey();
+            objectReader = entry.getValue()
+                    ? objectReader.with(feature)
+                    : objectReader.without(feature);
+        }
+        reader = new AvroGenericRecordMapper(objectReader);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        reader = null;
+    }
+
+    @Test
+    public void testValidation() {
+        /*
+         * Test what happens when schemas are validated.
+         *
+         * If invalid, we expect IllegalArgumentException.
+         */
+        try {
+            reader.checkValid(testFixture.avroSchema);
+            // If we expected an exception, fail...
+            if (testFixture.schemaUnsupported) {
+                fail("Schema is not supported; expected IllegalArgumentException: " + testFixture.avroSchema);
+            }
+        } catch (final IllegalArgumentException e) {
+            // Rethrow if the schema was supposed to be valid.
+            if (!testFixture.schemaUnsupported) {
+                throw e;
+            }
+        }
     }
 
     @Test
@@ -114,14 +159,6 @@ public class AvroGenericRecordMapperTest {
          *
          * A fixture can also specify specific deserialization options be [in]active.
          */
-        ObjectReader objectReader = JSON_MAPPER.reader();
-        for (final Map.Entry<DeserializationFeature,Boolean> entry : testFixture.deserializationFeatures.entrySet()) {
-            final DeserializationFeature feature = entry.getKey();
-            objectReader = entry.getValue()
-                    ? objectReader.with(feature)
-                    : objectReader.without(feature);
-        }
-        final AvroGenericRecordMapper reader = new AvroGenericRecordMapper(objectReader);
         try {
             final Object avroResult = reader.read(testFixture.jsonToMap, testFixture.avroSchema);
             // If we expected an exception, fail...

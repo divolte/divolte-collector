@@ -607,12 +607,11 @@ public final class DslRecordMapping {
         @Override
         Optional<ValidationError> validateTypes(final Field target) {
             /*
-             * There's not a lot we can do here, since the expression
-             * at runtime can return anything depending on the event
-             * contents.
+             * We can do some basic validation here because there are
+             * some Avro schemas (e.g non-trivial unions) that we don't
+             * support.
              */
-            // TODO: Validate the schema is supported for mappings.
-            return Optional.empty();
+            return JacksonSupport.AVRO_MAPPER.checkValid(target.schema());
         }
 
         @Override
