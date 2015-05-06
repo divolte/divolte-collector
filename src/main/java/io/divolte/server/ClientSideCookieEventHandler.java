@@ -131,14 +131,6 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                 );
     }
 
-    static Long tryParseBase36Long(String input) {
-        try {
-            return Long.parseLong(input, 36);
-        } catch(NumberFormatException nfe) {
-            return null;
-        }
-    }
-
     private static final HashFunction CHECKSUM_HASH = Hashing.murmur3_32();
 
     private static boolean isRequestChecksumCorrect(final HttpServerExchange exchange) {
@@ -195,6 +187,15 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
             }
         });
         return builder.toString();
+    }
+
+    @Nullable
+    static Long tryParseBase36Long(String input) {
+        try {
+            return Long.parseLong(input, 36);
+        } catch(NumberFormatException nfe) {
+            return null;
+        }
     }
 
     @Nullable
