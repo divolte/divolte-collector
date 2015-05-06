@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import org.junit.After;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.openqa.selenium.WebDriver;
@@ -28,6 +30,7 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
+@RunWith(Parameterized.class)
 public class SeleniumTestBase {
 
     public static final String DRIVER_ENV_VAR = "SELENIUM_DRIVER";

@@ -5,11 +5,14 @@ import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
 import static org.junit.Assert.*;
 import io.divolte.server.ServerTestUtils.EventPayload;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Preconditions;
 
+@ParametersAreNonnullByDefault
 public class SeleniumDisabledAutoPageViewEventTest extends SeleniumTestBase {
     @Before
     public void setup() throws Exception {

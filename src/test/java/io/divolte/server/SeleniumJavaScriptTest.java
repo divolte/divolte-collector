@@ -16,19 +16,10 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
-import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.BASIC;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.BASIC_COPY;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.PAGE_VIEW_SUPPLIED;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.isA;
-import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static io.divolte.server.IncomingRequestProcessor.*;
+import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 import io.divolte.server.ServerTestUtils.EventPayload;
 
 import java.util.Optional;
@@ -40,14 +31,11 @@ import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.openqa.selenium.By;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
-@RunWith(Parameterized.class)
 @ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest extends SeleniumTestBase {
     private static final long HALF_DAY_MS = TimeUnit.HOURS.toMillis(12);
