@@ -195,6 +195,37 @@
           "default": null
         },
         {
+          "name": "paramRecord",
+          "type": [
+            "null",
+            {
+              "name": "EventParameter",
+              "type": "record",
+              "fields": [
+                { "name": "foo",   "type": "string" },
+                { "name": "bar",   "type": "string" },
+                {
+                  "name": "items",
+                  "type": {
+                    "type": "array",
+                    "items": {
+                      "type": "record",
+                      "name": "AbbreviatedBasketItem",
+                      "fields": [
+                        // Deliberately omit the name property, to demonstrate
+                        // that extra fields are simply ignored.
+                        { "name": "count", "type": "int" },
+                        { "name": "price", "type": "double" }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "default": null
+        },
+        {
           "name": "items",
           "type": [
             "null",

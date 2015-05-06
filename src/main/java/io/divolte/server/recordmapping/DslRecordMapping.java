@@ -55,8 +55,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
@@ -558,20 +556,9 @@ public final class DslRecordMapping {
     /*
      * Custom event parameter mapping
      */
-    public final static class EventParameterValueProducer extends ValueProducer<Map<String,String>> {
+    public final static class EventParameterValueProducer extends JsonValueProducer {
         private EventParameterValueProducer() {
-            super("eventParameters()", (h,e,c) -> {
-                final Optional<JsonNode> parameters = e.eventParametersProducer.get().map(WriteContext::json);
-                return parameters.map(parameterNodes ->
-                    StreamSupport.stream(Spliterators.spliterator(parameterNodes.fields(),
-                                                                  parameterNodes.size(),
-                                                                  Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.NONNULL),
-                                         false)
-                            .filter(entry -> entry.getValue().isValueNode())
-                            .collect(Collectors.toMap(Map.Entry::getKey,
-                                                      entry -> entry.getValue().asText()))
-                );
-            });
+            super("eventParameters()", (h,e,c) -> e.eventParametersProducer.get().map(WriteContext::json));
         }
 
         public ValueProducer<String> value(String name) {
@@ -586,22 +573,22 @@ public final class DslRecordMapping {
             final JsonPath jsonPath = JsonPath.compile(path);
             return new JsonPathValueProducer(identifier + ".path(" + path + ')', jsonPath);
         }
-
-        @Override
-        Optional<ValidationError> validateTypes(final Field target) {
-            return validateTrivialUnion(target.schema(),
-                                        s -> s.getType() == Type.MAP &&
-                                             s.getValueType().getType() == Type.STRING,
-                                        "event parameters can only be mapped to an Avro map where the values are strings");
-        }
     }
 
     @ParametersAreNonnullByDefault
-    private static class JsonPathValueProducer extends ValueProducer<TreeNode> {
+    private static class JsonPathValueProducer extends JsonValueProducer {
         public JsonPathValueProducer(final String identifier,
                                      final JsonPath jsonPath) {
             super(identifier,
                   (h, e, c) -> e.eventParametersProducer.get().map(dc -> dc.read(jsonPath)));
+        }
+    }
+
+    @ParametersAreNonnullByDefault
+    private static class JsonValueProducer extends ValueProducer<TreeNode> {
+        public JsonValueProducer(final String identifier,
+                                 final FieldSupplier<TreeNode> supplier) {
+            super(identifier, supplier);
         }
 
         @Override

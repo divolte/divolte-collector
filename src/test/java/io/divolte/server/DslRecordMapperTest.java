@@ -316,6 +316,14 @@ public class DslRecordMapperTest {
     }
 
     @Test
+    public void shouldMapAllEventParameters() throws IOException, InterruptedException {
+        setupServer("event-param-all.groovy");
+        final EventPayload event = request("http://www.example.com/", Collections.singletonList(HETEROGENOUS_EVENT_PARAMS));
+        assertEquals("{\"foo\": \"string\", \"bar\": \"42\", \"items\": [{\"count\": 3, \"price\": 1.23}, {\"count\": 1, \"price\": 0.89}]}",
+                GenericData.get().toString(event.record.get("paramRecord")));
+    }
+
+    @Test
     public void shouldSupportPresenceTestingOfJsonPathExpressions() throws IOException, InterruptedException {
         setupServer("event-param-jsonpath-presence.groovy");
         final EventPayload event = request("http://www.example.com/", Collections.singletonList(HOMOGENOUS_EVENT_PARAMS));
