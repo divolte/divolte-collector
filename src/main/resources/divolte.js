@@ -34,6 +34,8 @@ var COOKIE_DOMAIN = '';
 var LOGGING = false;
 /** @define {string} */
 var SCRIPT_NAME = 'divolte.js';
+/** @define {boolean} */
+var AUTO_PAGE_VIEW_EVENT = true;
 
 (function (global, factory) {
   factory(global);
@@ -913,19 +915,23 @@ var SCRIPT_NAME = 'divolte.js';
       visibilityEventName = "webkitvisibilitychange";
     }
 
+    var signalPageView = AUTO_PAGE_VIEW_EVENT ? function() {
+      signal('pageView');
+    } : function() {};
+
     if (typeof hiddenProperty !== 'undefined' && document[hiddenProperty]) {
       // The {add|remove}EventListener functions are not available in <= IE8;
       // but this branch shouldn't execute in that case, since the hidden
       // property is also undefined.
       document.addEventListener(visibilityEventName, function visibilityListener() {
         if (document[hiddenProperty] === false) {
-          signal('pageView');
+          signalPageView();
           document.removeEventListener(visibilityEventName, visibilityListener);
         }
       })
     } else {
       // TODO: Possibly defer until the DOM is ready?
-      signal('pageView');
+      signalPageView();
     }
   } else {
     warn("Divolte module already initialized; existing module left intact.");
