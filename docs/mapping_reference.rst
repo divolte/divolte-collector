@@ -86,8 +86,8 @@ The simplest possible mapping is mapping a simple value onto a schema field. The
 Alternatively, the map methods takes a closure as first argument, which can come in handy when the value is the result of several operations or a more complex construct, such as this example where we take a query parameter form the location and parse it to an int::
 
   map {
-    def u = parse location() to uri                   // parse a URI out of the location
-    parse location().query().value('n') to int32      // Take the n query parameter and try to parse an int out of it
+    def u = parse location() to uri          // Parse the URI out of the location
+    parse u.query().value('n') to int32      // Take the n query parameter and try to parse an int out of it
   } onto 'intField'
 
 In Groovy, the last statement in a closure becomes the return value for the closure. So in the closure above, the value returned by the parse call is the result of the entire closure. This is in turn mapped onto the 'intField' field of the Avro record.
