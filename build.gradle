@@ -328,19 +328,19 @@ def buildTime() {
 }
 
 task buildRpm(type:Exec) {
-  dependsOn = [copySourceTar]
+    dependsOn = [copySourceTar]
 
-  workingDir 'rpm'
+    workingDir 'rpm'
 
-  if (version.contains('SNAPSHOT')) {
-      commandLine 'rpmbuild', '-ba',
+    if (version.contains('SNAPSHOT')) {
+        commandLine 'rpmbuild', '-ba',
             '--target', 'noarch-redhat-linux',
             '--define', 'snapshotVersion -SNAPSHOT',
             '--define', 'dist _' + buildTime(),
             'divolte-collector.spec'
-  } else {
-    commandLine 'rpmbuild', '-ba',
+    } else {
+        commandLine 'rpmbuild', '-ba',
             '--target', 'noarch-redhat-linux',
             'divolte-collector.spec'
-  }
+    }
 }
