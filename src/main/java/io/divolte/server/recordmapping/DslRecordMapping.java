@@ -323,7 +323,7 @@ public final class DslRecordMapping {
     }
 
     public final class UserAgentValueProducer extends ValueProducer<ReadableUserAgent> {
-        private UserAgentValueProducer(final ValueProducer<String> source, final UserAgentParserAndCache parser) {
+        UserAgentValueProducer(final ValueProducer<String> source, final UserAgentParserAndCache parser) {
             super("userAgent()", (h, e, c) -> source.produce(h, e, c).flatMap(parser::tryParse), true);
         }
 
@@ -396,7 +396,7 @@ public final class DslRecordMapping {
     }
 
     public final static class MatcherValueProducer extends ValueProducer<Matcher> {
-        private MatcherValueProducer(final ValueProducer<String> source, final String regex) {
+        MatcherValueProducer(final ValueProducer<String> source, final String regex) {
             super("match(" + regex + " against " + source.identifier + ")",
                   (h, e, c) -> source.produce(h, e, c).map((s) -> Pattern.compile(regex).matcher(s)),
                   true);
@@ -437,7 +437,7 @@ public final class DslRecordMapping {
     }
 
     public final static class UriValueProducer extends ValueProducer<URI> {
-        private UriValueProducer(final ValueProducer<String> source) {
+        UriValueProducer(final ValueProducer<String> source) {
             super("parse(" + source.identifier + " to uri)",
                   (h,e,c) -> source.produce(h, e, c).map((location) -> {
                         try {
@@ -515,7 +515,7 @@ public final class DslRecordMapping {
     }
 
     public final static class QueryStringValueProducer extends ValueProducer<Map<String,List<String>>> {
-        private QueryStringValueProducer(final ValueProducer<String> source) {
+        QueryStringValueProducer(final ValueProducer<String> source) {
             super("parse (" + source.identifier + " to querystring)",
                   (h,e,c) -> source.produce(h, e, c).map(QueryStringParser::parseQueryString),
                   true);
@@ -557,7 +557,7 @@ public final class DslRecordMapping {
      * Custom event parameter mapping
      */
     public final static class EventParameterValueProducer extends JsonValueProducer {
-        private EventParameterValueProducer() {
+        EventParameterValueProducer() {
             super("eventParameters()", (h,e,c) -> e.eventParametersProducer.get().map(WriteContext::json));
         }
 
@@ -638,7 +638,7 @@ public final class DslRecordMapping {
     public final static class HeaderValueProducer extends PrimitiveListValueProducer<String> {
         private final static Joiner COMMA_JOINER = Joiner.on(',');
 
-        private HeaderValueProducer(final String name) {
+        HeaderValueProducer(final String name) {
             super("header(" + name + ")",
                   String.class,
                   (h,e,c) -> Optional.ofNullable(h.getRequestHeaders().get(name)));
@@ -688,7 +688,7 @@ public final class DslRecordMapping {
     }
 
     public final static class GeoIpValueProducer extends ValueProducer<CityResponse> {
-        private GeoIpValueProducer(final ValueProducer<InetAddress> source, final LookupService service) {
+        GeoIpValueProducer(final ValueProducer<InetAddress> source, final LookupService service) {
             super("ip2geo(" + source.identifier + ")",
                   (h,e,c) -> source.produce(h, e, c).flatMap((address) -> {
                         try {
@@ -950,7 +950,7 @@ public final class DslRecordMapping {
     }
 
     @ParametersAreNonnullByDefault
-    private static abstract class ValueProducer<T> {
+    public static abstract class ValueProducer<T> {
 
         protected interface FieldSupplier<T> {
             Optional<T> apply(HttpServerExchange httpServerExchange,
@@ -962,22 +962,19 @@ public final class DslRecordMapping {
         private final FieldSupplier<T> supplier;
         private final boolean memoize;
 
-        public ValueProducer(final String identifier,
-                             final FieldSupplier<T> supplier,
-                             final boolean memoize) {
+        ValueProducer(final String identifier, final FieldSupplier<T> supplier, final boolean memoize) {
             this.identifier = Objects.requireNonNull(identifier);
             this.supplier   = Objects.requireNonNull(supplier);
             this.memoize    = memoize;
         }
 
-        public ValueProducer(final String identifier,
-                             final FieldSupplier<T> supplier) {
+        ValueProducer(final String identifier, final FieldSupplier<T> supplier) {
             this(identifier, supplier, false);
         }
 
-        public Optional<T> produce(final HttpServerExchange exchange,
-                                   final DivolteEvent divolteEvent,
-                                   final Map<String,Optional<?>> context) {
+        final Optional<T> produce(final HttpServerExchange exchange,
+                                  final DivolteEvent divolteEvent,
+                                  final Map<String,Optional<?>> context) {
             @SuppressWarnings("unchecked")
             final Optional<T> result = memoize
                     ? (Optional<T>)context.computeIfAbsent(identifier, (x) -> supplier.apply(exchange, divolteEvent, context))
@@ -1034,7 +1031,7 @@ public final class DslRecordMapping {
     }
 
     @ParametersAreNonnullByDefault
-    private static class PrimitiveValueProducer<T> extends ValueProducer<T> {
+    public static class PrimitiveValueProducer<T> extends ValueProducer<T> {
         private final Class<T> type;
 
         /**
@@ -1045,22 +1042,22 @@ public final class DslRecordMapping {
          * @param memoize       Whether the value should be calculated once and remembered, or on every requeast.
          *                      This should only be set to true when calculating the value is expensive.
          */
-        public PrimitiveValueProducer(final String readableName,
-                                      final Class<T> type,
-                                      final FieldSupplier<T> supplier,
-                                      final boolean memoize) {
+        PrimitiveValueProducer(final String readableName,
+                               final Class<T> type,
+                               final FieldSupplier<T> supplier,
+                               final boolean memoize) {
             super(readableName, supplier, memoize);
             this.type = Objects.requireNonNull(type);
         }
 
-        public PrimitiveValueProducer(final String readableName,
-                                      final Class<T> type,
-                                      final FieldSupplier<T> supplier) {
+        PrimitiveValueProducer(final String readableName,
+                               final Class<T> type,
+                               final FieldSupplier<T> supplier) {
             this(readableName, type, supplier, false);
         }
 
         @Override
-        public Optional<ValidationError> validateTypes(final Field target) {
+        Optional<ValidationError> validateTypes(final Field target) {
             return validateTrivialUnion(target.schema(),
                                         s -> COMPATIBLE_PRIMITIVES.get(type) == s.getType(),
                                         "type must be compatible with %s", type);
@@ -1068,12 +1065,12 @@ public final class DslRecordMapping {
     }
 
     @ParametersAreNonnullByDefault
-    private static class PrimitiveListValueProducer<T> extends ValueProducer<List<T>> {
+    public static class PrimitiveListValueProducer<T> extends ValueProducer<List<T>> {
         private final Class<T> type;
 
-        public PrimitiveListValueProducer(final String identifier,
-                                          final Class<T> type,
-                                          final FieldSupplier<List<T>> supplier) {
+        PrimitiveListValueProducer(final String identifier,
+                                   final Class<T> type,
+                                   final FieldSupplier<List<T>> supplier) {
             super(identifier, supplier);
             this.type = Objects.requireNonNull(type);
         }
@@ -1093,9 +1090,9 @@ public final class DslRecordMapping {
         }
     }
 
-    private static class BooleanValueProducer extends PrimitiveValueProducer<Boolean> {
-        private BooleanValueProducer(final String identifier,
-                                     final FieldSupplier<Boolean> supplier) {
+    public static class BooleanValueProducer extends PrimitiveValueProducer<Boolean> {
+        BooleanValueProducer(final String identifier,
+                             final FieldSupplier<Boolean> supplier) {
             super(identifier, Boolean.class, supplier);
         }
 
