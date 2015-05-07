@@ -947,9 +947,9 @@ public final class DslRecordMapping {
             this(identifier, supplier, false);
         }
 
-        public Optional<T> produce(final HttpServerExchange exchange,
-                                   final DivolteEvent divolteEvent,
-                                   final Map<String,Optional<?>> context) {
+        final Optional<T> produce(final HttpServerExchange exchange,
+                                  final DivolteEvent divolteEvent,
+                                  final Map<String,Optional<?>> context) {
             @SuppressWarnings("unchecked")
             final Optional<T> result = memoize
                     ? (Optional<T>)context.computeIfAbsent(identifier, (x) -> supplier.apply(exchange, divolteEvent, context))
