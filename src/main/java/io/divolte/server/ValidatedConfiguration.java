@@ -116,7 +116,8 @@ public final class ValidatedConfiguration {
         final JavascriptConfiguration javascript = new JavascriptConfiguration(
                 getOrAddException(              config::getString,      "divolte.javascript.name",                      exceptions),
                 getOrAddException(              config::getBoolean,     "divolte.javascript.logging",                   exceptions),
-                getOrAddException(              config::getBoolean,     "divolte.javascript.debug",                     exceptions));
+                getOrAddException(              config::getBoolean,     "divolte.javascript.debug",                     exceptions),
+                getOrAddException(              config::getBoolean,     "divolte.javascript.auto_page_view_event",      exceptions));
 
         if (javascript.name != null && !javascript.name.matches("^[A-Za-z0-9_-]+\\.js$")) {
             ConfigException.Generic wrongJsNameException = new ConfigException.Generic(
@@ -378,11 +379,13 @@ public final class ValidatedConfiguration {
         public final String name;
         public final Boolean logging;
         public final Boolean debug;
+        public final Boolean autoPageViewEvent;
 
-        private JavascriptConfiguration(final String name, final Boolean logging, final Boolean debug) {
+        private JavascriptConfiguration(final String name, final Boolean logging, final Boolean debug, final Boolean autoPageViewEvent) {
             this.name = name;
             this.logging = logging;
             this.debug = debug;
+            this.autoPageViewEvent = autoPageViewEvent;
         }
     }
 
