@@ -45,12 +45,12 @@ events from browsers. It will be started automatically on system startup.
 sed -e "s/scmVersion\.version/'%{version}%{snapshot}'/g" build.gradle > build.gradle.$$ && mv build.gradle.$$ build.gradle
 
 %build
-./gradlew -x test build
+./gradlew --no-daemon --exclude-task test build
 
 %install
 rm -rf "%{buildroot}"
 
-./gradlew -x test installApp
+./gradlew --no-daemon --exclude-task test installApp
 
 %{__mkdir_p} "%{buildroot}/etc/divolte"
 %{__mkdir_p} "%{buildroot}/etc/init.d"
