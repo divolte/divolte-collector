@@ -1,8 +1,6 @@
 package io.divolte.server;
 
-import static io.divolte.server.BrowserLists.BS_BROWSER_LIST;
-import static io.divolte.server.BrowserLists.SAUCE_BROWSER_LIST;
-import static io.divolte.server.BrowserLists.browserNameList;
+import static io.divolte.server.BrowserLists.*;
 import io.divolte.server.ServerTestUtils.TestServer;
 
 import java.net.MalformedURLException;
@@ -31,7 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
 @RunWith(Parameterized.class)
-public class SeleniumTestBase {
+public abstract class SeleniumTestBase {
 
     public static final String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public static final String PHANTOMJS_DRIVER = "phantomjs";
