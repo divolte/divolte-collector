@@ -324,6 +324,16 @@ public class DslRecordMapperTest {
     }
 
     @Test
+    public void shouldTreatRuntimeEventParameterMappingMismatchAsNonPresent() throws IOException, InterruptedException {
+        setupServer("event-param-jsonpath-mismatch.groovy");
+        final EventPayload event = request("http://example.com/", Collections.singletonList(HETEROGENOUS_EVENT_PARAMS));
+        // Nothing should have been mapped here.
+        assertNull(event.record.get("paramIntValue"));
+        // This is mapped last: it should have completed even though an earlier field mapping failed.
+        assertTrue((Boolean)event.record.get("flag1"));
+    }
+
+    @Test
     public void shouldSupportPresenceTestingOfJsonPathExpressions() throws IOException, InterruptedException {
         setupServer("event-param-jsonpath-presence.groovy");
         final EventPayload event = request("http://www.example.com/", Collections.singletonList(HOMOGENOUS_EVENT_PARAMS));

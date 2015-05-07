@@ -23,6 +23,14 @@
   <!-- Divolte-specific logging. -->
   <logger name="io.divolte" level="inherited"/>
 
+  <!--
+  ~ By default, failure at runtime to map JSON from event parameters is logged at the 'info'
+  ~ level. This is disabled by default to prevent logs being filled due to a configuration
+  ~ error. Change from 'warn' to 'info' if you wish to see these errors, for example to help
+  ~ with diagnosing why mapping isn't working.
+  -->
+  <logger name="io.divolte.server.recordmapping.DslRecordMapping$JsonValueProducer" level="warn" />
+
   <root level="info">
     <appender-ref ref="VARLOG"/>
   </root>

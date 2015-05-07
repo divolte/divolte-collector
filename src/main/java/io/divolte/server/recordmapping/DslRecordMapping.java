@@ -43,6 +43,8 @@ import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -101,8 +103,8 @@ public final class DslRecordMapping {
         }
         stack.getLast().add((h,e,c,r) -> {
             producer.produce(h,e,c)
-                    .ifPresent((v) -> r.set(field,
-                                            producer.mapToGenericRecord(v, field.schema())));
+                    .flatMap(v -> producer.mapToGenericRecord(v, field.schema()))
+                    .ifPresent(v -> r.set(field, v));
             return MappingAction.MappingResult.CONTINUE;
         });
     }
@@ -579,8 +581,10 @@ public final class DslRecordMapping {
 
     @ParametersAreNonnullByDefault
     private static class JsonValueProducer extends ValueProducer<TreeNode> {
-        public JsonValueProducer(final String identifier,
-                                 final FieldSupplier<TreeNode> supplier) {
+        private static final Logger logger = LoggerFactory.getLogger(JsonValueProducer.class);
+
+        protected JsonValueProducer(final String identifier,
+                                    final FieldSupplier<TreeNode> supplier) {
             super(identifier, supplier);
         }
 
@@ -595,19 +599,16 @@ public final class DslRecordMapping {
         }
 
         @Override
-        public Object mapToGenericRecord(final TreeNode value,
-                                         final Schema schema) throws SchemaMappingException {
+        Optional<Object> mapToGenericRecord(final TreeNode value,
+                                            final Schema schema) throws SchemaMappingException {
             try {
-                return JacksonSupport.AVRO_MAPPER.read(value, schema);
+                return Optional.ofNullable(JacksonSupport.AVRO_MAPPER.read(value, schema));
             } catch (final IOException e) {
-                throw withCause(new SchemaMappingException("Error mapping JSON value %s to schema: %s", value, schema),
-                                e);
+                if (logger.isInfoEnabled()) {
+                    logger.info(String.format("Error mapping JSON value %s to schema: %s", value, schema), e);
+                }
+                return Optional.empty();
             }
-        }
-
-        private static <T extends Throwable > T withCause(final T throwable, final Throwable cause) {
-            throwable.initCause(cause);
-            return throwable;
         }
     }
 
@@ -1019,9 +1020,9 @@ public final class DslRecordMapping {
 
         abstract Optional<ValidationError> validateTypes(final Field target);
 
-        public Object mapToGenericRecord(final T value, final Schema schema) {
+        Optional<Object> mapToGenericRecord(final T value, final Schema schema) {
             // Default mapping is the identity mapping.
-            return value;
+            return Optional.of(value);
         }
 
         @Override
