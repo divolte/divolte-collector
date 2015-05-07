@@ -16,7 +16,6 @@
 
 package io.divolte.server;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.jayway.jsonpath.WriteContext;
@@ -218,34 +217,11 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         assertTrue(eventData.eventType.isPresent());
         assertEquals("custom", eventData.eventType.get());
-        final Optional<JsonNode> customEventParameters =
-                eventData.eventParametersProducer.get().map(WriteContext::json);
-        final Optional<String> customEventParameter =
-                customEventParameters.map(json -> json.path("key").asText());
-        assertTrue(customEventParameter.isPresent());
-        assertEquals("value", customEventParameter.get());
-    }
 
-    @Test
-    public void shouldNotEncodeCustomEventParameters() throws InterruptedException {
-        Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
-        server.waitForEvent();
-
-        driver.findElement(By.id("custom")).click();
-        final EventPayload customEvent = server.waitForEvent();
-        final DivolteEvent eventData = customEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
-
-        assertTrue(eventData.eventType.isPresent());
-        assertEquals("custom", eventData.eventType.get());
-
-        final Optional<String> customEventAnswerParameter = eventData.eventParameterProducer.apply("answer");
-        assertTrue(customEventAnswerParameter.isPresent());
-        assertEquals("42", customEventAnswerParameter.get());
-
-        final Optional<String> customEventMagicParameter = eventData.eventParameterProducer.apply("magic");
-        assertTrue(customEventMagicParameter.isPresent());
-        assertEquals("true", customEventMagicParameter.get());
+        final Optional<String> customEventParameters =
+                eventData.eventParametersProducer.get().map(WriteContext::jsonString);
+        assertTrue(customEventParameters.isPresent());
+        assertEquals("{\"key\":\"value\",\"answer\":42,\"magic\":true,\"array\":[\"a\",\"b\",2]}", customEventParameters.get());
     }
 
     @Test
