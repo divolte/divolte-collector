@@ -170,8 +170,7 @@ findbugs() {
 }
 
 pmd {
-    // Gradle 2.3 isn't compatible with PMD 5.2+
-    toolVersion = "5.1.3"
+    toolVersion = "5.3.1"
 }
 
 jacoco {
@@ -188,7 +187,7 @@ findbugsTest.reports {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '2.3'
+    gradleVersion = '2.4'
 }
 
 /*
@@ -335,19 +334,19 @@ def buildTime() {
 }
 
 task buildRpm(type:Exec) {
-  dependsOn = [copySourceTar]
+    dependsOn = [copySourceTar]
 
-  workingDir 'rpm'
+    workingDir 'rpm'
 
-  if (version.contains('SNAPSHOT')) {
-      commandLine 'rpmbuild', '-ba',
+    if (version.contains('SNAPSHOT')) {
+        commandLine 'rpmbuild', '-ba',
             '--target', 'noarch-redhat-linux',
             '--define', 'snapshotVersion -SNAPSHOT',
             '--define', 'dist _' + buildTime(),
             'divolte-collector.spec'
-  } else {
-    commandLine 'rpmbuild', '-ba',
+    } else {
+        commandLine 'rpmbuild', '-ba',
             '--target', 'noarch-redhat-linux',
             'divolte-collector.spec'
-  }
+    }
 }
