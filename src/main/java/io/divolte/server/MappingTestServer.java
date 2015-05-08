@@ -74,9 +74,10 @@ public class MappingTestServer {
         mapper = new DslRecordMapper(vc, mappingFilename, schema, Optional.ofNullable(lookupServiceFromConfig(vc)));
 
         final HttpHandler handler = new AllowedMethodsHandler(this::handleEvent, Methods.POST);
+        final HttpHandler rootHandler = new ProxyAdjacentPeerAddressHandler(handler);
         undertow = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(handler)
+                .setHandler(rootHandler)
                 .build();
     }
 
