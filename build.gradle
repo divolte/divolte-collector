@@ -174,7 +174,7 @@ pmd {
 }
 
 jacoco {
-    toolVersion = "0.7.1.201405082137"
+    toolVersion = "0.7.4.201502262128"
 }
 
 findbugsMain.reports {

@@ -48,9 +48,8 @@ public class ProxyAdjacentPeerAddressHandler implements HttpHandler {
             } else {
                 value = forwardedFor.substring(index + 1, forwardedFor.length()).trim();
             }
-            InetAddress address;
             try {
-                address = InetAddress.getByName(value);
+                final InetAddress address = InetAddress.getByName(value);
                 //we have no way of knowing the port
                 exchange.setSourceAddress(new InetSocketAddress(address, 0));
             } catch (Exception e) {

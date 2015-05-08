@@ -30,6 +30,9 @@ import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
@@ -77,9 +80,10 @@ public class MappingTestServer {
         mapper = new DslRecordMapper(vc, mappingFilename, schema, Optional.ofNullable(lookupServiceFromConfig(vc)));
 
         final HttpHandler handler = new AllowedMethodsHandler(this::handleEvent, Methods.POST);
+        final HttpHandler rootHandler = new ProxyAdjacentPeerAddressHandler(handler);
         undertow = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(handler)
+                .setHandler(rootHandler)
                 .build();
     }
 
@@ -135,6 +139,17 @@ public class MappingTestServer {
                     get(payload, "event_type", String.class),
                     () -> get(payload, "parameters", TreeNode.class).map(JsonPathSupport::asDocumentContext),
                     Optional.of(browserEventData));
+
+            get(payload, "remote_host", String.class)
+                .ifPresent(ip -> {
+                    try {
+                        final InetAddress address = InetAddress.getByName(ip);
+                        // We have no way of knowing the port
+                        exchange.setSourceAddress(new InetSocketAddress(address, 0));
+                    } catch (final UnknownHostException e) {
+                        log.warn("Could not parse remote host: " + ip, e);
+                    }
+                });
 
             exchange.putAttachment(DIVOLTE_EVENT_KEY, divolteEvent);
             exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
