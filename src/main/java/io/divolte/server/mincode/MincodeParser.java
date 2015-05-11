@@ -227,6 +227,12 @@ public class MincodeParser extends ParserBase {
                 recordType = nextChar();
             }
 
+            // If we just finished a field name, invalidate the
+            // buffer containing the text for the field name.
+            if (JsonToken.FIELD_NAME == _currToken) {
+                _nameCopied = false;
+            }
+
             // Special handling for end-of-object (and end-of-array).
             // (This is the only record type while in an object that doesn't
             //  have a field name.)
