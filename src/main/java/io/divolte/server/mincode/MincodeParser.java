@@ -30,7 +30,6 @@ import java.io.Reader;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 
