@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.jayway.jsonpath.DocumentContext;
+import io.divolte.server.mincode.MincodeFactory;
 import io.undertow.server.HttpServerExchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,7 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
     private static final String SCREEN_PIXEL_HEIGHT_QUERY_PARAM = "j";
     private static final String DEVICE_PIXEL_RATIO_QUERY_PARAM = "k";
 
-    private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper().reader();
+    private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper(new MincodeFactory()).reader();
 
     static final String EVENT_SOURCE_NAME = "browser";
 
