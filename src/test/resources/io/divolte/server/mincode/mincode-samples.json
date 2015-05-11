@@ -7,8 +7,18 @@
   },
   {
     "title": "Value: String that requires escaping",
-    "json": "Hello World!",
-    "code": "sHello World~!!"
+    "json": "Hello~World!",
+    "code": "sHello~~World~!!"
+  },
+  {
+    "title": "Value: String with newlines",
+    "json": "It's cold outside\nThere's no kind of atmosphere\nIt's freezing cold, more or less\nLet me fly far away from here\nFun Fun Fun, in the Sun Sun Sun.",
+    "code": "sIt's cold outside\nThere's no kind of atmosphere\nIt's freezing cold, more or less\nLet me fly far away from here\nFun Fun Fun, in the Sun Sun Sun.!"
+  },
+  {
+    "title": "Value: String with unicode escapes",
+    "json": "H̶e̶l̶l̶o̶ ̶W̶o̶r̶l̶d̶!̶",
+    "code": "sH\u0336e\u0336l\u0336l\u0336o\u0336 \u0336W\u0336o\u0336r\u0336l\u0336d\u0336~!\u0336!"
   },
   {
     "title": "Value: Boolean True",
