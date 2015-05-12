@@ -177,20 +177,83 @@
         },
         { "name": "header",                           "type": ["null","string"],  "default": null },
         { "name": "headers",                          "type": ["null","string"],  "default": null },
-	    {
-	      "name": "paramMap",
-	      "type": [
-	        "null",
-	        {
-	          "type": "map",
-	          "values": {
-	            "type": "string"
-	          }
-	        }
-	      ],
-	      "default": null
-	    },
-	    { "name": "paramValue",                       "type": ["null","string"],  "default": null }
-
+        { "name": "flag1",                            "type": ["null","boolean"], "default": null },
+        { "name": "flag2",                            "type": ["null","boolean"], "default": null },
+        { "name": "paramValue",                       "type": ["null","string"],  "default": null },
+        { "name": "paramIntValue",                    "type": ["null","int"],     "default": null },
+        {
+          "name": "paramMap",
+          "type": [
+            "null",
+            {
+              "type": "map",
+              "values": {
+                "type": "string"
+              }
+            }
+          ],
+          "default": null
+        },
+        {
+          "name": "paramRecord",
+          "type": [
+            "null",
+            {
+              "name": "EventParameter",
+              "type": "record",
+              "fields": [
+                { "name": "foo",   "type": "string" },
+                { "name": "bar",   "type": "string" },
+                {
+                  "name": "items",
+                  "type": {
+                    "type": "array",
+                    "items": {
+                      "type": "record",
+                      "name": "AbbreviatedBasketItem",
+                      "fields": [
+                        // Deliberately omit the name property, to demonstrate
+                        // that extra fields are simply ignored.
+                        { "name": "count", "type": "int" },
+                        { "name": "price", "type": "double" }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "default": null
+        },
+        {
+          "name": "items",
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": {
+                "type": "record",
+                "name": "BasketItem",
+                "fields": [
+                  { "name": "name", "type": "string" },
+                  { "name": "count", "type": "int" },
+                  { "name": "price", "type": "double" }
+                ]
+              }
+            }
+          ],
+          "default": null
+        },
+        {
+          "name": "itemPrices",
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": "double"
+            }
+          ],
+          "default": null
+        }
     ]
 }
