@@ -30,7 +30,6 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Base64;
-import java.util.BitSet;
 
 import static org.junit.Assert.*;
 
@@ -122,14 +121,11 @@ public class MincodeParserTest {
         assertJsonParserTextUnavailable(parser);
     }
 
-    private static final BitSet OFFSETS = new BitSet(JACKSON_BUFFER_SIZE);
-
     private static void assertJsonParserText(final JsonParser parser,
                                              final String expectedText) throws IOException {
         assertEquals(expectedText, parser.getText());
         final char[] buffer = parser.getTextCharacters();
         assertNotNull(buffer);
-        OFFSETS.set(parser.getTextOffset());
         assertEquals(expectedText, new String(buffer, parser.getTextOffset(), parser.getTextLength()));
     }
 
