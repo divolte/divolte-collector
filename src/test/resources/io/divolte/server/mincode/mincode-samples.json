@@ -99,8 +99,17 @@
       "g": 53.2,
       "h": -37,
       "i": -78.3e10,
-      "j": {}
+      "j": true,
+      "k": false,
+      "l": null,
+      "m": {},
+      "n": [
+        {},
+        { "a": "b" },
+        { "c": "d" }
+      ],
+      "o": {}
     },
-    "code": "Oa!sb!c!Ad!a!.sb!g!.ae!s1!s2!.df!16!jg!53.2!dh!-11!ji!-78.3e10!oj!."
+    "code": "Oa!sb!c!Ad!a!.sb!g!.ae!s1!s2!.df!16!jg!53.2!dh!-11!ji!-78.3e10!tj!fk!nl!om!an!oSa!b!.Sc!d!..oo!."
   }
 ]
