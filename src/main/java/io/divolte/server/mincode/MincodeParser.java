@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.base.ParserBase;
 import com.fasterxml.jackson.core.io.IOContext;
-import com.fasterxml.jackson.core.util.BufferRecycler;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -48,7 +47,6 @@ public class MincodeParser extends ParserBase {
     private Optional<Integer> pendingRecordType = Optional.empty();
 
     MincodeParser(final IOContext ctxt,
-                  final BufferRecycler br,
                   final int parserFeatures,
                   @Nullable final ObjectCodec objectCodec,
                   final Reader reader) {

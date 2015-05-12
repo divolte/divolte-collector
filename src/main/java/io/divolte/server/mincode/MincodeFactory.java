@@ -172,7 +172,7 @@ public class MincodeFactory extends JsonFactory {
     @Override
     protected MincodeParser _createParser(final Reader r,
                                           final IOContext ctxt) throws IOException {
-        return new MincodeParser(ctxt, _getBufferRecycler(), _parserFeatures, _objectCodec, r);
+        return new MincodeParser(ctxt, _parserFeatures, _objectCodec, r);
     }
 
     @Override
