@@ -75,12 +75,12 @@ public class MincodeParserTest {
         assertEquals("Text size should be relatively prime to the buffer size.",
                      BigInteger.ONE,
                      BigInteger.valueOf(recordTemplate.length()).gcd(BigInteger.valueOf(JACKSON_BUFFER_SIZE)));
-        final StringBuilder sb = new StringBuilder(1 + JACKSON_BUFFER_SIZE * recordTemplate.length());
+        final StringBuilder sb = new StringBuilder(2 + JACKSON_BUFFER_SIZE * recordTemplate.length());
+        sb.append('(');
         for (int i = 0; i < JACKSON_BUFFER_SIZE; ++i) {
             sb.append(String.format(recordTemplate, i, i));
         }
-        sb.append('.');
-        sb.setCharAt(0, Character.toUpperCase(sb.charAt(0)));
+        sb.append(')');
 
         // Time for the test itself.
         final JsonParser parser = createParser(sb.toString());
@@ -166,9 +166,16 @@ public class MincodeParserTest {
     }
 
     @Test
-    public void testFirstRecordCannotBeEndOfObjectOrArray() throws IOException {
+    public void testFirstRecordCannotBeEndOfObject() throws IOException {
         expectedException.expect(JsonParseException.class);
-        expectedException.expectMessage("Unexpected closing record");
+        expectedException.expectMessage("Unexpected end of object");
+        createParser(")").nextToken();
+    }
+
+    @Test
+    public void testFirstRecordCannotBeEndOfArray() throws IOException {
+        expectedException.expect(JsonParseException.class);
+        expectedException.expectMessage("Unexpected end of array");
         createParser(".").nextToken();
     }
 

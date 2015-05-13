@@ -78,12 +78,12 @@ public class DslRecordMapperTest {
             + "t=pageView";
 
     private static final String HOMOGENOUS_EVENT_PARAMS =
-            "u=" + encodeUrl("Sfoo!string!dbar!16!.");
+            "u=" + encodeUrl("(sfoo!string!dbar!16!)");
     private static final String HETEROGENOUS_EVENT_PARAMS =
-            "u=" + encodeUrl("Sfoo!string!dbar!16!aitems!" +
-                    "Sname!apple!dcount!3!jprice!1.23!sextra1!ignored!." +
-                    "Sname!pear!dcount!1!jprice!0.89!sextra2!ignored!." +
-                    "..");
+            "u=" + encodeUrl("(sfoo!string!dbar!16!aitems!" +
+                    "(sname!apple!dcount!3!jprice!1.23!sextra1!ignored!)" +
+                    "(sname!pear!dcount!1!jprice!0.89!sextra2!ignored!)" +
+                    ".)");
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 

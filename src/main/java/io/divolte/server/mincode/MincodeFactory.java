@@ -75,14 +75,7 @@ public class MincodeFactory extends JsonFactory {
             // First byte has to be one of the record types, possibly capital denoting a root object.
             // (Only '.' cannot appear at the start of Mincode.)
             switch (b) {
-                case 'A':
-                case 'S':
-                case 'T':
-                case 'F':
-                case 'N':
-                case 'D':
-                case 'J':
-                case 'O':
+                case '(':
                 case 'a':
                 case 's':
                 case 't':
@@ -90,7 +83,6 @@ public class MincodeFactory extends JsonFactory {
                 case 'n':
                 case 'd':
                 case 'j':
-                case 'o':
                     matchStrength = MatchStrength.SOLID_MATCH;
                     break;
                 default:

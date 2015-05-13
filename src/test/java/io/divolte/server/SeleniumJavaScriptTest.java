@@ -221,7 +221,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final Optional<String> customEventParameters =
                 eventData.eventParametersProducer.get().map(WriteContext::jsonString);
         assertTrue(customEventParameters.isPresent());
-        assertEquals("{\"key\":\"value\",\"answer\":42,\"magic\":true,\"array\":[\"a\",\"b\",2]}", customEventParameters.get());
+        assertEquals("{\"a\":{},\"b\":\"c\",\"d\":{\"a\":[],\"b\":\"g\"},\"e\":[\"1\",\"2\"],\"f\":42,\"g\":53.2,\"h\":-37,\"i\":-7.83E-9,\"j\":true,\"k\":false,\"l\":null,\"m\":\"2015-06-13T15:49:33.012Z\",\"n\":{},\"o\":[{},{\"a\":\"b\"},{\"c\":\"d\"}],\"p\":{}}",
+                     customEventParameters.get());
     }
 
     @Test

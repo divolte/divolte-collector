@@ -776,11 +776,10 @@ var AUTO_PAGE_VIEW_EVENT = true;
      *          a "!".</li>
      * <li>'j': for a number, with a payload containing the JSON-encoded number terminated with
      *          a "!".</li>
+     * <li>'(': a special record indicating the start of an object.</li>
+     * <li>')': a special record indicating the end of an object.</li>
      * <li>'a': a special record indicating the start of an array.</li>
-     * <li>'.': a special record indicating the end of an object or array.</li>
-     * <li>'o': a special record indicating an empty object.</li>
-     *
-     * The start of an object is indicated by capitalizing the letter of the record type.
+     * <li>'.': a special record indicating the end of an array.</li>
      *
      * @constructor
      * @final
@@ -793,12 +792,6 @@ var AUTO_PAGE_VIEW_EVENT = true;
        */
       this.buffer = '';
       /**
-       * A flag indicating whether the next record will be the first
-       * in a nested object or not.
-       * @type {boolean}
-       */
-      this.pendingStartObject = false;
-      /**
        * Field containing the name of the property to which the next
        * record will be assigned. Used when encoding objects.
        * @type {?string}
@@ -810,14 +803,14 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @private
      */
     Mincoder.prototype.startObject = function() {
-      this.pendingStartObject = true;
+      this.addRecord('(');
     };
     /**
      * Finish encoding an object.
      * @private
      */
     Mincoder.prototype.endObject = function() {
-      this.addRecord(this.pendingStartObject ? 'o' : '.');
+      this.addRecord(')');
     };
     /**
      * Start encoding an array.
@@ -849,10 +842,6 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @param {string=} payload    the (optional) payload for this record.
      */
     Mincoder.prototype.addRecord = function(recordType, payload) {
-      if (this.pendingStartObject) {
-        recordType = recordType.toUpperCase();
-        this.pendingStartObject = false;
-      }
       this.buffer += recordType;
       if (null !== this.pendingFieldName) {
         this.buffer += Mincoder.escapeString(this.pendingFieldName);
