@@ -763,7 +763,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      *  - Optional: If encoding an object, the name of the property which the record encodes.
      *  - Optional: Record-specific payload.
      *
-     * Property names are presented as is, terminates with a "!". Within the string itself, any
+     * Property names are presented as is, terminated with a "!". Within the string itself, any
      * occurrences of "!" or "~" are prefixed with "~".
      *
      * The record types are:
