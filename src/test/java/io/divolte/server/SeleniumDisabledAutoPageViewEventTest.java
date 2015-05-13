@@ -33,7 +33,7 @@ public class SeleniumDisabledAutoPageViewEventTest extends SeleniumTestBase {
         EventPayload viewEvent = server.waitForEvent();
 
         final DivolteEvent eventData = viewEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
-        final Optional<String> eventParameters = eventData.eventParametersProducer.get().map(WriteContext::jsonString);
+        final Optional<String> eventParameters = eventData.eventParametersProducer.get().map(Object::toString);
         assertTrue(eventParameters.isPresent());
         assertEquals("{\"foo\":\"moo\",\"bar\":\"baz\"}", eventParameters.get());
         assertFalse(server.eventsRemaining());

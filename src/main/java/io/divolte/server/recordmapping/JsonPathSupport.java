@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.divolte.server;
+package io.divolte.server.recordmapping;
 
 import com.fasterxml.jackson.core.TreeNode;
 import com.jayway.jsonpath.Configuration;

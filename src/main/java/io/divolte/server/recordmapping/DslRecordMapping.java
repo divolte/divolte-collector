@@ -16,7 +16,6 @@
 
 package io.divolte.server.recordmapping;
 
-import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -26,8 +25,10 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.WriteContext;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.maxmind.geoip2.model.CityResponse;
 import com.maxmind.geoip2.record.*;
 import io.divolte.server.DivolteEvent;
@@ -72,6 +73,12 @@ public final class DslRecordMapping {
                         .put(Integer.class, Type.INT)
                         .put(Long.class, Type.LONG)
                         .build();
+
+    private static final Configuration JSON_PATH_CONFIGURATION =
+            Configuration.builder()
+                    .options(Option.SUPPRESS_EXCEPTIONS)
+                    .jsonProvider(new JacksonJsonNodeJsonProvider())
+                    .build();
 
     private final Schema schema;
     private final ArrayDeque<ImmutableList.Builder<MappingAction>> stack;
@@ -560,32 +567,35 @@ public final class DslRecordMapping {
      */
     public final static class EventParameterValueProducer extends JsonValueProducer {
         EventParameterValueProducer() {
-            super("eventParameters()", (h,e,c) -> e.eventParametersProducer.get().map(WriteContext::json));
+            super("eventParameters()", (h,e,c) -> e.eventParametersProducer.get(), true);
         }
 
         public ValueProducer<String> value(String name) {
             return new PrimitiveValueProducer<>(
                     identifier + ".value(" + name + ")",
                     String.class,
-                    (h,e,c) -> e.eventParametersProducer.get()
-                                .map(dc -> dc.<JsonNode>json().path(name).asText()));
+                    (h,e,c) -> EventParameterValueProducer.this.produce(h,e,c)
+                                .map(json -> json.path(name).asText()));
         }
 
-        public ValueProducer<TreeNode> path(final String path) {
+        public ValueProducer<JsonNode> path(final String path) {
             final JsonPath jsonPath = JsonPath.compile(path);
             return new JsonValueProducer(
                     identifier + ".path(" + path + ')',
-                    (h,e,c) -> e.eventParametersProducer.get().map(dc -> dc.read(jsonPath)));
+                    (h,e,c) -> EventParameterValueProducer.this.produce(h, e, c)
+                                .map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
+                    false);
         }
     }
 
     @ParametersAreNonnullByDefault
-    private static class JsonValueProducer extends ValueProducer<TreeNode> {
+    private static class JsonValueProducer extends ValueProducer<JsonNode> {
         private static final Logger logger = LoggerFactory.getLogger(JsonValueProducer.class);
 
         protected JsonValueProducer(final String identifier,
-                                    final FieldSupplier<TreeNode> supplier) {
-            super(identifier, supplier);
+                                    final FieldSupplier<JsonNode> supplier,
+                                    final boolean memoize) {
+            super(identifier, supplier, memoize);
         }
 
         @Override
@@ -599,7 +609,7 @@ public final class DslRecordMapping {
         }
 
         @Override
-        Optional<Object> mapToGenericRecord(final TreeNode value,
+        Optional<Object> mapToGenericRecord(final JsonNode value,
                                             final Schema schema) throws SchemaMappingException {
             try {
                 return Optional.ofNullable(JacksonSupport.AVRO_MAPPER.read(value, schema));
@@ -623,10 +633,11 @@ public final class DslRecordMapping {
     @Deprecated
     @SuppressWarnings("unused")
     public ValueProducer<String> eventParameter(final String name) {
+        final EventParameterValueProducer eventParametersProducer = eventParameters();
         return new PrimitiveValueProducer<>("eventParameter(" + name + ")",
                                             String.class,
-                                            (h,e,c) -> e.eventParametersProducer.get()
-                                                        .map(dc -> dc.<JsonNode>json().path(name).asText()));
+                                            (h,e,c) -> eventParametersProducer.produce(h,e,c)
+                                                        .map(json -> json.path(name).asText()));
     }
 
     /*

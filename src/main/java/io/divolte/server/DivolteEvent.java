@@ -17,13 +17,10 @@
 package io.divolte.server;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import com.jayway.jsonpath.DocumentContext;
+import com.fasterxml.jackson.databind.JsonNode;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -48,11 +45,11 @@ public final class DivolteEvent {
     public final long requestStartTime;
     public final long clientUtcOffset;
 
-    public final Supplier<Optional<DocumentContext>> eventParametersProducer;
+    public final Supplier<Optional<JsonNode>> eventParametersProducer;
     // Extra data provided for browser events.
     public final Optional<BrowserEventData> browserEventData;
 
-    @ParametersAreNonnullByDefault
+    @NotNullByDefault
     public static final class BrowserEventData {
         public final String pageViewId;
         public final Optional<String> location;
@@ -92,7 +89,7 @@ public final class DivolteEvent {
                  final boolean newPartyId,
                  final boolean firstInSession,
                  final Optional<String> eventType,
-                 final Supplier<Optional<DocumentContext>> eventParametersProducer,
+                 final Supplier<Optional<JsonNode>> eventParametersProducer,
                  final Optional<BrowserEventData> browserEvent) {
         this.corruptEvent            = corruptEvent;
         this.partyCookie             = Objects.requireNonNull(partyCookie);

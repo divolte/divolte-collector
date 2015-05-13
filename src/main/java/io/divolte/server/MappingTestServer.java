@@ -1,7 +1,7 @@
 package io.divolte.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableList;
@@ -114,7 +114,7 @@ public class MappingTestServer {
 
     private void handleEvent(HttpServerExchange exchange) throws Exception {
         try (final ChannelInputStream cis = new ChannelInputStream(exchange.getRequestChannel())) {
-            final TreeNode payload = EVENT_PARAMETERS_READER.readTree(cis);
+            final JsonNode payload = EVENT_PARAMETERS_READER.readTree(cis);
             final String generatedPageViewId = DivolteIdentifier.generate().value;
 
             final DivolteEvent.BrowserEventData browserEventData = new DivolteEvent.BrowserEventData(
@@ -137,7 +137,7 @@ public class MappingTestServer {
                     get(payload, "new_party_id", Boolean.class).orElse(false),
                     get(payload, "first_in_session", Boolean.class).orElse(false),
                     get(payload, "event_type", String.class),
-                    () -> get(payload, "parameters", TreeNode.class).map(JsonPathSupport::asDocumentContext),
+                    () -> get(payload, "parameters", JsonNode.class),
                     Optional.of(browserEventData));
 
             get(payload, "remote_host", String.class)
@@ -160,8 +160,8 @@ public class MappingTestServer {
         }
     }
 
-    private static <T> Optional<T> get(final TreeNode jsonResult, final String key, final Class<T> type) {
-        final Optional<TreeNode> fieldNode = Optional.ofNullable(jsonResult.get(key));
+    private static <T> Optional<T> get(final JsonNode jsonResult, final String key, final Class<T> type) {
+        final Optional<JsonNode> fieldNode = Optional.ofNullable(jsonResult.get(key));
         return fieldNode.map(f -> {
             try {
                 return EVENT_PARAMETERS_READER.treeToValue(f, type);
