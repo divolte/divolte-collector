@@ -933,17 +933,28 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @param {!Date} d the date to encode as a record.
      */
     Mincoder.prototype.encodeDate = function() {
-      var pad = function(n) {
-            return n < 10 ? ('0' + n) : n;
+      /**
+       * Zero-pad a number.
+       * @param {!number} len the length to pad to.
+       * @param {!number} n   the number to
+       * @returns {!string} the number, zero-padded to the required length
+       */
+      var pad = function(len, n) {
+            var result = n.toString();
+            while(result.length < len) {
+              result = '0' + result;
+            }
+            return result;
           };
       return function(d) {
         var rendered = isFinite(d.valueOf())
                 ? d.getUTCFullYear() + '-' +
-                  pad(d.getUTCMonth() + 1) + '-' +
-                  pad(d.getUTCDate()) + 'T' +
-                  pad(d.getUTCHours()) + ':' +
-                  pad(d.getUTCMinutes()) + ':' +
-                  pad(d.getUTCSeconds()) + 'Z'
+                  pad(2,d.getUTCMonth() + 1) + '-' +
+                  pad(2,d.getUTCDate()) + 'T' +
+                  pad(2,d.getUTCHours()) + ':' +
+                  pad(2,d.getUTCMinutes()) + ':' +
+                  pad(2,d.getUTCSeconds()) + '.' +
+                  pad(3,d.getUTCMilliseconds()) + 'Z'
                 : null;
         this.encode(rendered);
       }
