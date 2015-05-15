@@ -763,7 +763,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      *  - Optional: If encoding an object, the name of the property which the record encodes.
      *  - Optional: Record-specific payload.
      *
-     * Property names are presented as is, terminates with a "!". Within the string itself, any
+     * Property names are presented as is, terminated with a "!". Within the string itself, any
      * occurrences of "!" or "~" are prefixed with "~".
      *
      * The record types are:
@@ -776,11 +776,10 @@ var AUTO_PAGE_VIEW_EVENT = true;
      *          a "!".</li>
      * <li>'j': for a number, with a payload containing the JSON-encoded number terminated with
      *          a "!".</li>
+     * <li>'(': a special record indicating the start of an object.</li>
+     * <li>')': a special record indicating the end of an object.</li>
      * <li>'a': a special record indicating the start of an array.</li>
-     * <li>'.': a special record indicating the end of an object or array.</li>
-     * <li>'o': a special record indicating an empty object.</li>
-     *
-     * The start of an object is indicated by capitalizing the letter of the record type.
+     * <li>'.': a special record indicating the end of an array.</li>
      *
      * @constructor
      * @final
@@ -793,12 +792,6 @@ var AUTO_PAGE_VIEW_EVENT = true;
        */
       this.buffer = '';
       /**
-       * A flag indicating whether the next record will be the first
-       * in a nested object or not.
-       * @type {boolean}
-       */
-      this.pendingStartObject = false;
-      /**
        * Field containing the name of the property to which the next
        * record will be assigned. Used when encoding objects.
        * @type {?string}
@@ -810,14 +803,14 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @private
      */
     Mincoder.prototype.startObject = function() {
-      this.pendingStartObject = true;
+      this.addRecord('(');
     };
     /**
      * Finish encoding an object.
      * @private
      */
     Mincoder.prototype.endObject = function() {
-      this.addRecord(this.pendingStartObject ? 'o' : '.');
+      this.addRecord(')');
     };
     /**
      * Start encoding an array.
@@ -849,10 +842,6 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @param {string=} payload    the (optional) payload for this record.
      */
     Mincoder.prototype.addRecord = function(recordType, payload) {
-      if (this.pendingStartObject) {
-        recordType = recordType.toUpperCase();
-        this.pendingStartObject = false;
-      }
       this.buffer += recordType;
       if (null !== this.pendingFieldName) {
         this.buffer += Mincoder.escapeString(this.pendingFieldName);
@@ -944,17 +933,28 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @param {!Date} d the date to encode as a record.
      */
     Mincoder.prototype.encodeDate = function() {
-      var pad = function(n) {
-            return n < 10 ? ('0' + n) : n;
+      /**
+       * Zero-pad a number.
+       * @param {!number} len the length to pad to.
+       * @param {!number} n   the number to
+       * @returns {!string} the number, zero-padded to the required length
+       */
+      var pad = function(len, n) {
+            var result = n.toString();
+            while(result.length < len) {
+              result = '0' + result;
+            }
+            return result;
           };
       return function(d) {
         var rendered = isFinite(d.valueOf())
                 ? d.getUTCFullYear() + '-' +
-                  pad(d.getUTCMonth() + 1) + '-' +
-                  pad(d.getUTCDate()) + 'T' +
-                  pad(d.getUTCHours()) + ':' +
-                  pad(d.getUTCMinutes()) + ':' +
-                  pad(d.getUTCSeconds()) + 'Z'
+                  pad(2,d.getUTCMonth() + 1) + '-' +
+                  pad(2,d.getUTCDate()) + 'T' +
+                  pad(2,d.getUTCHours()) + ':' +
+                  pad(2,d.getUTCMinutes()) + ':' +
+                  pad(2,d.getUTCSeconds()) + '.' +
+                  pad(3,d.getUTCMilliseconds()) + 'Z'
                 : null;
         this.encode(rendered);
       }

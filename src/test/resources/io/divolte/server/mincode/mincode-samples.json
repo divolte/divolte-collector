@@ -36,6 +36,11 @@
     "code": "n"
   },
   {
+    "title": "Value: Integer",
+    "json": 42,
+    "code": "d16!"
+  },
+  {
     "title": "Value: Float",
     "json": 10.3,
     "code": "j10.3!"
@@ -43,7 +48,7 @@
   {
     "title": "Empty object",
     "json": {},
-    "code": "o"
+    "code": "()"
   },
   {
     "title": "Empty array",
@@ -56,7 +61,7 @@
       "foo": "bar",
       "baz": "daz"
     },
-    "code": "Sfoo!bar!sbaz!daz!."
+    "code": "(sfoo!bar!sbaz!daz!)"
   },
   {
     "title": "Simple array",
@@ -75,12 +80,12 @@
       { "daz": "huh", "doo": "wha" },
       { "daz": 2,     "doo": 3     }
     ],
-    "code": "aSfoo!bar!sbaz!daz!.Sdaz!huh!sdoo!wha!.Ddaz!2!ddoo!3!.."
+    "code": "a(sfoo!bar!sbaz!daz!)(sdaz!huh!sdoo!wha!)(ddaz!2!ddoo!3!)."
   },
   {
     "title": "Example from https://github.com/Sage/jsurl",
     "json": {"name":"John Doe","age":42,"children":["Mary","Bill"]},
-    "code": "Sname!John Doe!dage!16!achildren!sMary!sBill!.."
+    "code": "(sname!John Doe!dage!16!achildren!sMary!sBill!.)"
   },
   {
     "title": "Object with nested objects, arrays and mixed content",
@@ -98,9 +103,18 @@
       "f": 42,
       "g": 53.2,
       "h": -37,
-      "i": -78.3e10,
-      "j": {}
+      "i": -78.3e-10,
+      "j": true,
+      "k": false,
+      "l": null,
+      "m": {},
+      "n": [
+        {},
+        { "a": "b" },
+        { "c": "d" }
+      ],
+      "o": {}
     },
-    "code": "Oa!sb!c!Ad!a!.sb!g!.ae!s1!s2!.df!16!jg!53.2!dh!-11!ji!-78.3e10!oj!."
+    "code": "((a!)sb!c!(d!aa!.sb!g!)ae!s1!s2!.df!16!jg!53.2!dh!-11!ji!-78.3e-10!tj!fk!nl!(m!)an!()(sa!b!)(sc!d!).(o!))"
   }
 ]

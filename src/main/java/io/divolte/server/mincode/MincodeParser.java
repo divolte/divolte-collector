@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.base.ParserBase;
 import com.fasterxml.jackson.core.io.IOContext;
-import com.fasterxml.jackson.core.util.BufferRecycler;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -48,7 +47,6 @@ public class MincodeParser extends ParserBase {
     private Optional<Integer> pendingRecordType = Optional.empty();
 
     MincodeParser(final IOContext ctxt,
-                  final BufferRecycler br,
                   final int parserFeatures,
                   @Nullable final ObjectCodec objectCodec,
                   final Reader reader) {
@@ -233,19 +231,14 @@ public class MincodeParser extends ParserBase {
                 _nameCopied = false;
             }
 
-            // Special handling for end-of-object (and end-of-array).
+            // Special handling for end-of-object.
             // (This is the only record type while in an object that doesn't
             //  have a field name.)
-            if ('.' == recordType) {
-                if (_parsingContext.inObject()) {
-                    nextToken = JsonToken.END_OBJECT;
-                } else if (_parsingContext.inArray()) {
-                    nextToken = JsonToken.END_ARRAY;
-                } else {
-                    _reportError("Unexpected closing record; not in object or array.");
-                    // Unreachable.
-                    nextToken = null;
+            if (')' == recordType) {
+                if (!_parsingContext.inObject()) {
+                    _reportError("Unexpected end of object while not in object.");
                 }
+                nextToken = JsonToken.END_OBJECT;
                 _parsingContext = _parsingContext.getParent();
             } else if (_currToken != JsonToken.FIELD_NAME
                         && _parsingContext.inObject()) {
@@ -270,18 +263,17 @@ public class MincodeParser extends ParserBase {
                         nextToken = JsonToken.START_ARRAY;
                         _parsingContext = _parsingContext.createChildArrayContext(_tokenInputRow, _tokenInputCol);
                         break;
-                    case 'A':
-                    case 'S':
-                    case 'T':
-                    case 'F':
-                    case 'N':
-                    case 'D':
-                    case 'J':
-                    case 'O':
+                    case '.':
+                        if (!_parsingContext.inArray()) {
+                            _reportError("Unexpected end of array while not in array.");
+                        }
+                        nextToken = JsonToken.END_ARRAY;
+                        _parsingContext = _parsingContext.getParent();
+                        break;
+                    case '(':
                         // Start of an object.
                         nextToken = JsonToken.START_OBJECT;
                         _parsingContext = _parsingContext.createChildObjectContext(_tokenInputRow, _tokenInputCol);
-                        pendingRecordType = Optional.of(Character.toLowerCase(recordType));
                         break;
                     case 'o':
                         // An empty object.

@@ -179,7 +179,7 @@ Below is a table of all types that can be produced in a mapping and the correspo
 |                            |     "default": null                                                    |
 |                            |   }                                                                    |
 +----------------------------+------------------------------------------------------------------------+
-| JSON (TreeNode)            | _Must match the structure of the JSON fragment._                       |
+| JSON (JsonNode)            | _Must match the structure of the JSON fragment._                       |
 |                            | _See :ref:`mapping-json-label`._                                       |
 +----------------------------+------------------------------------------------------------------------+
 
@@ -219,10 +219,10 @@ Because int, long, boolean, etc. are reserved words in Groovy, the mapping DSL u
 
 .. _mapping-json-label:
 
-Mapping JSON (``TreeNode``) to Avro fields
+Mapping JSON (``JsonNode``) to Avro fields
 """"""""""""""""""""""""""""""""""""""""""
 
-Some expressions, for example, ``eventParameters()`` (and its ``path()`` method), produce a ``TreeNode`` value that represents JSON supplied by a client. Because Avro doesn't have a type built in to handle arbitrary JSON data, a *compatible* Avro type must be chosen to match the expected structure of the JSON from the client. The following table lists the rules for compatibility between JSON values and Avro types.
+Some expressions, for example, ``eventParameters()`` (and its ``path()`` method), produce a ``JsonNode`` value that represents JSON supplied by a client. Because Avro doesn't have a type built in to handle arbitrary JSON data, a *compatible* Avro type must be chosen to match the expected structure of the JSON from the client. The following table lists the rules for compatibility between JSON values and Avro types.
 
 +---------------+-------------------------------------------------------------------------+
 | Avro type     | JSON value                                                              |
@@ -242,7 +242,7 @@ Some expressions, for example, ``eventParameters()`` (and its ``path()`` method)
 | | ``string``  | A JSON string, number or boolean value.                                 |
 +---------------+-------------------------------------------------------------------------+
 | | ``enum``    | A JSON string, so long as the it's identical to one of the              |
-|               | enumeration's symbols. (If not, it the value will be treated as null.   |
+|               | enumeration's symbols. (If not, the value will be treated as null.)     |
 +---------------+-------------------------------------------------------------------------+
 | | ``record``  | A JSON object, with each property corresponding to a field in the       |
 |               | record. (Extraneous properties are ignored.) The property values and    |
@@ -791,13 +791,13 @@ eventParameters
     map eventParameters() onto 'parametersField'
 
 :Description:
-  A JSON object (``TreeNode``) containing the custom parameters that were submitted with
+  A JSON object (``JsonNode``) containing the custom parameters that were submitted with
   the event.
 
   See :ref:`mapping-json-label` for an example on how to map this to a field.
 
 :Type:
-  TreeNode
+  JsonNode
 
 eventParameters value
 """""""""""""""""""""
@@ -850,7 +850,7 @@ eventParameters path
   See :ref:`mapping-json-label` for an example on how to map JSON values to a field. Expressions can return more than one result; these are presented as a JSON array for subsequent mapping.
 
 :Type:
-  TreeNode
+  JsonNode
 
 URI
 """

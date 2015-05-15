@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.jayway.jsonpath.DocumentContext;
 import io.divolte.server.mincode.MincodeFactory;
 import io.undertow.server.HttpServerExchange;
 import org.slf4j.Logger;
@@ -107,18 +106,6 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                               final boolean newPartyId,
                                               final boolean firstInSession,
                                               final HttpServerExchange exchange) {
-        final LazyReference<Optional<DocumentContext>> eventParameters = new LazyReference<>(() ->
-                queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
-                        .map(encodedParameters -> {
-                            try {
-                                return JsonPathSupport.asDocumentContext(EVENT_PARAMETERS_READER.readTree(encodedParameters));
-                            } catch (final IOException e) {
-                                if (logger.isDebugEnabled()) {
-                                    logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
-                                }
-                                return null;
-                            }
-                        }));
         return new DivolteEvent(corruptEvent,
                                 partyCookie,
                                 sessionCookie,
@@ -129,7 +116,17 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                 newPartyId,
                                 firstInSession,
                                 queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-                                eventParameters::get,
+                                () -> queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
+                                    .map(encodedParameters -> {
+                                        try {
+                                            return EVENT_PARAMETERS_READER.readTree(encodedParameters);
+                                        } catch (final IOException e) {
+                                            if (logger.isDebugEnabled()) {
+                                                logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
+                                            }
+                                            return null;
+                                        }
+                                    }),
                                 Optional.of(new DivolteEvent.BrowserEventData(pageViewId,
                                                                           queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
                                                                           queryParamFromExchange(exchange, REFERER_QUERY_PARAM),

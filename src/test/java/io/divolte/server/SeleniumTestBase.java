@@ -15,11 +15,18 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import org.junit.After;
+import org.junit.AssumptionViolatedException;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.model.Statement;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
@@ -52,6 +59,21 @@ public abstract class SeleniumTestBase {
         LOCAL_RUN_CAPABILITIES = new DesiredCapabilities();
         LOCAL_RUN_CAPABILITIES.setBrowserName("Local Selenium instructed browser");
     }
+
+    @Rule
+    public final TestRule suppressWebDriverNavigationExceptions = (base, description) -> new Statement() {
+        @Override
+        public void evaluate() throws Throwable {
+            try {
+                base.evaluate();
+            } catch (final WebDriverException e) {
+                if (e.getMessage().contains("history navigation does not work")) {
+                    throw new AssumptionViolatedException("Selenium driver doesn't support navigation required for this test.", e);
+                }
+                throw e;
+            }
+        }
+    };
 
     @Nullable
     protected WebDriver driver;

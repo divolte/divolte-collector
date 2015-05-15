@@ -29,6 +29,7 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericFixed;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericRecordBuilder;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -219,7 +220,7 @@ public class AvroGenericRecordMapper {
                 break;
             case END_OBJECT:
             case FIELD_NAME:
-                result = new GenericData.Record(targetSchema);
+                final GenericRecordBuilder builder = new GenericRecordBuilder(targetSchema);
                 while (parser.getCurrentToken() == JsonToken.FIELD_NAME) {
                     final String fieldName = parser.getCurrentName();
                     // Advance to the field value.
@@ -228,9 +229,9 @@ public class AvroGenericRecordMapper {
                     final Schema.Field field = targetSchema.getField(fieldName);
                     if (null != field) {
                         final Object fieldValue = read(parser, field.schema());
-                        result.put(field.pos(), fieldValue);
+                        builder.set(field, fieldValue);
                     } else if (reader.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)) {
-                        throw unrecognizedPropertyException(parser, result, fieldName);
+                        throw unrecognizedPropertyException(parser, targetSchema, fieldName);
                     } else {
                         // We're ignoring unknown properties; skip over this one.
                         parser.skipChildren();
@@ -238,6 +239,7 @@ public class AvroGenericRecordMapper {
                     // Advance to next token, in preparation of next field.
                     parser.nextToken();
                 }
+                result = builder.build();
                 break;
             default:
                 throw mappingException(parser, targetSchema);
@@ -391,13 +393,13 @@ public class AvroGenericRecordMapper {
     }
 
     private static UnrecognizedPropertyException unrecognizedPropertyException(final JsonParser parser,
-                                                                               final GenericRecord record,
+                                                                               final Schema schema,
                                                                                final String fieldName) {
-        final List<Object> fieldNames = record.getSchema().getFields()
+        final List<Object> fieldNames = schema.getFields()
                 .stream()
                 .map(Schema.Field::name)
                 .collect(Collectors.toList());
-        return UnrecognizedPropertyException.from(parser, record, fieldName, fieldNames);
+        return UnrecognizedPropertyException.from(parser, schema, fieldName, fieldNames);
     }
 
     private static InvalidFormatException unknownEnumValueException(final JsonParser parser,
