@@ -49,7 +49,7 @@ public final class DivolteEvent {
     // Extra data provided for browser events.
     public final Optional<BrowserEventData> browserEventData;
 
-    @NotNullByDefault
+    @ParametersAreNonnullByDefault
     public static final class BrowserEventData {
         public final String pageViewId;
         public final Optional<String> location;
