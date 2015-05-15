@@ -41,9 +41,16 @@ apply plugin: 'groovy'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'pl.allegro.tech.build.axion-release'
 
+import com.github.zafarkhaja.semver.Version
+
 scmVersion {
     tag {
         prefix = rootProject.name
+    }
+    versionCreator { versionFromTag, scmPosition ->
+        scmPosition.onTag || scmPosition.branch.startsWith('support/')
+            ? versionFromTag
+            : Version.valueOf(versionFromTag).incrementMinorVersion()
     }
 }
 
@@ -51,9 +58,7 @@ defaultTasks 'clean', 'build'
 
 group   = 'io.divolte'
 // Order matters: the version has to be after the scmVersion extension has determined the version.
-//project.version = scmVersion.version
-// Disable version resolution via the plugin; we're reevaluating the release process.
-project.version = '0.3.0'
+project.version = scmVersion.version
 
 sourceCompatibility = 1.8
 mainClassName = 'io.divolte.server.Server'
