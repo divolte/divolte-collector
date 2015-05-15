@@ -1,25 +1,12 @@
 package io.divolte.server;
 
-import static io.divolte.server.BrowserLists.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
 import io.divolte.server.ServerTestUtils.TestServer;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
-
 import org.junit.After;
 import org.junit.AssumptionViolatedException;
 import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestRule;
-import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -32,8 +19,17 @@ import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
+import javax.annotation.Nullable;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static io.divolte.server.BrowserLists.*;
 
 @RunWith(Parameterized.class)
 public abstract class SeleniumTestBase {
