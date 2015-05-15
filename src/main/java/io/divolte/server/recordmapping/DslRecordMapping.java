@@ -1051,7 +1051,7 @@ public final class DslRecordMapping {
          * @param readableName  A human-readable description of this producer, used in error messages.
          * @param type          The type of value that this producer will produce.
          * @param supplier      A supplier that can be used to calculate the value on demand.
-         * @param memoize       Whether the value should be calculated once and remembered, or on every requeast.
+         * @param memoize       Whether the value should be calculated once and remembered, or on every request.
          *                      This should only be set to true when calculating the value is expensive.
          */
         PrimitiveValueProducer(final String readableName,

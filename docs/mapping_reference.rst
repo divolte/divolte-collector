@@ -242,7 +242,7 @@ Some expressions, for example, ``eventParameters()`` (and its ``path()`` method)
 | | ``string``  | A JSON string, number or boolean value.                                 |
 +---------------+-------------------------------------------------------------------------+
 | | ``enum``    | A JSON string, so long as the it's identical to one of the              |
-|               | enumeration's symbols. (If not, it the value will be treated as null.   |
+|               | enumeration's symbols. (If not, the value will be treated as null.)     |
 +---------------+-------------------------------------------------------------------------+
 | | ``record``  | A JSON object, with each property corresponding to a field in the       |
 |               | record. (Extraneous properties are ignored.) The property values and    |
