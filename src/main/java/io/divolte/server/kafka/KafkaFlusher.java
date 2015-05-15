@@ -108,7 +108,7 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     @FunctionalInterface
     private interface KafkaSender {
-        public abstract void send() throws FailedToSendMessageException;
+        void send() throws FailedToSendMessageException;
     }
 
     private ProcessingDirective send(final KafkaSender sender) {

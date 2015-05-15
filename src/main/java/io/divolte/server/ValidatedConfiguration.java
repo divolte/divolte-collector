@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -501,12 +502,14 @@ public final class ValidatedConfiguration {
         }
 
         public SimpleRollingFileStrategyConfiguration asSimpleRollingFileStrategy() {
-            if (Types.SIMPLE_ROLLING_FILE != type) throw new IllegalStateException("Attempt to cast FileStrategyConfiguration to wrong type.");
+            Preconditions.checkState(Types.SIMPLE_ROLLING_FILE == type,
+                                     "Attempt to cast FileStrategyConfiguration to wrong type.");
             return (SimpleRollingFileStrategyConfiguration) this;
         }
 
         public SessionBinningFileStrategyConfiguration asSessionBinningFileStrategy() {
-            if (Types.SESSION_BINNING != type) throw new IllegalStateException("Attempt to cast FileStrategyConfiguration to wrong type.");
+            Preconditions.checkState(Types.SESSION_BINNING == type,
+                                     "Attempt to cast FileStrategyConfiguration to wrong type.");
             return (SessionBinningFileStrategyConfiguration) this;
         }
     }

@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.maxmind.geoip2.model.CityResponse;
 import com.typesafe.config.Config;
@@ -50,6 +49,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -354,7 +354,7 @@ public class DslRecordMapperTest {
         EventPayload event = request("http://www.example.com");
 
         final File geoMappingFile = File.createTempFile("geo-mapping", ".groovy");
-        Files.write(Resources.toByteArray(Resources.getResource("geo-mapping.groovy")), geoMappingFile);
+        copyResourceToFile("geo-mapping.groovy", geoMappingFile);
 
         final ImmutableMap<String, Object> mappingConfig = ImmutableMap.of(
                 "divolte.tracking.schema_mapping.mapping_script_file", geoMappingFile.getAbsolutePath(),
@@ -387,7 +387,7 @@ public class DslRecordMapperTest {
             assertEquals("Property " + k + " not mapped correctly.", v, recordValue);
         });
 
-        java.nio.file.Files.delete(geoMappingFile.toPath());
+        Files.delete(geoMappingFile.toPath());
     }
 
     @Test(expected=SchemaMappingException.class)
@@ -535,10 +535,10 @@ public class DslRecordMapperTest {
 
     private void setupServer(final String mapping) throws IOException {
         mappingFile = File.createTempFile("test-mapping", ".groovy");
-        Files.write(Resources.toByteArray(Resources.getResource(mapping)), mappingFile);
+        copyResourceToFile(mapping, mappingFile);
 
         avroFile = File.createTempFile("TestSchema-", ".avsc");
-        Files.write(Resources.toByteArray(Resources.getResource("TestRecord.avsc")), avroFile);
+        copyResourceToFile("TestRecord.avsc", avroFile);
 
         ImmutableMap<String, Object> mappingConfig = ImmutableMap.of(
                 "divolte.tracking.schema_mapping.mapping_script_file", mappingFile.getAbsolutePath(),
@@ -549,10 +549,20 @@ public class DslRecordMapperTest {
         server.server.run();
     }
 
+    private static void copyResourceToFile(final String resourceName, final File file) throws IOException {
+        com.google.common.io.Files.write(Resources.toByteArray(Resources.getResource(resourceName)), file);
+    }
+
     @After
     public void shutdown() throws IOException {
-        if (server != null) server.server.shutdown();
-        if (mappingFile != null) java.nio.file.Files.delete(mappingFile.toPath());
-        if (avroFile != null) java.nio.file.Files.delete(avroFile.toPath());
+        if (server != null) {
+            server.server.shutdown();
+        }
+        if (mappingFile != null) {
+            Files.delete(mappingFile.toPath());
+        }
+        if (avroFile != null) {
+            Files.delete(avroFile.toPath());
+        }
     }
 }

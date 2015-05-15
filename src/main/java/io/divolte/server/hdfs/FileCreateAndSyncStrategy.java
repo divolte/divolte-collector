@@ -37,7 +37,7 @@ interface FileCreateAndSyncStrategy {
     HdfsOperationResult append(final AvroRecordBuffer record);
     void cleanup();
 
-    public static FileCreateAndSyncStrategy create(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
+    static FileCreateAndSyncStrategy create(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
         if (vc.configuration().hdfsFlusher.fileStrategy.type == Types.SESSION_BINNING) {
             return new SessionBinningFileStrategy(vc, fs, hdfsReplication, schema);
         } else if (vc.configuration().hdfsFlusher.fileStrategy.type == Types.SIMPLE_ROLLING_FILE) {

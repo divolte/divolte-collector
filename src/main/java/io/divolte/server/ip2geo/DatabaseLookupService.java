@@ -35,8 +35,6 @@ import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.CityResponse;
 
-import static com.google.common.io.Files.*;
-
 @ParametersAreNonnullByDefault
 public class DatabaseLookupService implements LookupService {
     private static final Logger logger = LoggerFactory.getLogger(DatabaseLookupService.class);
@@ -55,7 +53,7 @@ public class DatabaseLookupService implements LookupService {
          *    to mmap(2) the file.
          */
         final DatabaseReader reader;
-        if ("gz".equals(getFileExtension(location.toString()))) {
+        if ("gz".equals(com.google.common.io.Files.getFileExtension(location.toString()))) {
             try (final InputStream rawStream = Files.newInputStream(location);
                  final InputStream bufferedStream = new BufferedInputStream(rawStream);
                  final InputStream dbStream = new GZIPInputStream(bufferedStream)) {
