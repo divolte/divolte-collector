@@ -36,17 +36,17 @@ public abstract class SeleniumTestBase {
     public static final String CHROME_DRIVER = "chrome";
     public static final String SAUCE_DRIVER = "sauce";
     public static final String BS_DRIVER = "browserstack";
-    
+
     public static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
     public static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_API_KEY";
     public static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
     public static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
-    
+
     public static final String BS_USER_NAME_ENV_VAR = "BS_USER_NAME";
     public static final String BS_API_KEY_ENV_VAR = "BS_API_KEY";
-    
+
     public static final String CHROME_DRIVER_LOCATION_ENV_VAR = "CHROME_DRIVER";
-    
+
     public static final DesiredCapabilities LOCAL_RUN_CAPABILITIES;
     static {
         LOCAL_RUN_CAPABILITIES = new DesiredCapabilities();
@@ -94,9 +94,9 @@ public abstract class SeleniumTestBase {
             BASIC_COPY("test-basic-page-copy"),
             PAGE_VIEW_SUPPLIED("test-basic-page-provided-pv-id"),
             CUSTOM_PAGE_VIEW("test-custom-page-view");
-    
+
             private final String resourceName;
-    
+
             private TEST_PAGES(final String resourceName) {
                 this.resourceName = Objects.requireNonNull(resourceName);
             }
@@ -110,7 +110,7 @@ public abstract class SeleniumTestBase {
 
     protected void doSetUp(final String configFileName) throws Exception {
         final String driverName = System.getenv().getOrDefault(DRIVER_ENV_VAR, PHANTOMJS_DRIVER);
-    
+
         switch (driverName) {
         case CHROME_DRIVER:
             setupLocalChrome();
@@ -126,7 +126,7 @@ public abstract class SeleniumTestBase {
             driver = new PhantomJSDriver();
             break;
         }
-    
+
         server = new TestServer(configFileName);
         server.server.run();
     }
@@ -136,18 +136,18 @@ public abstract class SeleniumTestBase {
                 .ofNullable(System.getenv(BS_USER_NAME_ENV_VAR))
                 .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
                                                       + "in the " + BS_USER_NAME_ENV_VAR + " env var."));
-    
+
             final String bsApiKey = Optional
                     .ofNullable(System.getenv(BS_API_KEY_ENV_VAR))
                     .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
                                                           + "in the " + BS_API_KEY_ENV_VAR + " env var."));
-    
+
             final DesiredCapabilities caps = capabilities.get();
             caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
             driver = new RemoteWebDriver(
                     new URL(String.format("http://%s:%s@hub.browserstack.com/wd/hub", bsUserName, bsApiKey)),
                     caps);
-    
+
     }
 
     private void setupSauceLabs() throws MalformedURLException {
@@ -155,7 +155,7 @@ public abstract class SeleniumTestBase {
             .ofNullable(System.getenv(SAUCE_USER_NAME_ENV_VAR))
             .orElseThrow(() -> new RuntimeException("When using 'sauce' as Selenium driver, please set the SauceLabs username "
                                                   + "in the " + SAUCE_USER_NAME_ENV_VAR + " env var."));
-    
+
         final String sauceApiKey = Optional
                 .ofNullable(System.getenv(SAUCE_API_KEY_ENV_VAR))
                 .orElseThrow(() -> new RuntimeException("When using 'sauce' as Selenium driver, please set the SauceLabs username "
@@ -163,11 +163,11 @@ public abstract class SeleniumTestBase {
         final String sauceHost = Optional
                 .ofNullable(System.getenv(SAUCE_HOST_ENV_VAR))
                 .orElse("localhost");
-    
+
         final int saucePort = Optional
                 .ofNullable(System.getenv(SAUCE_PORT_ENV_VAR)).map(Ints::tryParse)
                 .orElse(4445);
-    
+
         final DesiredCapabilities caps = capabilities.get();
         caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
         driver = new RemoteWebDriver(
@@ -195,5 +195,4 @@ public abstract class SeleniumTestBase {
             server = null;
         }
     }
-
 }
