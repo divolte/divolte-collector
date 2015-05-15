@@ -18,7 +18,6 @@ package io.divolte.server.recordmapping;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
