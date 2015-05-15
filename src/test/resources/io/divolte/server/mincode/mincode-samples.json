@@ -36,6 +36,11 @@
     "code": "n"
   },
   {
+    "title": "Value: Integer",
+    "json": 42,
+    "code": "d16!"
+  },
+  {
     "title": "Value: Float",
     "json": 10.3,
     "code": "j10.3!"
