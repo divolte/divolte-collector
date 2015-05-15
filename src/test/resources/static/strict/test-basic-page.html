@@ -27,6 +27,24 @@
   </head>
   <body>
     <script src="/divolte.js" defer async></script>
-    <div id="custom" onclick="divolte.signal('custom',{ key: 'value', answer: 42, magic: true })">Click me to fire an event!</div>
+    <div id="custom"
+         onclick="divolte.signal('custom', {
+                                   a: {},
+                                   b: 'c',
+                                   d: { a: [], b: 'g' },
+                                   e: [ '1', '2' ],
+                                   f: 42,
+                                   g: 53.2,
+                                   h: -37,
+                                   i: -78.3e-10,
+                                   j: true,
+                                   k: false,
+                                   l: null,
+                                   m: new Date(Date.UTC(2015,5,13,15,49,33,2)),
+                                   n: {},
+                                   o: [ {}, { a: 'b' }, { c: 'd' } ],
+                                   p: {}
+                                 }
+                                 )">Click me to fire an event!</div>
   </body>
 </html>

@@ -17,10 +17,10 @@
 package io.divolte.server;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Map;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -45,9 +45,7 @@ public final class DivolteEvent {
     public final long requestStartTime;
     public final long clientUtcOffset;
 
-    public final Function<String, Optional<String>> eventParameterProducer;
-    public final Supplier<Map<String,String>> eventParametersProducer;
-
+    public final Supplier<Optional<JsonNode>> eventParametersProducer;
     // Extra data provided for browser events.
     public final Optional<BrowserEventData> browserEventData;
 
@@ -91,8 +89,7 @@ public final class DivolteEvent {
                  final boolean newPartyId,
                  final boolean firstInSession,
                  final Optional<String> eventType,
-                 final Function<String, Optional<String>> eventParameterProducer,
-                 final Supplier<Map<String, String>> eventParametersProducer,
+                 final Supplier<Optional<JsonNode>> eventParametersProducer,
                  final Optional<BrowserEventData> browserEvent) {
         this.corruptEvent            = corruptEvent;
         this.partyCookie             = Objects.requireNonNull(partyCookie);
@@ -104,7 +101,6 @@ public final class DivolteEvent {
         this.newPartyId              = newPartyId;
         this.firstInSession          = firstInSession;
         this.eventType               = Objects.requireNonNull(eventType);
-        this.eventParameterProducer  = Objects.requireNonNull(eventParameterProducer);
         this.eventParametersProducer = Objects.requireNonNull(eventParametersProducer);
         this.browserEventData        = Objects.requireNonNull(browserEvent);
     }

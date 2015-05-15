@@ -1,0 +1,394 @@
+[
+  {
+    "title": "Test boolean mapping (true)",
+    "schema": { "type": "boolean" },
+    "json": true,
+    "result": true
+  },
+  {
+    "title": "Test boolean mapping (false)",
+    "schema": { "type": "boolean" },
+    "json": false,
+    "result": false
+  },
+  {
+    "title": "Test string mapping",
+    "schema": { "type": "string" },
+    "json": "a value",
+    "result": "a value"
+  },
+  {
+    "title": "Test empty string mapping",
+    "schema": { "type": "string" },
+    "json": "",
+    "result": ""
+  },
+  {
+    "title": "Test numeric (int) mapping",
+    "schema": { "type": "int" },
+    "json": 10,
+    "result": 10
+  },
+  {
+    "title": "Test numeric (long) mapping",
+    "schema": { "type": "long" },
+    "json": 45,
+    "result": 45
+  },
+  {
+    "title": "Test numeric (float) mapping",
+    "schema": { "type": "float" },
+    "json": 10.2,
+    "result": 10.2
+  },
+  {
+    "title": "Test numeric (double) mapping",
+    "schema": { "type": "double" },
+    "json": 10.1,
+    "result": 10.1
+  },
+  {
+    "title": "Test lossless numeric mapping",
+    "schema": { "type": "string" },
+    "json": 9999999.4999999999,
+    "result": "9999999.4999999999"
+  },
+  {
+    "title": "Test null mapping",
+    "schema": { "type": "null" },
+    "json": null,
+    "result": null
+  },
+  {
+    "title": "Test illegal mapping value as null",
+    "schema": { "type": "null" },
+    "json": "not null",
+    "exception": "com.fasterxml.jackson.databind.JsonMappingException"
+  },
+  {
+    "title": "Test enum mapping",
+    "schema": {
+      "type": "enum",
+      "name": "Suit",
+      "symbols": [ "SPADES", "HEARTS", "DIAMONDS", "CLUBS" ]
+    },
+    "json": "SPADES",
+    "result": "SPADES"
+  },
+  {
+    "title": "Test enum mapping missing value",
+    "schema": {
+      "type": "enum",
+      "name": "Suit",
+      "symbols": [ "SPADES", "HEARTS", "DIAMONDS", "CLUBS" ]
+    },
+    "json": "RAKES",
+    "deserialization_features": {
+      "READ_UNKNOWN_ENUM_VALUES_AS_NULL": false
+    },
+    "exception": "com.fasterxml.jackson.databind.exc.InvalidFormatException"
+  },
+  {
+    "title": "Test enum mapping missing value to null",
+    "schema": {
+      "type": "enum",
+      "name": "Suit",
+      "symbols": [ "SPADES", "HEARTS", "DIAMONDS", "CLUBS" ]
+    },
+    "json": "RAKES",
+    "deserialization_features": {
+      "READ_UNKNOWN_ENUM_VALUES_AS_NULL": true
+    },
+    "result": null
+  },
+  {
+    "title": "Test bytes mapping",
+    "schema": { "type": "bytes" },
+    "json": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZy4=",
+    "result": { "bytes" : "The quick brown fox jumps over the lazy dog." }
+  },
+  {
+    "title": "Test fixed mapping",
+    "schema": { "type": "fixed", "name": "md5", "size": 16 },
+    "json": "FHWPGv1EwJt5kgc8zwC0PQ==",
+    "result": [20,117,-113,26,-3,68,-64,-101,121,-110,7,60,-49,0,-76,61]
+  },
+  {
+    "title": "Test map mapping",
+    "schema": { "type": "map", "values": "string" },
+    "json": { "foo": "bar", "baz": "daz" },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test empty map mapping",
+    "schema": { "type": "map", "values": "string" },
+    "json": {},
+    "result": {}
+  },
+  {
+    "title": "Test illegal mapping value as map",
+    "schema": { "type": "map", "values": "string" },
+    "json": "bar",
+    "exception": "com.fasterxml.jackson.databind.JsonMappingException"
+  },
+  {
+    "title": "Test array mapping",
+    "schema": { "type": "array", "items": "string" },
+    "json": [ "foo", "bar", "baz", "daz" ],
+    "result": [ "foo", "bar", "baz", "daz" ]
+  },
+  {
+    "title": "Test empty array mapping",
+    "schema": { "type": "array", "items": "string" },
+    "json": [],
+    "result": []
+  },
+  {
+    "title": "Test illegal array mapping from single value",
+    "schema": { "type": "array", "items": "string" },
+    "json": "a value",
+    "deserialization_features": {
+      "ACCEPT_SINGLE_VALUE_AS_ARRAY": false
+    },
+    "exception": "com.fasterxml.jackson.databind.JsonMappingException"
+  },
+  {
+    "title": "Test array mapping single value",
+    "schema": { "type": "array", "items": "string" },
+    "json": "a value",
+    "deserialization_features": {
+      "ACCEPT_SINGLE_VALUE_AS_ARRAY": true
+    },
+    "result": ["a value"]
+  },
+  {
+    "title": "Test mapping single-element array as value",
+    "schema": { "type": "string" },
+    "json": ["a value"],
+    "deserialization_features": {
+      "UNWRAP_SINGLE_VALUE_ARRAYS": true
+    },
+    "result": "a value"
+  },
+  {
+    "title": "Test illegal mapping single-element array as value",
+    "schema": { "type": "string" },
+    "json": ["a value"],
+    "deserialization_features": {
+      "UNWRAP_SINGLE_VALUE_ARRAYS": false
+    },
+    "exception": "com.fasterxml.jackson.databind.JsonMappingException"
+  },
+  {
+    "title": "Test null-first union mapping null",
+    "schema": ["null", "string"],
+    "json": null,
+    "result": null
+  },
+  {
+    "title": "Test null-first union mapping value",
+    "schema": ["null", "string"],
+    "json": "a value",
+    "result": "a value"
+  },
+  {
+    "title": "Test null-second union mapping null",
+    "schema": ["string", "null"],
+    "json": null,
+    "result": null
+  },
+  {
+    "title": "Test null-second union mapping value",
+    "schema": ["string", "null"],
+    "json": "a value",
+    "result": "a value"
+  },
+  {
+    "title": "Test singleton union mapping",
+    "schema": ["string"],
+    "json": "some value",
+    "result": "some value"
+  },
+  {
+    "title": "Test illegal union mapping #1",
+    "schema": ["string", "int"],
+    "unsupported": "true",
+    "json": "some value",
+    "exception": "com.fasterxml.jackson.databind.JsonMappingException"
+  },
+  {
+    "title": "Test illegal union mapping #2",
+    "schema": ["string", "int", "long"],
+    "unsupported": "true",
+    "json": "some value",
+    "exception": "com.fasterxml.jackson.databind.JsonMappingException"
+  },
+  {
+    "title": "Test record mapping",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "baz": "daz" },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test record mapping with unknown field",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "baz": "daz", "extraField": "foobar" },
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": true
+    },
+    "exception": "com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException"
+  },
+  {
+    "title": "Test illegal mapping value as record",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" }
+      ]
+    },
+    "json": "bar",
+    "exception": "com.fasterxml.jackson.databind.JsonMappingException"
+  },
+  {
+    "title": "Test record mapping with unknown field ignored",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "extraField": "foobar", "baz": "daz"},
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test record mapping with complex unknown field ignored",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "extraField": { "foo": "x", "baz": "y" }, "baz": "daz"},
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test record mapping with unknown last field ignored",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "baz": "daz", "extraField": "foobar" },
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test record mapping with complex unknown last field ignored",
+    "schema": {
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "foo", "type": "string" },
+        { "name": "baz", "type": "string" }
+      ]
+    },
+    "json": { "foo": "bar", "baz": "daz", "extraField": { "foo": "x", "baz": "y" }, "baz": "daz"},
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": { "foo": "bar", "baz": "daz" }
+  },
+  {
+    "title": "Test array of records mapping",
+    "schema": {
+      "type": "array",
+      "items": {
+        "type": "record",
+        "name": "TestRecord",
+        "fields": [
+          { "name": "field1", "type": ["null", "string"],  "default": null },
+          { "name": "field2", "type": ["null", "int"],     "default": null },
+          { "name": "field3", "type": ["null", "boolean"], "default": null }
+        ]
+      }
+    },
+    "json": [
+      { "field1": "foo", "field2": 42,   "extra": "ignored"      },
+      { "field1": "bar", "field3": true, "more":  "also ignored" }
+    ],
+    "deserialization_features": {
+      "FAIL_ON_UNKNOWN_PROPERTIES": false
+    },
+    "result": [
+      { "field1": "foo", "field2": 42,   "field3": null },
+      { "field1": "bar", "field2": null, "field3": true }
+    ]
+  },
+  {
+    "title": "Test nested record mapping",
+    "schema": {
+      "namespace": "io.divolte.server.recordmapping",
+      "type": "record",
+      "name": "TestRecord",
+      "fields": [
+        { "name": "field1", "type": ["null", "string"],     "default": null },
+        { "name": "nested", "type": ["null", "TestRecord"], "default": null }
+      ]
+    },
+    "json": {
+      "field1": "foo",
+      "nested": {
+        "field1": "bar",
+        "nested": {
+          "field1": "baz",
+          "nested": {
+            "field1": "daz"
+          }
+        }
+      }
+    },
+    "result": {
+      "field1": "foo",
+      "nested": {
+        "field1": "bar",
+        "nested": {
+          "field1": "baz",
+          "nested": {
+            "field1": "daz",
+            "nested": null
+          }
+        }
+      }
+    }
+  }
+]

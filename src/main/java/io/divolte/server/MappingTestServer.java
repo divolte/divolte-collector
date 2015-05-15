@@ -1,6 +1,9 @@
 package io.divolte.server;
 
-import com.fasterxml.jackson.jr.ob.JSON;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableList;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -33,16 +36,16 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 public class MappingTestServer {
     private static final Logger log = LoggerFactory.getLogger(MappingTestServer.class);
+
+    private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper().reader();
 
     private final RecordMapper mapper;
     private final Undertow undertow;
@@ -110,62 +113,63 @@ public class MappingTestServer {
     }
 
     private void handleEvent(HttpServerExchange exchange) throws Exception {
-        final ChannelInputStream cis = new ChannelInputStream(exchange.getRequestChannel());
-        final Map<String,Object> payload = JSON.std.<String>mapFrom(cis);
-        final String generatedPageViewId = DivolteIdentifier.generate().value;
+        try (final ChannelInputStream cis = new ChannelInputStream(exchange.getRequestChannel())) {
+            final JsonNode payload = EVENT_PARAMETERS_READER.readTree(cis);
+            final String generatedPageViewId = DivolteIdentifier.generate().value;
 
-        final DivolteEvent.BrowserEventData browserEventData = new DivolteEvent.BrowserEventData(
-                get(payload, "page_view_id", String.class).orElse(generatedPageViewId),
-                get(payload, "location", String.class),
-                get(payload, "referer", String.class),
-                get(payload, "viewport_pixel_width", Integer.class),
-                get(payload, "viewport_pixel_height", Integer.class),
-                get(payload, "screen_pixel_width", Integer.class),
-                get(payload, "screen_pixel_height", Integer.class),
-                get(payload, "device_pixel_ratio", Integer.class));
-        final DivolteEvent divolteEvent = new DivolteEvent(
-                get(payload, "corrupt", Boolean.class).orElse(false),
-                get(payload, "party_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
-                get(payload, "session_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
-                get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
-                ClientSideCookieEventHandler.EVENT_SOURCE_NAME,
-                System.currentTimeMillis(),
-                0L,
-                get(payload, "new_party_id", Boolean.class).orElse(false),
-                get(payload, "first_in_session", Boolean.class).orElse(false),
-                get(payload, "event_type", String.class),
-                (name) -> get(payload, "param_" + name, String.class),
-                () -> payload.entrySet()
-                        .stream()
-                        .filter((e) -> e.getKey().startsWith("param_"))
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                (e) -> (String) e.getValue())),
-                Optional.of(browserEventData));
+            final DivolteEvent.BrowserEventData browserEventData = new DivolteEvent.BrowserEventData(
+                    get(payload, "page_view_id", String.class).orElse(generatedPageViewId),
+                    get(payload, "location", String.class),
+                    get(payload, "referer", String.class),
+                    get(payload, "viewport_pixel_width", Integer.class),
+                    get(payload, "viewport_pixel_height", Integer.class),
+                    get(payload, "screen_pixel_width", Integer.class),
+                    get(payload, "screen_pixel_height", Integer.class),
+                    get(payload, "device_pixel_ratio", Integer.class));
+            final DivolteEvent divolteEvent = new DivolteEvent(
+                    get(payload, "corrupt", Boolean.class).orElse(false),
+                    get(payload, "party_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
+                    get(payload, "session_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
+                    get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
+                    ClientSideCookieEventHandler.EVENT_SOURCE_NAME,
+                    System.currentTimeMillis(),
+                    0L,
+                    get(payload, "new_party_id", Boolean.class).orElse(false),
+                    get(payload, "first_in_session", Boolean.class).orElse(false),
+                    get(payload, "event_type", String.class),
+                    () -> get(payload, "parameters", JsonNode.class),
+                    Optional.of(browserEventData));
 
-        get(payload, "remote_host", String.class)
-            .ifPresent(ip -> {
-                try {
-                    final InetAddress address = InetAddress.getByName(ip);
-                    //we have no way of knowing the port
-                    exchange.setSourceAddress(new InetSocketAddress(address, 0));
-                } catch (final UnknownHostException e) {
-                    log.warn("Could not parse remote host: " + ip, e);
-                }
-            });
+            get(payload, "remote_host", String.class)
+                .ifPresent(ip -> {
+                    try {
+                        final InetAddress address = InetAddress.getByName(ip);
+                        // We have no way of knowing the port
+                        exchange.setSourceAddress(new InetSocketAddress(address, 0));
+                    } catch (final UnknownHostException e) {
+                        log.warn("Could not parse remote host: " + ip, e);
+                    }
+                });
 
-        exchange.putAttachment(DIVOLTE_EVENT_KEY, divolteEvent);
-        exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
+            exchange.putAttachment(DIVOLTE_EVENT_KEY, divolteEvent);
+            exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
 
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-        exchange.getResponseChannel().write(ByteBuffer.wrap(mapper.newRecordFromExchange(exchange).toString().getBytes(StandardCharsets.UTF_8)));
-        exchange.endExchange();
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+            exchange.getResponseChannel().write(ByteBuffer.wrap(mapper.newRecordFromExchange(exchange).toString().getBytes(StandardCharsets.UTF_8)));
+            exchange.endExchange();
+        }
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> Optional<T> get(Map<String,Object> jsonResult, String key, Class<T> type) {
-        final Object result = jsonResult.get(key);
-        return result != null && result.getClass().isAssignableFrom(type) ? Optional.of((T) result) : Optional.empty();
+    private static <T> Optional<T> get(final JsonNode jsonResult, final String key, final Class<T> type) {
+        final Optional<JsonNode> fieldNode = Optional.ofNullable(jsonResult.get(key));
+        return fieldNode.map(f -> {
+            try {
+                return EVENT_PARAMETERS_READER.treeToValue(f, type);
+            } catch (final JsonProcessingException e) {
+                log.info("Unable to map field: " + key, e);
+                return null;
+            }
+        });
     }
 
     private static class MappingTestServerOptionParser extends OptionParser {

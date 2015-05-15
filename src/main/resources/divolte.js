@@ -742,6 +742,291 @@ var AUTO_PAGE_VIEW_EVENT = true;
     return murmum3_32(canonicalBytes);
   };
 
+
+  /**
+   * Serialize a value as a string.
+   * This function can serialize anything that JSON.stringify() can,
+   * and honours toJSON() semantics. It does not, however, use the JSON
+   * encoding to serialize the value.
+   * @param {!*} value The value to serialize.
+   * @return {String} a string that represents the serialized value.
+   */
+  var mincode = function() {
+    /**
+     * Class for serializing values using a minimum encoding.
+     *
+     * The encoding is designed to be short, url-friendly, and capable of representing anything
+     * that JSON could.
+     *
+     * Objects are encoded as a series of records. The format of a record is:
+     *  - Character: indicates the type of record.
+     *  - Optional: If encoding an object, the name of the property which the record encodes.
+     *  - Optional: Record-specific payload.
+     *
+     * Property names are presented as is, terminated with a "!". Within the string itself, any
+     * occurrences of "!" or "~" are prefixed with "~".
+     *
+     * The record types are:
+     * <li>'s': for a string, with a payload of the string itself encoded in the same was as
+     *          property names (described above).</li>
+     * <li>'t': for a boolean, with a value of true.</li>
+     * <li>'f': for a boolean, with a value of false.</li>
+     * <li>'n': for null.</li>
+     * <li>'d': for a number, with a payload of the the base36-encoded number terminated with
+     *          a "!".</li>
+     * <li>'j': for a number, with a payload containing the JSON-encoded number terminated with
+     *          a "!".</li>
+     * <li>'(': a special record indicating the start of an object.</li>
+     * <li>')': a special record indicating the end of an object.</li>
+     * <li>'a': a special record indicating the start of an array.</li>
+     * <li>'.': a special record indicating the end of an array.</li>
+     *
+     * @constructor
+     * @final
+     */
+    var Mincoder = function() {
+      /**
+       * Buffer containing the records encoded so far.
+       * @protected
+       * @type {string}
+       */
+      this.buffer = '';
+      /**
+       * Field containing the name of the property to which the next
+       * record will be assigned. Used when encoding objects.
+       * @type {?string}
+       */
+      this.pendingFieldName = null;
+    };
+    /**
+     * Start encoding an object.
+     * @private
+     */
+    Mincoder.prototype.startObject = function() {
+      this.addRecord('(');
+    };
+    /**
+     * Finish encoding an object.
+     * @private
+     */
+    Mincoder.prototype.endObject = function() {
+      this.addRecord(')');
+    };
+    /**
+     * Start encoding an array.
+     * @private
+     */
+    Mincoder.prototype.startArray = function() {
+      this.addRecord('a');
+    };
+    /**
+     * Finished encoding an array.
+     * @private
+     */
+    Mincoder.prototype.endArray = function() {
+      this.addRecord('.');
+    };
+    /**
+     * Set the name of the property that the next record will be assigned
+     * to.
+     * @private
+     * @param {!string} fieldName the property name.
+     */
+    Mincoder.prototype.setNextFieldName = function(fieldName) {
+      this.pendingFieldName = fieldName;
+    };
+    /**
+     * Add a record to the buffer.
+     * @private
+     * @param {!string} recordType the type of the record.
+     * @param {string=} payload    the (optional) payload for this record.
+     */
+    Mincoder.prototype.addRecord = function(recordType, payload) {
+      this.buffer += recordType;
+      if (null !== this.pendingFieldName) {
+        this.buffer += Mincoder.escapeString(this.pendingFieldName);
+        this.buffer += '!';
+        this.pendingFieldName = null;
+      }
+      if (payload) {
+        this.buffer += payload;
+      }
+    };
+    /**
+     * Encode a variable-length string value.
+     * @param {!string} s the string to encode.
+     */
+    Mincoder.escapeString = function() {
+      /**
+       * Regular expression for escaping strings while serializing.
+       * @const
+       * @type {RegExp}
+       */
+      var stringEscapingRegex = /~!/g;
+      return function(s) {
+        return s.replace(stringEscapingRegex, "~$&");
+      }
+    }();
+    /**
+     * Encode a string.
+     * @private
+     * @param {!string} s the string to encode as a record.
+     */
+    Mincoder.prototype.encodeString = function(s) {
+      this.addRecord('s', Mincoder.escapeString(s) + '!');
+    };
+    /**
+     * Encode a number.
+     * @private
+     * @param {!number} n the number to encode as a record.
+     */
+    Mincoder.prototype.encodeNumber = function(n) {
+      if (isFinite(n)) {
+        // A 'd' record is only allowed to encode integers.
+        var dEncoding = n === Math.floor(n) ? n.toString(36) : null,
+            jEncoding1 = n.toExponential(),
+            jEncoding2 = String(n);
+        // We prefer a 'd' record to 'j' even if equal length because they're
+        // more efficient to process on the server.
+        if (null != dEncoding &&
+            dEncoding.length <= jEncoding1.length &&
+            dEncoding.length <= jEncoding2.length) {
+          this.addRecord('d', dEncoding + '!');
+        } else {
+          this.addRecord('j', (jEncoding1.length < jEncoding2.length ? jEncoding1 : jEncoding2) + '!');
+        }
+      } else {
+        this.encode(null);
+      }
+    };
+    /**
+     * Encode a boolean.
+     * @private
+     * @param b {!boolean} b the boolean to encode as a record.
+     */
+    Mincoder.prototype.encodeBoolean = function(b) {
+      this.addRecord(b ? 't' : 'f');
+    };
+    /**
+     * Encode a null.
+     * @private
+     */
+    Mincoder.prototype.encodeNull = function() {
+      this.addRecord('n');
+    };
+    /**
+     * Encode an array.
+     * @private
+     * @param {!Array<*>} a the array to encode as a series of records.
+     */
+    Mincoder.prototype.encodeArray = function(a) {
+      this.startArray();
+      for (var i = 0; i < a.length; ++i) {
+        this.encode(a[i]);
+      }
+      this.endArray();
+    };
+    /**
+     * Encode a Date.
+     * Dates are encoded as a string, as with JSON.
+     * @private
+     * @param {!Date} d the date to encode as a record.
+     */
+    Mincoder.prototype.encodeDate = function() {
+      /**
+       * Zero-pad a number.
+       * @param {!number} len the length to pad to.
+       * @param {!number} n   the number to
+       * @returns {!string} the number, zero-padded to the required length
+       */
+      var pad = function(len, n) {
+            var result = n.toString();
+            while(result.length < len) {
+              result = '0' + result;
+            }
+            return result;
+          };
+      return function(d) {
+        var rendered = isFinite(d.valueOf())
+                ? d.getUTCFullYear() + '-' +
+                  pad(2,d.getUTCMonth() + 1) + '-' +
+                  pad(2,d.getUTCDate()) + 'T' +
+                  pad(2,d.getUTCHours()) + ':' +
+                  pad(2,d.getUTCMinutes()) + ':' +
+                  pad(2,d.getUTCSeconds()) + '.' +
+                  pad(3,d.getUTCMilliseconds()) + 'Z'
+                : null;
+        this.encode(rendered);
+      }
+    }();
+    /**
+     * Encode a generic object.
+     * @private
+     * @param {!Object} o an object to encode.
+     */
+    Mincoder.prototype.encodeJavaScriptObject = function(o) {
+      this.startObject();
+      for (var k in o) {
+        if (Object.prototype.hasOwnProperty.call(o, k)) {
+          this.setNextFieldName(k);
+          this.encode(o[k]);
+        }
+      }
+      this.endObject();
+    };
+    /**
+     * Encode an object.
+     * Note that arrays, dates and null are all objects.
+     * @param {!Object} o the object to encode as a series of records.
+     */
+    Mincoder.prototype.encodeObject = function(o) {
+      if (o === null) {
+        this.encodeNull();
+      } else if (typeof o.toJSON === 'function') {
+        this.encode(o.toJSON())
+      } else {
+        switch (Object.prototype.toString.call(o)) {
+          case '[object Array]':
+            this.encodeArray(/**@type !Array<*>*/(o));
+            break;
+          case '[object Date]':
+            this.encodeDate(/**@type !Date*/(o));
+            break;
+          default:
+            this.encodeJavaScriptObject(o);
+        }
+      }
+    };
+    /**
+     * Encode a value as a series of records.
+     * @param {!*} value the value to encode.
+     */
+    Mincoder.prototype.encode = function(value) {
+      switch (typeof value) {
+        case 'string':
+          this.encodeString(value);
+          break;
+        case 'number':
+          this.encodeNumber(value);
+          break;
+        case 'boolean':
+          this.encodeBoolean(value);
+          break;
+        case 'object':
+          this.encodeObject(/**@type !Object*/(value));
+          break;
+        default:
+          throw "Cannot encode of type: " + typeof value;
+      }
+    };
+    Mincoder.mincode = function(value) {
+      var mincoder = new Mincoder();
+      mincoder.encode(value);
+      return mincoder.buffer;
+    };
+    return Mincoder.mincode;
+  }();
+
   /**
    * Event logger.
    *
@@ -750,7 +1035,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * asynchronously.
    *
    * @param {!string} type The type of event to log.
-   * @param {Object.<string,(string|boolean|number)>=} [customParameters]
+   * @param {Object=} [customParameters]
    *    Optional object containing custom parameters to log alongside the event.
    *
    * @return {string} the unique event identifier for this event.
@@ -834,32 +1119,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
           }
         }
       }
-      // These are the custom parameters that may have been supplied.
-      switch (typeof customParameters) {
-        case 'undefined':
-          // No custom parameters were supplied.
-          break;
-        case 'object':
-          for (var customName in customParameters) {
-            if (customParameters.hasOwnProperty(customName)) {
-              var customParameter = customParameters[customName],
-                  customParameterType = typeof customParameter,
-                  parameterValue;
-              switch (customParameterType) {
-                case 'string':
-                case 'number':
-                case 'boolean':
-                  parameterValue = customParameter.toString();
-                  break;
-                default:
-                  throw "Parameter '" + customName + "' is of unsupported type: " + customParameterType;
-              }
-              addParam('t.' + customName, parameterValue);
-            }
-          }
-          break;
-        default:
-          error("Ignoring non-object custom event parameters", customParameters);
+      // Custom parameters are supplied, render as JSON to send to the server.
+      if (typeof customParameters !== 'undefined') {
+        addParam('u', mincode(customParameters));
       }
 
       // After the first request it's neither a new party nor a new session,

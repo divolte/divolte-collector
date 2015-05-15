@@ -1,0 +1,120 @@
+// Mincode/JSON samples.
+[
+  {
+    "title": "Value: String",
+    "json": "a string",
+    "code": "sa string!"
+  },
+  {
+    "title": "Value: String that requires escaping",
+    "json": "Hello~World!",
+    "code": "sHello~~World~!!"
+  },
+  {
+    "title": "Value: String with newlines",
+    "json": "It's cold outside\nThere's no kind of atmosphere\nIt's freezing cold, more or less\nLet me fly far away from here\nFun Fun Fun, in the Sun Sun Sun.",
+    "code": "sIt's cold outside\nThere's no kind of atmosphere\nIt's freezing cold, more or less\nLet me fly far away from here\nFun Fun Fun, in the Sun Sun Sun.!"
+  },
+  {
+    "title": "Value: String with unicode escapes",
+    "json": "H̶e̶l̶l̶o̶ ̶W̶o̶r̶l̶d̶!̶",
+    "code": "sH\u0336e\u0336l\u0336l\u0336o\u0336 \u0336W\u0336o\u0336r\u0336l\u0336d\u0336~!\u0336!"
+  },
+  {
+    "title": "Value: Boolean True",
+    "json": true,
+    "code": "t"
+  },
+  {
+    "title": "Value: Boolean False",
+    "json": false,
+    "code": "f"
+  },
+  {
+    "title": "Value: Null",
+    "json": null,
+    "code": "n"
+  },
+  {
+    "title": "Value: Integer",
+    "json": 42,
+    "code": "d16!"
+  },
+  {
+    "title": "Value: Float",
+    "json": 10.3,
+    "code": "j10.3!"
+  },
+  {
+    "title": "Empty object",
+    "json": {},
+    "code": "()"
+  },
+  {
+    "title": "Empty array",
+    "json": [],
+    "code": "a."
+  },
+  {
+    "title": "Simple object",
+    "json": {
+      "foo": "bar",
+      "baz": "daz"
+    },
+    "code": "(sfoo!bar!sbaz!daz!)"
+  },
+  {
+    "title": "Simple array",
+    "json": [
+      "foo",
+      "bar",
+      "baz",
+      "daz"
+    ],
+    "code": "asfoo!sbar!sbaz!sdaz!."
+  },
+  {
+    "title": "Array of objects",
+    "json": [
+      { "foo": "bar", "baz": "daz" },
+      { "daz": "huh", "doo": "wha" },
+      { "daz": 2,     "doo": 3     }
+    ],
+    "code": "a(sfoo!bar!sbaz!daz!)(sdaz!huh!sdoo!wha!)(ddaz!2!ddoo!3!)."
+  },
+  {
+    "title": "Example from https://github.com/Sage/jsurl",
+    "json": {"name":"John Doe","age":42,"children":["Mary","Bill"]},
+    "code": "(sname!John Doe!dage!16!achildren!sMary!sBill!.)"
+  },
+  {
+    "title": "Object with nested objects, arrays and mixed content",
+    "json": {
+      "a": {},
+      "b": "c",
+      "d": {
+        "a": [],
+        "b": "g"
+      },
+      "e": [
+        "1",
+        "2"
+      ],
+      "f": 42,
+      "g": 53.2,
+      "h": -37,
+      "i": -78.3e-10,
+      "j": true,
+      "k": false,
+      "l": null,
+      "m": {},
+      "n": [
+        {},
+        { "a": "b" },
+        { "c": "d" }
+      ],
+      "o": {}
+    },
+    "code": "((a!)sb!c!(d!aa!.sb!g!)ae!s1!s2!.df!16!jg!53.2!dh!-11!ji!-78.3e-10!tj!fk!nl!(m!)an!()(sa!b!)(sc!d!).(o!))"
+  }
+]

@@ -111,7 +111,8 @@ dependencies {
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20150315'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.3', classifier: 'indy'
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.8'
-    compile group: 'com.fasterxml.jackson.jr', name: 'jackson-jr-objects', version: '2.5.2'
+    compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.0.0'
+    compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.5.3'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
@@ -123,7 +124,9 @@ dependencies {
     testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
     testCompile group: 'com.mashape.unirest', name: 'unirest-java', version: '1.4.5'
-    testCompile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.5.2'
+    testCompile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.5.3'
+    testCompile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.5.3'
+    testCompile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.5.3'
     testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.13'
     // Warning: SauceLabs doesn't work properly with Selenium 2.44.
     testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.43.1'
@@ -150,6 +153,10 @@ tasks.withType(JavaCompile) {
 
     // Log details about usage of deprecated symbols.
     options.deprecation = true
+
+    // Java 8 feature: parameter names via reflection, which makes
+    // stuff like Jackson mapping easier.
+    options.compilerArgs = ["-parameters"]
 }
 
 tasks.withType(FindBugs) {
@@ -161,6 +168,7 @@ tasks.withType(FindBugs) {
 
 findbugs() {
     toolVersion = "3.0.1"
+    excludeFilter = file("findbugs-excludes.xml")
 }
 
 pmd {

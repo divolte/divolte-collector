@@ -16,39 +16,7 @@
 
 package io.divolte.server.recordmapping;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
-
-import io.divolte.server.DivolteEvent;
-import io.divolte.server.ip2geo.LookupService;
-import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.util.ArrayDeque;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
-import net.sf.uadetector.ReadableUserAgent;
-
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Field;
-import org.apache.avro.Schema.Type;
-import org.apache.avro.generic.GenericRecordBuilder;
-import org.apache.commons.lang.StringUtils;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,14 +25,41 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.record.City;
-import com.maxmind.geoip2.record.Continent;
-import com.maxmind.geoip2.record.Country;
-import com.maxmind.geoip2.record.Location;
-import com.maxmind.geoip2.record.Postal;
-import com.maxmind.geoip2.record.Subdivision;
-import com.maxmind.geoip2.record.Traits;
+import com.maxmind.geoip2.record.*;
+import io.divolte.server.DivolteEvent;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import net.sf.uadetector.ReadableUserAgent;
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
+import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -78,6 +73,12 @@ public final class DslRecordMapping {
                         .put(Integer.class, Type.INT)
                         .put(Long.class, Type.LONG)
                         .build();
+
+    private static final Configuration JSON_PATH_CONFIGURATION =
+            Configuration.builder()
+                    .options(Option.SUPPRESS_EXCEPTIONS)
+                    .jsonProvider(new JacksonJsonNodeJsonProvider())
+                    .build();
 
     private final Schema schema;
     private final ArrayDeque<ImmutableList.Builder<MappingAction>> stack;
@@ -102,13 +103,17 @@ public final class DslRecordMapping {
         if (field == null) {
             throw new SchemaMappingException("Field %s does not exist in Avro schema; error in mapping %s onto %s", fieldName, producer.identifier, fieldName);
         }
-        if (!producer.validateTypes(field)) {
-            throw new SchemaMappingException("Type mismatch. Cannot map the result of %s onto a field of type %s (type of value and schema of field do not match).", producer.identifier, field.schema());
+        final Optional<ValidationError> validationError = producer.validateTypes(field);
+        if (validationError.isPresent()) {
+            throw new SchemaMappingException("Cannot map the result of %s onto field %s: %s",
+                                             producer.identifier, fieldName, validationError.get().message);
         }
         stack.getLast().add((h,e,c,r) -> {
-                producer.produce(h, e, c).ifPresent((v) -> r.set(field, v));
-                return MappingAction.MappingResult.CONTINUE;
-            });
+            producer.produce(h,e,c)
+                    .flatMap(v -> producer.mapToGenericRecord(v, field.schema()))
+                    .ifPresent(v -> r.set(field, v));
+            return MappingAction.MappingResult.CONTINUE;
+        });
     }
 
     public <T> void map(final String fieldName, final T literal) {
@@ -386,9 +391,9 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
+        Optional<ValidationError> validateTypes(final Field target) {
             // this field cannot be directly mapped onto a Avro schema
-            return false;
+            return validationError("cannot map a parsed user-agent directly; map one of its properties instead.", target.schema());
         }
     }
 
@@ -427,9 +432,9 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
+        Optional<ValidationError> validateTypes(final Field target) {
             // this field cannot be directly mapped onto a Avro schema
-            return false;
+            return validationError("cannot map a regular expression match directly; map using group() or matches() instead.", target.schema());
         }
     }
 
@@ -513,9 +518,8 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            // this field cannot be directly mapped onto a Avro schema
-            return false;
+        Optional<ValidationError> validateTypes(final Field target) {
+            return validationError("cannot map an URI directly; map one of its properties.", target.schema());
         }
     }
 
@@ -540,13 +544,12 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                .map((s) -> s.getType() == Type.MAP &&
-                            s.getValueType().getType() == Type.ARRAY &&
-                            s.getValueType().getElementType().getType() == Type.STRING)
-                .orElse(false);
+        Optional<ValidationError> validateTypes(final Field target) {
+            return validateTrivialUnion(target.schema(),
+                                        s -> s.getType() == Type.MAP &&
+                                             s.getValueType().getType() == Type.ARRAY &&
+                                             s.getValueType().getElementType().getType() == Type.STRING,
+                                        "query strings can only be mapped to an Avro map where the values are arrays of strings");
         }
     }
 
@@ -562,25 +565,60 @@ public final class DslRecordMapping {
     /*
      * Custom event parameter mapping
      */
-    public final static class EventParameterValueProducer extends ValueProducer<Map<String,String>> {
+    public final static class EventParameterValueProducer extends JsonValueProducer {
         EventParameterValueProducer() {
-            super("eventParameters()", (h,e,c) -> Optional.of(e.eventParametersProducer.get()));
+            super("eventParameters()", (h,e,c) -> e.eventParametersProducer.get(), true);
         }
 
         public ValueProducer<String> value(String name) {
             return new PrimitiveValueProducer<>(
                     identifier + ".value(" + name + ")",
                     String.class,
-                    (h,e,c) -> e.eventParameterProducer.apply(name));
+                    (h,e,c) -> EventParameterValueProducer.this.produce(h,e,c)
+                                .map(json -> json.path(name).asText()));
+        }
+
+        public ValueProducer<JsonNode> path(final String path) {
+            final JsonPath jsonPath = JsonPath.compile(path);
+            return new JsonValueProducer(
+                    identifier + ".path(" + path + ')',
+                    (h,e,c) -> EventParameterValueProducer.this.produce(h, e, c)
+                                .map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
+                    false);
+        }
+    }
+
+    @ParametersAreNonnullByDefault
+    private static class JsonValueProducer extends ValueProducer<JsonNode> {
+        private static final Logger logger = LoggerFactory.getLogger(JsonValueProducer.class);
+
+        protected JsonValueProducer(final String identifier,
+                                    final FieldSupplier<JsonNode> supplier,
+                                    final boolean memoize) {
+            super(identifier, supplier, memoize);
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                .map((s) -> s.getType() == Type.MAP &&
-                            s.getValueType().getType() == Type.STRING)
-                .orElse(false);
+        Optional<ValidationError> validateTypes(final Field target) {
+            /*
+             * We can do some basic validation here because there are
+             * some Avro schemas (e.g non-trivial unions) that we don't
+             * support.
+             */
+            return JacksonSupport.AVRO_MAPPER.checkValid(target.schema());
+        }
+
+        @Override
+        Optional<Object> mapToGenericRecord(final JsonNode value,
+                                            final Schema schema) throws SchemaMappingException {
+            try {
+                return Optional.ofNullable(JacksonSupport.AVRO_MAPPER.read(value, schema));
+            } catch (final IOException e) {
+                if (logger.isInfoEnabled()) {
+                    logger.info(String.format("Error mapping JSON value %s to schema: %s", value, schema), e);
+                }
+                return Optional.empty();
+            }
         }
     }
 
@@ -595,9 +633,11 @@ public final class DslRecordMapping {
     @Deprecated
     @SuppressWarnings("unused")
     public ValueProducer<String> eventParameter(final String name) {
+        final EventParameterValueProducer eventParametersProducer = eventParameters();
         return new PrimitiveValueProducer<>("eventParameter(" + name + ")",
                                             String.class,
-                                            (h,e,c) -> e.eventParameterProducer.apply(name));
+                                            (h,e,c) -> eventParametersProducer.produce(h,e,c)
+                                                        .map(json -> json.path(name).asText()));
     }
 
     /*
@@ -863,8 +903,8 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(Field target) {
-            return false;
+        Optional<ValidationError> validateTypes(Field target) {
+            return validationError("cannot map a GeoIP lookup result directly; map one of its properties instead.", target.schema());
         }
     }
 
@@ -989,7 +1029,12 @@ public final class DslRecordMapping {
                     (h,e,c) -> Optional.of(produce(h, e, c).map((x) -> Boolean.FALSE).orElse(Boolean.TRUE)));
         }
 
-        abstract boolean validateTypes(final Field target);
+        abstract Optional<ValidationError> validateTypes(final Field target);
+
+        Optional<Object> mapToGenericRecord(final T value, final Schema schema) {
+            // Default mapping is the identity mapping.
+            return Optional.of(value);
+        }
 
         @Override
         public String toString() {
@@ -1001,6 +1046,14 @@ public final class DslRecordMapping {
     public static class PrimitiveValueProducer<T> extends ValueProducer<T> {
         private final Class<T> type;
 
+        /**
+         * Construct a value producer that will produce a primitive value.
+         * @param readableName  A human-readable description of this producer, used in error messages.
+         * @param type          The type of value that this producer will produce.
+         * @param supplier      A supplier that can be used to calculate the value on demand.
+         * @param memoize       Whether the value should be calculated once and remembered, or on every request.
+         *                      This should only be set to true when calculating the value is expensive.
+         */
         PrimitiveValueProducer(final String readableName,
                                final Class<T> type,
                                final FieldSupplier<T> supplier,
@@ -1015,11 +1068,11 @@ public final class DslRecordMapping {
             this(readableName, type, supplier, false);
         }
 
-        boolean validateTypes(final Field target) {
-            final Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                    .map((s) -> COMPATIBLE_PRIMITIVES.get(type) == s.getType())
-                    .orElse(false);
+        @Override
+        Optional<ValidationError> validateTypes(final Field target) {
+            return validateTrivialUnion(target.schema(),
+                                        s -> COMPATIBLE_PRIMITIVES.get(type) == s.getType(),
+                                        "type must be compatible with %s", type);
         }
     }
 
@@ -1035,13 +1088,17 @@ public final class DslRecordMapping {
         }
 
         @Override
-        boolean validateTypes(final Field target) {
-            final Optional<Schema> targetSchema = unpackNullableUnion(target.schema());
-            return targetSchema
-                    .map((s) -> s.getType() == Type.ARRAY &&
-                        unpackNullableUnion(s.getElementType()).map((sub) -> COMPATIBLE_PRIMITIVES.get(type) == sub.getType())
-                                                               .orElse(false))
-                    .orElse(false);
+        Optional<ValidationError> validateTypes(final Field target) {
+            final Schema targetSchema = target.schema();
+            final Optional<ValidationError> validationError =
+                    validateTrivialUnion(targetSchema,
+                                         s -> s.getType() == Type.ARRAY,
+                                         "must map to an Avro array, not %s", target);
+            return validationError.isPresent()
+                    ? validationError
+                    : validateTrivialUnion(unpackNullableUnion(targetSchema).get().getElementType(),
+                                           s -> COMPATIBLE_PRIMITIVES.get(type) == s.getType(),
+                                           "array type must be compatible with %s", type);
         }
     }
 
@@ -1084,6 +1141,23 @@ public final class DslRecordMapping {
                         (h,e,c) -> produce(h,e,c).map((b) -> !b));
             // This would have been a fine candidate use for a method reference to BooleanUtils
         }
+    }
+
+    private static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,
+                                                                  final Function<Schema, Boolean> validator,
+                                                                  final String messageIfInvalid,
+                                                                  Object... messageParameters) {
+        final Optional<Schema> resolvedSchema = unpackNullableUnion(targetSchema);
+        final Optional<Optional<ValidationError>> unionValidation =
+                resolvedSchema.map(s -> validator.apply(s)
+                        ? Optional.empty()
+                        : validationError(String.format(messageIfInvalid, messageParameters), targetSchema));
+        return unionValidation.orElseGet(() -> validationError("mapping to non-trivial unions (" + targetSchema + ") is not supported", targetSchema));
+    }
+
+    private static Optional<ValidationError> validationError(final String message,
+                                                             final Schema schema) {
+        return Optional.of(new ValidationError(message, schema));
     }
 
     interface MappingAction {

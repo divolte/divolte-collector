@@ -16,25 +16,24 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import io.divolte.server.ServerTestUtils.EventPayload;
+import org.junit.Before;
+import org.junit.Test;
+import org.openqa.selenium.By;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.openqa.selenium.By;
-
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
+import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest extends SeleniumTestBase {
@@ -217,31 +216,12 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         assertTrue(eventData.eventType.isPresent());
         assertEquals("custom", eventData.eventType.get());
-        final Optional<String> customEventParameter = eventData.eventParameterProducer.apply("key");
-        assertTrue(customEventParameter.isPresent());
-        assertEquals("value", customEventParameter.get());
-    }
-    
-    @Test
-    public void shouldNotEncodeCustomEventParameters() throws InterruptedException {
-        Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
-        server.waitForEvent();
 
-        driver.findElement(By.id("custom")).click();
-        final EventPayload customEvent = server.waitForEvent();
-        final DivolteEvent eventData = customEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
-
-        assertTrue(eventData.eventType.isPresent());
-        assertEquals("custom", eventData.eventType.get());
-        
-        final Optional<String> customEventAnswerParameter = eventData.eventParameterProducer.apply("answer");
-        assertTrue(customEventAnswerParameter.isPresent());
-        assertEquals("42", customEventAnswerParameter.get());
-
-        final Optional<String> customEventMagicParameter = eventData.eventParameterProducer.apply("magic");
-        assertTrue(customEventMagicParameter.isPresent());
-        assertEquals("true", customEventMagicParameter.get());
+        final Optional<String> customEventParameters =
+                eventData.eventParametersProducer.get().map(Object::toString);
+        assertTrue(customEventParameters.isPresent());
+        assertEquals("{\"a\":{},\"b\":\"c\",\"d\":{\"a\":[],\"b\":\"g\"},\"e\":[\"1\",\"2\"],\"f\":42,\"g\":53.2,\"h\":-37,\"i\":-7.83E-9,\"j\":true,\"k\":false,\"l\":null,\"m\":\"2015-06-13T15:49:33.002Z\",\"n\":{},\"o\":[{},{\"a\":\"b\"},{\"c\":\"d\"}],\"p\":{}}",
+                     customEventParameters.get());
     }
 
     @Test
@@ -273,7 +253,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         assertEquals("supercalifragilisticexpialidocious", eventData.browserEventData.get().pageViewId);
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
     }
-    
+
     @Before
     public void setup() throws Exception {
         doSetUp("selenium-test-config.conf");

@@ -1,0 +1,12 @@
+<FindBugsFilter>
+    <Match>
+        <!--
+          ~ This method creates an input stream that is managed by Jackson.
+          ~ FindBugs doesn't realise this though, and thinks we should be
+          ~ closing it ourselves. This is wrong.
+          -->
+        <Class name="io.divolte.server.mincode.MincodeFactory"/>
+        <Method name="createParser" params="java.io.File"/>
+        <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+    </Match>
+</FindBugsFilter>
