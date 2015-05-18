@@ -79,11 +79,11 @@ public class HdfsFlusherTest {
     public void shouldCreateAndPopulateFileWithSimpleStrategy() throws IOException {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         final Config config =
-        		ConfigFactory.parseString(
-				                "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 day\n"
-				                + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-				                + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-			                 .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
+            ConfigFactory.parseString(
+                   "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 day\n"
+                   + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                   + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                   .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
         final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
@@ -109,11 +109,11 @@ public class HdfsFlusherTest {
     public void shouldWriteInProgressFilesWithNonAvroExtension() throws IOException {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         final Config config =
-        		ConfigFactory.parseString(
-		                        "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 day\n"
-		                        + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-		                        + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-		                     .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
+             ConfigFactory.parseString(
+                             "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 day\n"
+                             + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                             + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                          .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
         final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
@@ -137,11 +137,11 @@ public class HdfsFlusherTest {
     public void shouldRollFilesWithSimpleStrategy() throws IOException, InterruptedException {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         final Config config =
-        		ConfigFactory.parseString(
-		                        "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 second\n"
-		                        + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-		                        + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-	                         .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
+             ConfigFactory.parseString(
+                             "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 1 second\n"
+                             + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                             + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                          .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
         final List<Record> records = LongStream.range(0, 5)
@@ -178,12 +178,12 @@ public class HdfsFlusherTest {
     @Test
     public void shouldNotCreateEmptyFiles() throws IOException, InterruptedException {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        final Config config = ConfigFactory
-        		.parseString(
-	                "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 100 millisecond\n"
-	                + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-	                + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-                .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
+        final Config config =
+            ConfigFactory.parseString(
+                            "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every = 100 millisecond\n"
+                            + "divolte.hdfs_flusher.simple_rolling_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                            + "divolte.hdfs_flusher.simple_rolling_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                         .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
         final List<Record> records = LongStream.range(0, 5)

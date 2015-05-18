@@ -102,7 +102,7 @@ public final class ServerTestUtils {
             // SauceLabs can take quite a while to fire up everything.
             return Optional.ofNullable(events.poll(5, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
         }
-        
+
         public boolean eventsRemaining() {
             return !events.isEmpty();
         }

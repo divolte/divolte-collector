@@ -34,6 +34,7 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'findbugs'
 apply plugin: 'pmd'
+apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'application'
@@ -173,7 +174,7 @@ tasks.withType(FindBugs) {
 
 findbugs() {
     toolVersion = "3.0.1"
-    excludeFilter = file("findbugs-excludes.xml")
+    excludeFilter = file("config/findbugs/findbugs-excludes.xml")
 }
 
 pmd {
@@ -188,6 +189,10 @@ pmd {
             "java-imports",
             "java-unnecessary"
     ]
+}
+
+checkstyle {
+    toolVersion = "6.6"
 }
 
 jacoco {

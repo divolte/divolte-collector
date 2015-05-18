@@ -63,7 +63,7 @@ public final class ValidatedConfiguration {
      * {@code Config} object is passed through a supplier, instead of directly.
      * The constructor will catch any {@code ConfigException} thrown from the
      * supplier's getter.
-     * 
+     *
      * @param configLoader
      *            Supplier of the underlying {@code Config} instance.
      */
@@ -247,7 +247,7 @@ public final class ValidatedConfiguration {
      * Returns the validated configuration object tree. This is only returned
      * when no validation errors exist. The method throws
      * {@code IllegalStateException} otherwise.
-     * 
+     *
      * @return The validated configuration.
      * @throws IllegalStateException
      *             When validation errors exist.
@@ -262,7 +262,7 @@ public final class ValidatedConfiguration {
     /**
      * Returns a list of {@code ConfigException} that were thrown during
      * configuration validation.
-     * 
+     *
      * @return A list of {@code ConfigException} that were thrown during
      *         configuration validation.
      */
@@ -272,7 +272,7 @@ public final class ValidatedConfiguration {
 
     /**
      * Returns false if validation errors exist, true otherwise.
-     * 
+     *
      * @return false if validation errors exist, true otherwise.
      */
     public boolean isValid() {
