@@ -100,7 +100,9 @@ public class DslRecordMapper implements RecordMapper {
         final Map<String,Optional<?>> context = Maps.newHashMapWithExpectedSize(20);
 
         for (final Iterator<MappingAction> itr = actions.iterator();
-             itr.hasNext() && itr.next().perform(exchange, eventData, context, builder) == MappingResult.CONTINUE;);
+             itr.hasNext() && itr.next().perform(exchange, eventData, context, builder) == MappingResult.CONTINUE;) {
+            // Nothing needed in here.
+        }
 
         return builder.build();
     }

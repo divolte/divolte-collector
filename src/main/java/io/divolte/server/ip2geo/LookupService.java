@@ -30,7 +30,7 @@ public interface LookupService extends AutoCloseable {
     Optional<CityResponse> lookup(InetAddress address) throws ClosedServiceException;
 
     @ParametersAreNonnullByDefault
-    public class ClosedServiceException extends Exception {
+    class ClosedServiceException extends Exception {
         private static final long serialVersionUID = 1L;
 
         private final LookupService service;

@@ -6,7 +6,7 @@
 %define snapshot %{nil}%{?snapshotVersion}
 
 Name:           divolte-collector
-Version:        0.3.0
+Version:        0.4.0
 Release:        1%{?dist}
 Summary:        The Divolte click-stream collection agent.
 
@@ -68,10 +68,10 @@ rm -rf "%{buildroot}"
 %{__ln_s} ../share/divolte/bin/%{name} "%{buildroot}/usr/bin/%{name}"
 
 %check
-./gradlew test
+./gradlew --no-daemon test
 
 %clean
-./gradlew clean
+./gradlew --no-daemon clean
 
 %pre
 getent group divolte >/dev/null || groupadd -r divolte

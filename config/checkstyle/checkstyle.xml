@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Puppy Crawl//DTD Check Configuration 1.3//EN"
+        "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+
+<!--
+  ~ Copyright 2015 GoDataDriven B.V.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!--
+  ~ Some basic CheckStyle rules for this project. In general we
+  ~ try to enforce coding conventions via FindBugs and PMD, but
+  ~ some things (such as formatting conventions) can only be
+  ~ enforced by looking at the source code itself.
+  -->
+
+<module name="Checker">
+    <property name="basedir" value="${basedir}"/>
+    <property name="fileExtensions" value="java, properties, xml"/>
+
+    <!-- Whitespace rules:
+      ~   - No tabs.
+      ~   - No trailing whitespace.
+      ~   - Files must end with a newline.
+      ~   - Unix-style line-endings.
+      -->
+    <module name="FileTabCharacter"/>
+    <module name="RegexpSingleline">
+        <property name="message" value="Trailing whitespace is not allowed."/>
+        <property name="format" value="\s+$"/>
+    </module>
+    <module name="NewlineAtEndOfFile"/>
+    <module name="RegexpMultiline">
+        <property name="message" value="Files must use Unix-style line endings."/>
+        <property name="format" value="(?s:\r\n.*)"/>
+    </module>
+
+</module>

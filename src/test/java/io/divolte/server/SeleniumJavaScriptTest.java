@@ -29,8 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
-import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
+import static io.divolte.server.IncomingRequestProcessor.*;
 import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
