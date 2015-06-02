@@ -350,7 +350,7 @@ divolte.javascript
 ------------------
 On startup, Divolte Collector internally compiles the JavaScript that it serves using `Google's Closure Compiler <https://developers.google.com/closure/compiler/>`_. This minifies the JavaScript and ensures there are no compilation errors or warnings. The javascript section controls settings related to the way the JavaScript file is compiled.
 
-divolte.tracking.javascript.name
+divolte.javascript.name
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   The filename of the JavaScript that is served. This changes the divolte.js part in the script url: http://example.com/divolte.js.
@@ -360,11 +360,11 @@ divolte.tracking.javascript.name
 
   ::
 
-    divolte.tracking.javascript {
+    divolte.javascript {
       name = tracking.js
     }
 
-divolte.tracking.javascript.logging
+divolte.javascript.logging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   Enable or disable the logging on the JavaScript console in the browser.
@@ -374,11 +374,11 @@ divolte.tracking.javascript.logging
 
   ::
 
-    divolte.tracking.javascript {
+    divolte.javascript {
       logging = true
     }
 
-divolte.tracking.javascript.debug
+divolte.javascript.debug
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   When true, the served JavaScript will be compiled, but not minified, improving readability when debugging in the browser.
@@ -388,11 +388,11 @@ divolte.tracking.javascript.debug
 
   ::
 
-    divolte.tracking.javascript {
+    divolte.javascript {
       debug = true
     }
 
-divolte.tracking.javascript.auto_page_view_event
+divolte.javascript.auto_page_view_event
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   When false, the served JavaScript will not automatically send a pageView event after being loaded. This way clients can send a initial event themselves and have full control over the event type and the custom parameters that are sent with the initial event.
@@ -402,7 +402,7 @@ divolte.tracking.javascript.auto_page_view_event
 
   ::
 
-    divolte.tracking.javascript {
+    divolte.javascript {
       auto_page_view_event = false
     }
 
