@@ -119,6 +119,7 @@ dependencies {
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.8'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.0.0'
     compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.5.3'
+    compile group: 'com.jasonclawson', name: 'jackson-dataformat-hocon', version: '1.0.14-SNAPSHOT'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)

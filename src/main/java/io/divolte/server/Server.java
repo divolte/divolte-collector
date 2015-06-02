@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
@@ -148,8 +147,8 @@ public final class Server implements Runnable {
         final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
         if (!vc.isValid()) {
             System.err.println("There are configuration errors. Details:");
-            for (ConfigException ce : vc.errors()) {
-                System.err.println(ce.getMessage());
+            for (Exception e : vc.errors()) {
+                System.err.println(e.getMessage());
             }
             System.exit(1);
         }

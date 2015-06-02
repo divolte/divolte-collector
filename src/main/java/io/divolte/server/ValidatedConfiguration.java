@@ -16,6 +16,9 @@
 
 package io.divolte.server;
 
+import static com.fasterxml.jackson.core.JsonToken.*;
+
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,8 +36,30 @@ import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.BeanProperty;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
+import com.fasterxml.jackson.databind.deser.std.StdScalarDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.jasonclawson.jackson.dataformat.hocon.HoconNodeCursor;
+import com.jasonclawson.jackson.dataformat.hocon.HoconTreeTraversingParser;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigList;
@@ -55,7 +80,7 @@ import com.typesafe.config.ConfigValue;
 public final class ValidatedConfiguration {
     private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
 
-    private final List<ConfigException> exceptions;
+    private final List<Exception> exceptions;
     private final DivolteConfiguration divolteConfiguration;
 
     /**
@@ -68,23 +93,132 @@ public final class ValidatedConfiguration {
      *            Supplier of the underlying {@code Config} instance.
      */
     public ValidatedConfiguration(Supplier<Config> configLoader) {
-        final List<ConfigException> exceptions = new ArrayList<>();
+        final List<Exception> exceptions = new ArrayList<>();
 
         DivolteConfiguration divolteConfiguration;
         try {
             final Config config = configLoader.get();
-            divolteConfiguration = validateAndLoad(config, exceptions);
-        } catch(ConfigException ce) {
-            logger.debug("Configuration error caught during validation.", ce);
-            exceptions.add(ce);
+            divolteConfiguration = mapped(config.getConfig("divolte"));
+        } catch(Exception e) {
+            e.printStackTrace();
+            logger.debug("Configuration error caught during validation.", e);
+            exceptions.add(e);
             divolteConfiguration = null;
         }
 
         this.exceptions = ImmutableList.copyOf(exceptions);
         this.divolteConfiguration = divolteConfiguration;
     }
+    
+    private static DivolteConfiguration mapped(final Config input) throws JsonParseException, JsonMappingException, IOException {
+        final Config resolved = input.resolve();
+        final ObjectMapper mapper = new ObjectMapper();
+        
+        // snake_casing
+        mapper.setPropertyNamingStrategy(new PropertyNamingStrategy.LowerCaseWithUnderscoresStrategy());
 
-    private static DivolteConfiguration validateAndLoad(final Config input, final List<ConfigException> exceptions) {
+        // Ignore unknown stuff in the config
+//        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        // Deserialization for Duration
+        final SimpleModule module= new SimpleModule("Configuration Deserializers");
+        module.addDeserializer(Duration.class, new DurationDeserializer(resolved));
+        module.addDeserializer(Properties.class, new PropertiesDeserializer(resolved));
+
+        mapper.registerModules(
+                new Jdk8Module(),                   // JDK8 types (Optional, etc.)
+                new ParameterNamesModule(),         // Support JDK8 parameter name discovery
+                module                              // Register custom deserializers module
+                );
+        
+        return mapper.readValue(new HoconTreeTraversingParser(resolved.root()), DivolteConfiguration.class);
+    }
+    
+    public static class DurationDeserializer extends StdScalarDeserializer<Duration> implements ContextualDeserializer {
+        private static final long serialVersionUID = 1L;
+        
+        private final Config config;
+
+        public DurationDeserializer(final Config config) {
+            super(Duration.class);
+            this.config = config;
+        }
+
+        @Override
+        public Duration deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
+            System.out.println(p == ctx.getParser());
+            if (VALUE_STRING == p.getCurrentToken()) {
+                try {
+                    System.out.println(p.getText());
+                    final HoconNodeCursor cursor = (HoconNodeCursor) p.getParsingContext();
+                    final long millis = config.getDuration(cursor.constructPath(), TimeUnit.MILLISECONDS);
+                    return Duration.ofMillis(millis);
+                } catch(ConfigException ce) {
+                    System.out.println(ce.getMessage());
+                    throw ctx.mappingException("Could not parse duration from value: '" + p.getText() + "'.");
+                }
+            } else {
+                throw ctx.mappingException("Expected string value for Duration mapping.");
+            }
+        }
+
+        @Override
+        public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException {
+            return this;
+        }
+    }
+    
+    public static class PropertiesDeserializer extends JsonDeserializer<Properties> {
+        private final Config config;
+        
+        public PropertiesDeserializer(final Config config) {
+            this.config = config;
+        }
+        
+        @Override
+        public Properties deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
+            if (!(ctx.getParser().getParsingContext() instanceof HoconNodeCursor)) {
+                throw ctx.mappingException("Properties deserialization only available when using HOCON parser.");
+            } else if (START_OBJECT == p.getCurrentToken()) {
+                final HoconNodeCursor cursor = (HoconNodeCursor) ctx.getParser().getParsingContext();
+                
+                final Config propertiesConfig = config.getConfig(cursor.constructPath());
+                final Properties properties = new Properties();
+                
+                for (final Map.Entry<String,ConfigValue> entry : propertiesConfig.entrySet()) {
+                    final ConfigValue configValue = entry.getValue();
+                    final String value;
+                    switch (configValue.valueType()) {
+                    case STRING:
+                    case BOOLEAN:
+                    case NUMBER:
+                        value = configValue.unwrapped().toString();
+                        break;
+                    case LIST:
+                        final ConfigList configList = (ConfigList)configValue;
+                        // We only need to support 'simple' types here.
+                        value = COMMA_JOINER.join(configList.unwrapped());
+                        break;
+                    case OBJECT:
+                    case NULL:
+                    default:
+                        throw new IllegalStateException("Property type not supported for Kafka configuration: " + entry);
+                    }
+                    properties.setProperty(entry.getKey(), value);
+                }
+                
+                // Move the parser to the end of this object
+                p.skipChildren();
+                
+                return properties;
+            } else {
+                throw ctx.mappingException("Expected nested object for Properties mapping.");
+            }
+        }
+    }
+
+
+    private static DivolteConfiguration validateAndLoad(final Config input, final List<Exception> exceptions) {
         final Config config = input.resolve();
         final ServerConfiguration server = new ServerConfiguration(
                 getOrAddException(              config::getString,      "divolte.server.host",                          exceptions),
@@ -163,12 +297,14 @@ public final class ValidatedConfiguration {
         } else if (sbStrategyPresent) {
             // if both strategies are present in the config, the session binning one takes precedence
             fileStrategy = new SessionBinningFileStrategyConfiguration(
+                    "",
                     getOrAddException(              config::getInt,      "divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_records",   exceptions),
                     getOrAddException(              duration(config),    "divolte.hdfs_flusher.session_binning_file_strategy.sync_file_after_duration",  exceptions),
                     getOrAddException(              config::getString,   "divolte.hdfs_flusher.session_binning_file_strategy.working_dir",               exceptions),
                     getOrAddException(              config::getString,   "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir",               exceptions));
         } else {
             fileStrategy = new SimpleRollingFileStrategyConfiguration(
+                    "",
                     getOrAddException(              duration(config),    "divolte.hdfs_flusher.simple_rolling_file_strategy.roll_every",                exceptions),
                     getOrAddException(              config::getInt,      "divolte.hdfs_flusher.simple_rolling_file_strategy.sync_file_after_records",   exceptions),
                     getOrAddException(              duration(config),    "divolte.hdfs_flusher.simple_rolling_file_strategy.sync_file_after_duration",  exceptions),
@@ -192,7 +328,7 @@ public final class ValidatedConfiguration {
         return (p) -> Duration.ofMillis(config.getDuration(p, TimeUnit.MILLISECONDS));
     }
 
-    private static <T> T getOrAddException(final Function<String,T> getter, final String path, final List<ConfigException> exceptions) {
+    private static <T> T getOrAddException(final Function<String,T> getter, final String path, final List<Exception> exceptions) {
         try {
             return getter.apply(path);
         } catch(ConfigException ce) {
@@ -202,7 +338,7 @@ public final class ValidatedConfiguration {
         }
     }
 
-    private static <T> Optional<T> getOptionalOrAddException(final Function<String,T> getter, final String path, final List<ConfigException> exceptions, final Config config) {
+    private static <T> Optional<T> getOptionalOrAddException(final Function<String,T> getter, final String path, final List<Exception> exceptions, final Config config) {
         try {
             if (!config.hasPath(path)) {
                 return Optional.empty();
@@ -266,7 +402,7 @@ public final class ValidatedConfiguration {
      * @return A list of {@code ConfigException} that were thrown during
      *         configuration validation.
      */
-    public List<ConfigException> errors() {
+    public List<Exception> errors() {
         return exceptions;
     }
 
@@ -288,6 +424,7 @@ public final class ValidatedConfiguration {
         public final KafkaFlusherConfiguration kafkaFlusher;
         public final HdfsFlusherConfiguration hdfsFlusher;
 
+        @JsonCreator
         private DivolteConfiguration(
                 final ServerConfiguration server,
                 final TrackingConfiguration tracking,
@@ -302,6 +439,11 @@ public final class ValidatedConfiguration {
             this.kafkaFlusher = kafkaFlusher;
             this.hdfsFlusher = hdfsFlusher;
         }
+        
+        @JsonAnySetter
+        public void something(String key, Object value) {
+            System.out.println(key);
+        }
     }
 
     @ParametersAreNullableByDefault
@@ -311,7 +453,8 @@ public final class ValidatedConfiguration {
         public final Boolean useXForwardedFor;
         public final Boolean serveStaticResources;
 
-        private ServerConfiguration(final String host, final Integer port, final Boolean useXForwardedFor, final Boolean serveStaticResources) {
+        @JsonCreator
+        private ServerConfiguration(final String host, final Integer port, @JsonProperty("use_x_forwarded_for") final Boolean useXForwardedFor, final Boolean serveStaticResources) {
             this.host = host;
             this.port = port;
             this.useXForwardedFor = useXForwardedFor;
@@ -331,6 +474,7 @@ public final class ValidatedConfiguration {
         public final Optional<String> schemaFile;
         public final Optional<SchemaMappingConfiguration> schemaMapping;
 
+        @JsonCreator
         private TrackingConfiguration(
                 final String partyCookie,
                 final Duration partyTimeout,
@@ -358,6 +502,7 @@ public final class ValidatedConfiguration {
         public final String type;
         public final Integer cacheSize;
 
+        @JsonCreator
         private UaParserConfiguration(final String type, final Integer cacheSize) {
             this.type = type;
             this.cacheSize = cacheSize;
@@ -369,6 +514,7 @@ public final class ValidatedConfiguration {
         public final Integer version;
         public final String mappingScriptFile;
 
+        @JsonCreator
         private SchemaMappingConfiguration(final Integer version, final String mappingScriptFile) {
             this.version = version;
             this.mappingScriptFile = mappingScriptFile;
@@ -382,6 +528,7 @@ public final class ValidatedConfiguration {
         public final Boolean debug;
         public final Boolean autoPageViewEvent;
 
+        @JsonCreator
         private JavascriptConfiguration(final String name, final Boolean logging, final Boolean debug, final Boolean autoPageViewEvent) {
             this.name = name;
             this.logging = logging;
@@ -399,6 +546,7 @@ public final class ValidatedConfiguration {
         public final Integer duplicateMemorySize;
         public final Boolean discardDuplicates;
 
+        @JsonCreator
         private IncomingRequestProcessorConfiguration(
                 final Integer threads,
                 final Integer maxWriteQueue,
@@ -424,9 +572,10 @@ public final class ValidatedConfiguration {
         public final String topic;
         public final Properties producer;
 
+        @JsonCreator
         private KafkaFlusherConfiguration(
                 final Boolean enabled,
-                Integer threads,
+                final Integer threads,
                 final Integer maxWriteQueue,
                 final Duration maxEnqueueDelay,
                 final String topic,
@@ -449,6 +598,7 @@ public final class ValidatedConfiguration {
         public final HdfsConfiguration hdfs;
         public final FileStrategyConfiguration fileStrategy;
 
+        @JsonCreator
         private HdfsFlusherConfiguration(
                 final Boolean enabled,
                 final Integer threads,
@@ -470,27 +620,33 @@ public final class ValidatedConfiguration {
         public final Optional<String> uri;
         public final Short replication;
 
+        @JsonCreator
         private HdfsConfiguration(Optional<String> uri, Short replication) {
             this.uri = uri;
             this.replication = replication;
         }
     }
 
-    @ParametersAreNullableByDefault
-    public static class FileStrategyConfiguration {
+    @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
+    @JsonSubTypes({
+        @Type(value=SimpleRollingFileStrategyConfiguration.class, name = "SIMPLE_ROLLING_FILE"),
+        @Type(value=SessionBinningFileStrategyConfiguration.class, name = "SESSION_BINNING")
+    })
+    public abstract static class FileStrategyConfiguration {
         public final Types type;
         public final Integer syncFileAfterRecords;
         public final Duration syncFileAfterDuration;
         public final String workingDir;
         public final String publishDir;
 
-        private FileStrategyConfiguration (
-                final Types type,
+        @JsonCreator
+        public FileStrategyConfiguration (
+                final String type,
                 final Integer syncFileAfterRecords,
                 final Duration syncFileAfterDuration,
                 final String workingDir,
                 final String publishDir) {
-            this.type = type;
+            this.type = Types.valueOf(type);
             this.syncFileAfterRecords = syncFileAfterRecords;
             this.syncFileAfterDuration = syncFileAfterDuration;
             this.workingDir = workingDir;
@@ -518,25 +674,29 @@ public final class ValidatedConfiguration {
     public static final class SimpleRollingFileStrategyConfiguration extends FileStrategyConfiguration {
         public final Duration rollEvery;
 
-        private SimpleRollingFileStrategyConfiguration(
+        @JsonCreator
+        public SimpleRollingFileStrategyConfiguration(
+                final String type,
                 final Duration rollEvery,
                 final Integer syncFileAfterRecords,
                 final Duration syncFileAfterDuration,
                 final String workingDir,
                 final String publishDir) {
-            super(Types.SIMPLE_ROLLING_FILE, syncFileAfterRecords, syncFileAfterDuration, workingDir, publishDir);
+            super(type, syncFileAfterRecords, syncFileAfterDuration, workingDir, publishDir);
             this.rollEvery = rollEvery;
         }
     }
 
     @ParametersAreNullableByDefault
     public static final class SessionBinningFileStrategyConfiguration extends FileStrategyConfiguration {
-        private SessionBinningFileStrategyConfiguration(
+        @JsonCreator
+        public SessionBinningFileStrategyConfiguration(
+                final String type,
                 final Integer syncFileAfterRecords,
                 final Duration syncFileAfterDuration,
                 final String workingDir,
                 final String publishDir) {
-            super(Types.SESSION_BINNING, syncFileAfterRecords, syncFileAfterDuration, workingDir, publishDir);
+            super(type, syncFileAfterRecords, syncFileAfterDuration, workingDir, publishDir);
         }
     }
 }

@@ -37,3 +37,4 @@
 
 # Local/non-default configuration
 application.conf
+/rpm/
