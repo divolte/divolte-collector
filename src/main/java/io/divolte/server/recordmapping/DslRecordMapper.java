@@ -21,7 +21,7 @@ import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import io.divolte.server.DivolteEvent;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapping.MappingAction;
 import io.divolte.server.recordmapping.DslRecordMapping.MappingAction.MappingResult;

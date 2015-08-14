@@ -17,8 +17,8 @@
 package io.divolte.server.hdfs;
 
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.ValidatedConfiguration;
-import io.divolte.server.ValidatedConfiguration.FileStrategyConfiguration.Types;
+import io.divolte.server.config.FileStrategyConfiguration.Types;
+import io.divolte.server.config.ValidatedConfiguration;
 
 import org.apache.avro.Schema;
 import org.apache.hadoop.fs.FileSystem;

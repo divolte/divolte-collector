@@ -19,7 +19,7 @@ package io.divolte.server.hdfs;
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
 import io.divolte.server.processing.ItemProcessor;
 

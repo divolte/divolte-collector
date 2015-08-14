@@ -18,7 +18,7 @@ package io.divolte.server.hdfs;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 
 import java.io.File;
 import java.io.IOException;

@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;

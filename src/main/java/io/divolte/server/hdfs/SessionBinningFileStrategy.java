@@ -19,7 +19,8 @@ package io.divolte.server.hdfs;
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import static java.util.Calendar.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.SessionBinningFileStrategyConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -105,11 +106,11 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
         hostString = findLocalHostName();
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
-        hdfsWorkingDir = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().workingDir;
-        hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().publishDir;
+        hdfsWorkingDir = vc.configuration().hdfsFlusher.fileStrategy.as(SessionBinningFileStrategyConfiguration.class).workingDir;
+        hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.as(SessionBinningFileStrategyConfiguration.class).publishDir;
 
-        syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterDuration.toMillis();
-        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterRecords;
+        syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.as(SessionBinningFileStrategyConfiguration.class).syncFileAfterDuration.toMillis();
+        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.as(SessionBinningFileStrategyConfiguration.class).syncFileAfterRecords;
 
         this.hdfs = hdfs;
         this.hdfsReplication = hdfsReplication;

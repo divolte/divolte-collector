@@ -18,6 +18,7 @@ package io.divolte.server;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.record.DefaultEventRecord;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.hdfs.HdfsFlusher;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.LookupService;

@@ -17,7 +17,7 @@
 package io.divolte.server.hdfs;
 
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
 
 import java.util.Objects;

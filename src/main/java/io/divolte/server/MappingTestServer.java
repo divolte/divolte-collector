@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableList;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -20,6 +22,7 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
+
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Parser;
 import org.slf4j.Logger;
@@ -28,6 +31,7 @@ import org.xnio.streams.ChannelInputStream;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
