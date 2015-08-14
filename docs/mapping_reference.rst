@@ -1100,7 +1100,7 @@ Regex matches
 
   ::
 
-    def matcher = match '/foo/bar/([a-z]+).html$' against location()
+    def matcher = match '^/foo/bar/([a-z]+).html$' against location()
 
     // use in conditional mapping
     when matcher.matches() apply {
