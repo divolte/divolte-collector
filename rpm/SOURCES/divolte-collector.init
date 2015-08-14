@@ -41,7 +41,7 @@ start() {
     [ -f $config ] || exit 6
     echo -n $"Starting $prog: "
     # Daemon doesn't let us background the script, so we do this ourselves.
-    nohup runuser -s /bin/sh divolte $exec > /var/log/divolte/divolte-collector.out 2>&1 &
+    nohup runuser -s /bin/sh divolte $exec >> /var/log/divolte/divolte-collector.out 2>&1 &
     retval=$?
     pid=$!
     if [ $retval -eq 0 ]
