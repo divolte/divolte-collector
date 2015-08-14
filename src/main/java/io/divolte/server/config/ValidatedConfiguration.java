@@ -84,11 +84,11 @@ public final class ValidatedConfiguration {
         this.exceptions = ImmutableList.copyOf(exceptions);
         this.divolteConfiguration = divolteConfiguration;
     }
-    
+
     private static DivolteConfiguration mapped(final Config input) throws JsonParseException, JsonMappingException, IOException {
         final Config resolved = input.resolve();
         final ObjectMapper mapper = new ObjectMapper();
-        
+
         // snake_casing
         mapper.setPropertyNamingStrategy(new PropertyNamingStrategy.LowerCaseWithUnderscoresStrategy());
 
@@ -105,7 +105,7 @@ public final class ValidatedConfiguration {
                 new ParameterNamesModule(),         // Support JDK8 parameter name discovery
                 module                              // Register custom deserializers module
                 );
-        
+
         return mapper.readValue(new HoconTreeTraversingParser(resolved.root()), DivolteConfiguration.class);
     }
     
