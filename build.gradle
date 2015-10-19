@@ -114,7 +114,7 @@ dependencies {
         exclude group: 'com.google.http-client', module: 'google-http-client'
     }
     compile group: 'org.apache.kafka', name:'kafka_2.11', version:'0.8.2.2'
-    compile group: 'com.google.javascript', name:'closure-compiler', version:'v20150505'
+    compile group: 'com.google.javascript', name:'closure-compiler', version:'v20150920'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.5', classifier: 'indy'
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.9'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.0.0'

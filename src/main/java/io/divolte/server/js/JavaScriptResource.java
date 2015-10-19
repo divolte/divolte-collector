@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -93,6 +94,7 @@ public class JavaScriptResource {
         final CompilerOptions options = new CompilerOptions();
         COMPILATION_LEVEL.setOptionsForCompilationLevel(options);
         COMPILATION_LEVEL.setTypeBasedOptimizationOptions(options);
+        options.setEnvironment(CompilerOptions.Environment.BROWSER);
         options.setLanguageIn(ECMASCRIPT5_STRICT);
         options.setLanguageOut(ECMASCRIPT5_STRICT);
         WarningLevel.VERBOSE.setOptionsForWarningLevel(options);
@@ -110,10 +112,9 @@ public class JavaScriptResource {
         final Compiler compiler = new Compiler();
         final ErrorManager errorManager = new Slf4jErrorManager(compiler);
         compiler.setErrorManager(errorManager);
-        // TODO: Use an explicit list of externs instead of the default set, to control compatibility.
-        compiler.compile(CommandLineRunner.getDefaultExterns(),
-                         ImmutableList.of(source),
-                         options);
+        // TODO: Use an explicit list of externs instead of the default browser set, to control compatibility.
+        final List<SourceFile> externs = CommandLineRunner.getBuiltinExterns(options);
+        compiler.compile(externs, ImmutableList.of(source), options);
         return compiler;
     }
 
