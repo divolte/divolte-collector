@@ -133,11 +133,11 @@ dependencies {
     testCompile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.6.3'
     testCompile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.6.3'
     testCompile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.6.3'
-    testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.19'
+    testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.20'
     // Warning: SauceLabs doesn't work properly with Selenium 2.44.
-    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.43.1'
+    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.48.2'
     // Warning: PhantomJSDriver 1.2.0 doesn't work properly with Selenium 2.44.
-    testCompile group: 'com.github.detro', name: 'phantomjsdriver', version: '1.2.0'
+    testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.2.1'
 }
 
 configurations {
