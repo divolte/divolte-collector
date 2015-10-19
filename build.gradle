@@ -21,7 +21,7 @@ buildscript {
     }
     dependencies {
         classpath group: 'com.github.jengelman.gradle.plugins', name: 'shadow', version: '1.1.2'
-        classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.9'
+        classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.11.3'
         classpath group: 'pl.allegro.tech.build', name: 'axion-release-plugin', version: '1.2.4'
     }
 }
@@ -145,6 +145,22 @@ configurations {
     // (At runtime these are redirected over SLF4J.)
     all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     all*.exclude group: 'log4j', module: 'log4j'
+
+    // For dependency update tracking, reject non-releases that are in release repositories.
+    all {
+        resolutionStrategy {
+            componentSelection {
+                all { ComponentSelection selection ->
+                    boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
+                        selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+                    }
+                    if (rejected) {
+                        selection.reject('Release candidate')
+                    }
+                }
+            }
+        }
+    }
 }
 
 shadowJar {
