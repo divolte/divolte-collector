@@ -574,16 +574,14 @@ public final class DslRecordMapping {
             return new PrimitiveValueProducer<>(
                     identifier + ".value(" + name + ")",
                     String.class,
-                    (h,e,c) -> EventParameterValueProducer.this.produce(h,e,c)
-                                .map(json -> json.path(name).asText()));
+                    (h,e,c) -> produce(h, e, c).map(json -> json.path(name).asText()));
         }
 
         public ValueProducer<JsonNode> path(final String path) {
             final JsonPath jsonPath = JsonPath.compile(path);
             return new JsonValueProducer(
                     identifier + ".path(" + path + ')',
-                    (h,e,c) -> EventParameterValueProducer.this.produce(h, e, c)
-                                .map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
+                    (h,e,c) -> produce(h, e, c).map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
                     false);
         }
     }
