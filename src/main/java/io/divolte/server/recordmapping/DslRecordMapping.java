@@ -574,16 +574,14 @@ public final class DslRecordMapping {
             return new PrimitiveValueProducer<>(
                     identifier + ".value(" + name + ")",
                     String.class,
-                    (h,e,c) -> EventParameterValueProducer.this.produce(h,e,c)
-                                .map(json -> json.path(name).asText()));
+                    (h,e,c) -> produce(h, e, c).map(json -> json.path(name).asText()));
         }
 
         public ValueProducer<JsonNode> path(final String path) {
             final JsonPath jsonPath = JsonPath.compile(path);
             return new JsonValueProducer(
                     identifier + ".path(" + path + ')',
-                    (h,e,c) -> EventParameterValueProducer.this.produce(h, e, c)
-                                .map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
+                    (h,e,c) -> produce(h, e, c).map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
                     false);
         }
     }
@@ -892,11 +890,15 @@ public final class DslRecordMapping {
                                                 (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::getOrganization));
         }
 
+        @Deprecated
+        @SuppressWarnings("deprecation")
         public ValueProducer<Boolean> anonymousProxy() {
             return new BooleanValueProducer(identifier + ".anonymousProxy()",
                                             (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::isAnonymousProxy));
         }
 
+        @Deprecated
+        @SuppressWarnings("deprecation")
         public ValueProducer<Boolean> satelliteProvider() {
             return new BooleanValueProducer(identifier + ".satelliteProvider()",
                                             (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::isSatelliteProvider));
@@ -1000,9 +1002,9 @@ public final class DslRecordMapping {
                     (h,e,c) -> {
                         final Optional<T> left = this.produce(h, e, c);
                         final Optional<T> right = other.produce(h, e, c);
-                        return left.isPresent() && right.isPresent()
-                                ? Optional.of(left.get().equals(right.get()))
-                                : Optional.of(false);
+                        return Optional.of(left.isPresent() &&
+                                           right.isPresent() &&
+                                           left.get().equals(right.get()));
                     });
         }
 
@@ -1011,9 +1013,7 @@ public final class DslRecordMapping {
                     identifier + ".equalTo(" + literal + ")",
                     (h,e,c) -> {
                         final Optional<T> value = produce(h, e, c);
-                        return value.isPresent()
-                                ? Optional.of(value.get().equals(literal))
-                                : Optional.of(false);
+                        return Optional.of(value.isPresent() && value.get().equals(literal));
                     });
         }
 

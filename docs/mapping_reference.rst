@@ -1082,7 +1082,7 @@ Regular expression matching
     def matcher = match '/foo/bar/([a-z]+).html$' against location()
 
 :Description:
-  Matches the given regular expression against a value. The result of this can not be directly mapped onto a Avro field, but can be used to extract capture groups or conditionally perform a mapping if the pattern is a match. Often it is required to perform non-trivial partial extractions against strings that are taken from the requests. One example would be matching the path of the location with a wild card. It is not recommended to match patterns against the location() or referer() values directly; instead consider parsing out relevant parts of the URI first using URI parsing. In the following example, the matching is much more robust in the presence of unexpected query parameters or fragments compared to matching against the entire location string::
+  Matches the given regular expression against a value; the entire value must match. The result of this can not be directly mapped onto a Avro field, but can be used to extract capture groups or conditionally perform a mapping if the pattern is a match. Often it is required to perform non-trivial partial extractions against strings that are taken from the requests. One example would be matching the path of the location with a wild card. It is not recommended to match patterns against the location() or referer() values directly; instead consider parsing out relevant parts of the URI first using URI parsing. In the following example, the matching is much more robust in the presence of unexpected query parameters or fragments compared to matching against the entire location string::
 
     def locationUri = parse location() to uri
     def pathMatcher = match '^/foo/bar/([a-z]+).html$' against locationUri.path()
@@ -1100,7 +1100,7 @@ Regex matches
 
   ::
 
-    def matcher = match '/foo/bar/([a-z]+).html$' against location()
+    def matcher = match '^/foo/bar/([a-z]+).html$' against location()
 
     // use in conditional mapping
     when matcher.matches() apply {

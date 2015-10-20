@@ -56,7 +56,7 @@ public final class BrowserLists {
                 caps.setCapability("deviceName", "");
                 return caps;
             }, "IE10 on Windows 7" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.opera();
+                final DesiredCapabilities caps = DesiredCapabilities.operaBlink();
                 caps.setCapability("platform", "Windows 7");
                 caps.setCapability("version", "12");
                 caps.setCapability("deviceName", "");
@@ -140,7 +140,7 @@ public final class BrowserLists {
 
             // Linux
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.opera();
+                final DesiredCapabilities caps = DesiredCapabilities.operaBlink();
                 caps.setCapability("platform", "Linux");
                 caps.setCapability("version", "12");
                 caps.setCapability("deviceName", "");
