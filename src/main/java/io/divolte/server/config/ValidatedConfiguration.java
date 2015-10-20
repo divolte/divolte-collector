@@ -21,10 +21,15 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
 
+import org.hibernate.validator.HibernateValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +44,7 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.google.common.collect.ImmutableList;
 import com.jasonclawson.jackson.dataformat.hocon.HoconTreeTraversingParser;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 
 /**
  * Container for a validated configuration loaded from a {@code Config}
@@ -55,7 +61,7 @@ import com.typesafe.config.Config;
 public final class ValidatedConfiguration {
     private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
 
-    private final List<Exception> exceptions;
+    private final List<String> configurationErrors;
     private final DivolteConfiguration divolteConfiguration;
 
     /**
@@ -67,22 +73,44 @@ public final class ValidatedConfiguration {
      * @param configLoader
      *            Supplier of the underlying {@code Config} instance.
      */
-    public ValidatedConfiguration(Supplier<Config> configLoader) {
-        final List<Exception> exceptions = new ArrayList<>();
+    public ValidatedConfiguration(final Supplier<Config> configLoader) {
+        final List<String> configurationErrors = new ArrayList<>();
 
         DivolteConfiguration divolteConfiguration;
         try {
+            /*
+             * We first load the config using the provided loading method.
+             * Then, we validate using bean validation and add any validation
+             * errors to the resulting list of error messages.
+             */
             final Config config = configLoader.get();
             divolteConfiguration = mapped(config.getConfig("divolte"));
-        } catch(Exception e) {
-            e.printStackTrace();
+            validate(configurationErrors, divolteConfiguration);
+        } catch(final ConfigException e) {
             logger.debug("Configuration error caught during validation.", e);
-            exceptions.add(e);
+            configurationErrors.add(e.getMessage());
             divolteConfiguration = null;
+        } catch (final Exception e) {
+            logger.error("Error while reading configuration!", e);
+            throw new RuntimeException(e);
         }
 
-        this.exceptions = ImmutableList.copyOf(exceptions);
+        this.configurationErrors = ImmutableList.copyOf(configurationErrors);
         this.divolteConfiguration = divolteConfiguration;
+    }
+
+    private void validate(final List<String> configurationErrors, final DivolteConfiguration divolteConfiguration) {
+        final Validator validator = Validation
+                .byProvider(HibernateValidator.class)
+                .configure()
+                .buildValidatorFactory()
+                .getValidator();
+
+        final Set<ConstraintViolation<DivolteConfiguration>> validationErrors = validator.validate(divolteConfiguration);
+
+        validationErrors.forEach((e) -> configurationErrors.add(
+                String.format("Property 'divolte.%s' %s. Found: '%s'.", e.getPropertyPath(), e.getMessage(), e.getInvalidValue())
+                ));
     }
 
     private static DivolteConfiguration mapped(final Config input) throws JsonParseException, JsonMappingException, IOException {
@@ -119,7 +147,7 @@ public final class ValidatedConfiguration {
      *             When validation errors exist.
      */
     public DivolteConfiguration configuration() {
-        if (!exceptions.isEmpty()) {
+        if (!configurationErrors.isEmpty()) {
             throw new IllegalStateException("Attempt to access invalid configuration.");
         }
         return divolteConfiguration;
@@ -132,8 +160,8 @@ public final class ValidatedConfiguration {
      * @return A list of {@code ConfigException} that were thrown during
      *         configuration validation.
      */
-    public List<Exception> errors() {
-        return exceptions;
+    public List<String> errors() {
+        return configurationErrors;
     }
 
     /**
@@ -142,6 +170,6 @@ public final class ValidatedConfiguration {
      * @return false if validation errors exist, true otherwise.
      */
     public boolean isValid() {
-        return exceptions.isEmpty();
+        return configurationErrors.isEmpty();
     }
 }

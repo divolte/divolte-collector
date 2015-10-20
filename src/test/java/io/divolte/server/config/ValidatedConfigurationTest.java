@@ -12,16 +12,28 @@ public class ValidatedConfigurationTest {
     @Test
     public void shouldNotThrowExceptionsOnInvalidConfiguration() {
         final Config empty = ConfigFactory.parseString("");
-        ValidatedConfiguration vc = new ValidatedConfiguration(() -> empty);
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> empty);
 
         assertFalse(vc.isValid());
         assertFalse(vc.errors().isEmpty());
     }
 
+    @Test
+    public void shouldValidateJavaScriptName() {
+        final Config config =
+                ConfigFactory.parseString(
+                                "divolte.javascript.name = 404.exe\n")
+                                .withFallback(ConfigFactory.parseResources("reference-test.conf"));
+
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
+        assertFalse(vc.errors().isEmpty());
+        assertEquals("Property 'divolte.javascript.name' must match \"^[A-Za-z0-9_-]+\\.js$\". Found: '404.exe'.", vc.errors().get(0));
+    }
+
     @Test(expected = IllegalStateException.class)
     public void shouldNotAllowAccessToInvalidConfiguration() {
         final Config empty = ConfigFactory.parseString("");
-        ValidatedConfiguration vc = new ValidatedConfiguration(() -> empty);
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> empty);
 
         assertFalse(vc.isValid());
 

@@ -1,17 +1,18 @@
 package io.divolte.server.config;
 
 import javax.annotation.ParametersAreNullableByDefault;
+import javax.validation.Valid;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 @ParametersAreNullableByDefault
 public final class DivolteConfiguration {
-    public final ServerConfiguration server;
-    public final TrackingConfiguration tracking;
-    public final JavascriptConfiguration javascript;
-    public final IncomingRequestProcessorConfiguration incomingRequestProcessor;
-    public final KafkaFlusherConfiguration kafkaFlusher;
-    public final HdfsFlusherConfiguration hdfsFlusher;
+    @Valid public final ServerConfiguration server;
+    @Valid public final TrackingConfiguration tracking;
+    @Valid public final JavascriptConfiguration javascript;
+    @Valid public final IncomingRequestProcessorConfiguration incomingRequestProcessor;
+    @Valid public final KafkaFlusherConfiguration kafkaFlusher;
+    @Valid public final HdfsFlusherConfiguration hdfsFlusher;
 
     @JsonCreator
     private DivolteConfiguration(

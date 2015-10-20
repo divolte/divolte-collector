@@ -59,7 +59,7 @@ public final class Server implements Runnable {
         this(vc, (e,b,r) -> {});
     }
 
-    Server(final ValidatedConfiguration vc, IncomingRequestListener listener) {
+    Server(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
         host = vc.configuration().server.host;
         port = vc.configuration().server.port;
 
@@ -129,7 +129,7 @@ public final class Server implements Runnable {
             shutdownHandler.shutdown();
             shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
             undertow.stop();
-        } catch (Exception ie) {
+        } catch (final Exception ie) {
             Thread.currentThread().interrupt();
         }
 
@@ -139,7 +139,7 @@ public final class Server implements Runnable {
         logger.info("Closing HDFS filesystem connection.");
         try {
             FileSystem.closeAll();
-        } catch (IOException ioe) {
+        } catch (final IOException ioe) {
             logger.warn("Failed to cleanly close HDFS file system.", ioe);
         }
     }
@@ -148,8 +148,8 @@ public final class Server implements Runnable {
         final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
         if (!vc.isValid()) {
             System.err.println("There are configuration errors. Details:");
-            for (Exception e : vc.errors()) {
-                System.err.println(e.getMessage());
+            for (final String e : vc.errors()) {
+                System.err.println(e);
             }
             System.exit(1);
         }
