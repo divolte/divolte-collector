@@ -194,17 +194,10 @@ findbugs() {
 }
 
 pmd {
-    toolVersion = "5.3.1"
-    ruleSets = [
-            "java-basic",
-            "java-braces",
-            "java-clone",
-            "java-empty",
-            "java-finalizers",
-            'java-sunsecure',
-            "java-imports",
-            "java-unnecessary"
-    ]
+    toolVersion = "5.4.0"
+    ruleSetFiles = files("config/pmd/ruleset.xml")
+    // The default set includes 'basic', so empty it. (We include basic via our custom ruleset.)
+    ruleSets = []
 }
 
 checkstyle {
