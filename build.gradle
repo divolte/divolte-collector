@@ -108,7 +108,7 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.10'
-    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'0.8.1') {
+    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'2.3.1') {
         // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'
