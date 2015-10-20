@@ -72,12 +72,6 @@ applicationDefaultJvmArgs = [
 repositories {
     mavenLocal()
     mavenCentral()
-    maven {
-        url 'https://repository-saucelabs.forge.cloudbees.com/release'
-    }
-    maven {
-        url 'http://repository.codehaus.org/'
-    }
 }
 
 dependencies {
