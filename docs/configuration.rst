@@ -694,83 +694,16 @@ divolte.hdfs_flusher.hdfs.replication
       replication = 3
     }
 
+divolte.hdfs.file_strategy
+--------------------------
+Divolte Collector has two strategies for creating files on HDFS and flushing data. Either one of these must be configured, but not both. Which strategy to use is set using the `type` property of this configuration; accepted values are either `SIMPLE_ROLLING_FILE` (default) or `SESSION_BINNING`.
 
-divolte.hdfs.simple_rolling_file_strategy
------------------------------------------
-Divolte Collector has two strategies for creating files on HDFS and flushing data. Either one of these must be configured, but not both. By default, a simple rolling file strategy is employed. This opens one file per thread and rolls on to a new file after a configurable interval. Files that are being written to have a extension of .avro.partial and are created in the the directory configured in the working_dir setting. When a file is closed, it is renamed to have a .avro extension and is moved to the directory configured in the publish_dir setting. This happens in a single (atomic) filesystem move operation.
+Simple rolling file strategy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+By default, a simple rolling file strategy is employed. This opens one file per thread and rolls on to a new file after a configurable interval. Files that are being written to have a extension of .avro.partial and are created in the the directory configured in the working_dir setting. When a file is closed, it is renamed to have a .avro extension and is moved to the directory configured in the publish_dir setting. This happens in a single (atomic) filesystem move operation.
 
-divolte.hdfs.simple_rolling_file_strategy.roll_every
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Roll over files on HDFS after this amount of time.
-:Default:
-  60 minutes
-:Example:
-
-  ::
-
-    divolte.hdfs.simple_rolling_file_strategy {
-      roll_every = 15 minutes
-    }
-
-divolte.hdfs.simple_rolling_file_strategy.sync_file_after_records
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Issue a hsync against files each time this number of records has been flushed to it.
-:Default:
-  1000
-:Example:
-
-  ::
-
-    divolte.hdfs.simple_rolling_file_strategy {
-      sync_file_after_records = 100
-    }
-
-divolte.hdfs.simple_rolling_file_strategy.sync_file_after_duration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Issue a hsync at least when this amount of time passes, regardless of how much data was written to a file.
-:Default:
-  30 seconds
-:Example:
-
-  ::
-
-    divolte.hdfs.simple_rolling_file_strategy {
-      sync_file_after_duration = 1 minute
-    }
-
-divolte.hdfs.simple_rolling_file_strategy.working_dir
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Directory where files are created and kept while being written to.
-:Default:
-  /tmp
-:Example:
-
-  ::
-
-    divolte.hdfs.simple_rolling_file_strategy {
-      working_dir = /webdata/inflight
-    }
-
-divolte.hdfs.simple_rolling_file_strategy.publish_dir
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Directory where files are moved to, after they are closed.
-:Default:
-  /tmp
-:Example:
-
-  ::
-
-    divolte.hdfs.simple_rolling_file_strategy {
-      publish_dir = /webdata/published
-    }
-
-divolte.hdfs.session_binning_file_strategy
-------------------------------------------
+Session binning file strategy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Next to the rolling file strategy, there is a more complex strategy called session binning file strategy. The general idea of this strategy is to provide a best effort to put events that belong to the same session in the same file.
 
 This strategy assigns events to files as such:
@@ -791,24 +724,38 @@ This strategy assigns events to files as such:
 
   * This happens for exceptionally long sessions
 
-This strategy attempts to write events that belong to the same session to the same file. Do note that in case of failures, this guarantee no longer holds. For this reason, in failure scenarios or at shutdown, this strategy DOES NOT move files to the publish directory. Users have to setup a separate process to periodically move these files out of the way. 
+This strategy attempts to write events that belong to the same session to the same file. Do note that in case of failures, this guarantee no longer holds. For this reason, in failure scenarios or at shutdown, this strategy DOES NOT move files to the publish directory. Users have to setup a separate process to periodically move these files out of the way.
 
-divolte.hdfs.session_binning_file_strategy.sync_file_after_records
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+divolte.hdfs.file_strategy.type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
-  Issue a hsync against files each time this number of records has been flushed to it. 
+  Identifies which strategy to use for flushing HDFS files. Type can be either `SIMPLE_ROLLING_FILE` or `SESSION_BINNING` for the respective strategies.
+:Default:
+  SIMPLE_ROLLING_FILE
+:Example:
+
+  ::
+
+    divolte.hdfs.file_strategy {
+      type = SESSION_BINNING
+    }
+
+divolte.hdfs.file_strategy.sync_file_after_records
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:Description:
+  Issue a hsync against files each time this number of records has been flushed to it.
 :Default:
   1000
 :Example:
 
   ::
 
-    divolte.hdfs.session_binning_file_strategy {
+    divolte.hdfs.file_strategy {
       sync_file_after_records = 100
     }
 
-divolte.hdfs.session_binning_file_strategy.sync_file_after_duration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+divolte.hdfs.file_strategy.sync_file_after_duration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   Issue a hsync at least when this amount of time passes, regardless of how much data was written to a file.
 :Default:
@@ -817,12 +764,12 @@ divolte.hdfs.session_binning_file_strategy.sync_file_after_duration
 
   ::
 
-    divolte.hdfs.session_binning_file_strategy {
+    divolte.hdfs.file_strategy {
       sync_file_after_duration = 1 minute
     }
 
-divolte.hdfs.session_binning_file_strategy.working_dir
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+divolte.hdfs.file_strategy.working_dir
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   Directory where files are created and kept while being written to.
 :Default:
@@ -831,12 +778,12 @@ divolte.hdfs.session_binning_file_strategy.working_dir
 
   ::
 
-    divolte.hdfs.session_binning_file_strategy {
+    divolte.hdfs.file_strategy {
       working_dir = /webdata/inflight
     }
 
-divolte.hdfs.session_binning_file_strategy.publish_dir
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+divolte.hdfs.file_strategy.publish_dir
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :Description:
   Directory where files are moved to, after they are closed.
 :Default:
@@ -845,8 +792,22 @@ divolte.hdfs.session_binning_file_strategy.publish_dir
 
   ::
 
-    divolte.hdfs.session_binning_file_strategy {
+    divolte.hdfs.file_strategy {
       publish_dir = /webdata/published
+    }
+
+divolte.hdfs.file_strategy.roll_every *(simple rolling file only)*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:Description:
+  Roll over files on HDFS after this amount of time.
+:Default:
+  60 minutes
+:Example:
+
+  ::
+
+    divolte.hdfs.file_strategy {
+      roll_every = 15 minutes
     }
 
 logback.xml
