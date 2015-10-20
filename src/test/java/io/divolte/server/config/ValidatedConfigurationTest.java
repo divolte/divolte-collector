@@ -5,7 +5,6 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
 public class ValidatedConfigurationTest {
@@ -45,7 +44,7 @@ public class ValidatedConfigurationTest {
     public void shouldNotBreakOnConfigSyntaxErrorsDuringLoad() {
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseString("not = //allowed"));
         assertFalse(vc.errors().isEmpty());
-        assertEquals(ConfigException.Parse.class, vc.errors().get(0).getClass());
+        assertEquals("String: 1: Expecting a value but got wrong token: end of file", vc.errors().get(0));
     }
 
     @Test
