@@ -100,10 +100,10 @@ dependencies {
     compile group: 'org.apache.avro', name: 'trevni-core', version: '1.7.7'
     compile group: 'org.apache.avro', name: 'avro-mapred', version: '1.7.7'
 
-    compile (group: 'org.apache.hadoop', name:'hadoop-common', version: '2.4.1') {
+    compile (group: 'org.apache.hadoop', name:'hadoop-common', version: '2.7.1') {
         exclude group: 'jline', module: 'jline'
     }
-    compile group: 'org.apache.hadoop', name:'hadoop-hdfs', version: '2.4.1'
+    compile group: 'org.apache.hadoop', name:'hadoop-hdfs', version: '2.7.1'
     compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.22') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
@@ -151,7 +151,7 @@ configurations {
         resolutionStrategy {
             componentSelection {
                 all { ComponentSelection selection ->
-                    boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
+                    boolean rejected = ['alpha', 'beta', 'rc', 'cr'].any { qualifier ->
                         selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
                     }
                     if (rejected) {
