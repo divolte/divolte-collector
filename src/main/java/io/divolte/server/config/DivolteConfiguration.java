@@ -28,7 +28,7 @@ public final class DivolteConfiguration {
         this.kafkaFlusher = kafkaFlusher;
         this.hdfsFlusher = hdfsFlusher;
     }
-    
+
     @Override
     public String toString() {
         return "DivolteConfiguration [server=" + server + ", tracking=" + tracking + ", javascript=" + javascript + ", incomingRequestProcessor=" + incomingRequestProcessor + ", kafkaFlusher=" + kafkaFlusher + ", hdfsFlusher=" + hdfsFlusher + "]";

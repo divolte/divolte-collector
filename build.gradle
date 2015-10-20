@@ -119,6 +119,8 @@ dependencies {
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.8'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.0.0'
     compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.5.3'
+    compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.5.3'
+    compile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.5.3'
     compile group: 'com.jasonclawson', name: 'jackson-dataformat-hocon', version: '1.1.0'
 
     // We use the SLF4J API. At runtime, this is LogBack.
@@ -132,8 +134,6 @@ dependencies {
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
     testCompile group: 'com.mashape.unirest', name: 'unirest-java', version: '1.4.5'
     testCompile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.5.3'
-    testCompile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.5.3'
-    testCompile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.5.3'
     testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.19'
     // Warning: SauceLabs doesn't work properly with Selenium 2.44.
     testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.43.1'

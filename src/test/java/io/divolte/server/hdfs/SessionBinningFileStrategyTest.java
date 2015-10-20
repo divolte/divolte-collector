@@ -79,8 +79,9 @@ public class SessionBinningFileStrategyTest {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         final Config config =
              ConfigFactory.parseString(
-                             "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                             + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                             "divolte.hdfs_flusher.file_strategy.type = SESSION_BINNING\n"
+                             + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                             + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
                              .withFallback(ConfigFactory.parseResources("hdfs-flusher-binning-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
@@ -134,8 +135,9 @@ public class SessionBinningFileStrategyTest {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         final Config config =
              ConfigFactory.parseString(
-                             "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                             + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                             "divolte.hdfs_flusher.file_strategy.type = SESSION_BINNING\n"
+                             + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                             + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
                              .withFallback(ConfigFactory.parseResources("hdfs-flusher-binning-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
@@ -183,8 +185,9 @@ public class SessionBinningFileStrategyTest {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         final Config config =
              ConfigFactory.parseString(
-                       "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                       + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                       "divolte.hdfs_flusher.file_strategy.type = SESSION_BINNING\n"
+                       + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                       + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
                     .withFallback(ConfigFactory.parseResources("hdfs-flusher-binning-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
@@ -232,8 +235,9 @@ public class SessionBinningFileStrategyTest {
         final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
         final Config config =
              ConfigFactory.parseString(
-                             "divolte.hdfs_flusher.session_binning_file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                             + "divolte.hdfs_flusher.session_binning_file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
+                             "divolte.hdfs_flusher.file_strategy.type = SESSION_BINNING\n"
+                             + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
+                             + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
                           .withFallback(ConfigFactory.parseResources("hdfs-flusher-binning-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 

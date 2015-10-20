@@ -37,11 +37,11 @@ public abstract class FileStrategyConfiguration {
     public static enum Types {
         SIMPLE_ROLLING_FILE(SimpleRollingFileStrategyConfiguration.class),
         SESSION_BINNING(SessionBinningFileStrategyConfiguration.class);
-        
+
         public final Class<?> clazz;
         Types(Class<?> clazz) { this.clazz = clazz; }
     }
-    
+
     public <T> T as(Class<T> target) {
         Preconditions.checkState(type.clazz.equals(target),
                                  "Attempt to cast FileStrategyConfiguration to wrong type.");

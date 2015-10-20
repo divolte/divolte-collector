@@ -18,7 +18,7 @@ import com.google.common.base.Joiner;
 public class PropertiesDeserializer extends JsonDeserializer<Properties> {
     private final static Joiner DOT_JOINER = Joiner.on('.');
     private final static Joiner COMMA_JOINER = Joiner.on(',');
-    
+
     @Override
     public Properties deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
         if (START_OBJECT == p.getCurrentToken()) {

@@ -108,7 +108,7 @@ public final class ValidatedConfiguration {
 
         return mapper.readValue(new HoconTreeTraversingParser(resolved.root()), DivolteConfiguration.class);
     }
-    
+
     /**
      * Returns the validated configuration object tree. This is only returned
      * when no validation errors exist. The method throws

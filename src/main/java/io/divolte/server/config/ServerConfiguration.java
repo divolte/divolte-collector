@@ -7,12 +7,9 @@ import javax.annotation.ParametersAreNullableByDefault;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * 
- */
 @ParametersAreNullableByDefault
 public final class ServerConfiguration {
-    
+
     public final String host;
     public final int port;
     public final boolean useXForwardedFor;

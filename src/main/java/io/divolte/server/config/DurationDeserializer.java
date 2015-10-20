@@ -15,7 +15,7 @@ import com.typesafe.config.impl.ConfigImplUtil;
 
 public class DurationDeserializer extends StdScalarDeserializer<Duration> {
     private static final long serialVersionUID = 1L;
-    
+
     public DurationDeserializer() {
         super(Duration.class);
     }
@@ -28,7 +28,7 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
             throw ctx.mappingException("Expected string value for Duration mapping.");
         }
     }
-    
+
     // Inspired by Typesafe Config parseDuration(...)
     private static long parseDuration(final String input, final DeserializationContext context) throws JsonMappingException {
         String s = ConfigImplUtil.unicodeTrim(input);
@@ -43,12 +43,12 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
             throw context.mappingException(String.format("No number in duration value '%s'", input));
         }
 
-        if (unitString.length() > 2 && !unitString.endsWith("s"))
+        if (unitString.length() > 2 && !unitString.endsWith("s")) {
             unitString = unitString + "s";
+        }
 
         // note that this is deliberately case-sensitive
-        if (unitString.equals("") || unitString.equals("ms") || unitString.equals("millis")
-                || unitString.equals("milliseconds")) {
+        if (unitString.equals("") || unitString.equals("ms") || unitString.equals("millis") || unitString.equals("milliseconds")) {
             units = TimeUnit.MILLISECONDS;
         } else if (unitString.equals("us") || unitString.equals("micros") || unitString.equals("microseconds")) {
             units = TimeUnit.MICROSECONDS;
@@ -80,13 +80,14 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
             throw context.mappingException(String.format("Could not parse duration number '%s'", numberString));
         }
     }
-    
+
     private static String getUnits(String s) {
         int i = s.length() - 1;
         while (i >= 0) {
             char c = s.charAt(i);
-            if (!Character.isLetter(c))
+            if (!Character.isLetter(c)) {
                 break;
+            }
             i -= 1;
         }
         return s.substring(i + 1);

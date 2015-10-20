@@ -36,9 +36,9 @@ public class ValidatedConfigurationTest {
         assertEquals(ConfigException.Parse.class, vc.errors().get(0).getClass());
     }
 
-	@Test
-	public void shouldMapReferenceConfig() {
-	    final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
-	    assertTrue(vc.errors().isEmpty());
-	}
+    @Test
+    public void shouldMapReferenceConfig() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
+        assertTrue(vc.errors().isEmpty());
+    }
 }
