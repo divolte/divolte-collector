@@ -891,12 +891,14 @@ public final class DslRecordMapping {
         }
 
         @Deprecated
+        @SuppressWarnings("deprecation")
         public ValueProducer<Boolean> anonymousProxy() {
             return new BooleanValueProducer(identifier + ".anonymousProxy()",
                                             (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::isAnonymousProxy));
         }
 
         @Deprecated
+        @SuppressWarnings("deprecation")
         public ValueProducer<Boolean> satelliteProvider() {
             return new BooleanValueProducer(identifier + ".satelliteProvider()",
                                             (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::isSatelliteProvider));
