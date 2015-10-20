@@ -112,7 +112,7 @@ final class JavaScriptHandler implements HttpHandler {
             responseHeaders.put(Headers.CONTENT_TYPE, "application/javascript");
             exchange.getResponseSender().send(entityBody);
         } else {
-            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+            exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
             exchange.endExchange();
         }
     }
