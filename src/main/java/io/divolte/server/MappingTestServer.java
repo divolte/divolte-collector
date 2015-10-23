@@ -127,6 +127,7 @@ public class MappingTestServer {
                     get(payload, "screen_pixel_height", Integer.class),
                     get(payload, "device_pixel_ratio", Integer.class));
             final DivolteEvent divolteEvent = new DivolteEvent(
+                    exchange,
                     get(payload, "corrupt", Boolean.class).orElse(false),
                     get(payload, "party_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
                     get(payload, "session_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
@@ -155,7 +156,7 @@ public class MappingTestServer {
             exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
 
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            exchange.getResponseChannel().write(ByteBuffer.wrap(mapper.newRecordFromExchange(exchange).toString().getBytes(StandardCharsets.UTF_8)));
+            exchange.getResponseChannel().write(ByteBuffer.wrap(mapper.newRecordFromExchange(divolteEvent).toString().getBytes(StandardCharsets.UTF_8)));
             exchange.endExchange();
         }
     }

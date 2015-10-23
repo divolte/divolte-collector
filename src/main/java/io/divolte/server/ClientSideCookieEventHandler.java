@@ -16,23 +16,28 @@
 
 package io.divolte.server;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Deque;
+import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+
 import io.divolte.server.mincode.MincodeFactory;
 import io.undertow.server.HttpServerExchange;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-
-import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 public final class ClientSideCookieEventHandler extends BaseEventHandler {
@@ -66,7 +71,7 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
     }
 
     @Override
-    protected void logEvent(HttpServerExchange exchange) {
+    protected void logEvent(final HttpServerExchange exchange) {
         try {
             handleRequestIfComplete(exchange);
         } catch (final IncompleteRequestException ire) {
@@ -86,14 +91,12 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
         final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
 
         final long requestTime = System.currentTimeMillis();
-        final DivolteEvent eventData = buildBrowserEventData(corrupt, partyId, sessionId, pageViewId, eventId,
+        final DivolteEvent event = buildBrowserEventData(corrupt, partyId, sessionId, pageViewId, eventId,
                                                              requestTime, clientTimeStamp - requestTime,
                                                              isNewPartyId, isFirstInSession, exchange);
 
-        exchange.putAttachment(DIVOLTE_EVENT_KEY, eventData);
-
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
-        processingPool.enqueueIncomingExchangeForProcessing(partyId, exchange);
+        processingPool.enqueueIncomingExchangeForProcessing(partyId, event);
     }
 
     static DivolteEvent buildBrowserEventData(final boolean corruptEvent,
@@ -106,7 +109,8 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                               final boolean newPartyId,
                                               final boolean firstInSession,
                                               final HttpServerExchange exchange) {
-        return new DivolteEvent(corruptEvent,
+        return new DivolteEvent(exchange,
+                                corruptEvent,
                                 partyCookie,
                                 sessionCookie,
                                 eventId,
@@ -198,10 +202,10 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
     }
 
     @Nullable
-    static Long tryParseBase36Long(String input) {
+    static Long tryParseBase36Long(final String input) {
         try {
             return Long.parseLong(input, 36);
-        } catch(NumberFormatException nfe) {
+        } catch(final NumberFormatException nfe) {
             return null;
         }
     }

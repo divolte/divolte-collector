@@ -1,16 +1,18 @@
 package io.divolte.server;
 
-import com.google.common.base.Preconditions;
-import io.divolte.server.ServerTestUtils.EventPayload;
+import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static org.junit.Assert.*;
+
+import java.util.Optional;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Optional;
+import com.google.common.base.Preconditions;
 
-import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.CUSTOM_PAGE_VIEW;
-import static org.junit.Assert.*;
+import io.divolte.server.ServerTestUtils.EventPayload;
 
 @ParametersAreNonnullByDefault
 public class SeleniumDisabledAutoPageViewEventTest extends SeleniumTestBase {
@@ -26,9 +28,9 @@ public class SeleniumDisabledAutoPageViewEventTest extends SeleniumTestBase {
         final String location = urlOf(CUSTOM_PAGE_VIEW);
         driver.get(location);
 
-        EventPayload viewEvent = server.waitForEvent();
+        final EventPayload payload = server.waitForEvent();
 
-        final DivolteEvent eventData = viewEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
+        final DivolteEvent eventData = payload.event;
         final Optional<String> eventParameters = eventData.eventParametersProducer.get().map(Object::toString);
         assertTrue(eventParameters.isPresent());
         assertEquals("{\"foo\":\"moo\",\"bar\":\"baz\"}", eventParameters.get());

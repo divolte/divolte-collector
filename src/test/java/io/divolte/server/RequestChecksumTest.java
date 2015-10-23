@@ -16,23 +16,23 @@
 
 package io.divolte.server;
 
-import com.google.common.base.Preconditions;
-import io.divolte.server.ServerTestUtils.EventPayload;
-import io.divolte.server.ServerTestUtils.TestServer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.google.common.base.Preconditions;
+
+import io.divolte.server.ServerTestUtils.EventPayload;
+import io.divolte.server.ServerTestUtils.TestServer;
 
 @ParametersAreNonnullByDefault
 public class RequestChecksumTest {
@@ -102,24 +102,24 @@ public class RequestChecksumTest {
     public void shouldFlagCorrectChecksumAsNotCorrupted() throws IOException, InterruptedException {
         request(URL_QUERY_CHECKSUM_GOOD);
         Preconditions.checkState(null != server);
-        final EventPayload event = server.waitForEvent();
-        assertFalse(event.exchange.getAttachment(DIVOLTE_EVENT_KEY).corruptEvent);
+        final EventPayload payload = server.waitForEvent();
+        assertFalse(payload.event.corruptEvent);
     }
 
     @Test
     public void shouldFlagIncorrectChecksumAsCorrupted() throws IOException, InterruptedException {
         request(URL_QUERY_CHECKSUM_BAD);
         Preconditions.checkState(null != server);
-        final EventPayload event = server.waitForEvent();
-        assertTrue(event.exchange.getAttachment(DIVOLTE_EVENT_KEY).corruptEvent);
+        final EventPayload payload = server.waitForEvent();
+        assertTrue(payload.event.corruptEvent);
     }
 
     @Test
     public void shouldFlagMissingChecksumAsCorrupted() throws IOException, InterruptedException {
         request(URL_QUERY_CHECKSUM_MISSING);
         Preconditions.checkState(null != server);
-        final EventPayload event = server.waitForEvent();
-        assertTrue(event.exchange.getAttachment(DIVOLTE_EVENT_KEY).corruptEvent);
+        final EventPayload payload = server.waitForEvent();
+        assertTrue(payload.event.corruptEvent);
     }
 
     @Test
@@ -127,8 +127,8 @@ public class RequestChecksumTest {
         for (final String urlQueryChecksumPartial : URL_QUERY_CHECKSUM_PARTIALS) {
             request(urlQueryChecksumPartial);
             Preconditions.checkState(null != server);
-            final EventPayload event = server.waitForEvent();
-            assertTrue(event.exchange.getAttachment(DIVOLTE_EVENT_KEY).corruptEvent);
+            final EventPayload payload = server.waitForEvent();
+            assertTrue(payload.event.corruptEvent);
         }
     }
 
@@ -136,8 +136,8 @@ public class RequestChecksumTest {
     public void shouldChecksumCorrectlyWithNonAsciiParameters() throws IOException, InterruptedException {
         request(URL_QUERY_CHECKSUM_UNICODE);
         Preconditions.checkState(null != server);
-        final EventPayload event = server.waitForEvent();
-        final DivolteEvent eventData = event.exchange.getAttachment(DIVOLTE_EVENT_KEY);
+        final EventPayload payload = server.waitForEvent();
+        final DivolteEvent eventData = payload.event;
         assertFalse(eventData.corruptEvent);
         assertEquals("ụñ⚕©ºḌℨ", eventData.eventType.get());
     }
@@ -148,9 +148,9 @@ public class RequestChecksumTest {
         request(URL_QUERY_CHECKSUM_BAD);
         request(URL_QUERY_SENTINEL);
         Preconditions.checkState(null != server);
-        final EventPayload event = server.waitForEvent();
+        final EventPayload payload = server.waitForEvent();
         // The first request should be missing, and we should now have the sentinel event.
-        final String eventType = event.exchange.getAttachment(DIVOLTE_EVENT_KEY).eventType.get();
+        final String eventType = payload.event.eventType.get();
         assertEquals("sentinelEvent", eventType);
     }
 
@@ -178,7 +178,7 @@ public class RequestChecksumTest {
         setServer(null);
     }
 
-    private void setServer(@Nullable TestServer newServer) {
+    private void setServer(@Nullable final TestServer newServer) {
         final TestServer oldServer = this.server;
         if (oldServer != newServer) {
             if (null != oldServer) {

@@ -16,10 +16,10 @@
 
 package io.divolte.server.recordmapping;
 
-import io.undertow.server.HttpServerExchange;
-
 import org.apache.avro.generic.GenericRecord;
 
+import io.divolte.server.DivolteEvent;
+
 public interface RecordMapper {
-    GenericRecord newRecordFromExchange(final HttpServerExchange exchange);
+    GenericRecord newRecordFromExchange(final DivolteEvent event);
 }

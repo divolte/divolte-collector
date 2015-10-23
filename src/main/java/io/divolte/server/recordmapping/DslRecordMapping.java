@@ -16,6 +16,33 @@
 
 package io.divolte.server.recordmapping;
 
+import static io.divolte.server.IncomingRequestProcessor.*;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.util.ArrayDeque;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
+import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -30,36 +57,21 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.record.*;
+import com.maxmind.geoip2.record.City;
+import com.maxmind.geoip2.record.Continent;
+import com.maxmind.geoip2.record.Country;
+import com.maxmind.geoip2.record.Location;
+import com.maxmind.geoip2.record.Postal;
+import com.maxmind.geoip2.record.Subdivision;
+import com.maxmind.geoip2.record.Traits;
+
 import io.divolte.server.DivolteEvent;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import net.sf.uadetector.ReadableUserAgent;
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Field;
-import org.apache.avro.Schema.Type;
-import org.apache.avro.generic.GenericRecordBuilder;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.util.*;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -108,8 +120,8 @@ public final class DslRecordMapping {
             throw new SchemaMappingException("Cannot map the result of %s onto field %s: %s",
                                              producer.identifier, fieldName, validationError.get().message);
         }
-        stack.getLast().add((h,e,c,r) -> {
-            producer.produce(h,e,c)
+        stack.getLast().add((e,c,r) -> {
+            producer.produce(e,c)
                     .flatMap(v -> producer.mapToGenericRecord(v, field.schema()))
                     .ifPresent(v -> r.set(field, v));
             return MappingAction.MappingResult.CONTINUE;
@@ -131,7 +143,7 @@ public final class DslRecordMapping {
             throw new SchemaMappingException("Type mismatch. Cannot map literal %s of type %s onto a field of type %s (type of value and schema of field do not match).", literal.toString(), literal.getClass(), field.schema());
         }
 
-        stack.getLast().add((h,e,c,r) -> {
+        stack.getLast().add((e,c,r) -> {
             r.set(field, literal);
             return MappingAction.MappingResult.CONTINUE;
         });
@@ -145,10 +157,10 @@ public final class DslRecordMapping {
         closure.run();
 
         final List<MappingAction> actions = stack.removeLast().build();
-        stack.getLast().add((h,e,c,r) -> {
-           if (condition.produce(h, e, c).orElse(false)) {
-               for (MappingAction action : actions) {
-                   switch (action.perform(h, e, c, r)) {
+        stack.getLast().add((e,c,r) -> {
+           if (condition.produce(e, c).orElse(false)) {
+               for (final MappingAction action : actions) {
+                   switch (action.perform(e, c, r)) {
                    case EXIT:
                        return MappingAction.MappingResult.EXIT;
                    case STOP:
@@ -166,9 +178,9 @@ public final class DslRecordMapping {
         closure.run();
 
         final List<MappingAction> actions = stack.removeLast().build();
-        stack.getLast().add((h,e,c,r) -> {
-           for (MappingAction action : actions) {
-               switch (action.perform(h, e, c, r)) {
+        stack.getLast().add((e,c,r) -> {
+           for (final MappingAction action : actions) {
+               switch (action.perform(e, c, r)) {
                case EXIT:
                    return MappingAction.MappingResult.CONTINUE;
                case STOP:
@@ -184,18 +196,18 @@ public final class DslRecordMapping {
      * Short circuit actions
      */
     public void stop() {
-        stack.getLast().add((h,e,c,r) -> MappingAction.MappingResult.STOP);
+        stack.getLast().add((e,c,r) -> MappingAction.MappingResult.STOP);
     }
 
     public void exitWhen(final ValueProducer<Boolean> condition) {
         stack.getLast().add(
-                (h,e,c,r) -> condition.produce(h, e, c)
+                (e,c,r) -> condition.produce(e, c)
                                       .map((b) -> b ? MappingAction.MappingResult.EXIT : MappingAction.MappingResult.CONTINUE)
                                       .orElse(MappingAction.MappingResult.CONTINUE));
     }
 
     public void exit() {
-        stack.getLast().add((h,e,c,r) -> MappingAction.MappingResult.EXIT);
+        stack.getLast().add((e,c,r) -> MappingAction.MappingResult.EXIT);
     }
 
     /*
@@ -212,34 +224,34 @@ public final class DslRecordMapping {
         return new PrimitiveValueProducer<>(
                 "parse(" + source.identifier + " to int32)",
                 Integer.class,
-                (h,e,c) -> source.produce(h, e, c).map(Ints::tryParse));
+                (e,c) -> source.produce(e, c).map(Ints::tryParse));
     }
 
     public ValueProducer<Long> toLong(final ValueProducer<String> source) {
         return new PrimitiveValueProducer<>(
                 "parse(" + source.identifier + " to int64)",
                 Long.class,
-                (h,e,c) -> source.produce(h, e, c).map(Longs::tryParse));
+                (e,c) -> source.produce(e, c).map(Longs::tryParse));
     }
 
     public ValueProducer<Float> toFloat(final ValueProducer<String> source) {
         return new PrimitiveValueProducer<>(
                 "parse(" + source.identifier + " to fp32)",
                 Float.class,
-                (h,e,c) -> source.produce(h, e, c).map(Floats::tryParse));
+                (e,c) -> source.produce(e, c).map(Floats::tryParse));
     }
 
     public ValueProducer<Double> toDouble(final ValueProducer<String> source) {
         return new PrimitiveValueProducer<>(
                 "parse(" + source.identifier + " to fp64)",
                 Double.class,
-                (h,e,c) -> source.produce(h, e, c).map(Doubles::tryParse));
+                (e,c) -> source.produce(e, c).map(Doubles::tryParse));
     }
 
     public ValueProducer<Boolean> toBoolean(final ValueProducer<String> source) {
         return new BooleanValueProducer(
                 "parse(" + source.identifier + " to bool)",
-                (h,e,c) -> source.produce(h, e, c).map(Boolean::parseBoolean));
+                (e,c) -> source.produce(e, c).map(Boolean::parseBoolean));
     }
 
     /*
@@ -254,31 +266,31 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<String> eventType() {
-        return new PrimitiveValueProducer<>("eventType()", String.class, (h,e,c) -> e.eventType);
+        return new PrimitiveValueProducer<>("eventType()", String.class, (e,c) -> e.eventType);
     }
 
     public ValueProducer<Boolean> firstInSession() {
-        return new BooleanValueProducer("firstInSession()", (h,e,c) -> Optional.of(e.firstInSession));
+        return new BooleanValueProducer("firstInSession()", (e,c) -> Optional.of(e.firstInSession));
     }
 
     public ValueProducer<Boolean> corrupt() {
-        return new BooleanValueProducer("corrupt()", (h,e,c) -> Optional.of(e.corruptEvent));
+        return new BooleanValueProducer("corrupt()", (e,c) -> Optional.of(e.corruptEvent));
     }
 
     public ValueProducer<Boolean> duplicate() {
-        return new BooleanValueProducer("duplicate()", (h,e,c) -> Optional.ofNullable(h.getAttachment(DUPLICATE_EVENT_KEY)));
+        return new BooleanValueProducer("duplicate()", (e,c) -> Optional.ofNullable(e.exchange.getAttachment(DUPLICATE_EVENT_KEY)));
     }
 
     public ValueProducer<Long> timestamp() {
-        return new PrimitiveValueProducer<>("timestamp()", Long.class, (h,e,c) -> Optional.of(e.requestStartTime));
+        return new PrimitiveValueProducer<>("timestamp()", Long.class, (e,c) -> Optional.of(e.requestStartTime));
     }
 
     public ValueProducer<Long> clientTimestamp() {
-        return new PrimitiveValueProducer<>("clientTimestamp()", Long.class, (h,e,c) -> Optional.of(e.requestStartTime + e.clientUtcOffset));
+        return new PrimitiveValueProducer<>("clientTimestamp()", Long.class, (e,c) -> Optional.of(e.requestStartTime + e.clientUtcOffset));
     }
 
     public ValueProducer<String> remoteHost() {
-        return new PrimitiveValueProducer<>("remoteHost()", String.class, (h,e,c) -> Optional.ofNullable(h.getSourceAddress()).map(InetSocketAddress::getHostString));
+        return new PrimitiveValueProducer<>("remoteHost()", String.class, (e,c) -> Optional.ofNullable(e.exchange.getSourceAddress()).map(InetSocketAddress::getHostString));
     }
 
     public ValueProducer<Integer> viewportPixelWidth() {
@@ -302,11 +314,11 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<String> partyId() {
-        return new PrimitiveValueProducer<>("partyId()", String.class, (h,e,c) -> Optional.of(e.partyCookie.value));
+        return new PrimitiveValueProducer<>("partyId()", String.class, (e,c) -> Optional.of(e.partyCookie.value));
     }
 
     public ValueProducer<String> sessionId() {
-        return new PrimitiveValueProducer<>("sessionId()", String.class, (h,e,c) -> Optional.of(e.sessionCookie.value));
+        return new PrimitiveValueProducer<>("sessionId()", String.class, (e,c) -> Optional.of(e.sessionCookie.value));
     }
 
     public ValueProducer<String> pageViewId() {
@@ -314,7 +326,7 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<String> eventId() {
-        return new PrimitiveValueProducer<>("eventId()", String.class, (h,e,c) -> Optional.of(e.eventId));
+        return new PrimitiveValueProducer<>("eventId()", String.class, (e,c) -> Optional.of(e.eventId));
     }
 
     /*
@@ -323,8 +335,8 @@ public final class DslRecordMapping {
     public ValueProducer<String> userAgentString() {
         return new PrimitiveValueProducer<>("userAgentString()",
                                             String.class,
-                                            (h, e, c) ->
-                                                    Optional.ofNullable(h.getRequestHeaders().getFirst(Headers.USER_AGENT)));
+                                            (e, c) ->
+                                                    Optional.ofNullable(e.exchange.getRequestHeaders().getFirst(Headers.USER_AGENT)));
     }
 
     public UserAgentValueProducer userAgent() {
@@ -333,61 +345,61 @@ public final class DslRecordMapping {
 
     public final class UserAgentValueProducer extends ValueProducer<ReadableUserAgent> {
         UserAgentValueProducer(final ValueProducer<String> source, final UserAgentParserAndCache parser) {
-            super("userAgent()", (h, e, c) -> source.produce(h, e, c).flatMap(parser::tryParse), true);
+            super("userAgent()", (e, c) -> source.produce(e, c).flatMap(parser::tryParse), true);
         }
 
         public ValueProducer<String> name() {
             return new PrimitiveValueProducer<>(identifier + ".name()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(ReadableUserAgent::getName));
+                                                (e,c) -> produce(e, c).map(ReadableUserAgent::getName));
         }
 
         public ValueProducer<String> family() {
             return new PrimitiveValueProducer<>(identifier + ".family()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((ua) -> ua.getFamily().getName()));
+                                                (e,c) -> produce(e, c).map((ua) -> ua.getFamily().getName()));
         }
 
         public ValueProducer<String> vendor() {
             return new PrimitiveValueProducer<>(identifier + ".vendor()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(ReadableUserAgent::getProducer));
+                                                (e,c) -> produce(e, c).map(ReadableUserAgent::getProducer));
         }
 
         public ValueProducer<String> type() {
             return new PrimitiveValueProducer<>(identifier + ".type()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((ua) -> ua.getType().getName()));
+                                                (e,c) -> produce(e, c).map((ua) -> ua.getType().getName()));
         }
 
         public ValueProducer<String> version() {
             return new PrimitiveValueProducer<>(identifier + ".version()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((ua) -> ua.getVersionNumber().toVersionString()));
+                                                (e,c) -> produce(e, c).map((ua) -> ua.getVersionNumber().toVersionString()));
         }
 
         public ValueProducer<String> deviceCategory() {
             return new PrimitiveValueProducer<>(identifier + ".deviceCategory()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((ua) -> ua.getDeviceCategory().getName()));
+                                                (e,c) -> produce(e, c).map((ua) -> ua.getDeviceCategory().getName()));
         }
 
         public ValueProducer<String> osFamily() {
             return new PrimitiveValueProducer<>(identifier + ".osFamily()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((ua) -> ua.getOperatingSystem().getFamily().getName()));
+                                                (e,c) -> produce(e, c).map((ua) -> ua.getOperatingSystem().getFamily().getName()));
         }
 
         public ValueProducer<String> osVersion() {
             return new PrimitiveValueProducer<>(identifier + ".osVersion()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((ua) -> ua.getOperatingSystem().getVersionNumber().toVersionString()));
+                                                (e,c) -> produce(e, c).map((ua) -> ua.getOperatingSystem().getVersionNumber().toVersionString()));
         }
 
         public ValueProducer<String> osVendor() {
             return new PrimitiveValueProducer<>(identifier + ".osVendor()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((ua) -> ua.getOperatingSystem().getProducer()));
+                                                (e,c) -> produce(e, c).map((ua) -> ua.getOperatingSystem().getProducer()));
         }
 
         @Override
@@ -407,13 +419,13 @@ public final class DslRecordMapping {
     public final static class MatcherValueProducer extends ValueProducer<Matcher> {
         MatcherValueProducer(final ValueProducer<String> source, final String regex) {
             super("match(" + regex + " against " + source.identifier + ")",
-                  (h, e, c) -> source.produce(h, e, c).map((s) -> Pattern.compile(regex).matcher(s)),
+                  (e, c) -> source.produce(e, c).map((s) -> Pattern.compile(regex).matcher(s)),
                   true);
         }
 
         public ValueProducer<Boolean> matches() {
             return new BooleanValueProducer(identifier + ".matches()",
-                                            (h,e,c) -> produce(h, e, c).map(Matcher::matches));
+                                            (e,c) -> produce(e, c).map(Matcher::matches));
         }
 
         // Note: matches() must be called on a Matcher prior to calling group
@@ -422,13 +434,13 @@ public final class DslRecordMapping {
         public ValueProducer<String> group(final int group) {
             return new PrimitiveValueProducer<>(identifier + ".group(" + group + ")",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((m) -> m.matches() ? m.group(group) : null));
+                                                (e,c) -> produce(e, c).map((m) -> m.matches() ? m.group(group) : null));
         }
 
         public ValueProducer<String> group(final String group) {
             return new PrimitiveValueProducer<>(identifier + ".group(" + group + ")",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((m) -> m.matches() ? m.group(group) : null));
+                                                (e,c) -> produce(e, c).map((m) -> m.matches() ? m.group(group) : null));
         }
 
         @Override
@@ -448,10 +460,10 @@ public final class DslRecordMapping {
     public final static class UriValueProducer extends ValueProducer<URI> {
         UriValueProducer(final ValueProducer<String> source) {
             super("parse(" + source.identifier + " to uri)",
-                  (h,e,c) -> source.produce(h, e, c).map((location) -> {
+                  (e,c) -> source.produce(e, c).map((location) -> {
                         try {
                             return new URI(location);
-                        } catch (Exception ignored) {
+                        } catch (final Exception ignored) {
                             // When we cannot parse as URI, leave the producer empty
                             return null;
                         }
@@ -462,55 +474,55 @@ public final class DslRecordMapping {
         public ValueProducer<String> path() {
             return new PrimitiveValueProducer<>(identifier + ".path()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getPath));
+                                                (e,c) -> produce(e, c).map(URI::getPath));
         }
 
         public ValueProducer<String> rawPath() {
             return new PrimitiveValueProducer<>(identifier + ".rawPath()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getRawPath));
+                                                (e,c) -> produce(e, c).map(URI::getRawPath));
         }
 
         public ValueProducer<String> scheme() {
             return new PrimitiveValueProducer<>(identifier + ".scheme()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getScheme));
+                                                (e,c) -> produce(e, c).map(URI::getScheme));
         }
 
         public ValueProducer<String> host() {
             return new PrimitiveValueProducer<>(identifier + ".host()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getHost));
+                                                (e,c) -> produce(e, c).map(URI::getHost));
         }
 
         public ValueProducer<Integer> port() {
             return new PrimitiveValueProducer<>(identifier + ".port()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((uri) -> uri.getPort() != -1 ? uri.getPort() : null));
+                                                (e,c) -> produce(e, c).map((uri) -> uri.getPort() != -1 ? uri.getPort() : null));
         }
 
         public ValueProducer<String> decodedQueryString() {
             return new PrimitiveValueProducer<>(identifier + ".decodedQueryString()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getQuery));
+                                                (e,c) -> produce(e, c).map(URI::getQuery));
         }
 
         public ValueProducer<String> rawQueryString() {
             return new PrimitiveValueProducer<>(identifier + ".rawQueryString()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getRawQuery));
+                                                (e,c) -> produce(e, c).map(URI::getRawQuery));
         }
 
         public ValueProducer<String> decodedFragment() {
             return new PrimitiveValueProducer<>(identifier + ".decodedFragment()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getFragment));
+                                                (e,c) -> produce(e, c).map(URI::getFragment));
         }
 
         public ValueProducer<String> rawFragment() {
             return new PrimitiveValueProducer<>(identifier + ".rawFragment()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(URI::getRawFragment));
+                                                (e,c) -> produce(e, c).map(URI::getRawFragment));
         }
 
         public QueryStringValueProducer query() {
@@ -526,7 +538,7 @@ public final class DslRecordMapping {
     public final static class QueryStringValueProducer extends ValueProducer<Map<String,List<String>>> {
         QueryStringValueProducer(final ValueProducer<String> source) {
             super("parse (" + source.identifier + " to querystring)",
-                  (h,e,c) -> source.produce(h, e, c).map(QueryStringParser::parseQueryString),
+                  (e,c) -> source.produce(e, c).map(QueryStringParser::parseQueryString),
                   true);
         }
 
@@ -534,13 +546,13 @@ public final class DslRecordMapping {
             // Note that we do not check for the empty list, as is could not exist; if the key is in the map, there is at least one element in the list
             return new PrimitiveValueProducer<>(identifier + ".value(" + key + ")",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((qs) -> qs.get(key)).map((l) -> l.get(0)));
+                                                (e,c) -> produce(e, c).map((qs) -> qs.get(key)).map((l) -> l.get(0)));
         }
 
         public ValueProducer<List<String>> valueList(final String key) {
             return new PrimitiveListValueProducer<>(identifier + ".valueList(" + key + ")",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((qs) -> qs.get(key)));
+                                                (e,c) -> produce(e, c).map((qs) -> qs.get(key)));
         }
 
         @Override
@@ -559,7 +571,7 @@ public final class DslRecordMapping {
     public ValueProducer<String> cookie(final String name) {
         return new PrimitiveValueProducer<>("cookie(" + name + ")",
                                             String.class,
-                                            (h,e,c) -> Optional.ofNullable(h.getRequestCookies().get(name)).map(Cookie::getValue));
+                                            (e,c) -> Optional.ofNullable(e.exchange.getRequestCookies().get(name)).map(Cookie::getValue));
     }
 
     /*
@@ -567,21 +579,21 @@ public final class DslRecordMapping {
      */
     public final static class EventParameterValueProducer extends JsonValueProducer {
         EventParameterValueProducer() {
-            super("eventParameters()", (h,e,c) -> e.eventParametersProducer.get(), true);
+            super("eventParameters()", (e,c) -> e.eventParametersProducer.get(), true);
         }
 
-        public ValueProducer<String> value(String name) {
+        public ValueProducer<String> value(final String name) {
             return new PrimitiveValueProducer<>(
                     identifier + ".value(" + name + ")",
                     String.class,
-                    (h,e,c) -> produce(h, e, c).map(json -> json.path(name).asText()));
+                    (e,c) -> produce(e, c).map(json -> json.path(name).asText()));
         }
 
         public ValueProducer<JsonNode> path(final String path) {
             final JsonPath jsonPath = JsonPath.compile(path);
             return new JsonValueProducer(
                     identifier + ".path(" + path + ')',
-                    (h,e,c) -> produce(h, e, c).map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
+                    (e,c) -> produce(e, c).map(json -> jsonPath.read(json, JSON_PATH_CONFIGURATION)),
                     false);
         }
     }
@@ -629,12 +641,11 @@ public final class DslRecordMapping {
      * on some installations.
      */
     @Deprecated
-    @SuppressWarnings("unused")
     public ValueProducer<String> eventParameter(final String name) {
         final EventParameterValueProducer eventParametersProducer = eventParameters();
         return new PrimitiveValueProducer<>("eventParameter(" + name + ")",
                                             String.class,
-                                            (h,e,c) -> eventParametersProducer.produce(h,e,c)
+                                            (e,c) -> eventParametersProducer.produce(e,c)
                                                         .map(json -> json.path(name).asText()));
     }
 
@@ -651,25 +662,25 @@ public final class DslRecordMapping {
         HeaderValueProducer(final String name) {
             super("header(" + name + ")",
                   String.class,
-                  (h,e,c) -> Optional.ofNullable(h.getRequestHeaders().get(name)));
+                  (e,c) -> Optional.ofNullable(e.exchange.getRequestHeaders().get(name)));
         }
 
         public ValueProducer<String> first() {
             return new PrimitiveValueProducer<>(identifier + ".first()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((hv) -> ((HeaderValues) hv).getFirst()));
+                                                (e,c) -> produce(e, c).map((hv) -> ((HeaderValues) hv).getFirst()));
         }
 
         public ValueProducer<String> last() {
             return new PrimitiveValueProducer<>(identifier + ".last()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((hv) -> ((HeaderValues) hv).getLast()));
+                                                (e,c) -> produce(e, c).map((hv) -> ((HeaderValues) hv).getLast()));
         }
 
         public ValueProducer<String> commaSeparated() {
             return new PrimitiveValueProducer<>(identifier + ".commaSeparated()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map(COMMA_JOINER::join));
+                                                (e,c) -> produce(e, c).map(COMMA_JOINER::join));
         }
     }
 
@@ -680,7 +691,7 @@ public final class DslRecordMapping {
         final PrimitiveValueProducer<InetAddress> addressProducer =
                 new PrimitiveValueProducer<>("parse(" + source.identifier + " to IP address)",
                                              InetAddress.class,
-                                             (h, e, c) -> source.produce(h, e, c).flatMap(DslRecordMapping::tryParseIpv4),
+                                             (e, c) -> source.produce(e, c).flatMap(DslRecordMapping::tryParseIpv4),
                                              true);
         return new GeoIpValueProducer(addressProducer, verifyAndReturnLookupService());
     }
@@ -689,7 +700,7 @@ public final class DslRecordMapping {
         final PrimitiveValueProducer<InetAddress> addressProducer =
                 new PrimitiveValueProducer<>("<remote host IP>",
                                              InetAddress.class,
-                                             (h,e,c) -> Optional.ofNullable(h.getSourceAddress()).map(InetSocketAddress::getAddress));
+                                             (e,c) -> Optional.ofNullable(e.exchange.getSourceAddress()).map(InetSocketAddress::getAddress));
         return new GeoIpValueProducer(addressProducer, verifyAndReturnLookupService());
     }
 
@@ -700,10 +711,10 @@ public final class DslRecordMapping {
     public final static class GeoIpValueProducer extends ValueProducer<CityResponse> {
         GeoIpValueProducer(final ValueProducer<InetAddress> source, final LookupService service) {
             super("ip2geo(" + source.identifier + ")",
-                  (h,e,c) -> source.produce(h, e, c).flatMap((address) -> {
+                  (e,c) -> source.produce(e, c).flatMap((address) -> {
                         try {
                             return service.lookup(address);
-                        } catch (ClosedServiceException ex) {
+                        } catch (final ClosedServiceException ex) {
                             return null;
                         }
                     }),
@@ -713,199 +724,199 @@ public final class DslRecordMapping {
         public ValueProducer<Integer> cityId() {
             return new PrimitiveValueProducer<>(identifier + ".cityId()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getCity()).map(City::getGeoNameId));
+                                                (e,c) -> produce(e, c).map((r) -> r.getCity()).map(City::getGeoNameId));
         }
 
         public ValueProducer<String> cityName() {
             return new PrimitiveValueProducer<>(identifier + ".cityName()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getCity()).map(City::getName));
+                                                (e,c) -> produce(e, c).map((r) -> r.getCity()).map(City::getName));
         }
 
         public ValueProducer<String> continentCode() {
             return new PrimitiveValueProducer<>(identifier + ".continentCode()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getContinent()).map(Continent::getCode));
+                                                (e,c) -> produce(e, c).map((r) -> r.getContinent()).map(Continent::getCode));
         }
 
         public ValueProducer<Integer> continentId() {
             return new PrimitiveValueProducer<>(identifier + ".continentId()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getContinent()).map(Continent::getGeoNameId));
+                                                (e,c) -> produce(e, c).map((r) -> r.getContinent()).map(Continent::getGeoNameId));
         }
 
         public ValueProducer<String> continentName() {
             return new PrimitiveValueProducer<>(identifier + ".continentName()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getContinent()).map(Continent::getName));
+                                                (e,c) -> produce(e, c).map((r) -> r.getContinent()).map(Continent::getName));
         }
 
         public ValueProducer<String> countryCode() {
             return new PrimitiveValueProducer<>(identifier + ".countryCode()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getCountry()).map(Country::getIsoCode));
+                                                (e,c) -> produce(e, c).map((r) -> r.getCountry()).map(Country::getIsoCode));
         }
 
         public ValueProducer<Integer> countryId() {
             return new PrimitiveValueProducer<>(identifier + ".countryId()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getCountry()).map(Country::getGeoNameId));
+                                                (e,c) -> produce(e, c).map((r) -> r.getCountry()).map(Country::getGeoNameId));
         }
 
         public ValueProducer<String> countryName() {
             return new PrimitiveValueProducer<>(identifier + ".countryName()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getCountry()).map(Country::getName));
+                                                (e,c) -> produce(e, c).map((r) -> r.getCountry()).map(Country::getName));
         }
 
         public ValueProducer<Double> latitude() {
             return new PrimitiveValueProducer<>(identifier + ".latitude()",
                                                 Double.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getLocation()).map(Location::getLatitude));
+                                                (e,c) -> produce(e, c).map((r) -> r.getLocation()).map(Location::getLatitude));
         }
 
         public ValueProducer<Double> longitude() {
             return new PrimitiveValueProducer<>(identifier + ".latitude()",
                                                 Double.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getLocation()).map(Location::getLongitude));
+                                                (e,c) -> produce(e, c).map((r) -> r.getLocation()).map(Location::getLongitude));
         }
 
         public ValueProducer<Integer> metroCode() {
             return new PrimitiveValueProducer<>(identifier + ".metroCode()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getLocation()).map(Location::getMetroCode));
+                                                (e,c) -> produce(e, c).map((r) -> r.getLocation()).map(Location::getMetroCode));
         }
 
         public ValueProducer<String> timeZone() {
             return new PrimitiveValueProducer<>(identifier + ".timeZone()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getLocation()).map(Location::getTimeZone));
+                                                (e,c) -> produce(e, c).map((r) -> r.getLocation()).map(Location::getTimeZone));
         }
 
         public ValueProducer<String> mostSpecificSubdivisionCode() {
             return new PrimitiveValueProducer<>(identifier + ".mostSpecificSubdivisionCode()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getMostSpecificSubdivision()).map(Subdivision::getIsoCode));
+                                                (e,c) -> produce(e, c).map((r) -> r.getMostSpecificSubdivision()).map(Subdivision::getIsoCode));
         }
 
         public ValueProducer<Integer> mostSpecificSubdivisionId() {
             return new PrimitiveValueProducer<>(identifier + ".mostSpecificSubdivisionId()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getMostSpecificSubdivision()).map(Subdivision::getGeoNameId));
+                                                (e,c) -> produce(e, c).map((r) -> r.getMostSpecificSubdivision()).map(Subdivision::getGeoNameId));
         }
 
         public ValueProducer<String> mostSpecificSubdivisionName() {
             return new PrimitiveValueProducer<>(identifier + ".mostSpecificSubdivisionName()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getMostSpecificSubdivision()).map(Subdivision::getName));
+                                                (e,c) -> produce(e, c).map((r) -> r.getMostSpecificSubdivision()).map(Subdivision::getName));
         }
 
         public ValueProducer<String> postalCode() {
             return new PrimitiveValueProducer<>(identifier + ".postalCode()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getPostal()).map(Postal::getCode));
+                                                (e,c) -> produce(e, c).map((r) -> r.getPostal()).map(Postal::getCode));
         }
 
         public ValueProducer<String> registeredCountryCode() {
             return new PrimitiveValueProducer<>(identifier + ".registeredCountryCode()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getRegisteredCountry()).map(Country::getIsoCode));
+                                                (e,c) -> produce(e, c).map((r) -> r.getRegisteredCountry()).map(Country::getIsoCode));
         }
 
         public ValueProducer<Integer> registeredCountryId() {
             return new PrimitiveValueProducer<>(identifier + ".registeredCountryId()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getRegisteredCountry()).map(Country::getGeoNameId));
+                                                (e,c) -> produce(e, c).map((r) -> r.getRegisteredCountry()).map(Country::getGeoNameId));
         }
 
         public ValueProducer<String> registeredCountryName() {
             return new PrimitiveValueProducer<>(identifier + ".registeredCountryName()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getRegisteredCountry()).map(Country::getName));
+                                                (e,c) -> produce(e, c).map((r) -> r.getRegisteredCountry()).map(Country::getName));
         }
 
         public ValueProducer<String> representedCountryCode() {
             return new PrimitiveValueProducer<>(identifier + ".representedCountryCode()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getRepresentedCountry()).map(Country::getIsoCode));
+                                                (e,c) -> produce(e, c).map((r) -> r.getRepresentedCountry()).map(Country::getIsoCode));
         }
 
         public ValueProducer<Integer> representedCountryId() {
             return new PrimitiveValueProducer<>(identifier + ".representedCountryId()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getRepresentedCountry()).map(Country::getGeoNameId));
+                                                (e,c) -> produce(e, c).map((r) -> r.getRepresentedCountry()).map(Country::getGeoNameId));
         }
 
         public ValueProducer<String> representedCountryName() {
             return new PrimitiveValueProducer<>(identifier + ".representedCountryName()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getRepresentedCountry()).map(Country::getName));
+                                                (e,c) -> produce(e, c).map((r) -> r.getRepresentedCountry()).map(Country::getName));
         }
 
         public ValueProducer<List<String>> subdivisionCodes() {
             return new PrimitiveListValueProducer<>(identifier + ".subdivisionCodes()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getSubdivisions()).map((l) -> Lists.transform(l, Subdivision::getIsoCode)));
+                                                (e,c) -> produce(e, c).map((r) -> r.getSubdivisions()).map((l) -> Lists.transform(l, Subdivision::getIsoCode)));
         }
 
         public ValueProducer<List<Integer>> subdivisionIds() {
             return new PrimitiveListValueProducer<>(identifier + ".subdivisionIds()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getSubdivisions()).map((l) -> Lists.transform(l, Subdivision::getGeoNameId)));
+                                                (e,c) -> produce(e, c).map((r) -> r.getSubdivisions()).map((l) -> Lists.transform(l, Subdivision::getGeoNameId)));
         }
 
         public ValueProducer<List<String>> subdivisionNames() {
             return new PrimitiveListValueProducer<>(identifier + ".subdivisionNames()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getSubdivisions()).map((l) -> Lists.transform(l, Subdivision::getName)));
+                                                (e,c) -> produce(e, c).map((r) -> r.getSubdivisions()).map((l) -> Lists.transform(l, Subdivision::getName)));
         }
 
         public ValueProducer<Integer> autonomousSystemNumber() {
             return new PrimitiveValueProducer<>(identifier + ".autonomousSystemNumber()",
                                                 Integer.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::getAutonomousSystemNumber));
+                                                (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::getAutonomousSystemNumber));
         }
 
         public ValueProducer<String> autonomousSystemOrganization() {
             return new PrimitiveValueProducer<>(identifier + ".autonomousSystemOrganization()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::getAutonomousSystemOrganization));
+                                                (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::getAutonomousSystemOrganization));
         }
 
         public ValueProducer<String> domain() {
             return new PrimitiveValueProducer<>(identifier + ".domain()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::getDomain));
+                                                (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::getDomain));
         }
 
         public ValueProducer<String> isp() {
             return new PrimitiveValueProducer<>(identifier + ".isp()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::getIsp));
+                                                (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::getIsp));
         }
 
         public ValueProducer<String> organisation() {
             return new PrimitiveValueProducer<>(identifier + ".organisation()",
                                                 String.class,
-                                                (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::getOrganization));
+                                                (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::getOrganization));
         }
 
         @Deprecated
         @SuppressWarnings("deprecation")
         public ValueProducer<Boolean> anonymousProxy() {
             return new BooleanValueProducer(identifier + ".anonymousProxy()",
-                                            (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::isAnonymousProxy));
+                                            (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::isAnonymousProxy));
         }
 
         @Deprecated
         @SuppressWarnings("deprecation")
         public ValueProducer<Boolean> satelliteProvider() {
             return new BooleanValueProducer(identifier + ".satelliteProvider()",
-                                            (h,e,c) -> produce(h, e, c).map((r) -> r.getTraits()).map(Traits::isSatelliteProvider));
+                                            (e,c) -> produce(e, c).map((r) -> r.getTraits()).map(Traits::isSatelliteProvider));
         }
 
         @Override
-        Optional<ValidationError> validateTypes(Field target) {
+        Optional<ValidationError> validateTypes(final Field target) {
             return validationError("cannot map a GeoIP lookup result directly; map one of its properties instead.", target.schema());
         }
     }
@@ -928,13 +939,13 @@ public final class DslRecordMapping {
                 }
                 result[c] = (byte) (x & 0xff);
             }
-        } catch(NumberFormatException nfe) {
+        } catch(final NumberFormatException nfe) {
             return Optional.empty();
         }
 
         try {
             return Optional.of(InetAddress.getByAddress(result));
-        } catch (UnknownHostException e) {
+        } catch (final UnknownHostException e) {
             return Optional.empty();
         }
     }
@@ -960,15 +971,14 @@ public final class DslRecordMapping {
                                                                   final Class<T> type,
                                                                   final BrowserFieldSupplier<T> fieldSupplier) {
         return new PrimitiveValueProducer<>(readableName, type,
-                                            (h,e,c) -> e.browserEventData.flatMap(fieldSupplier::apply));
+                                            (e,c) -> e.browserEventData.flatMap(fieldSupplier::apply));
     }
 
     @ParametersAreNonnullByDefault
     public static abstract class ValueProducer<T> {
 
         protected interface FieldSupplier<T> {
-            Optional<T> apply(HttpServerExchange httpServerExchange,
-                              DivolteEvent eventData,
+            Optional<T> apply(DivolteEvent eventData,
                               Map<String,Optional<?>> context);
         }
 
@@ -986,22 +996,21 @@ public final class DslRecordMapping {
             this(identifier, supplier, false);
         }
 
-        final Optional<T> produce(final HttpServerExchange exchange,
-                                  final DivolteEvent divolteEvent,
+        final Optional<T> produce(final DivolteEvent divolteEvent,
                                   final Map<String,Optional<?>> context) {
             @SuppressWarnings("unchecked")
             final Optional<T> result = memoize
-                    ? (Optional<T>)context.computeIfAbsent(identifier, (x) -> supplier.apply(exchange, divolteEvent, context))
-                    : supplier.apply(exchange, divolteEvent, context);
+                    ? (Optional<T>)context.computeIfAbsent(identifier, (x) -> supplier.apply(divolteEvent, context))
+                    : supplier.apply(divolteEvent, context);
             return result;
         }
 
         public ValueProducer<Boolean> equalTo(final ValueProducer<T> other) {
             return new BooleanValueProducer(
                     identifier + ".equalTo(" + other.identifier + ")",
-                    (h,e,c) -> {
-                        final Optional<T> left = this.produce(h, e, c);
-                        final Optional<T> right = other.produce(h, e, c);
+                    (e,c) -> {
+                        final Optional<T> left = this.produce(e, c);
+                        final Optional<T> right = other.produce(e, c);
                         return Optional.of(left.isPresent() &&
                                            right.isPresent() &&
                                            left.get().equals(right.get()));
@@ -1011,8 +1020,8 @@ public final class DslRecordMapping {
         public ValueProducer<Boolean> equalTo(final T literal) {
             return new BooleanValueProducer(
                     identifier + ".equalTo(" + literal + ")",
-                    (h,e,c) -> {
-                        final Optional<T> value = produce(h, e, c);
+                    (e,c) -> {
+                        final Optional<T> value = produce(e, c);
                         return Optional.of(value.isPresent() && value.get().equals(literal));
                     });
         }
@@ -1020,13 +1029,13 @@ public final class DslRecordMapping {
         public ValueProducer<Boolean> isPresent() {
             return new BooleanValueProducer(
                     identifier + ".isPresent()",
-                    (h,e,c) -> Optional.of(produce(h, e, c).map((x) -> Boolean.TRUE).orElse(Boolean.FALSE)));
+                    (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.TRUE).orElse(Boolean.FALSE)));
         }
 
         public ValueProducer<Boolean> isAbsent() {
             return new BooleanValueProducer(
                     identifier + ".isAbsent()",
-                    (h,e,c) -> Optional.of(produce(h, e, c).map((x) -> Boolean.FALSE).orElse(Boolean.TRUE)));
+                    (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.FALSE).orElse(Boolean.TRUE)));
         }
 
         abstract Optional<ValidationError> validateTypes(final Field target);
@@ -1108,37 +1117,34 @@ public final class DslRecordMapping {
             super(identifier, Boolean.class, supplier);
         }
 
-        @SuppressWarnings("unused")
         public ValueProducer<Boolean> or(final ValueProducer<Boolean> other) {
             return new BooleanValueProducer(
                     identifier + ".or(" + other.identifier + ")",
-                    (h,e,c) -> {
-                        final Optional<Boolean> left = produce(h, e, c);
-                        final Optional<Boolean> right = other.produce(h, e, c);
+                    (e,c) -> {
+                        final Optional<Boolean> left = produce(e, c);
+                        final Optional<Boolean> right = other.produce(e, c);
                         return left.isPresent() && right.isPresent()
                                 ? Optional.of(left.get() || right.get())
                                 : Optional.empty();
                     });
         }
 
-        @SuppressWarnings("unused")
         public ValueProducer<Boolean> and(final ValueProducer<Boolean> other) {
             return new BooleanValueProducer(
                     identifier + ".and(" + other.identifier + ")",
-                    (h,e,c) -> {
-                        final Optional<Boolean> left = produce(h, e, c);
-                        final Optional<Boolean> right = other.produce(h, e, c);
+                    (e,c) -> {
+                        final Optional<Boolean> left = produce(e, c);
+                        final Optional<Boolean> right = other.produce(e, c);
                         return left.isPresent() && right.isPresent()
                                 ? Optional.of(left.get() && right.get())
                                 : Optional.empty();
                     });
         }
 
-        @SuppressWarnings("unused")
         public ValueProducer<Boolean> negate() {
             return new BooleanValueProducer(
                         "not(" + identifier + ")",
-                        (h,e,c) -> produce(h,e,c).map((b) -> !b));
+                        (e,c) -> produce(e,c).map((b) -> !b));
             // This would have been a fine candidate use for a method reference to BooleanUtils
         }
     }
@@ -1146,7 +1152,7 @@ public final class DslRecordMapping {
     private static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,
                                                                   final Function<Schema, Boolean> validator,
                                                                   final String messageIfInvalid,
-                                                                  Object... messageParameters) {
+                                                                  final Object... messageParameters) {
         final Optional<Schema> resolvedSchema = unpackNullableUnion(targetSchema);
         final Optional<Optional<ValidationError>> unionValidation =
                 resolvedSchema.map(s -> validator.apply(s)
@@ -1164,8 +1170,7 @@ public final class DslRecordMapping {
         enum MappingResult {
             STOP, EXIT, CONTINUE
         }
-        MappingResult perform(HttpServerExchange exchange,
-                              DivolteEvent divolteEvent,
+        MappingResult perform(DivolteEvent divolteEvent,
                               Map<String,Optional<?>> context,
                               GenericRecordBuilder record);
     }

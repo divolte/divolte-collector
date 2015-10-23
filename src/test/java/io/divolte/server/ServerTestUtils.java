@@ -16,9 +16,6 @@
 
 package io.divolte.server;
 
-import io.divolte.server.config.ValidatedConfiguration;
-import io.undertow.server.HttpServerExchange;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Map;
@@ -35,6 +32,8 @@ import org.apache.avro.generic.GenericRecord;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
+
+import io.divolte.server.config.ValidatedConfiguration;
 
 public final class ServerTestUtils {
     /*
@@ -53,14 +52,14 @@ public final class ServerTestUtils {
 
     @ParametersAreNonnullByDefault
     public static final class EventPayload {
-        final HttpServerExchange exchange;
+        final DivolteEvent event;
         final AvroRecordBuffer buffer;
         final GenericRecord record;
 
-        public EventPayload(final HttpServerExchange exchange,
+        public EventPayload(final DivolteEvent event,
                              final AvroRecordBuffer buffer,
                              final GenericRecord record) {
-            this.exchange = Objects.requireNonNull(exchange);
+            this.event = Objects.requireNonNull(event);
             this.buffer = Objects.requireNonNull(buffer);
             this.record = Objects.requireNonNull(record);
         }
@@ -96,7 +95,7 @@ public final class ServerTestUtils {
 
             events = new ArrayBlockingQueue<>(100);
             final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);
-            server = new Server(vc, (exchange, buffer, record) -> events.add(new EventPayload(exchange, buffer, record)));
+            server = new Server(vc, (event, buffer, record) -> events.add(new EventPayload(event, buffer, record)));
         }
 
         public EventPayload waitForEvent() throws InterruptedException {
