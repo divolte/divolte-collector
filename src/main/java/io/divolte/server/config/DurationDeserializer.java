@@ -44,6 +44,8 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
             throw context.mappingException(String.format("No number in duration value '%s'", input));
         }
 
+        // All units longer than 2 characters are accepted in singular or plural form.
+        // This normalizes to plural so we only need to check that below.
         if (unitString.length() > 2 && !unitString.endsWith("s")) {
             unitString = unitString + "s";
         }
