@@ -22,11 +22,10 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
 
     @Override
     public Duration deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
-        if (VALUE_STRING == p.getCurrentToken()) {
-            return Duration.ofNanos(parseDuration(p.getText(), ctx));
-        } else {
+        if (VALUE_STRING != p.getCurrentToken()) {
             throw ctx.mappingException("Expected string value for Duration mapping.");
         }
+        return Duration.ofNanos(parseDuration(p.getText(), ctx));
     }
 
     // Inspired by Typesafe Config parseDuration(...)
