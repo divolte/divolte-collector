@@ -24,7 +24,8 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
     }
 
     @Override
-    public Duration deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
+    public Duration deserialize(final JsonParser p,
+                                final DeserializationContext ctx) throws IOException, JsonProcessingException {
         if (VALUE_STRING != p.getCurrentToken()) {
             throw ctx.mappingException("Expected string value for Duration mapping.");
         }
@@ -33,10 +34,10 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
 
     // Inspired by Typesafe Config parseDuration(...)
     private static long parseDuration(final String input, final DeserializationContext context) throws JsonMappingException {
-        String s = ConfigImplUtil.unicodeTrim(input);
-        String originalUnitString = getUnits(s);
+        final String s = ConfigImplUtil.unicodeTrim(input);
+        final String originalUnitString = getUnits(s);
         String unitString = originalUnitString;
-        String numberString = ConfigImplUtil.unicodeTrim(s.substring(0, s.length() - unitString.length()));
+        final String numberString = ConfigImplUtil.unicodeTrim(s.substring(0, s.length() - unitString.length()));
 
         // this would be caught later anyway, but the error message
         // is more helpful if we check it here.
@@ -97,12 +98,12 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
                 long nanosInUnit = units.toNanos(1);
                 return (long) (Double.parseDouble(numberString) * nanosInUnit);
             }
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             throw context.mappingException(String.format("Could not parse duration number '%s'", numberString));
         }
     }
 
-    private static String getUnits(String s) {
+    private static String getUnits(final String s) {
         int i = s.length() - 1;
         while (i >= 0) {
             char c = s.charAt(i);
