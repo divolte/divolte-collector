@@ -13,6 +13,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.std.StdScalarDeserializer;
 import com.typesafe.config.impl.ConfigImplUtil;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public class DurationDeserializer extends StdScalarDeserializer<Duration> {
     private static final long serialVersionUID = 1L;
 
