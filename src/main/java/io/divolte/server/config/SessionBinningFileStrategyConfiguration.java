@@ -17,7 +17,7 @@ public final class SessionBinningFileStrategyConfiguration extends FileStrategyC
             /*
              * Nasty hack here! We need to have a roll_every property on this object
              * in order to support the default configuration without breaking when
-             * overriding to the session binnin strategy vs. the file binning one.
+             * overriding to the session binning strategy vs. the file binning one.
              *
              * This will be fixed when we either drop support for session binning
              * or we'll move to a new config setup with separation in sources, mappings
