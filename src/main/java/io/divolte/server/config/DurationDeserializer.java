@@ -47,22 +47,41 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
         }
 
         // note that this is deliberately case-sensitive
-        if (unitString.equals("") || unitString.equals("ms") || unitString.equals("millis") || unitString.equals("milliseconds")) {
-            units = TimeUnit.MILLISECONDS;
-        } else if (unitString.equals("us") || unitString.equals("micros") || unitString.equals("microseconds")) {
-            units = TimeUnit.MICROSECONDS;
-        } else if (unitString.equals("ns") || unitString.equals("nanos") || unitString.equals("nanoseconds")) {
-            units = TimeUnit.NANOSECONDS;
-        } else if (unitString.equals("d") || unitString.equals("days")) {
-            units = TimeUnit.DAYS;
-        } else if (unitString.equals("h") || unitString.equals("hours")) {
-            units = TimeUnit.HOURS;
-        } else if (unitString.equals("s") || unitString.equals("seconds")) {
-            units = TimeUnit.SECONDS;
-        } else if (unitString.equals("m") || unitString.equals("minutes")) {
-            units = TimeUnit.MINUTES;
-        } else {
-            throw context.mappingException(String.format("Could not parse time unit '%s' (try ns, us, ms, s, m, h, d)", originalUnitString));
+        switch (unitString) {
+            case "":
+            case "ms":
+            case "millis":
+            case "milliseconds":
+                units = TimeUnit.MILLISECONDS;
+                break;
+            case "us":
+            case "micros":
+            case "microseconds":
+                units = TimeUnit.MICROSECONDS;
+                break;
+            case "ns":
+            case "nanos":
+            case "nanoseconds":
+                units = TimeUnit.NANOSECONDS;
+                break;
+            case "d":
+            case "days":
+                units = TimeUnit.DAYS;
+                break;
+            case "h":
+            case "hours":
+                units = TimeUnit.HOURS;
+                break;
+            case "s":
+            case "seconds":
+                units = TimeUnit.SECONDS;
+                break;
+            case "m":
+            case "minutes":
+                units = TimeUnit.MINUTES;
+                break;
+            default:
+                throw context.mappingException(String.format("Could not parse time unit '%s' (try ns, us, ms, s, m, h, d)", originalUnitString));
         }
 
         try {
