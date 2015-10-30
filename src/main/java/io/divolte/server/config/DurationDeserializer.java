@@ -39,7 +39,7 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
 
         // this would be caught later anyway, but the error message
         // is more helpful if we check it here.
-        if (numberString.length() == 0) {
+        if (numberString.isEmpty()) {
             throw context.mappingException(String.format("No number in duration value '%s'", input));
         }
 
