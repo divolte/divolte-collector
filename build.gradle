@@ -153,7 +153,7 @@ configurations {
         resolutionStrategy {
             componentSelection {
                 all { ComponentSelection selection ->
-                    boolean rejected = ['alpha', 'beta', 'rc', 'cr', "b"].any { qualifier ->
+                    boolean rejected = ['alpha', 'beta', 'rc', 'cr'].any { qualifier ->
                         selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
                     }
                     if (rejected) {
