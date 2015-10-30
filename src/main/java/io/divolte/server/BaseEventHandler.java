@@ -92,14 +92,14 @@ public abstract class BaseEventHandler implements HttpHandler {
             try {
                 logEvent(exchange);
             } finally {
-                exchange.setResponseCode(StatusCodes.OK);
+                // Default status code what we want: 200 OK.
                 exchange.getResponseSender().send(transparentImage.slice());
             }
         } else {
             if (logger.isDebugEnabled()) {
                 logger.debug("Ignoring duplicate event from {}: {}", sourceAddress, getFullUrl(exchange));
             }
-            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+            exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
             exchange.endExchange();
         }
     }

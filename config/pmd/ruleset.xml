@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<ruleset name="Divolte PMD Ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+    <description>
+        Custom rule set for Divolte. This is composed of the builtin rule sets
+        with a few exclusions due to PMD bugs.
+    </description>
+
+    <!-- The default rule sets that we apply. -->
+    <rule ref="rulesets/java/basic.xml">
+        <!-- Some of our ternaries trigger false-positives with this rule. -->
+        <exclude name="SimplifiedTernary"/>
+    </rule>
+    <rule ref="rulesets/java/braces.xml"/>
+    <rule ref="rulesets/java/clone.xml"/>
+    <rule ref="rulesets/java/empty.xml"/>
+    <rule ref="rulesets/java/finalizers.xml"/>
+    <rule ref="rulesets/java/sunsecure.xml"/>
+    <rule ref="rulesets/java/imports.xml"/>
+    <rule ref="rulesets/java/unnecessary.xml">
+        <!-- Java 8 method handles seem to trigger false positives with this rule. -->
+        <exclude name="UselessQualifiedThis"/>
+    </rule>
+</ruleset>

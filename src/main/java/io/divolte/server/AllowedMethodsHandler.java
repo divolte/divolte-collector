@@ -53,7 +53,7 @@ public class AllowedMethodsHandler implements HttpHandler {
         if (allowedMethods.contains(requestMethod)) {
             next.handleRequest(exchange);
         } else {
-            exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED);
+            exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
             exchange.getResponseHeaders()
                     .put(Headers.ALLOW, allowedMethodHeader)
                     .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
