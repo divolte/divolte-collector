@@ -34,7 +34,6 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
         String originalUnitString = getUnits(s);
         String unitString = originalUnitString;
         String numberString = ConfigImplUtil.unicodeTrim(s.substring(0, s.length() - unitString.length()));
-        TimeUnit units = null;
 
         // this would be caught later anyway, but the error message
         // is more helpful if we check it here.
@@ -47,6 +46,7 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
         }
 
         // note that this is deliberately case-sensitive
+        final TimeUnit units;
         switch (unitString) {
             case "":
             case "ms":
