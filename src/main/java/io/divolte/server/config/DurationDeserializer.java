@@ -25,7 +25,7 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
 
     @Override
     public Duration deserialize(final JsonParser p,
-                                final DeserializationContext ctx) throws IOException, JsonProcessingException {
+                                final DeserializationContext ctx) throws IOException {
         if (VALUE_STRING != p.getCurrentToken()) {
             throw ctx.mappingException("Expected string value for Duration mapping.");
         }
