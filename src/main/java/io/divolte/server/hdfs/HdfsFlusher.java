@@ -50,7 +50,7 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
 
         final FileSystem hadoopFs;
         final Configuration hdfsConfiguration = new Configuration();
-        final short hdfsReplication = (short) vc.configuration().hdfsFlusher.hdfs.replication;
+        final short hdfsReplication = vc.configuration().hdfsFlusher.hdfs.replication;
 
         /*
          * The HDFS client creates a JVM shutdown hook, which interferes with our own server shutdown hook.
