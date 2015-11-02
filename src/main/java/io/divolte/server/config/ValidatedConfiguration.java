@@ -16,6 +16,26 @@
 
 package io.divolte.server.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.jasonclawson.jackson.dataformat.hocon.HoconTreeTraversingParser;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
+import org.hibernate.validator.HibernateValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -23,26 +43,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Supplier;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
-
-import org.hibernate.validator.HibernateValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-import com.google.common.collect.ImmutableList;
-import com.jasonclawson.jackson.dataformat.hocon.HoconTreeTraversingParser;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigException;
 
 /**
  * Container for a validated configuration loaded from a {@code Config}
@@ -60,6 +60,7 @@ public final class ValidatedConfiguration {
     private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
 
     private final List<String> configurationErrors;
+    @Nullable
     private final DivolteConfiguration divolteConfiguration;
 
     /**
@@ -145,9 +146,8 @@ public final class ValidatedConfiguration {
      *             When validation errors exist.
      */
     public DivolteConfiguration configuration() {
-        if (!configurationErrors.isEmpty()) {
-            throw new IllegalStateException("Attempt to access invalid configuration.");
-        }
+        Preconditions.checkState(null != divolteConfiguration && configurationErrors.isEmpty(),
+                                 "Attempt to access invalid configuration.");
         return divolteConfiguration;
     }
 
