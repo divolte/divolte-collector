@@ -157,14 +157,14 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
                         event.clientUtcOffset,
                         avroRecord);
                 listener.incomingRequest(event, avroBuffer, avroRecord);
-                doProcess(avroRecord, avroBuffer);
+                doProcess(avroBuffer);
             }
         }
 
         return CONTINUE;
     }
 
-    private void doProcess(final GenericRecord avroRecord, final AvroRecordBuffer avroBuffer) {
+    private void doProcess(final AvroRecordBuffer avroBuffer) {
 
         if (null != kafkaFlushingPool) {
             kafkaFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
