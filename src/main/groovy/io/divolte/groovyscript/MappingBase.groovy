@@ -69,7 +69,7 @@ abstract class MappingBase extends Script {
     ]
   }
 
-  def not(ValueProducer<Boolean> producer) {
+  static def not(ValueProducer<Boolean> producer) {
     producer.negate()
   }
 
