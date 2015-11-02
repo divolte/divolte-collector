@@ -15,6 +15,9 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.base.Joiner;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public class PropertiesDeserializer extends JsonDeserializer<Properties> {
     private final static Joiner DOT_JOINER = Joiner.on('.');
     private final static Joiner COMMA_JOINER = Joiner.on(',');

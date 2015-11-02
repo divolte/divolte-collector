@@ -1,12 +1,11 @@
 package io.divolte.server.config;
 
-import java.time.Duration;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
+
+@ParametersAreNonnullByDefault
 public final class SessionBinningFileStrategyConfiguration extends FileStrategyConfiguration {
     @JsonCreator
     private SessionBinningFileStrategyConfiguration(

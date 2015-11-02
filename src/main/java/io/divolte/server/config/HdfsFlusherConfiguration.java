@@ -1,12 +1,12 @@
 package io.divolte.server.config;
 
-import java.time.Duration;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
+import java.util.Objects;
+
+@ParametersAreNonnullByDefault
 public final class HdfsFlusherConfiguration {
     public final boolean enabled;
     public final int threads;
@@ -26,9 +26,9 @@ public final class HdfsFlusherConfiguration {
         this.enabled = enabled;
         this.threads = threads;
         this.maxWriteQueue = maxWriteQueue;
-        this.maxEnqueueDelay = maxEnqueueDelay;
-        this.hdfs = hdfs;
-        this.fileStrategy = fileStrategy;
+        this.maxEnqueueDelay = Objects.requireNonNull(maxEnqueueDelay);
+        this.hdfs = Objects.requireNonNull(hdfs);
+        this.fileStrategy = Objects.requireNonNull(fileStrategy);
     }
 
     @Override

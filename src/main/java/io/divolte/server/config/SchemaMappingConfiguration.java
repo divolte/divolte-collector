@@ -1,10 +1,11 @@
 package io.divolte.server.config;
 
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+
+@ParametersAreNonnullByDefault
 public final class SchemaMappingConfiguration {
     public final int version;
     public final String mappingScriptFile;
@@ -12,7 +13,7 @@ public final class SchemaMappingConfiguration {
     @JsonCreator
     private SchemaMappingConfiguration(final int version, final String mappingScriptFile) {
         this.version = version;
-        this.mappingScriptFile = mappingScriptFile;
+        this.mappingScriptFile = Objects.requireNonNull(mappingScriptFile);
     }
 
     @Override

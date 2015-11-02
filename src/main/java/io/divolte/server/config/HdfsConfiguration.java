@@ -1,19 +1,19 @@
 package io.divolte.server.config;
 
-import java.util.Optional;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+import java.util.Optional;
+
+@ParametersAreNonnullByDefault
 public final class HdfsConfiguration {
     public final Optional<String> uri;
     public final short replication;
 
     @JsonCreator
-    private HdfsConfiguration(Optional<String> uri, short replication) {
-        this.uri = uri;
+    private HdfsConfiguration(final Optional<String> uri, final short replication) {
+        this.uri = Objects.requireNonNull(uri);
         this.replication = replication;
     }
 

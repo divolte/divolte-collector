@@ -1,12 +1,12 @@
 package io.divolte.server.config;
 
-import java.time.Duration;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
+import java.util.Objects;
+
+@ParametersAreNonnullByDefault
 public final class SimpleRollingFileStrategyConfiguration extends FileStrategyConfiguration {
     public final Duration rollEvery;
 
@@ -18,7 +18,7 @@ public final class SimpleRollingFileStrategyConfiguration extends FileStrategyCo
             final String workingDir,
             final String publishDir) {
         super(Types.SIMPLE_ROLLING_FILE, syncFileAfterRecords, syncFileAfterDuration, workingDir, publishDir);
-        this.rollEvery = rollEvery;
+        this.rollEvery = Objects.requireNonNull(rollEvery);
     }
 
     @Override

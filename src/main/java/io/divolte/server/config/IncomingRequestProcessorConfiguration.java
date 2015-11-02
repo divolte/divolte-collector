@@ -1,12 +1,12 @@
 package io.divolte.server.config;
 
-import java.time.Duration;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
+import java.util.Objects;
+
+@ParametersAreNonnullByDefault
 public final class IncomingRequestProcessorConfiguration {
     public final int threads;
     public final int maxWriteQueue;
@@ -25,7 +25,7 @@ public final class IncomingRequestProcessorConfiguration {
             final boolean discardDuplicates) {
         this.threads = threads;
         this.maxWriteQueue = maxWriteQueue;
-        this.maxEnqueueDelay = maxEnqueueDelay;
+        this.maxEnqueueDelay = Objects.requireNonNull(maxEnqueueDelay);
         this.discardCorrupted = discardCorrupted;
         this.duplicateMemorySize = duplicateMemorySize;
         this.discardDuplicates = discardDuplicates;

@@ -1,13 +1,13 @@
 package io.divolte.server.config;
 
-import java.time.Duration;
-import java.util.Properties;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.Properties;
+
+@ParametersAreNonnullByDefault
 public final class KafkaFlusherConfiguration {
     public final boolean enabled;
     public final int threads;
@@ -27,9 +27,9 @@ public final class KafkaFlusherConfiguration {
         this.enabled = enabled;
         this.threads = threads;
         this.maxWriteQueue = maxWriteQueue;
-        this.maxEnqueueDelay = maxEnqueueDelay;
-        this.topic = topic;
-        this.producer = producer;
+        this.maxEnqueueDelay = Objects.requireNonNull(maxEnqueueDelay);
+        this.topic = Objects.requireNonNull(topic);
+        this.producer = Objects.requireNonNull(producer);
     }
 
     @Override
