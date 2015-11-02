@@ -90,7 +90,7 @@ public final class ValidatedConfiguration {
             logger.debug("Configuration error caught during validation.", e);
             configurationErrors.add(e.getMessage());
             divolteConfiguration = null;
-        } catch (final Exception e) {
+        } catch (final IOException e) {
             logger.error("Error while reading configuration!", e);
             throw new RuntimeException(e);
         }
