@@ -21,7 +21,7 @@ public abstract class FileStrategyConfiguration {
     public final String publishDir;
 
     @JsonCreator
-    public FileStrategyConfiguration (
+    protected FileStrategyConfiguration (
             final FileStrategyConfiguration.Types type,
             final int syncFileAfterRecords,
             final Duration syncFileAfterDuration,

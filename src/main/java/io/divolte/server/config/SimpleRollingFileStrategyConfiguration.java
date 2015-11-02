@@ -11,7 +11,7 @@ public final class SimpleRollingFileStrategyConfiguration extends FileStrategyCo
     public final Duration rollEvery;
 
     @JsonCreator
-    public SimpleRollingFileStrategyConfiguration(
+    private SimpleRollingFileStrategyConfiguration(
             final Duration rollEvery,
             final int syncFileAfterRecords,
             final Duration syncFileAfterDuration,

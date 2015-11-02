@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 @ParametersAreNullableByDefault
 public final class SessionBinningFileStrategyConfiguration extends FileStrategyConfiguration {
     @JsonCreator
-    public SessionBinningFileStrategyConfiguration(
+    private SessionBinningFileStrategyConfiguration(
             final int syncFileAfterRecords,
             final Duration syncFileAfterDuration,
             final String workingDir,
