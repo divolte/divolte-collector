@@ -35,6 +35,7 @@ import io.undertow.util.Methods;
 import java.io.IOException;
 import java.time.Duration;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -52,6 +53,7 @@ public final class Server implements Runnable {
 
     private final IncomingRequestProcessingPool processingPool;
 
+    @Nullable
     private final String host;
     private final int port;
 
