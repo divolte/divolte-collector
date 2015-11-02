@@ -33,9 +33,7 @@ import org.hibernate.validator.HibernateValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -113,7 +111,7 @@ public final class ValidatedConfiguration {
                 ));
     }
 
-    private static DivolteConfiguration mapped(final Config input) throws JsonParseException, JsonMappingException, IOException {
+    private static DivolteConfiguration mapped(final Config input) throws IOException {
         final Config resolved = input.resolve();
         final ObjectMapper mapper = new ObjectMapper();
 
