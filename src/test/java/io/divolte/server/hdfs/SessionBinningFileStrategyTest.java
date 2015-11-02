@@ -17,6 +17,8 @@
 package io.divolte.server.hdfs;
 
 import static org.junit.Assert.*;
+
+import com.google.common.collect.ImmutableList;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.ValidatedConfiguration;
@@ -122,11 +124,11 @@ public class SessionBinningFileStrategyTest {
          */
         assertEquals(3, inflightFiles.size());
         assertEquals(2 ,publishedFiles.size());
-        verifyAvroFile(Arrays.asList(records.get(0)), schema, publishedFiles.get(0));
-        verifyAvroFile(Arrays.asList(records.get(1)), schema, publishedFiles.get(1));
-        verifyAvroFile(Arrays.asList(records.get(2)), schema, inflightFiles.get(0));
-        verifyAvroFile(Arrays.asList(records.get(3)), schema, inflightFiles.get(1));
-        verifyAvroFile(Arrays.asList(records.get(4)), schema, inflightFiles.get(2));
+        verifyAvroFile(ImmutableList.of(records.get(0)), schema, publishedFiles.get(0));
+        verifyAvroFile(ImmutableList.of(records.get(1)), schema, publishedFiles.get(1));
+        verifyAvroFile(ImmutableList.of(records.get(2)), schema, inflightFiles.get(0));
+        verifyAvroFile(ImmutableList.of(records.get(3)), schema, inflightFiles.get(1));
+        verifyAvroFile(ImmutableList.of(records.get(4)), schema, inflightFiles.get(2));
     }
 
     @Test
