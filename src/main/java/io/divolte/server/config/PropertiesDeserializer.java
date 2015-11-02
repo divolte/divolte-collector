@@ -23,8 +23,8 @@ public class PropertiesDeserializer extends JsonDeserializer<Properties> {
     public Properties deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
         if (START_OBJECT == p.getCurrentToken()) {
             final Properties properties = new Properties();
-            final Deque<String> stack = new ArrayDeque<>(10);
-            final ArrayList<String> array = new ArrayList<>(10);
+            final Deque<String> stack = new ArrayDeque<>();
+            final ArrayList<String> array = new ArrayList<>();
             for (JsonToken nextToken = p.nextToken(); nextToken != END_OBJECT || !stack.isEmpty(); nextToken = p.nextToken()) {
                 switch(nextToken) {
                     case FIELD_NAME:
