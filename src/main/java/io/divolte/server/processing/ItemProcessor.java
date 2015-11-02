@@ -42,7 +42,7 @@ public interface ItemProcessor<E> {
         // noop, override to implement cleanup
     }
 
-    public enum ProcessingDirective {
+    enum ProcessingDirective {
         CONTINUE,
         PAUSE
     }

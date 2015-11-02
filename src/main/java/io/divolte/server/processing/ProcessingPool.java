@@ -80,12 +80,10 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
                 .limit(numThreads)
                 .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
 
-        queues.forEach((queue) -> {
-                    scheduleQueueReader(
-                            executorService,
-                            queue,
-                            processorSupplier.get());
-                });
+        queues.forEach((queue) -> scheduleQueueReader(
+                executorService,
+                queue,
+                processorSupplier.get()));
 
     }
 

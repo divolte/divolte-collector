@@ -150,9 +150,7 @@ public final class Server implements Runnable {
         final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
         if (!vc.isValid()) {
             System.err.println("There are configuration errors. Details:");
-            for (final String e : vc.errors()) {
-                System.err.println(e);
-            }
+            vc.errors().forEach(System.err::println);
             System.exit(1);
         }
 
