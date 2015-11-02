@@ -26,6 +26,7 @@ public final class SessionBinningFileStrategyConfiguration extends FileStrategyC
              * This makes it valid configuration to declare roll_every on a configuration
              * for session binning flushing, although it has no effect.
              */
+            @SuppressWarnings("unused")
             final Duration rollEvery) {
         super(Types.SESSION_BINNING, syncFileAfterRecords, syncFileAfterDuration, workingDir, publishDir);
     }
