@@ -91,14 +91,10 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
 
         try {
             // if the string is purely digits, parse as an integer to avoid
-            // possible precision loss;
-            // otherwise as a double.
-            if (numberString.matches("[0-9]+")) {
-                return units.toNanos(Long.parseLong(numberString));
-            } else {
-                long nanosInUnit = units.toNanos(1);
-                return (long) (Double.parseDouble(numberString) * nanosInUnit);
-            }
+            // possible precision loss; otherwise as a double.
+            return numberString.matches("[0-9]+")
+                    ? units.toNanos(Long.parseLong(numberString))
+                    : (long) (Double.parseDouble(numberString) * units.toNanos(1));
         } catch (final NumberFormatException e) {
             throw context.mappingException(String.format("Could not parse duration number '%s'", numberString));
         }
