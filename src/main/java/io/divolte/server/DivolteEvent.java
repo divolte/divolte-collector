@@ -96,7 +96,7 @@ public final class DivolteEvent {
                  final Optional<String> eventType,
                  final Supplier<Optional<JsonNode>> eventParametersProducer,
                  final Optional<BrowserEventData> browserEvent) {
-        this.exchange = originatingExchange;
+        this.exchange                = originatingExchange;
         this.corruptEvent            = corruptEvent;
         this.partyCookie             = Objects.requireNonNull(partyCookie);
         this.sessionCookie           = Objects.requireNonNull(sessionCookie);
