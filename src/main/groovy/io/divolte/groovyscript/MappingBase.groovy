@@ -22,9 +22,9 @@ import io.divolte.server.recordmapping.SchemaMappingException
 import java.net.URI
 
 abstract class MappingBase extends Script {
-  // The mapping property is set on the scripts binding by the 
+  // The mapping property is set on the scripts binding by the
   // initializing Java code. This is to avoid cyclic dependencies
-  // between Java and Groovy code, as that introduces issues with 
+  // between Java and Groovy code, as that introduces issues with
   // IDE support.
 
   def mapping(Closure c) {
@@ -51,7 +51,7 @@ abstract class MappingBase extends Script {
   def when(ValueProducer<Boolean> producer) {
     [
       'apply': {
-        Closure closure -> 
+        Closure closure ->
         mapping.when(producer, closure)
       },
       'stop': { mapping.when(producer, { mapping.stop() }) },
