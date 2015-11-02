@@ -34,7 +34,7 @@ public abstract class FileStrategyConfiguration {
         this.publishDir = publishDir;
     }
 
-    public static enum Types {
+    public enum Types {
         SIMPLE_ROLLING_FILE(SimpleRollingFileStrategyConfiguration.class),
         SESSION_BINNING(SessionBinningFileStrategyConfiguration.class);
 
