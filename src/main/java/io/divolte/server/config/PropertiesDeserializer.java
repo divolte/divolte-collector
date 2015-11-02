@@ -61,8 +61,7 @@ public class PropertiesDeserializer extends JsonDeserializer<Properties> {
                         stack.removeLast();
                         break;
                     case VALUE_NULL:
-                        ctx.mappingException("Null values not allowed in Properties object.");
-                        break;
+                        throw ctx.mappingException("Null values not allowed in Properties object.");
                     case VALUE_EMBEDDED_OBJECT:
                         throw ctx.mappingException("Embedded object not allowed as part of Properties object.");
                     case NOT_AVAILABLE:
