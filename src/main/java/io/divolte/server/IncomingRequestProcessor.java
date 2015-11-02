@@ -48,7 +48,6 @@ import io.undertow.util.AttachmentKey;
 public final class IncomingRequestProcessor implements ItemProcessor<DivolteEvent> {
     private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
-    public static final AttachmentKey<DivolteEvent> DIVOLTE_EVENT_KEY = AttachmentKey.create(DivolteEvent.class);
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
     @Nullable

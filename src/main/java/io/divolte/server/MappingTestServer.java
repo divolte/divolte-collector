@@ -152,7 +152,6 @@ public class MappingTestServer {
                     }
                 });
 
-            exchange.putAttachment(DIVOLTE_EVENT_KEY, divolteEvent);
             exchange.putAttachment(DUPLICATE_EVENT_KEY, get(payload, "duplicate", Boolean.class).orElse(false));
 
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
