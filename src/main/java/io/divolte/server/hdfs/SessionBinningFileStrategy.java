@@ -417,7 +417,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
     @FunctionalInterface
     private interface IOExceptionThrower {
-        public abstract void run() throws IOException;
+        void run() throws IOException;
     }
 
     private static Optional<IOException> throwsIoException(final IOExceptionThrower r) {

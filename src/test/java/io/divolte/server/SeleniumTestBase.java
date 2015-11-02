@@ -115,7 +115,7 @@ public abstract class SeleniumTestBase {
 
             private final String resourceName;
 
-            private TEST_PAGES(final String resourceName) {
+            TEST_PAGES(final String resourceName) {
                 this.resourceName = Objects.requireNonNull(resourceName);
             }
         }
