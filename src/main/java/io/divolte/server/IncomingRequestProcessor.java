@@ -74,7 +74,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
 
         this.kafkaFlushingPool = kafkaFlushingPool;
         this.hdfsFlushingPool = hdfsFlushingPool;
-        this.listener = listener;
+        this.listener = Objects.requireNonNull(listener);
 
         keepCorrupted = !vc.configuration().incomingRequestProcessor.discardCorrupted;
 
