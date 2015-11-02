@@ -47,7 +47,7 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
         // All units longer than 2 characters are accepted in singular or plural form.
         // This normalizes to plural so we only need to check that below.
         if (unitString.length() > 2 && !unitString.endsWith("s")) {
-            unitString = unitString + "s";
+            unitString += 's';
         }
 
         // note that this is deliberately case-sensitive
