@@ -13,7 +13,7 @@ public final class SimpleRollingFileStrategyConfiguration extends FileStrategyCo
     @JsonCreator
     public SimpleRollingFileStrategyConfiguration(
             final Duration rollEvery,
-            final Integer syncFileAfterRecords,
+            final int syncFileAfterRecords,
             final Duration syncFileAfterDuration,
             final String workingDir,
             final String publishDir) {

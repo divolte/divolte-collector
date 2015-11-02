@@ -16,7 +16,10 @@ public final class ServerConfiguration {
     public final boolean serveStaticResources;
 
     @JsonCreator
-    private ServerConfiguration(final String host, final Integer port, @JsonProperty("use_x_forwarded_for") final Boolean useXForwardedFor, final Boolean serveStaticResources) {
+    private ServerConfiguration(final String host,
+                                final int port,
+                                @JsonProperty("use_x_forwarded_for") final boolean useXForwardedFor,
+                                final boolean serveStaticResources) {
         this.host = host;
         this.port = port;
         this.useXForwardedFor = useXForwardedFor;

@@ -15,7 +15,7 @@ import com.google.common.base.Preconditions;
 })
 public abstract class FileStrategyConfiguration {
     public final FileStrategyConfiguration.Types type;
-    public final Integer syncFileAfterRecords;
+    public final int syncFileAfterRecords;
     public final Duration syncFileAfterDuration;
     public final String workingDir;
     public final String publishDir;
@@ -23,7 +23,7 @@ public abstract class FileStrategyConfiguration {
     @JsonCreator
     public FileStrategyConfiguration (
             final FileStrategyConfiguration.Types type,
-            final Integer syncFileAfterRecords,
+            final int syncFileAfterRecords,
             final Duration syncFileAfterDuration,
             final String workingDir,
             final String publishDir) {

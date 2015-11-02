@@ -8,18 +8,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 @ParametersAreNullableByDefault
 public final class HdfsFlusherConfiguration {
-    public final Boolean enabled;
-    public final Integer threads;
-    public final Integer maxWriteQueue;
+    public final boolean enabled;
+    public final int threads;
+    public final int maxWriteQueue;
     public final Duration maxEnqueueDelay;
     public final HdfsConfiguration hdfs;
     public final FileStrategyConfiguration fileStrategy;
 
     @JsonCreator
     private HdfsFlusherConfiguration(
-            final Boolean enabled,
-            final Integer threads,
-            final Integer maxWriteQueue,
+            final boolean enabled,
+            final int threads,
+            final int maxWriteQueue,
             final Duration maxEnqueueDelay,
             final HdfsConfiguration hdfs,
             final FileStrategyConfiguration fileStrategy) {

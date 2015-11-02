@@ -7,10 +7,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 @ParametersAreNullableByDefault
 public final class UaParserConfiguration {
     public final String type;
-    public final Integer cacheSize;
+    public final int cacheSize;
 
     @JsonCreator
-    private UaParserConfiguration(final String type, final Integer cacheSize) {
+    private UaParserConfiguration(final String type, final int cacheSize) {
         this.type = type;
         this.cacheSize = cacheSize;
     }

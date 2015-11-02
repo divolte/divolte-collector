@@ -8,21 +8,21 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 @ParametersAreNullableByDefault
 public final class IncomingRequestProcessorConfiguration {
-    public final Integer threads;
-    public final Integer maxWriteQueue;
+    public final int threads;
+    public final int maxWriteQueue;
     public final Duration maxEnqueueDelay;
-    public final Boolean discardCorrupted;
-    public final Integer duplicateMemorySize;
-    public final Boolean discardDuplicates;
+    public final boolean discardCorrupted;
+    public final int duplicateMemorySize;
+    public final boolean discardDuplicates;
 
     @JsonCreator
     private IncomingRequestProcessorConfiguration(
-            final Integer threads,
-            final Integer maxWriteQueue,
+            final int threads,
+            final int maxWriteQueue,
             final Duration maxEnqueueDelay,
-            final Boolean discardCorrupted,
-            final Integer duplicateMemorySize,
-            final Boolean discardDuplicates) {
+            final boolean discardCorrupted,
+            final int duplicateMemorySize,
+            final boolean discardDuplicates) {
         this.threads = threads;
         this.maxWriteQueue = maxWriteQueue;
         this.maxEnqueueDelay = maxEnqueueDelay;

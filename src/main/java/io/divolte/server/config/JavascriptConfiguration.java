@@ -13,16 +13,16 @@ public final class JavascriptConfiguration {
     @NotNull @NotEmpty @Pattern(regexp="^[A-Za-z0-9_-]+\\.js$")
     public final String name;
 
-    public final Boolean logging;
-    public final Boolean debug;
-    public final Boolean autoPageViewEvent;
+    public final boolean logging;
+    public final boolean debug;
+    public final boolean autoPageViewEvent;
 
     @JsonCreator
     private JavascriptConfiguration(
             final String name,
-            final Boolean logging,
-            final Boolean debug,
-            final Boolean autoPageViewEvent) {
+            final boolean logging,
+            final boolean debug,
+            final boolean autoPageViewEvent) {
         this.name = name;
         this.logging = logging;
         this.debug = debug;

@@ -9,10 +9,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 @ParametersAreNullableByDefault
 public final class HdfsConfiguration {
     public final Optional<String> uri;
-    public final Short replication;
+    public final short replication;
 
     @JsonCreator
-    private HdfsConfiguration(Optional<String> uri, Short replication) {
+    private HdfsConfiguration(Optional<String> uri, short replication) {
         this.uri = uri;
         this.replication = replication;
     }

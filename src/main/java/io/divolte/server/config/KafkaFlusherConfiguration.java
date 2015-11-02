@@ -9,18 +9,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 @ParametersAreNullableByDefault
 public final class KafkaFlusherConfiguration {
-    public final Boolean enabled;
-    public final Integer threads;
-    public final Integer maxWriteQueue;
+    public final boolean enabled;
+    public final int threads;
+    public final int maxWriteQueue;
     public final Duration maxEnqueueDelay;
     public final String topic;
     public final Properties producer;
 
     @JsonCreator
     private KafkaFlusherConfiguration(
-            final Boolean enabled,
-            final Integer threads,
-            final Integer maxWriteQueue,
+            final boolean enabled,
+            final int threads,
+            final int maxWriteQueue,
             final Duration maxEnqueueDelay,
             final String topic,
             final Properties producer) {
