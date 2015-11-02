@@ -1,13 +1,13 @@
 package io.divolte.server.config;
 
-import java.time.Duration;
-import java.util.Optional;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
+
+@ParametersAreNonnullByDefault
 public final class TrackingConfiguration {
     public final String partyCookie;
     public final Duration partyTimeout;
@@ -30,15 +30,15 @@ public final class TrackingConfiguration {
             final Optional<String> ip2geoDatabase,
             final Optional<String> schemaFile,
             final Optional<SchemaMappingConfiguration> schemaMapping) {
-        this.partyCookie = partyCookie;
-        this.partyTimeout = partyTimeout;
-        this.sessionCookie = sessionCookie;
-        this.sessionTimeout = sessionTimeout;
-        this.cookieDomain = cookieDomain;
-        this.uaParser = uaParser;
-        this.ip2geoDatabase = ip2geoDatabase;
-        this.schemaFile = schemaFile;
-        this.schemaMapping = schemaMapping;
+        this.partyCookie = Objects.requireNonNull(partyCookie);
+        this.partyTimeout = Objects.requireNonNull(partyTimeout);
+        this.sessionCookie = Objects.requireNonNull(sessionCookie);
+        this.sessionTimeout = Objects.requireNonNull(sessionTimeout);
+        this.cookieDomain = Objects.requireNonNull(cookieDomain);
+        this.uaParser = Objects.requireNonNull(uaParser);
+        this.ip2geoDatabase = Objects.requireNonNull(ip2geoDatabase);
+        this.schemaFile = Objects.requireNonNull(schemaFile);
+        this.schemaMapping = Objects.requireNonNull(schemaMapping);
     }
 
     @Override

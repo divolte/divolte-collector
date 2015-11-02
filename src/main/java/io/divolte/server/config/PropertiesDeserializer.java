@@ -15,6 +15,9 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.base.Joiner;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public class PropertiesDeserializer extends JsonDeserializer<Properties> {
     private final static Joiner DOT_JOINER = Joiner.on('.');
     private final static Joiner COMMA_JOINER = Joiner.on(',');
@@ -23,8 +26,8 @@ public class PropertiesDeserializer extends JsonDeserializer<Properties> {
     public Properties deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
         if (START_OBJECT == p.getCurrentToken()) {
             final Properties properties = new Properties();
-            final Deque<String> stack = new ArrayDeque<>(10);
-            final ArrayList<String> array = new ArrayList<>(10);
+            final Deque<String> stack = new ArrayDeque<>();
+            final ArrayList<String> array = new ArrayList<>();
             for (JsonToken nextToken = p.nextToken(); nextToken != END_OBJECT || !stack.isEmpty(); nextToken = p.nextToken()) {
                 switch(nextToken) {
                     case FIELD_NAME:
@@ -58,8 +61,7 @@ public class PropertiesDeserializer extends JsonDeserializer<Properties> {
                         stack.removeLast();
                         break;
                     case VALUE_NULL:
-                        ctx.mappingException("Null values not allowed in Properties object.");
-                        break;
+                        throw ctx.mappingException("Null values not allowed in Properties object.");
                     case VALUE_EMBEDDED_OBJECT:
                         throw ctx.mappingException("Embedded object not allowed as part of Properties object.");
                     case NOT_AVAILABLE:

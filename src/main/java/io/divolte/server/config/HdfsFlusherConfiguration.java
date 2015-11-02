@@ -1,34 +1,34 @@
 package io.divolte.server.config;
 
-import java.time.Duration;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
+import java.util.Objects;
+
+@ParametersAreNonnullByDefault
 public final class HdfsFlusherConfiguration {
-    public final Boolean enabled;
-    public final Integer threads;
-    public final Integer maxWriteQueue;
+    public final boolean enabled;
+    public final int threads;
+    public final int maxWriteQueue;
     public final Duration maxEnqueueDelay;
     public final HdfsConfiguration hdfs;
     public final FileStrategyConfiguration fileStrategy;
 
     @JsonCreator
     private HdfsFlusherConfiguration(
-            final Boolean enabled,
-            final Integer threads,
-            final Integer maxWriteQueue,
+            final boolean enabled,
+            final int threads,
+            final int maxWriteQueue,
             final Duration maxEnqueueDelay,
             final HdfsConfiguration hdfs,
             final FileStrategyConfiguration fileStrategy) {
         this.enabled = enabled;
         this.threads = threads;
         this.maxWriteQueue = maxWriteQueue;
-        this.maxEnqueueDelay = maxEnqueueDelay;
-        this.hdfs = hdfs;
-        this.fileStrategy = fileStrategy;
+        this.maxEnqueueDelay = Objects.requireNonNull(maxEnqueueDelay);
+        this.hdfs = Objects.requireNonNull(hdfs);
+        this.fileStrategy = Objects.requireNonNull(fileStrategy);
     }
 
     @Override

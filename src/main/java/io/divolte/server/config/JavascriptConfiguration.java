@@ -1,29 +1,29 @@
 package io.divolte.server.config;
 
-import javax.annotation.ParametersAreNullableByDefault;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.hibernate.validator.constraints.NotEmpty;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import java.util.Objects;
 
-@ParametersAreNullableByDefault
+@ParametersAreNonnullByDefault
 public final class JavascriptConfiguration {
     @NotNull @NotEmpty @Pattern(regexp="^[A-Za-z0-9_-]+\\.js$")
     public final String name;
 
-    public final Boolean logging;
-    public final Boolean debug;
-    public final Boolean autoPageViewEvent;
+    public final boolean logging;
+    public final boolean debug;
+    public final boolean autoPageViewEvent;
 
     @JsonCreator
     private JavascriptConfiguration(
             final String name,
-            final Boolean logging,
-            final Boolean debug,
-            final Boolean autoPageViewEvent) {
-        this.name = name;
+            final boolean logging,
+            final boolean debug,
+            final boolean autoPageViewEvent) {
+        this.name = Objects.requireNonNull(name);
         this.logging = logging;
         this.debug = debug;
         this.autoPageViewEvent = autoPageViewEvent;

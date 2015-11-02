@@ -1,11 +1,11 @@
 package io.divolte.server.config;
 
-import javax.annotation.ParametersAreNullableByDefault;
-import javax.validation.Valid;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-@ParametersAreNullableByDefault
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.validation.Valid;
+
+@ParametersAreNonnullByDefault
 public final class DivolteConfiguration {
     @Valid public final ServerConfiguration server;
     @Valid public final TrackingConfiguration tracking;

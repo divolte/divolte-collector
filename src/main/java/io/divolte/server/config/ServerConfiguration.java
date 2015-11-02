@@ -1,22 +1,26 @@
 package io.divolte.server.config;
 
-import java.util.Objects;
-
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@ParametersAreNullableByDefault
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+
+@ParametersAreNonnullByDefault
 public final class ServerConfiguration {
 
+    @Nullable
     public final String host;
     public final int port;
     public final boolean useXForwardedFor;
     public final boolean serveStaticResources;
 
     @JsonCreator
-    private ServerConfiguration(final String host, final Integer port, @JsonProperty("use_x_forwarded_for") final Boolean useXForwardedFor, final Boolean serveStaticResources) {
+    private ServerConfiguration(@Nullable final String host,
+                                final int port,
+                                @JsonProperty("use_x_forwarded_for") final boolean useXForwardedFor,
+                                final boolean serveStaticResources) {
         this.host = host;
         this.port = port;
         this.useXForwardedFor = useXForwardedFor;

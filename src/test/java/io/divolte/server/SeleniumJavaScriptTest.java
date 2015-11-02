@@ -111,7 +111,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
                 driver.navigate()::back
                 };
 
-        // we expect on duplicate PV ID, because of the custom event
+        // We expect one duplicate PV ID, because of the custom event
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
         assertEquals(actions.length - 1, numberOfUniquePageViewIDs);
     }
