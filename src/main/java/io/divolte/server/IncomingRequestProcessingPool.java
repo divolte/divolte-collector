@@ -16,15 +16,6 @@
 
 package io.divolte.server;
 
-import io.divolte.record.DefaultEventRecord;
-import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.hdfs.HdfsFlushingPool;
-import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
-import io.divolte.server.ip2geo.LookupService;
-import io.divolte.server.kafka.KafkaFlushingPool;
-import io.divolte.server.processing.ProcessingPool;
-import io.undertow.server.HttpServerExchange;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -38,14 +29,22 @@ import org.apache.avro.Schema.Parser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.divolte.record.DefaultEventRecord;
+import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.hdfs.HdfsFlushingPool;
+import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.kafka.KafkaFlushingPool;
+import io.divolte.server.processing.ProcessingPool;
+
 @ParametersAreNonnullByDefault
-final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, HttpServerExchange> {
+final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, DivolteEvent> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
 
     private final Optional<KafkaFlushingPool> kafkaPool;
     private final Optional<HdfsFlushingPool> hdfsPool;
 
-    public IncomingRequestProcessingPool(final ValidatedConfiguration vc, IncomingRequestListener listener) {
+    public IncomingRequestProcessingPool(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
         this (
                 vc.configuration().incomingRequestProcessor.threads,
                 vc.configuration().incomingRequestProcessor.maxWriteQueue,
@@ -87,7 +86,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                 logger.info("Using Avro schema from configuration: {}", schemaFileName);
                 try {
                     return parser.parse(new File(schemaFileName));
-                } catch(IOException ioe) {
+                } catch(final IOException ioe) {
                     logger.error("Failed to load Avro schema file.");
                     throw new RuntimeException("Failed to load Avro schema file.", ioe);
                 }
@@ -112,8 +111,8 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             .orElse(null);
     }
 
-    public void enqueueIncomingExchangeForProcessing(final DivolteIdentifier partyId, final HttpServerExchange exchange) {
-        enqueue(partyId.value, exchange);
+    public void enqueueIncomingExchangeForProcessing(final DivolteIdentifier partyId, final DivolteEvent event) {
+        enqueue(partyId.value, event);
     }
 
     @Override

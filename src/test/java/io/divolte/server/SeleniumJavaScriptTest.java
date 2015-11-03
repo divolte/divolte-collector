@@ -16,23 +16,26 @@
 
 package io.divolte.server;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import io.divolte.server.ServerTestUtils.EventPayload;
-import org.junit.Before;
-import org.junit.Test;
-import org.openqa.selenium.By;
+import static io.divolte.server.IncomingRequestProcessor.*;
+import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.openqa.selenium.By;
+
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+
+import io.divolte.server.ServerTestUtils.EventPayload;
 
 @ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest extends SeleniumTestBase {
@@ -118,7 +121,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
                 .flatMap((action) -> {
                     action.run();
                     final EventPayload payload = unchecked(server::waitForEvent);
-                    final DivolteEvent event = payload.exchange.getAttachment(DIVOLTE_EVENT_KEY);
+                    final DivolteEvent event = payload.event;
                     return event.browserEventData.map(b -> b.pageViewId).map(Stream::of).orElse(null);
                 })
                 .collect(Collectors.toSet()).size();
@@ -147,10 +150,10 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final String location = urlOf(BASIC);
         driver.get(location);
 
-        EventPayload viewEvent = server.waitForEvent();
+        final EventPayload payload = server.waitForEvent();
 
-        final DivolteEvent eventData = viewEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
-        final Boolean detectedDuplicate = viewEvent.exchange.getAttachment(DUPLICATE_EVENT_KEY);
+        final DivolteEvent eventData = payload.event;
+        final Boolean detectedDuplicate = payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY);
 
         assertFalse(eventData.corruptEvent);
         assertFalse(detectedDuplicate);
@@ -210,8 +213,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         server.waitForEvent();
 
         driver.findElement(By.id("custom")).click();
-        final EventPayload customEvent = server.waitForEvent();
-        final DivolteEvent eventData = customEvent.exchange.getAttachment(DIVOLTE_EVENT_KEY);
+        final EventPayload payload = server.waitForEvent();
+        final DivolteEvent eventData = payload.event;
 
         assertTrue(eventData.eventType.isPresent());
         assertEquals("custom", eventData.eventType.get());
@@ -229,13 +232,13 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         driver.get(urlOf(BASIC));
         server.waitForEvent();
 
-        Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
+        final Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
         assertTrue(parsedPartyCookieOption.isPresent());
         assertThat(
                 parsedPartyCookieOption.get(),
                 isA(DivolteIdentifier.class));
 
-        Optional<DivolteIdentifier> parsedSessionCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
+        final Optional<DivolteIdentifier> parsedSessionCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
         assertTrue(parsedSessionCookieOption.isPresent());
         assertThat(
                 parsedSessionCookieOption.get(),
@@ -246,8 +249,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     public void shouldPickupProvidedPageViewIdFromHash() throws RuntimeException, InterruptedException {
         Preconditions.checkState(null != driver && null != server);
         driver.get(urlOf(PAGE_VIEW_SUPPLIED));
-        EventPayload event = server.waitForEvent();
-        DivolteEvent eventData = event.exchange.getAttachment(DIVOLTE_EVENT_KEY);
+        final EventPayload payload = server.waitForEvent();
+        final DivolteEvent eventData = payload.event;
 
         assertEquals("supercalifragilisticexpialidocious", eventData.browserEventData.get().pageViewId);
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);

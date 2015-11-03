@@ -88,49 +88,49 @@ public class ShortTermDuplicateMemoryTest {
 
     @Test
     public void shouldFlagDuplicateRequests() throws IOException, InterruptedException {
-        EventPayload event;
+        EventPayload payload;
 
         request(0);
-        event = server.waitForEvent();
-        assertEquals(false, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(false, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
 
         request(1);
-        event = server.waitForEvent();
-        assertEquals(false, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(false, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
 
         request(0);
-        event = server.waitForEvent();
-        assertEquals(true, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(true, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
     }
 
     @Test
     public void shouldForgetAboutRequestHashesAfterSomeTime() throws IOException, InterruptedException {
-        EventPayload event;
+        EventPayload payload;
 
         request(1);
-        event = server.waitForEvent();
-        assertEquals(false, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(false, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
 
         request(0);
-        event = server.waitForEvent();
-        assertEquals(false, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(false, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
 
         request(1);
-        event = server.waitForEvent();
-        assertEquals(true, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(true, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
 
         request(2);
-        event = server.waitForEvent();
-        assertEquals(false, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(false, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
 
         request(1);
-        event = server.waitForEvent();
-        assertEquals(false, event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
+        payload = server.waitForEvent();
+        assertEquals(false, payload.event.exchange.getAttachment(DUPLICATE_EVENT_KEY));
     }
 
-    private void request(int which) throws IOException {
-        URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRINGS[which]);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    private void request(final int which) throws IOException {
+        final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRINGS[which]);
+        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         assertEquals(200, conn.getResponseCode());
     }

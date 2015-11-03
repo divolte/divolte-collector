@@ -52,54 +52,54 @@ public class ProxyAdjacentPeerAddressHandlerTest {
     @Test
     public void shouldObtainRightMostAddressFromChain() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1,192.168.13.23");
         conn.setRequestMethod("GET");
 
         assertEquals(200, conn.getResponseCode());
 
-        EventPayload event = server.waitForEvent();
-        assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());
+        final EventPayload payload = server.waitForEvent();
+        assertEquals("192.168.13.23", payload.event.exchange.getSourceAddress().getHostString());
     }
 
     @Test
     public void shouldObtainSingleValueWithoutCommas() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1");
         conn.setRequestMethod("GET");
 
         assertEquals(200, conn.getResponseCode());
 
-        EventPayload event = server.waitForEvent();
-        assertEquals("127.0.0.1", event.exchange.getSourceAddress().getHostString());
+        final EventPayload payload = server.waitForEvent();
+        assertEquals("127.0.0.1", payload.event.exchange.getSourceAddress().getHostString());
     }
 
     @Test
     public void shouldAllowWhitespaceAfterComma() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 192.168.13.23");
         conn.setRequestMethod("GET");
 
         assertEquals(200, conn.getResponseCode());
 
-        EventPayload event = server.waitForEvent();
-        assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());
+        final EventPayload payload = server.waitForEvent();
+        assertEquals("192.168.13.23", payload.event.exchange.getSourceAddress().getHostString());
     }
 
     @Test
     public void shouldAllowMultipleXffHeaders() throws IOException, InterruptedException {
         final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 8.8.8.8");
         conn.addRequestProperty("X-Forwarded-For", "192.168.13.23");
         conn.setRequestMethod("GET");
 
         assertEquals(200, conn.getResponseCode());
 
-        EventPayload event = server.waitForEvent();
-        assertEquals("192.168.13.23", event.exchange.getSourceAddress().getHostString());
+        final EventPayload payload = server.waitForEvent();
+        assertEquals("192.168.13.23", payload.event.exchange.getSourceAddress().getHostString());
     }
 
     @Before

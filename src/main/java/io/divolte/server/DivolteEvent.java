@@ -19,6 +19,8 @@ package io.divolte.server;
 import javax.annotation.ParametersAreNonnullByDefault;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.undertow.server.HttpServerExchange;
+
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -31,6 +33,8 @@ import java.util.function.Supplier;
  */
 @ParametersAreNonnullByDefault
 public final class DivolteEvent {
+    public final HttpServerExchange exchange;
+
     // Events from all sources support these attributes.
     public final boolean corruptEvent;
     public final DivolteIdentifier partyCookie;
@@ -79,7 +83,8 @@ public final class DivolteEvent {
         }
     }
 
-    DivolteEvent(final boolean corruptEvent,
+    DivolteEvent(final HttpServerExchange originatingExchange,
+                 final boolean corruptEvent,
                  final DivolteIdentifier partyCookie,
                  final DivolteIdentifier sessionCookie,
                  final String eventId,
@@ -91,6 +96,7 @@ public final class DivolteEvent {
                  final Optional<String> eventType,
                  final Supplier<Optional<JsonNode>> eventParametersProducer,
                  final Optional<BrowserEventData> browserEvent) {
+        this.exchange                = originatingExchange;
         this.corruptEvent            = corruptEvent;
         this.partyCookie             = Objects.requireNonNull(partyCookie);
         this.sessionCookie           = Objects.requireNonNull(sessionCookie);

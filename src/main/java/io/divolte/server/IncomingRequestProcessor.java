@@ -17,6 +17,18 @@
 package io.divolte.server;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.divolte.record.DefaultEventRecord;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.hdfs.HdfsFlusher;
@@ -30,25 +42,12 @@ import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.DslRecordMapping;
 import io.divolte.server.recordmapping.RecordMapper;
 import io.divolte.server.recordmapping.UserAgentParserAndCache;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 @ParametersAreNonnullByDefault
-public final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
+public final class IncomingRequestProcessor implements ItemProcessor<DivolteEvent> {
     private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
-    public static final AttachmentKey<DivolteEvent> DIVOLTE_EVENT_KEY = AttachmentKey.create(DivolteEvent.class);
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
     @Nullable
@@ -137,14 +136,8 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
     }
 
     @Override
-    public ProcessingDirective process(final HttpServerExchange exchange) {
-        final DivolteEvent eventData = exchange.getAttachment(DIVOLTE_EVENT_KEY);
-
-        if (!eventData.corruptEvent || keepCorrupted) {
-            final DivolteIdentifier party = eventData.partyCookie;
-            final DivolteIdentifier session = eventData.sessionCookie;
-            final String event = eventData.eventId;
-
+    public ProcessingDirective process(final DivolteEvent event) {
+        if (!event.corruptEvent || keepCorrupted) {
             /*
              * Note: we cannot use the actual query string here,
              * as the incoming request processor is agnostic of
@@ -152,26 +145,26 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
              * an endpoint that doesn't require a query string,
              * but rather generates these IDs on the server side.
              */
-            final boolean duplicate = memory.isProbableDuplicate(party.value, session.value, event);
-            exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
+            final boolean duplicate = memory.isProbableDuplicate(event.partyCookie.value, event.sessionCookie.value, event.eventId);
+            event.exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
             if (!duplicate || keepDuplicates) {
-                final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
+                final GenericRecord avroRecord = mapper.newRecordFromExchange(event);
                 final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                        party,
-                        session,
-                        eventData.requestStartTime,
-                        eventData.clientUtcOffset,
+                        event.partyCookie,
+                        event.sessionCookie,
+                        event.requestStartTime,
+                        event.clientUtcOffset,
                         avroRecord);
-                doProcess(exchange, avroRecord, avroBuffer);
+                listener.incomingRequest(event, avroBuffer, avroRecord);
+                doProcess(avroBuffer);
             }
         }
 
         return CONTINUE;
     }
 
-    private void doProcess(final HttpServerExchange exchange, final GenericRecord avroRecord, final AvroRecordBuffer avroBuffer) {
-        listener.incomingRequest(exchange, avroBuffer, avroRecord);
+    private void doProcess(final AvroRecordBuffer avroBuffer) {
 
         if (null != kafkaFlushingPool) {
             kafkaFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
