@@ -34,8 +34,8 @@ import io.undertow.util.Methods;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Optional;
 
-import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -53,8 +53,7 @@ public final class Server implements Runnable {
 
     private final IncomingRequestProcessingPool processingPool;
 
-    @Nullable
-    private final String host;
+    private final Optional<String> host;
     private final int port;
 
     public Server(final ValidatedConfiguration vc) {
@@ -90,7 +89,7 @@ public final class Server implements Runnable {
 
         shutdownHandler = rootHandler;
         undertow = Undertow.builder()
-                           .addHttpListener(port, host)
+                           .addHttpListener(port, host.orElse(null))
                            .setHandler(rootHandler)
                            .build();
     }
