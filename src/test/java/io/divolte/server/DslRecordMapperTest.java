@@ -26,13 +26,16 @@ import com.google.common.io.Resources;
 import com.maxmind.geoip2.model.CityResponse;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
 import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.SchemaMappingException;
 import io.undertow.server.HttpServerExchange;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -41,6 +44,7 @@ import org.junit.After;
 import org.junit.Test;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;

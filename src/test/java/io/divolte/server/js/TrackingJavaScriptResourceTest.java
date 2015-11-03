@@ -16,7 +16,7 @@
 
 package io.divolte.server.js;
 
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.undertow.util.ETag;
 
 import java.io.IOException;

@@ -1,12 +1,34 @@
 package io.divolte.server;
 
+import static io.divolte.server.IncomingRequestProcessor.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.util.Optional;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Parser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.streams.ChannelInputStream;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableList;
-import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -20,26 +42,6 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Parser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xnio.streams.ChannelInputStream;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
-import java.util.Optional;
-
-import static io.divolte.server.IncomingRequestProcessor.DIVOLTE_EVENT_KEY;
-import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 public class MappingTestServer {
@@ -74,9 +76,7 @@ public class MappingTestServer {
 
     public MappingTestServer(final String schemaFilename, final String mappingFilename, final int port, final String host) throws IOException {
         final Schema schema = loadSchema(schemaFilename);
-        final Config config = ConfigFactory.load();
-
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
+        final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
         mapper = new DslRecordMapper(vc, mappingFilename, schema, Optional.ofNullable(lookupServiceFromConfig(vc)));
 
         final HttpHandler handler = new AllowedMethodsHandler(this::handleEvent, Methods.POST);
@@ -112,7 +112,7 @@ public class MappingTestServer {
         undertow.stop();
     }
 
-    private void handleEvent(HttpServerExchange exchange) throws Exception {
+    private void handleEvent(final HttpServerExchange exchange) throws Exception {
         try (final ChannelInputStream cis = new ChannelInputStream(exchange.getRequestChannel())) {
             final JsonNode payload = EVENT_PARAMETERS_READER.readTree(cis);
             final String generatedPageViewId = DivolteIdentifier.generate().value;

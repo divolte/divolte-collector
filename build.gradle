@@ -113,6 +113,13 @@ dependencies {
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.9'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.0.0'
     compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.6.3'
+    compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.6.3'
+    compile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.6.3'
+    compile group: 'com.jasonclawson', name: 'jackson-dataformat-hocon', version: '1.1.0'
+
+    // Used for configuration validation
+    compile group: 'org.hibernate', name:'hibernate-validator', version: '5.2.2.Final'
+    compile group: 'org.glassfish', name: 'javax.el', version: '3.0.0'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
@@ -128,6 +135,7 @@ dependencies {
     testCompile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.6.3'
     testCompile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.6.3'
     testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.20'
+
     // Warning: SauceLabs doesn't work properly with Selenium 2.44.
     testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.48.2'
     // Warning: PhantomJSDriver 1.2.0 doesn't work properly with Selenium 2.44.

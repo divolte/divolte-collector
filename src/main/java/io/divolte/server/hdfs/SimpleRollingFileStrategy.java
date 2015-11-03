@@ -18,7 +18,8 @@ package io.divolte.server.hdfs;
 
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.SimpleRollingFileStrategyConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -76,9 +77,10 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         Objects.requireNonNull(vc);
         this.schema = Objects.requireNonNull(schema);
 
-        syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterDuration.toMillis();
-        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().syncFileAfterRecords;
-        newFileEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().rollEvery.toMillis();
+        final SimpleRollingFileStrategyConfiguration fileStrategyConfiguration = vc.configuration().hdfsFlusher.fileStrategy.as(SimpleRollingFileStrategyConfiguration.class);
+        syncEveryMillis = fileStrategyConfiguration.syncFileAfterDuration.toMillis();
+        syncEveryRecords = fileStrategyConfiguration.syncFileAfterRecords;
+        newFileEveryMillis = fileStrategyConfiguration.rollEvery.toMillis();
 
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
         hostString = findLocalHostName();
@@ -86,8 +88,8 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         this.hdfs = fs;
         this.hdfsReplication = hdfsReplication;
 
-        hdfsWorkingDir = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().workingDir;
-        hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.asSimpleRollingFileStrategy().publishDir;
+        hdfsWorkingDir = fileStrategyConfiguration.workingDir;
+        hdfsPublishDir = fileStrategyConfiguration.publishDir;
 
         throwsIoException(() -> {
             if (!hdfs.isDirectory(new Path(hdfsWorkingDir))) {

@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -33,6 +34,7 @@ import io.undertow.util.Methods;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -40,7 +42,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
 @ParametersAreNonnullByDefault
@@ -52,14 +53,14 @@ public final class Server implements Runnable {
 
     private final IncomingRequestProcessingPool processingPool;
 
-    private final String host;
+    private final Optional<String> host;
     private final int port;
 
     public Server(final ValidatedConfiguration vc) {
         this(vc, (e,b,r) -> {});
     }
 
-    Server(final ValidatedConfiguration vc, IncomingRequestListener listener) {
+    Server(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
         host = vc.configuration().server.host;
         port = vc.configuration().server.port;
 
@@ -88,7 +89,7 @@ public final class Server implements Runnable {
 
         shutdownHandler = rootHandler;
         undertow = Undertow.builder()
-                           .addHttpListener(port, host)
+                           .addHttpListener(port, host.orElse(null))
                            .setHandler(rootHandler)
                            .build();
     }
@@ -129,7 +130,7 @@ public final class Server implements Runnable {
             shutdownHandler.shutdown();
             shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
             undertow.stop();
-        } catch (Exception ie) {
+        } catch (final Exception ie) {
             Thread.currentThread().interrupt();
         }
 
@@ -139,7 +140,7 @@ public final class Server implements Runnable {
         logger.info("Closing HDFS filesystem connection.");
         try {
             FileSystem.closeAll();
-        } catch (IOException ioe) {
+        } catch (final IOException ioe) {
             logger.warn("Failed to cleanly close HDFS file system.", ioe);
         }
     }
@@ -148,9 +149,7 @@ public final class Server implements Runnable {
         final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
         if (!vc.isValid()) {
             System.err.println("There are configuration errors. Details:");
-            for (ConfigException ce : vc.errors()) {
-                System.err.println(ce.getMessage());
-            }
+            vc.errors().forEach(System.err::println);
             System.exit(1);
         }
 

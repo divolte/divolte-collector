@@ -19,7 +19,8 @@ package io.divolte.server.hdfs;
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import static java.util.Calendar.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.SessionBinningFileStrategyConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -105,11 +106,12 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
         hostString = findLocalHostName();
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
-        hdfsWorkingDir = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().workingDir;
-        hdfsPublishDir = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().publishDir;
+        final SessionBinningFileStrategyConfiguration fileStrategyConfiguration = vc.configuration().hdfsFlusher.fileStrategy.as(SessionBinningFileStrategyConfiguration.class);
+        hdfsWorkingDir = fileStrategyConfiguration.workingDir;
+        hdfsPublishDir = fileStrategyConfiguration.publishDir;
 
-        syncEveryMillis = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterDuration.toMillis();
-        syncEveryRecords = vc.configuration().hdfsFlusher.fileStrategy.asSessionBinningFileStrategy().syncFileAfterRecords;
+        syncEveryMillis = fileStrategyConfiguration.syncFileAfterDuration.toMillis();
+        syncEveryRecords = fileStrategyConfiguration.syncFileAfterRecords;
 
         this.hdfs = hdfs;
         this.hdfsReplication = hdfsReplication;
@@ -131,7 +133,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private static String findLocalHostName() {
         try {
             return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
+        } catch (final UnknownHostException e) {
             return "localhost";
         }
     }
@@ -171,7 +173,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     }
 
     @Override
-    public HdfsOperationResult append(AvroRecordBuffer record) {
+    public HdfsOperationResult append(final AvroRecordBuffer record) {
         if (!isHdfsAlive) {
             throw new IllegalStateException("Append attempt while HDFS connection is not alive.");
         }
@@ -221,7 +223,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
                         file.writer.sync();   // Forces the Avro file to write a block
                         file.stream.hsync();  // Forces a (HDFS) sync on the underlying stream
                         file.recordsSinceLastSync = 0;
-                    } catch (IOException e) {
+                    } catch (final IOException e) {
                         throw new WrappedIOException(e);
                     }
                 });
@@ -239,7 +241,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private void possiblyCloseAndCleanup() {
         final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
 
-        List<Entry<Long, RoundHdfsFile>> entriesToBeClosed = openFiles
+        final List<Entry<Long, RoundHdfsFile>> entriesToBeClosed = openFiles
         .entrySet()
         .stream()
         .filter((e) -> e.getValue().round < oldestAllowedRound)
@@ -354,7 +356,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
                 recordsSinceLastSync = 0;
 
                 logger.debug("Created new HDFS file: {}", path);
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 logger.warn("Failed HDFS file creation: {}", path);
                 // we may have created the file, but failed to sync, so we attempt a delete
                 // this happens when the NN responds successfully, but there are no DNs available
@@ -400,7 +402,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
                         throw new IOException("Could not rename HDFS file: " + path + " -> " + publishDestination);
                     }
                 }
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 throw new WrappedIOException(e);
             }
         }
@@ -410,7 +412,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     private static final class WrappedIOException extends RuntimeException {
         final IOException wrappedIOException;
 
-        private WrappedIOException(IOException ioe) {
+        private WrappedIOException(final IOException ioe) {
             this.wrappedIOException = ioe;
         }
     }

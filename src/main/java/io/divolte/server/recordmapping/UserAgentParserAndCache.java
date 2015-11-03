@@ -1,6 +1,6 @@
 package io.divolte.server.recordmapping;
 
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;

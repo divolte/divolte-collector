@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import io.divolte.server.config.ValidatedConfiguration;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;

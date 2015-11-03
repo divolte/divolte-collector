@@ -16,7 +16,7 @@
 
 package io.divolte.server.js;
 
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 
 import java.io.IOException;
 import java.time.temporal.ChronoUnit;

@@ -18,7 +18,7 @@ package io.divolte.server.kafka;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.ValidatedConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ItemProcessor;
 
 import java.nio.ByteBuffer;
