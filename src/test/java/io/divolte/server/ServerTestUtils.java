@@ -16,6 +16,13 @@
 
 package io.divolte.server;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
+import io.divolte.server.config.ValidatedConfiguration;
+import org.apache.avro.generic.GenericRecord;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Map;
@@ -24,16 +31,6 @@ import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.apache.avro.generic.GenericRecord;
-
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigValueFactory;
-
-import io.divolte.server.config.ValidatedConfiguration;
 
 public final class ServerTestUtils {
     /*
@@ -83,7 +80,7 @@ public final class ServerTestUtils {
         public TestServer(final String configResource, final Map<String,Object> extraConfig) {
             this(
                     findFreePort(),
-                    ConfigFactory.parseMap(extraConfig)
+                    ConfigFactory.parseMap(extraConfig, "Test-specific overrides")
                                  .withFallback(ConfigFactory.parseResources(configResource))
                                  .withFallback(ConfigFactory.parseResources("reference-test.conf"))
                 );
@@ -91,7 +88,7 @@ public final class ServerTestUtils {
 
         private TestServer(final int port, final Config config) {
             this.port = port;
-            this.config = config.withValue("divolte.server.port", ConfigValueFactory.fromAnyRef(port));
+            this.config = config.withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
 
             events = new ArrayBlockingQueue<>(100);
             final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);

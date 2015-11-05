@@ -29,14 +29,12 @@ public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBu
     public KafkaFlushingPool(final ValidatedConfiguration vc) {
         this(
                 Objects.requireNonNull(vc),
-                vc.configuration().kafkaFlusher.threads,
-                vc.configuration().kafkaFlusher.maxWriteQueue,
-                vc.configuration().kafkaFlusher.maxEnqueueDelay.toMillis()
-                );
+                vc.configuration().global.kafka.threads,
+                vc.configuration().global.kafka.bufferSize);
     }
 
-    public KafkaFlushingPool(ValidatedConfiguration vc, int numThreads, int maxWriteQueue, long maxEnqueueDelay) {
-        super(numThreads, maxWriteQueue, maxEnqueueDelay, "Kafka Flusher", () -> new KafkaFlusher(vc));
+    public KafkaFlushingPool(ValidatedConfiguration vc, int numThreads, int maxWriteQueue) {
+        super(numThreads, maxWriteQueue, "Kafka Flusher", () -> new KafkaFlusher(vc));
     }
 
     public void enqueueRecord(final AvroRecordBuffer record) {

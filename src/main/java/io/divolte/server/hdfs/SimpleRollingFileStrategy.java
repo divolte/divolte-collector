@@ -16,11 +16,22 @@
 
 package io.divolte.server.hdfs;
 
-import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.config.SimpleRollingFileStrategyConfiguration;
+import io.divolte.server.config.FileStrategyConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -31,18 +42,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
-import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.FAILURE;
+import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.SUCCESS;
 
 @NotThreadSafe
 @ParametersAreNonnullByDefault
@@ -77,7 +78,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         Objects.requireNonNull(vc);
         this.schema = Objects.requireNonNull(schema);
 
-        final SimpleRollingFileStrategyConfiguration fileStrategyConfiguration = vc.configuration().hdfsFlusher.fileStrategy.as(SimpleRollingFileStrategyConfiguration.class);
+        final FileStrategyConfiguration fileStrategyConfiguration = vc.configuration().hdfsFlusher.fileStrategy;
         syncEveryMillis = fileStrategyConfiguration.syncFileAfterDuration.toMillis();
         syncEveryRecords = fileStrategyConfiguration.syncFileAfterRecords;
         newFileEveryMillis = fileStrategyConfiguration.rollEvery.toMillis();

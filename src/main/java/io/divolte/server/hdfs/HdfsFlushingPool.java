@@ -32,17 +32,15 @@ public final class HdfsFlushingPool extends ProcessingPool<HdfsFlusher, AvroReco
         this(
                 Objects.requireNonNull(vc),
                 Objects.requireNonNull(schema),
-                vc.configuration().hdfsFlusher.threads,
-                vc.configuration().hdfsFlusher.maxWriteQueue,
-                vc.configuration().hdfsFlusher.maxEnqueueDelay.toMillis()
+                vc.configuration().global.hdfs.threads,
+                vc.configuration().global.hdfs.bufferSize
                 );
     }
 
-    public HdfsFlushingPool(final ValidatedConfiguration vc, final Schema schema, final int numThreads, final int maxQueueSize, final long maxEnqueueDelay) {
+    public HdfsFlushingPool(final ValidatedConfiguration vc, final Schema schema, final int numThreads, final int maxQueueSize) {
         super(
                 numThreads,
                 maxQueueSize,
-                maxEnqueueDelay,
                 "Hdfs Flusher",
                 () -> new HdfsFlusher(vc, schema));
     }

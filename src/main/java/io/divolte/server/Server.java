@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import com.typesafe.config.ConfigFactory;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.Undertow;
@@ -31,18 +32,14 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Optional;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.ConfigFactory;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public final class Server implements Runnable {
@@ -61,8 +58,8 @@ public final class Server implements Runnable {
     }
 
     Server(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
-        host = vc.configuration().server.host;
-        port = vc.configuration().server.port;
+        host = vc.configuration().global.server.host;
+        port = vc.configuration().global.server.port;
 
         processingPool = new IncomingRequestProcessingPool(vc, listener);
         final ClientSideCookieEventHandler clientSideCookieEventHandler =
@@ -71,19 +68,20 @@ public final class Server implements Runnable {
         final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
 
         final PathHandler handler = new PathHandler();
-        handler.addExactPath("/csc-event",
+        handler.addExactPath(vc.configuration().browserSourceConfiguration.prefix + "csc-event",
                              new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
-        handler.addExactPath('/' + trackingJavaScript.getScriptName(), javascriptHandler);
+        handler.addExactPath(vc.configuration().browserSourceConfiguration.prefix + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
-        if (vc.configuration().server.serveStaticResources) {
+        if (vc.configuration().global.server.serveStaticResources) {
             // Catch-all handler; must be last if present.
+            // XXX: Our static resources assume the default 'browser' endpoint.
             handler.addPrefixPath("/", createStaticResourceHandler());
         }
         final SetHeaderHandler headerHandler =
                 new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
         final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
-                vc.configuration().server.useXForwardedFor ?
+                vc.configuration().global.server.useXForwardedFor ?
                 new ProxyAdjacentPeerAddressHandler(canonicalPathHandler) : canonicalPathHandler
                 );
 

@@ -50,7 +50,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
 
     private final ExecutorService executorService;
     private final List<BlockingQueue<E>> queues;
-    private final long maxEnqueueDelay;
 
     private volatile boolean running;
 
@@ -60,7 +59,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
     public ProcessingPool(
             final int numThreads,
             final int maxQueueSize,
-            final long maxEnqueueDelay,
             final String threadBaseName,
             final Supplier<T> processorSupplier) {
 
@@ -72,8 +70,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         final ThreadGroup threadGroup = new ThreadGroup(threadBaseName + " group");
         final ThreadFactory factory = createThreadFactory(threadGroup, threadBaseName + " - %d");
         executorService = Executors.newFixedThreadPool(numThreads, factory);
-
-        this.maxEnqueueDelay = maxEnqueueDelay;
 
         this.queues = Stream.<ArrayBlockingQueue<E>>
                 generate(() -> new ArrayBlockingQueue<>(maxQueueSize))
@@ -89,12 +85,8 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
 
     public void enqueue(String key, E e) {
         // We mask the hash-code to ensure we always get a positive bucket index.
-        if (!offerQuietly(
-                queues.get((key.hashCode() & Integer.MAX_VALUE) % queues.size()),
-                e,
-                maxEnqueueDelay,
-                TimeUnit.MILLISECONDS)) {
-            logger.warn("Failed to enqueue item for {} ms. Dropping event.", maxEnqueueDelay);
+        if (!queues.get((key.hashCode() & Integer.MAX_VALUE) % queues.size()).offer(e)) {
+            logger.warn("Failed to enqueue item. Dropping event.");
         }
     }
 
@@ -169,15 +161,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;
-        }
-    }
-
-    private static <E> boolean offerQuietly(final BlockingQueue<E> queue, final E item, final long timeout, final TimeUnit unit) {
-        try {
-            return queue.offer(item, timeout, unit);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
         }
     }
 

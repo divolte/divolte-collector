@@ -77,30 +77,18 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
 
         keepCorrupted = !vc.configuration().incomingRequestProcessor.discardCorrupted;
 
-        memory = new ShortTermDuplicateMemory(vc.configuration().incomingRequestProcessor.duplicateMemorySize);
+        memory = new ShortTermDuplicateMemory(vc.configuration().global.mapper.duplicateMemorySize);
         keepDuplicates = !vc.configuration().incomingRequestProcessor.discardDuplicates;
 
-        mapper = vc.configuration().tracking.schemaMapping
-            .map((smc) -> {
-                final int version = smc.version;
-                switch(version) {
-                case 1:
-                    logger.error("Version 1 configuration version had been deprecated and is no longer supported.");
-                    throw new RuntimeException("Unsupported schema mapping config version: " + version);
-                case 2:
+        mapper = vc.configuration().incomingRequestProcessor.mappingScriptFile
+                .map((mappingScriptFile) -> {
                     logger.info("Using script based schema mapping.");
-                    return new DslRecordMapper(
-                            vc,
-                            Objects.requireNonNull(schema),
-                            Optional.ofNullable(geoipLookupService));
-                default:
-                    throw new RuntimeException("Unsupported schema mapping config version: " + version);
-                }
-            })
-            .orElseGet(() -> {
-                logger.info("Using built in default schema mapping.");
-                return new DslRecordMapper(DefaultEventRecord.getClassSchema(), defaultRecordMapping(vc));
-            });
+                    return new DslRecordMapper(vc, mappingScriptFile, Objects.requireNonNull(schema), Optional.ofNullable(geoipLookupService));
+
+                }).orElseGet(() -> {
+                    logger.info("Using built in default schema mapping.");
+                    return new DslRecordMapper(DefaultEventRecord.getClassSchema(), defaultRecordMapping(vc));
+                });
     }
 
     private DslRecordMapping defaultRecordMapping(final ValidatedConfiguration vc) {

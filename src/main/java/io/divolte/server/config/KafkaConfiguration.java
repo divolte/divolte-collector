@@ -4,29 +4,29 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.MoreObjects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Properties;
 
 @ParametersAreNonnullByDefault
-public final class HdfsConfiguration extends SinkTypeConfiguration {
+public class KafkaConfiguration extends SinkTypeConfiguration {
 
-    private final Optional<Properties> client;
+    private final Properties producer;
 
     @JsonCreator
-    HdfsConfiguration(final boolean enabled, final int bufferSize, final int threads, final Optional<Properties> client) {
+    KafkaConfiguration(final int bufferSize, final int threads, final boolean enabled, final Properties producer) {
         super(bufferSize, threads, enabled);
         // Defensive copy: ensure our copy remains immutable.
-        this.client = client.map(properties -> (Properties) properties.clone());
+        this.producer = Objects.requireNonNull((Properties) producer.clone());
     }
 
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
-                .add("client", client);
+                .add("producer", producer);
     }
 
-    public Optional<Properties> getClient() {
+    public Properties getProducer() {
         // Defensive copy: we can't stop callers from modifying what we return.
-        return client.map(properties -> (Properties) properties.clone());
+        return (Properties)producer.clone();
     }
 }

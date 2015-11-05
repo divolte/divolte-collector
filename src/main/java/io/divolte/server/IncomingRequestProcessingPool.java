@@ -46,13 +46,12 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
 
     public IncomingRequestProcessingPool(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
         this (
-                vc.configuration().incomingRequestProcessor.threads,
-                vc.configuration().incomingRequestProcessor.maxWriteQueue,
-                vc.configuration().incomingRequestProcessor.maxEnqueueDelay.toMillis(),
+                vc.configuration().global.mapper.threads,
+                vc.configuration().global.mapper.bufferSize,
                 vc,
                 schemaFromConfig(vc),
-                vc.configuration().kafkaFlusher.enabled ? new KafkaFlushingPool(vc) : null,
-                vc.configuration().hdfsFlusher.enabled ? new HdfsFlushingPool(vc, schemaFromConfig(vc)) : null,
+                vc.configuration().global.kafka.enabled ? new KafkaFlushingPool(vc) : null,
+                vc.configuration().global.hdfs.enabled ? new HdfsFlushingPool(vc, schemaFromConfig(vc)) : null,
                 lookupServiceFromConfig(vc),
                 listener
                 );
@@ -61,7 +60,6 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     public IncomingRequestProcessingPool(
             final int numThreads,
             final int maxQueueSize,
-            final long maxEnqueueDelay,
             final ValidatedConfiguration vc,
             final Schema schema,
             @Nullable final KafkaFlushingPool kafkaFlushingPool,
@@ -71,7 +69,6 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
         super(
                 numThreads,
                 maxQueueSize,
-                maxEnqueueDelay,
                 "Incoming Request Processor",
                 () -> new IncomingRequestProcessor(vc, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema, listener));
 
@@ -80,7 +77,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     }
 
     private static Schema schemaFromConfig(final ValidatedConfiguration vc) {
-        return vc.configuration().tracking.schemaFile
+        return vc.configuration().incomingRequestProcessor.schemaFile
             .map((schemaFileName) -> {
                 final Parser parser = new Schema.Parser();
                 logger.info("Using Avro schema from configuration: {}", schemaFileName);
@@ -99,7 +96,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
 
     @Nullable
     private static LookupService lookupServiceFromConfig(final ValidatedConfiguration vc) {
-        return vc.configuration().tracking.ip2geoDatabase
+        return vc.configuration().global.mapper.ip2geoDatabase
             .map((path) -> {
                 try {
                     return new ExternalDatabaseLookupService(Paths.get(path));

@@ -16,30 +16,25 @@
 
 package io.divolte.server.kafka;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ItemProcessor;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.stream.Collectors;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
 import kafka.common.FailedToSendMessageException;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -55,7 +50,7 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     public KafkaFlusher(final ValidatedConfiguration vc) {
         Objects.requireNonNull(vc);
-        final ProducerConfig producerConfig = new ProducerConfig(vc.configuration().kafkaFlusher.producer);
+        final ProducerConfig producerConfig = new ProducerConfig(vc.configuration().global.kafka.getProducer());
         topic = vc.configuration().kafkaFlusher.topic;
         producer = new Producer<>(producerConfig);
     }

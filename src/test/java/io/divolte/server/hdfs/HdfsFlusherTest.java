@@ -16,21 +16,12 @@
 
 package io.divolte.server.hdfs;
 
-import static org.junit.Assert.*;
+import com.google.common.collect.ImmutableMap;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.config.ValidatedConfiguration;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
-import java.util.stream.StreamSupport;
-
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericData.Record;
@@ -44,89 +35,79 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+import java.util.stream.StreamSupport;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+@ParametersAreNonnullByDefault
 public class HdfsFlusherTest {
     private static final Logger logger = LoggerFactory.getLogger(HdfsFlusherTest.class);
 
     @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     private static final String ARBITRARY_IP = "8.8.8.8";
 
+    private Schema schema;
     private Path tempInflightDir;
     private Path tempPublishDir;
 
+    private List<Record> records;
+    private HdfsFlusher flusher;
+
     @Before
-    public void setupTempDir() throws IOException {
+    public void setup() throws IOException {
+        schema = schemaFromClassPath("/MinimalRecord.avsc");
         tempInflightDir = Files.createTempDirectory("hdfs-flusher-test-inflight");
         tempPublishDir = Files.createTempDirectory("hdfs-flusher-test-publish");
     }
 
     @After
-    public void cleanupTempDir() throws IOException {
+    public void teardown() throws IOException {
+        schema = null;
+
         Files.walk(tempInflightDir)
             .filter((p) -> !p.equals(tempInflightDir))
             .forEach(this::deleteQuietly);
         deleteQuietly(tempInflightDir);
+        tempInflightDir = null;
+
         Files.walk(tempPublishDir)
             .filter((p) -> !p.equals(tempPublishDir))
             .forEach(this::deleteQuietly);
         deleteQuietly(tempPublishDir);
+        tempPublishDir = null;
+
+        flusher = null;
+        records = null;
+        flusher = null;
     }
 
     @Test
     public void shouldCreateAndPopulateFileWithSimpleStrategy() throws IOException {
-        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        final Config config =
-            ConfigFactory.parseString(
-                   "divolte.hdfs_flusher.file_strategy.type = SIMPLE_ROLLING_FILE\n"
-                   + "divolte.hdfs_flusher.file_strategy.roll_every = 1 day\n"
-                   + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                   + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-                   .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
-
-        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
-
-        final List<Record> records = LongStream.range(0, 10)
-        .mapToObj((time) -> new GenericRecordBuilder(schema)
-        .set("ts", time)
-        .set("remoteHost", ARBITRARY_IP)
-        .build())
-        .collect(Collectors.toList());
-
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
+        setupFlusher("1 day", 10);
+        processRecords();
 
         flusher.cleanup();
 
         Files.walk(tempPublishDir)
-        .filter((p) -> p.toString().endsWith(".avro"))
-        .findFirst()
-        .ifPresent((p) -> verifyAvroFile(records, schema, p));
+             .filter((p) -> p.toString().endsWith(".avro"))
+             .findFirst()
+             .ifPresent((p) -> verifyAvroFile(records, schema, p));
     }
 
     @Test
     public void shouldWriteInProgressFilesWithNonAvroExtension() throws IOException {
-        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        final Config config =
-             ConfigFactory.parseString(
-                             "divolte.hdfs_flusher.file_strategy.type = SIMPLE_ROLLING_FILE\n"
-                             + "divolte.hdfs_flusher.file_strategy.roll_every = 1 day\n"
-                             + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                             + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-                          .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
-
-        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
-
-        final List<Record> records = LongStream.range(0, 10)
-                                         .mapToObj((time) -> new GenericRecordBuilder(schema)
-                                                 .set("ts", time)
-                                                 .set("remoteHost", ARBITRARY_IP)
-                                                 .build())
-                                         .collect(Collectors.toList());
-
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
+        setupFlusher("1 day", 10);
+        processRecords();
 
         assertTrue(Files.walk(tempInflightDir)
              .filter((p) -> p.toString().endsWith(".avro.partial"))
@@ -136,90 +117,82 @@ public class HdfsFlusherTest {
 
     @Test
     public void shouldRollFilesWithSimpleStrategy() throws IOException, InterruptedException {
-        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        final Config config =
-             ConfigFactory.parseString(
-                             "divolte.hdfs_flusher.file_strategy.type = SIMPLE_ROLLING_FILE\n"
-                             + "divolte.hdfs_flusher.file_strategy.roll_every = 1 second\n"
-                             + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                             + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-                          .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
-
-        final List<Record> records = LongStream.range(0, 5)
-        .mapToObj((time) -> new GenericRecordBuilder(schema)
-        .set("ts", time)
-        .set("remoteHost", ARBITRARY_IP)
-        .build())
-        .collect(Collectors.toList());
-
-        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
-
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
+        setupFlusher("1 second", 5);
+        processRecords();
 
         for (int c = 0; c < 2; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
+        processRecords();
 
         flusher.cleanup();
 
         final MutableInt count = new MutableInt(0);
         Files.walk(tempPublishDir)
-        .filter((p) -> p.toString().endsWith(".avro"))
-        .forEach((p) -> {
-            verifyAvroFile(records, schema, p);
-            count.increment();
-        });
+             .filter((p) -> p.toString().endsWith(".avro"))
+             .forEach((p) -> {
+                 verifyAvroFile(records, schema, p);
+                 count.increment();
+             });
 
         assertEquals(2, count.intValue());
     }
 
     @Test
     public void shouldNotCreateEmptyFiles() throws IOException, InterruptedException {
-        final Schema schema = schemaFromClassPath("/MinimalRecord.avsc");
-        final Config config =
-            ConfigFactory.parseString(
-                            "divolte.hdfs_flusher.file_strategy.type = SIMPLE_ROLLING_FILE\n"
-                            + "divolte.hdfs_flusher.file_strategy.roll_every = 100 millisecond\n"
-                            + "divolte.hdfs_flusher.file_strategy.working_dir = \"" + tempInflightDir.toString() + "\"\n"
-                            + "divolte.hdfs_flusher.file_strategy.publish_dir = \"" + tempPublishDir.toString() + '"')
-                         .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
+        setupFlusher("100 millisecond", 5);
 
-        final List<Record> records = LongStream.range(0, 5)
-        .mapToObj((time) -> new GenericRecordBuilder(schema)
-        .set("ts", time)
-        .set("remoteHost", ARBITRARY_IP)
-        .build())
-        .collect(Collectors.toList());
-
-        final HdfsFlusher flusher = new HdfsFlusher(vc, schema);
-
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
+        processRecords();
 
         for (int c = 0; c < 4; c++) {
             Thread.sleep(500);
             flusher.heartbeat();
         }
 
-        records.forEach((record) -> flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(), DivolteIdentifier.generate(), System.currentTimeMillis(), 0, record)));
+        processRecords();
 
         flusher.cleanup();
 
         final MutableInt count = new MutableInt(0);
         Files.walk(tempPublishDir)
-        .filter((p) -> p.toString().endsWith(".avro"))
-        .forEach((p) -> {
-            verifyAvroFile(records, schema, p);
-            count.increment();
-        });
-
+             .filter((p) -> p.toString().endsWith(".avro"))
+             .forEach((p) -> {
+                 verifyAvroFile(records, schema, p);
+                 count.increment();
+             });
         assertEquals(2, count.intValue());
     }
 
+    private void setupFlusher(final String rollEvery, final int recordCount) throws IOException {
+        final Config config = ConfigFactory
+                .parseMap(ImmutableMap.of(
+                        "divolte.sinks.hdfs.file_strategy.roll_every", rollEvery,
+                        "divolte.sinks.hdfs.file_strategy.working_dir", tempInflightDir.toString(),
+                        "divolte.sinks.hdfs.file_strategy.publish_dir", tempPublishDir.toString()))
+                .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
+
+        records = LongStream.range(0, recordCount)
+                            .mapToObj((time) ->
+                                    new GenericRecordBuilder(schema)
+                                      .set("ts", time)
+                                      .set("remoteHost", ARBITRARY_IP)
+                                      .build())
+                            .collect(Collectors.toList());
+
+        flusher = new HdfsFlusher(vc, schema);
+    }
+
+    private void processRecords() {
+        records.forEach((record) ->
+                flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
+                                                            DivolteIdentifier.generate(),
+                                                            System.currentTimeMillis(),
+                                                            0,
+                                                            record)));
+    }
 
     private void deleteQuietly(Path p) {
         try {

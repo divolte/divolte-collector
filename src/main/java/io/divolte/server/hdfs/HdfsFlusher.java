@@ -16,26 +16,24 @@
 
 package io.divolte.server.hdfs;
 
-import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
 import io.divolte.server.processing.ItemProcessor;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Objects;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
 import org.apache.avro.Schema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+import java.io.IOException;
+import java.util.Objects;
+
+import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.SUCCESS;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -48,43 +46,38 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     public HdfsFlusher(final ValidatedConfiguration vc, final Schema schema) {
         Objects.requireNonNull(vc);
 
-        final FileSystem hadoopFs;
-        final Configuration hdfsConfiguration = new Configuration();
-        final short hdfsReplication = vc.configuration().hdfsFlusher.hdfs.replication;
-
+        final Configuration hdfsConfiguration = vc.configuration().global.hdfs.getClient()
+                .map(clientProperties -> {
+                    final Configuration configuration = new Configuration(false);
+                    for (final String propertyName : clientProperties.stringPropertyNames()) {
+                        configuration.set(propertyName, clientProperties.getProperty(propertyName));
+                    }
+                    return configuration;
+                })
+                .orElse(new Configuration());
         /*
          * The HDFS client creates a JVM shutdown hook, which interferes with our own server shutdown hook.
          * This config option disabled the built in shutdown hook. We call FileSystem.closeAll() ourselves
          * in the server shutdown hook instead.
          */
         hdfsConfiguration.setBoolean("fs.automatic.close", false);
+
+        final FileSystem hadoopFs;
         try {
-            hadoopFs = vc.configuration().hdfsFlusher.hdfs.uri.map(uri -> {
-                try {
-                    return FileSystem.get(new URI(uri), hdfsConfiguration);
-                } catch (IOException | URISyntaxException e) {
-                    /*
-                     * It is possible to create a FileSystem instance when HDFS is not available (e.g. NameNode down).
-                     * This exception only occurs when there is a configuration error in the URI (e.g. wrong scheme).
-                     * So we fail to start up in this case. Below we create the actual HDFS connection, by opening
-                     * files. If that fails, we do startup and initiate the regular retry cycle.
-                     */
-                    logger.error("Could not initialize HDFS filesystem.", e);
-                    throw new RuntimeException("Could not initialize HDFS filesystem", e);
-                }
-            }).orElse(FileSystem.get(hdfsConfiguration));
-        } catch (IOException ioe) {
+            hadoopFs = FileSystem.get(hdfsConfiguration);
+        } catch (final IOException e) {
             /*
              * It is possible to create a FileSystem instance when HDFS is not available (e.g. NameNode down).
              * This exception only occurs when there is a configuration error in the URI (e.g. wrong scheme).
              * So we fail to start up in this case. Below we create the actual HDFS connection, by opening
              * files. If that fails, we do startup and initiate the regular retry cycle.
              */
-            logger.error("Could not initialize HDFS filesystem.", ioe);
-            throw new RuntimeException("Could not initialize HDFS filesystem", ioe);
+            logger.error("Could not initialize HDFS filesystem.", e);
+            throw new RuntimeException("Could not initialize HDFS filesystem", e);
         }
+        final short hdfsReplication = vc.configuration().hdfsFlusher.replication;
 
-        fileStrategy = FileCreateAndSyncStrategy.create(vc, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
+        fileStrategy = new SimpleRollingFileStrategy(vc, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
         lastHdfsResult = fileStrategy.setup();
     }
 

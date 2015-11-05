@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.google.common.base.Preconditions;
@@ -31,17 +32,13 @@ import org.hibernate.validator.HibernateValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -59,9 +56,8 @@ import java.util.function.Supplier;
 public final class ValidatedConfiguration {
     private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
 
-    private final List<String> configurationErrors;
-    @Nullable
-    private final DivolteConfiguration divolteConfiguration;
+    private final ImmutableList<String> configurationErrors;
+    private final Optional<DivolteConfiguration> divolteConfiguration;
 
     /**
      * Creates an instance of a validated configuration. The underlying
@@ -95,7 +91,7 @@ public final class ValidatedConfiguration {
         }
 
         this.configurationErrors = ImmutableList.copyOf(configurationErrors);
-        this.divolteConfiguration = divolteConfiguration;
+        this.divolteConfiguration = Optional.ofNullable(divolteConfiguration);
     }
 
     private void validate(final List<String> configurationErrors, final DivolteConfiguration divolteConfiguration) {
@@ -129,6 +125,7 @@ public final class ValidatedConfiguration {
 
         mapper.registerModules(
                 new Jdk8Module(),                   // JDK8 types (Optional, etc.)
+                new GuavaModule(),                  // Guava types (immutable collections)
                 new ParameterNamesModule(),         // Support JDK8 parameter name discovery
                 module                              // Register custom deserializers module
                 );
@@ -146,9 +143,9 @@ public final class ValidatedConfiguration {
      *             When validation errors exist.
      */
     public DivolteConfiguration configuration() {
-        Preconditions.checkState(null != divolteConfiguration && configurationErrors.isEmpty(),
+        Preconditions.checkState(configurationErrors.isEmpty(),
                                  "Attempt to access invalid configuration.");
-        return divolteConfiguration;
+        return divolteConfiguration.get();
     }
 
     /**

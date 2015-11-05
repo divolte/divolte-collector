@@ -2,6 +2,7 @@ package io.divolte.server.config;
 
 import static org.junit.Assert.*;
 
+import com.google.common.collect.ImmutableMap;
 import org.junit.Test;
 
 import com.typesafe.config.Config;
@@ -19,14 +20,16 @@ public class ValidatedConfigurationTest {
 
     @Test
     public void shouldValidateJavaScriptName() {
-        final Config config =
-                ConfigFactory.parseString(
-                                "divolte.javascript.name = 404.exe\n")
-                                .withFallback(ConfigFactory.parseResources("reference-test.conf"));
+        final String propertyName = "divolte.sources.browser.javascript.name";
+        final String invalidValue = "404.exe";
+        final Config config = ConfigFactory.parseMap(ImmutableMap.of(propertyName, invalidValue))
+                                           .withFallback(ConfigFactory.parseResources("reference-test.conf"));
 
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
         assertFalse(vc.errors().isEmpty());
-        assertEquals("Property 'divolte.javascript.name' must match \"^[A-Za-z0-9_-]+\\.js$\". Found: '404.exe'.", vc.errors().get(0));
+        final String reportedPropertyName = propertyName.replace(".sources.browser.", ".sources[browser].");
+        assertEquals("Property '" + reportedPropertyName + "' must match \"^[A-Za-z0-9_-]+\\.js$\". Found: '" + invalidValue + "'.",
+                     vc.errors().get(0));
     }
 
     @Test(expected = IllegalStateException.class)

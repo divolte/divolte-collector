@@ -1,55 +1,49 @@
 package io.divolte.server.config;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.base.MoreObjects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Duration;
-import java.util.Objects;
+import java.util.Optional;
 
-@JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({
-    @Type(value=SimpleRollingFileStrategyConfiguration.class, name = "SIMPLE_ROLLING_FILE"),
-    @Type(value=SessionBinningFileStrategyConfiguration.class, name = "SESSION_BINNING")
-})
 @ParametersAreNonnullByDefault
-public abstract class FileStrategyConfiguration {
-    public final FileStrategyConfiguration.Types type;
+public class FileStrategyConfiguration {
+    private static final int DEFAULT_SYNC_FILE_AFTER_RECORDS = 1000;
+    private static final Duration DEFAULT_SYNC_FILE_AFTER_DURATION = Duration.ofSeconds(30);
+    private static final String DEFAULT_WORKING_DIR = "/tmp";
+    private static final String DEFAULT_PUBLISH_DIR = "/tmp";
+    private static final Duration DEFAULT_ROLL_EVERY = Duration.ofHours(1);
+
+    static final FileStrategyConfiguration DEFAULT_FILE_STRATEGY_CONFIGURATION =
+            new FileStrategyConfiguration(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+
     public final int syncFileAfterRecords;
     public final Duration syncFileAfterDuration;
     public final String workingDir;
     public final String publishDir;
+    public final Duration rollEvery;
 
-    protected FileStrategyConfiguration (
-            final FileStrategyConfiguration.Types type,
-            final int syncFileAfterRecords,
-            final Duration syncFileAfterDuration,
-            final String workingDir,
-            final String publishDir) {
-        this.type = Objects.requireNonNull(type);
-        this.syncFileAfterRecords = Objects.requireNonNull(syncFileAfterRecords);
-        this.syncFileAfterDuration = Objects.requireNonNull(syncFileAfterDuration);
-        this.workingDir = Objects.requireNonNull(workingDir);
-        this.publishDir = Objects.requireNonNull(publishDir);
+    @JsonCreator
+    FileStrategyConfiguration(final Optional<Duration> rollEvery,
+                              final Optional<Integer> syncFileAfterRecords,
+                              final Optional<Duration> syncFileAfterDuration,
+                              final Optional<String> workingDir,
+                              final Optional<String> publishDir) {
+        this.rollEvery = rollEvery.orElse(DEFAULT_ROLL_EVERY);
+        this.syncFileAfterRecords = syncFileAfterRecords.orElse(DEFAULT_SYNC_FILE_AFTER_RECORDS);
+        this.syncFileAfterDuration = syncFileAfterDuration.orElse(DEFAULT_SYNC_FILE_AFTER_DURATION);
+        this.workingDir = workingDir.orElse(DEFAULT_WORKING_DIR);
+        this.publishDir = publishDir.orElse(DEFAULT_PUBLISH_DIR);
     }
 
-    @ParametersAreNonnullByDefault
-    public enum Types {
-        SIMPLE_ROLLING_FILE(SimpleRollingFileStrategyConfiguration.class),
-        SESSION_BINNING(SessionBinningFileStrategyConfiguration.class);
-
-        public final Class<?> clazz;
-
-        Types(final Class<?> clazz) {
-            this.clazz = Objects.requireNonNull(clazz);
-        }
-    }
-
-    public <T> T as(Class<T> target) {
-        Preconditions.checkState(type.clazz.equals(target),
-                                 "Attempt to cast FileStrategyConfiguration to wrong type.");
-        return target.cast(this);
+    @Override
+    public final String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("rollEvery", rollEvery)
+                .add("syncFileAfterRecords", syncFileAfterRecords)
+                .add("syncFileAfterDuration", syncFileAfterDuration)
+                .add("workingDir", workingDir)
+                .add("publishDir", publishDir).toString();
     }
 }

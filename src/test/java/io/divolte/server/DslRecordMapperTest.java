@@ -37,6 +37,9 @@ import java.util.stream.Stream;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import io.divolte.server.config.ValidatedConfiguration;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -52,12 +55,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.maxmind.geoip2.model.CityResponse;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
-import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -361,9 +361,9 @@ public class DslRecordMapperTest {
         copyResourceToFile("geo-mapping.groovy", geoMappingFile);
 
         final ImmutableMap<String, Object> mappingConfig = ImmutableMap.of(
-                "divolte.tracking.schema_mapping.mapping_script_file", geoMappingFile.getAbsolutePath(),
-                "divolte.tracking.schema_file", avroFile.getAbsolutePath()
-                );
+                "divolte.mappings.test.mapping_script_file", geoMappingFile.getAbsolutePath(),
+                "divolte.mappings.test.schema_file", avroFile.getAbsolutePath()
+        );
 
         final Config geoConfig = ConfigFactory.parseMap(mappingConfig)
             .withFallback(ConfigFactory.parseResources("dsl-mapping-test.conf"))
@@ -378,6 +378,7 @@ public class DslRecordMapperTest {
 
         final DslRecordMapper mapper = new DslRecordMapper(
                 vc,
+                geoMappingFile.getAbsolutePath(),
                 new Schema.Parser().parse(Resources.toString(Resources.getResource("TestRecord.avsc"), StandardCharsets.UTF_8)),
                 Optional.of(mockLookupService));
 
@@ -545,8 +546,8 @@ public class DslRecordMapperTest {
         copyResourceToFile("TestRecord.avsc", avroFile);
 
         final ImmutableMap<String, Object> mappingConfig = ImmutableMap.of(
-                "divolte.tracking.schema_mapping.mapping_script_file", mappingFile.getAbsolutePath(),
-                "divolte.tracking.schema_file", avroFile.getAbsolutePath()
+                "divolte.mappings.test.mapping_script_file", mappingFile.getAbsolutePath(),
+                "divolte.mappings.test.schema_file", avroFile.getAbsolutePath()
                 );
 
         server = new TestServer("dsl-mapping-test.conf", mappingConfig);
