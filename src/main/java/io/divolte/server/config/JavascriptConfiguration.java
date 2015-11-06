@@ -14,7 +14,7 @@ public final class JavascriptConfiguration {
     private static final String DEFAULT_NAME = "divolte.js";
     private static final boolean DEFAULT_LOGGING = false;
     private static final boolean DEFAULT_DEBUG = false;
-    private static final boolean DEFAULT_AUTO_PAGE_VIEW_EVENT = false;
+    private static final boolean DEFAULT_AUTO_PAGE_VIEW_EVENT = true;
 
     static final JavascriptConfiguration DEFAULT_JAVASCRIPT_CONFIGURATION =
             new JavascriptConfiguration(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
