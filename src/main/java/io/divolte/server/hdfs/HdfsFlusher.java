@@ -16,24 +16,25 @@
 
 package io.divolte.server.hdfs;
 
-import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
-import io.divolte.server.processing.ItemProcessor;
+import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+
+import java.io.IOException;
+import java.util.Objects;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+
 import org.apache.avro.Schema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-import java.io.IOException;
-import java.util.Objects;
-
-import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.SUCCESS;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
+import io.divolte.server.processing.ItemProcessor;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -46,7 +47,7 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     public HdfsFlusher(final ValidatedConfiguration vc, final Schema schema) {
         Objects.requireNonNull(vc);
 
-        final Configuration hdfsConfiguration = vc.configuration().global.hdfs.getClient()
+        final Configuration hdfsConfiguration = vc.configuration().global.hdfs.client
                 .map(clientProperties -> {
                     final Configuration configuration = new Configuration(false);
                     for (final String propertyName : clientProperties.stringPropertyNames()) {
@@ -87,7 +88,7 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     @Override
-    public ProcessingDirective process(AvroRecordBuffer record) {
+    public ProcessingDirective process(final AvroRecordBuffer record) {
         if (lastHdfsResult == SUCCESS) {
             return (lastHdfsResult = fileStrategy.append(record)) == SUCCESS ? CONTINUE : PAUSE;
         } else {
