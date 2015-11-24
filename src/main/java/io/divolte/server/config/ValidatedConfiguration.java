@@ -16,9 +16,31 @@
 
 package io.divolte.server.config;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+
+import org.hibernate.validator.HibernateValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonMappingException.Reference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -28,18 +50,6 @@ import com.google.common.collect.ImmutableList;
 import com.jasonclawson.jackson.dataformat.hocon.HoconTreeTraversingParser;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
-import org.hibernate.validator.HibernateValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.*;
-import java.util.function.Supplier;
 
 /**
  * Container for a validated configuration loaded from a {@code Config}
@@ -84,6 +94,32 @@ public final class ValidatedConfiguration {
         } catch(final ConfigException e) {
             logger.debug("Configuration error caught during validation.", e);
             configurationErrors.add(e.getMessage());
+            divolteConfiguration = null;
+        } catch (final UnrecognizedPropertyException e) {
+            // Add a special case for unknown property as we add the list of available properties to the message.
+            logger.debug("Configuration error. Exception while mapping.", e);
+            final String message = String.format(
+                    "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'.%n\tAvailable properties: %s.",
+                    e.getOriginalMessage(),
+                    e.getLocation().getSourceRef(),
+                    e.getPath().stream()
+                               .map(Reference::getFieldName)
+                               .collect(Collectors.joining(".")),
+                    e.getKnownPropertyIds().stream()
+                                           .map(Object::toString).map(s -> "'" + s + "'")
+                                           .collect(Collectors.joining(", ")));
+            configurationErrors.add(message);
+            divolteConfiguration = null;
+        } catch (final JsonMappingException e) {
+            logger.debug("Configuration error. Exception while mapping.", e);
+            final String message = String.format(
+                    "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'.",
+                    e.getOriginalMessage(),
+                    e.getLocation().getSourceRef(),
+                    e.getPath().stream()
+                               .map(Reference::getFieldName)
+                               .collect(Collectors.joining(".")));
+            configurationErrors.add(message);
             divolteConfiguration = null;
         } catch (final IOException e) {
             logger.error("Error while reading configuration!", e);
