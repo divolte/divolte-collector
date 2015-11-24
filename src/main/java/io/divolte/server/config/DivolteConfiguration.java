@@ -19,13 +19,13 @@ public final class DivolteConfiguration {
     @Valid public final ImmutableMap<String,SinkConfiguration> sinks;
     @Valid public final ImmutableMap<String,MappingConfiguration> mappings;
 
-    /** @deprecated */
+    @Deprecated
     public final MappingConfiguration incomingRequestProcessor;
-    /** @deprecated */
+    @Deprecated
     public final BrowserSourceConfiguration browserSourceConfiguration;
-    /** @deprecated */
+    @Deprecated
     public final KafkaSinkConfiguration kafkaFlusher;
-    /** @deprecated */
+    @Deprecated
     public final HdfsSinkConfiguration hdfsFlusher;
 
     @JsonCreator
