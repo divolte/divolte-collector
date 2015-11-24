@@ -98,27 +98,12 @@ public final class ValidatedConfiguration {
         } catch (final UnrecognizedPropertyException e) {
             // Add a special case for unknown property as we add the list of available properties to the message.
             logger.debug("Configuration error. Exception while mapping.", e);
-            final String message = String.format(
-                    "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'.%n\tAvailable properties: %s.",
-                    e.getOriginalMessage(),
-                    e.getLocation().getSourceRef(),
-                    e.getPath().stream()
-                               .map(Reference::getFieldName)
-                               .collect(Collectors.joining(".")),
-                    e.getKnownPropertyIds().stream()
-                                           .map(Object::toString).map(s -> "'" + s + "'")
-                                           .collect(Collectors.joining(", ")));
+            final String message = messageForUnrecognizedPropertyException(e);
             configurationErrors.add(message);
             divolteConfiguration = null;
         } catch (final JsonMappingException e) {
             logger.debug("Configuration error. Exception while mapping.", e);
-            final String message = String.format(
-                    "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'.",
-                    e.getOriginalMessage(),
-                    e.getLocation().getSourceRef(),
-                    e.getPath().stream()
-                               .map(Reference::getFieldName)
-                               .collect(Collectors.joining(".")));
+            final String message = messageForMappingException(e);
             configurationErrors.add(message);
             divolteConfiguration = null;
         } catch (final IOException e) {
@@ -128,6 +113,31 @@ public final class ValidatedConfiguration {
 
         this.configurationErrors = ImmutableList.copyOf(configurationErrors);
         this.divolteConfiguration = Optional.ofNullable(divolteConfiguration);
+    }
+
+    private String messageForMappingException(final JsonMappingException e) {
+        final String message = String.format(
+                "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'.",
+                e.getOriginalMessage(),
+                e.getLocation().getSourceRef(),
+                e.getPath().stream()
+                           .map(Reference::getFieldName)
+                           .collect(Collectors.joining(".")));
+        return message;
+    }
+
+    private static String messageForUnrecognizedPropertyException(final UnrecognizedPropertyException e) {
+        final String message = String.format(
+                "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'.%n\tAvailable properties: %s.",
+                e.getOriginalMessage(),
+                e.getLocation().getSourceRef(),
+                e.getPath().stream()
+                           .map(Reference::getFieldName)
+                           .collect(Collectors.joining(".")),
+                e.getKnownPropertyIds().stream()
+                                       .map(Object::toString).map(s -> "'" + s + "'")
+                                       .collect(Collectors.joining(", ")));
+        return message;
     }
 
     private void validate(final List<String> configurationErrors, final DivolteConfiguration divolteConfiguration) {
