@@ -55,4 +55,40 @@ public class ValidatedConfigurationTest {
         final ValidatedConfiguration vc = new ValidatedConfiguration(ConfigFactory::load);
         assertTrue(vc.errors().isEmpty());
     }
+
+    @Test
+    public void shouldReportMissingSourcesAndSinks() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("missing-sources-sinks.conf"));
+
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        assertTrue(
+                vc.errors()
+                  .get(0)
+                  .startsWith("Property 'divolte.' The following sources and/or sinks were used in a mapping but never defined: [missing-sink, missing-source].."));
+    }
+
+    @Test
+    public void sourceAndSinkNamesCannotCollide() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("source-sink-collisions.conf"));
+
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        assertTrue(
+                vc.errors()
+                  .get(0)
+                  .startsWith("Property 'divolte.' Source and sink names cannot collide (must be globally unique). The following names were both used as source and as sink: [foo, bar].."));
+    }
+
+    @Test
+    public void sinksCanOnlyHaveOneSchema() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("multiple-schemas-one-sink.conf"));
+
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        assertTrue(
+                vc.errors()
+                  .get(0)
+                  .startsWith("Property 'divolte.' Any sink can only use one schema. The following sinks have multiple mappings with different schema's linked to them: [kafka].."));
+    }
 }
