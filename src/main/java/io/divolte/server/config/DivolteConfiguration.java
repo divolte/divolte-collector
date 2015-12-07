@@ -66,6 +66,42 @@ public final class DivolteConfiguration {
         //  - Elide unreferenced sources and sinks.
     }
 
+    // Defaults
+    private static ImmutableMap<String,SourceConfiguration> defaultSourceConfigurations() {
+        return ImmutableMap.of("browser", new BrowserSourceConfiguration(Optional.empty(),
+                                                                         Optional.empty(),
+                                                                         Optional.empty(),
+                                                                         Optional.empty(),
+                                                                         Optional.empty(),
+                                                                         Optional.empty(),
+                                                                         Optional.empty()));
+    }
+
+    private static ImmutableMap<String,SinkConfiguration> defaultSinkConfigurations() {
+        return ImmutableMap.of("hdfs", new HdfsSinkConfiguration(Optional.empty(), Optional.empty()),
+                               "kafka", new KafkaSinkConfiguration(Optional.empty()));
+    }
+
+    private static ImmutableMap<String,MappingConfiguration> defaultMappingConfigurations(final ImmutableSet<String> sourceNames,
+                                                                                          final ImmutableSet<String> sinkNames) {
+        return ImmutableMap.of("default", new MappingConfiguration(Optional.empty(),
+                                                                   Optional.empty(),
+                                                                   sourceNames,
+                                                                   sinkNames,
+                                                                   Optional.empty(),
+                                                                   Optional.empty()));
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("global", global)
+                .add("sources", sources)
+                .add("sinks", sinks)
+                .add("mappings", mappings)
+                .toString();
+    }
+
     /*
      * Validation support methods here.
      *
@@ -104,45 +140,9 @@ public final class DivolteConfiguration {
         }
 
         return sinkSchemas.entrySet()
-                          .stream()
-                          .filter(e -> e.getValue().size() > 1)
-                          .map(Map.Entry::getKey)
-                          .collect(Collectors.toSet());
-    }
-
-    // Defaults
-    private static ImmutableMap<String,SourceConfiguration> defaultSourceConfigurations() {
-        return ImmutableMap.of("browser", new BrowserSourceConfiguration(Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty()));
-    }
-
-    private static ImmutableMap<String,SinkConfiguration> defaultSinkConfigurations() {
-        return ImmutableMap.of("hdfs", new HdfsSinkConfiguration(Optional.empty(), Optional.empty()),
-                               "kafka", new KafkaSinkConfiguration(Optional.empty()));
-    }
-
-    private static ImmutableMap<String,MappingConfiguration> defaultMappingConfigurations(final ImmutableSet<String> sourceNames,
-                                                                                          final ImmutableSet<String> sinkNames) {
-        return ImmutableMap.of("default", new MappingConfiguration(Optional.empty(),
-                                                                   Optional.empty(),
-                                                                   sourceNames,
-                                                                   sinkNames,
-                                                                   Optional.empty(),
-                                                                   Optional.empty()));
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                .add("global", global)
-                .add("sources", sources)
-                .add("sinks", sinks)
-                .add("mappings", mappings)
-                .toString();
+                .stream()
+                .filter(e -> e.getValue().size() > 1)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
     }
 }
