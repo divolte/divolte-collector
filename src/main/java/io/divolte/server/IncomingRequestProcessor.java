@@ -154,6 +154,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
 
             if (!duplicate || keepDuplicates) {
                 final GenericRecord avroRecord = mapper.newRecordFromExchange(event);
+
                 try {
                     final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
                         event.partyCookie,
@@ -161,12 +162,13 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
                         event.requestStartTime,
                         event.clientUtcOffset,
                         avroRecord);
-                    listener.incomingRequest(event, avroBuffer, avroRecord);
-                    doProcess(avroBuffer);
                 } catch (final RuntimeException e) {
                     logger.warn(invalid, "Error processing event {} from party {} in session {}: {}",
                                 event, event.partyCookie, event.sessionCookie, avroRecord, e);
                 }
+
+		listener.incomingRequest(event, avroBuffer, avroRecord);
+		doProcess(avroBuffer);
             }
         }
 
