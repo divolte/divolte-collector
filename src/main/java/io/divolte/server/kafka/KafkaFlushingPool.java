@@ -24,9 +24,13 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
 
 @ParametersAreNonnullByDefault
 public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBuffer> {
+
+    private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
+
     public KafkaFlushingPool(final ValidatedConfiguration vc) {
         this(
                 vc.configuration().kafkaFlusher.threads,
@@ -45,5 +49,12 @@ public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBu
                              final String topic,
                              final Producer<DivolteIdentifier, AvroRecordBuffer> producer ) {
         super(numThreads, maxWriteQueue, maxEnqueueDelay, "Kafka Flusher", () -> new KafkaFlusher(topic, producer));
+        this.producer = Objects.requireNonNull(producer);
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        producer.close();
     }
 }
