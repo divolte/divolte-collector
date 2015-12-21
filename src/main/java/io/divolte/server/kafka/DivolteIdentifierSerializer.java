@@ -19,9 +19,11 @@ package io.divolte.server.kafka;
 import io.divolte.server.DivolteIdentifier;
 import org.apache.kafka.common.serialization.Serializer;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+@ParametersAreNonnullByDefault
 class DivolteIdentifierSerializer implements Serializer<DivolteIdentifier> {
     @Override
     public void configure(final Map<String, ?> configs, final boolean isKey) {

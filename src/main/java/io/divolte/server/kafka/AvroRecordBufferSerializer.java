@@ -19,9 +19,11 @@ package io.divolte.server.kafka;
 import io.divolte.server.AvroRecordBuffer;
 import org.apache.kafka.common.serialization.Serializer;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+@ParametersAreNonnullByDefault
 class AvroRecordBufferSerializer implements Serializer<AvroRecordBuffer> {
     @Override
     public void configure(final Map<String, ?> configs, final boolean isKey) {
