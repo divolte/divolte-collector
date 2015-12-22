@@ -1,21 +1,31 @@
 package io.divolte.server.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.MoreObjects;
+import java.time.Duration;
+import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.validation.Valid;
-import java.time.Duration;
-import java.util.Objects;
-import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 @ParametersAreNonnullByDefault
 public class BrowserSourceConfiguration extends SourceConfiguration {
     private static final String DEFAULT_PREFIX = "/";
     private static final String DEFAULT_PARTY_COOKIE = "_dvp";
-    private static final Duration DEFAULT_PARTY_TIMEOUT = Duration.ofDays(730);
+    private static final String DEFAULT_PARTY_TIMEOUT = "730 days";
     private static final String DEFAULT_SESSION_COOKIE = "_dvs";
-    private static final Duration DEFAULT_SESSION_TIMEOUT = Duration.ofMinutes(30);
+    private static final String DEFAULT_SESSION_TIMEOUT = "30 minutes";
+
+    public static final BrowserSourceConfiguration DEFAULT_BROWSER_SOURCE_CONFIGURATION = new BrowserSourceConfiguration(
+            DEFAULT_PREFIX,
+            Optional.empty(),
+            DEFAULT_PARTY_COOKIE,
+            DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT),
+            DEFAULT_SESSION_COOKIE,
+            DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT),
+            JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
 
     public final String prefix;
 
@@ -29,20 +39,21 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     public final JavascriptConfiguration javascript;
 
     @JsonCreator
-    BrowserSourceConfiguration(final Optional<String> prefix,
+    BrowserSourceConfiguration(@JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix,
                                final Optional<String> cookieDomain,
-                               final Optional<String> partyCookie,
-                               final Optional<Duration> partyTimeout,
-                               final Optional<String> sessionCookie,
-                               final Optional<Duration> sessionTimeout,
-                               final Optional<JavascriptConfiguration> javascript) {
-        this.prefix = prefix.orElse(DEFAULT_PREFIX);
-        this.cookieDomain = Objects.requireNonNull(cookieDomain);
-        this.partyCookie = partyCookie.orElse(DEFAULT_PARTY_COOKIE);
-        this.partyTimeout = partyTimeout.orElse(DEFAULT_PARTY_TIMEOUT);
-        this.sessionCookie = sessionCookie.orElse(DEFAULT_SESSION_COOKIE);
-        this.sessionTimeout = sessionTimeout.orElse(DEFAULT_SESSION_TIMEOUT);
-        this.javascript = javascript.orElse(JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
+                               @JsonProperty(defaultValue=DEFAULT_PARTY_COOKIE) final String partyCookie,
+                               @JsonProperty(defaultValue=DEFAULT_PARTY_TIMEOUT) final Duration partyTimeout,
+                               @JsonProperty(defaultValue=DEFAULT_SESSION_COOKIE) final String sessionCookie,
+                               @JsonProperty(defaultValue=DEFAULT_SESSION_TIMEOUT) final Duration sessionTimeout,
+                               final JavascriptConfiguration javascript) {
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
+        this.prefix = prefix == null ? DEFAULT_PREFIX : prefix;
+        this.cookieDomain = cookieDomain;
+        this.partyCookie = partyCookie == null ? DEFAULT_PARTY_COOKIE : partyCookie;
+        this.partyTimeout = partyTimeout == null ? DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT) : partyTimeout;
+        this.sessionCookie = sessionCookie == null ? DEFAULT_SESSION_COOKIE : sessionCookie;
+        this.sessionTimeout = sessionTimeout == null ? DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT) : sessionTimeout;
+        this.javascript = Optional.ofNullable(javascript).orElse(JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
     }
 
     @Override

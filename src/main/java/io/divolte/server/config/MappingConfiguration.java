@@ -11,8 +11,8 @@ import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public class MappingConfiguration {
-    private static final boolean DEFAULT_DISCARD_CORRUPTED = false;
-    private static final boolean DEFAULT_DISCARD_DUPLICATES = false;
+    private static final String DEFAULT_DISCARD_CORRUPTED = "false";
+    private static final String DEFAULT_DISCARD_DUPLICATES = "false";
 
     public final Optional<String> schemaFile;
     public final Optional<String> mappingScriptFile;
@@ -30,14 +30,15 @@ public class MappingConfiguration {
                          final ImmutableSet<String> sources,
                          @JsonProperty(required = true)
                          final ImmutableSet<String> sinks,
-                         final Optional<Boolean> discardCorrupted,
-                         final Optional<Boolean> discardDuplicates) {
+                         @JsonProperty(defaultValue=DEFAULT_DISCARD_CORRUPTED) final Boolean discardCorrupted,
+                         @JsonProperty(defaultValue=DEFAULT_DISCARD_DUPLICATES) final Boolean discardDuplicates) {
         this.schemaFile = Objects.requireNonNull(schemaFile);
         this.mappingScriptFile = Objects.requireNonNull(mappingScriptFile);
         this.sources = Objects.requireNonNull(sources);
         this.sinks = Objects.requireNonNull(sinks);
-        this.discardCorrupted = discardCorrupted.orElse(DEFAULT_DISCARD_CORRUPTED);
-        this.discardDuplicates = discardDuplicates.orElse(DEFAULT_DISCARD_DUPLICATES);
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
+        this.discardCorrupted = discardCorrupted == null ? Boolean.valueOf(DEFAULT_DISCARD_CORRUPTED) : discardCorrupted;
+        this.discardDuplicates = discardDuplicates == null ? Boolean.valueOf(DEFAULT_DISCARD_DUPLICATES) : discardDuplicates;
     }
 
     @Override

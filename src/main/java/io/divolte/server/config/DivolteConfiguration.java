@@ -66,20 +66,14 @@ public final class DivolteConfiguration {
         //  - Elide unreferenced sources and sinks.
     }
 
-    // Defaults
+    // Defaults; these will eventually disappear
     private static ImmutableMap<String,SourceConfiguration> defaultSourceConfigurations() {
-        return ImmutableMap.of("browser", new BrowserSourceConfiguration(Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty(),
-                                                                         Optional.empty()));
+        return ImmutableMap.of("browser", BrowserSourceConfiguration.DEFAULT_BROWSER_SOURCE_CONFIGURATION);
     }
 
     private static ImmutableMap<String,SinkConfiguration> defaultSinkConfigurations() {
-        return ImmutableMap.of("hdfs", new HdfsSinkConfiguration(Optional.empty(), Optional.empty()),
-                               "kafka", new KafkaSinkConfiguration(Optional.empty()));
+        return ImmutableMap.of("hdfs", new HdfsSinkConfiguration((short) 1, FileStrategyConfiguration.DEFAULT_FILE_STRATEGY_CONFIGURATION),
+                               "kafka", new KafkaSinkConfiguration(null));
     }
 
     private static ImmutableMap<String,MappingConfiguration> defaultMappingConfigurations(final ImmutableSet<String> sourceNames,
@@ -88,8 +82,8 @@ public final class DivolteConfiguration {
                                                                    Optional.empty(),
                                                                    sourceNames,
                                                                    sinkNames,
-                                                                   Optional.empty(),
-                                                                   Optional.empty()));
+                                                                   false,
+                                                                   false));
     }
 
     @Override

@@ -93,7 +93,7 @@ public final class ValidatedConfiguration {
              * errors to the resulting list of error messages.
              */
             final Config config = configLoader.get();
-            divolteConfiguration = mapped(config.getConfig("divolte"));
+            divolteConfiguration = mapped(config.getConfig("divolte").resolve());
             configurationErrors.addAll(validate(divolteConfiguration));
         } catch(final ConfigException e) {
             logger.debug("Configuration error caught during validation.", e);

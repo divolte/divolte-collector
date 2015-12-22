@@ -6,13 +6,13 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.std.StdScalarDeserializer;
 import com.typesafe.config.impl.ConfigImplUtil;
-
-import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
 public class DurationDeserializer extends StdScalarDeserializer<Duration> {
@@ -28,11 +28,23 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
         if (VALUE_STRING != p.getCurrentToken()) {
             throw ctx.mappingException("Expected string value for Duration mapping.");
         }
-        return Duration.ofNanos(parseDuration(p.getText(), ctx));
+        return Duration.ofNanos(parse(p.getText(), ctx));
+    }
+
+    private static long parse(final String input, final DeserializationContext context) throws JsonMappingException {
+        try {
+            return parse(input);
+        } catch(final DurationFormatException de) {
+            throw new JsonMappingException(de.getMessage(), context.getParser().getCurrentLocation(), de);
+        }
+    }
+
+    public static Duration parseDuration(final String input) {
+        return Duration.ofNanos(parse(input));
     }
 
     // Inspired by Typesafe Config parseDuration(...)
-    private static long parseDuration(final String input, final DeserializationContext context) throws JsonMappingException {
+    private static long parse(final String input) {
         final String s = ConfigImplUtil.unicodeTrim(input);
         final String originalUnitString = getUnits(s);
         String unitString = originalUnitString;
@@ -41,7 +53,8 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
         // this would be caught later anyway, but the error message
         // is more helpful if we check it here.
         if (numberString.isEmpty()) {
-            throw context.mappingException(String.format("No number in duration value '%s'", input));
+            final String msg = String.format("No number in duration value '%s'", input);
+            throw new DurationFormatException(msg);
         }
 
         // All units longer than 2 characters are accepted in singular or plural form.
@@ -86,7 +99,8 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
                 units = TimeUnit.MINUTES;
                 break;
             default:
-                throw context.mappingException(String.format("Could not parse time unit '%s' (try ns, us, ms, s, m, h, d)", originalUnitString));
+                final String msg = String.format("Could not parse time unit '%s' (try ns, us, ms, s, m, h, d)", originalUnitString);
+                throw new DurationFormatException(msg);
         }
 
         try {
@@ -96,14 +110,15 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
                     ? units.toNanos(Long.parseLong(numberString))
                     : (long) (Double.parseDouble(numberString) * units.toNanos(1));
         } catch (final NumberFormatException e) {
-            throw context.mappingException(String.format("Could not parse duration number '%s'", numberString));
+            final String msg = String.format("Could not parse duration number '%s'", numberString);
+            throw new DurationFormatException(msg);
         }
     }
 
     private static String getUnits(final String s) {
         int i = s.length() - 1;
         while (i >= 0) {
-            char c = s.charAt(i);
+            final char c = s.charAt(i);
             if (!Character.isLetter(c)) {
                 break;
             }

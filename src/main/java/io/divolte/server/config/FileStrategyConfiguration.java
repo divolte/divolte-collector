@@ -1,22 +1,28 @@
 package io.divolte.server.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.MoreObjects;
+import java.time.Duration;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.time.Duration;
-import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 @ParametersAreNonnullByDefault
 public class FileStrategyConfiguration {
-    private static final int DEFAULT_SYNC_FILE_AFTER_RECORDS = 1000;
-    private static final Duration DEFAULT_SYNC_FILE_AFTER_DURATION = Duration.ofSeconds(30);
+    private static final String DEFAULT_SYNC_FILE_AFTER_RECORDS = "1000";
+    private static final String DEFAULT_SYNC_FILE_AFTER_DURATION = "30 seconds";
     private static final String DEFAULT_WORKING_DIR = "/tmp";
     private static final String DEFAULT_PUBLISH_DIR = "/tmp";
-    private static final Duration DEFAULT_ROLL_EVERY = Duration.ofHours(1);
+    private static final String DEFAULT_ROLL_EVERY = "1 hour";
 
     static final FileStrategyConfiguration DEFAULT_FILE_STRATEGY_CONFIGURATION =
-            new FileStrategyConfiguration(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+            new FileStrategyConfiguration(
+                    DurationDeserializer.parseDuration(DEFAULT_ROLL_EVERY),
+                    Integer.parseInt(DEFAULT_SYNC_FILE_AFTER_RECORDS),
+                    DurationDeserializer.parseDuration(DEFAULT_SYNC_FILE_AFTER_DURATION),
+                    DEFAULT_WORKING_DIR,
+                    DEFAULT_PUBLISH_DIR);
 
     public final int syncFileAfterRecords;
     public final Duration syncFileAfterDuration;
@@ -25,16 +31,17 @@ public class FileStrategyConfiguration {
     public final Duration rollEvery;
 
     @JsonCreator
-    FileStrategyConfiguration(final Optional<Duration> rollEvery,
-                              final Optional<Integer> syncFileAfterRecords,
-                              final Optional<Duration> syncFileAfterDuration,
-                              final Optional<String> workingDir,
-                              final Optional<String> publishDir) {
-        this.rollEvery = rollEvery.orElse(DEFAULT_ROLL_EVERY);
-        this.syncFileAfterRecords = syncFileAfterRecords.orElse(DEFAULT_SYNC_FILE_AFTER_RECORDS);
-        this.syncFileAfterDuration = syncFileAfterDuration.orElse(DEFAULT_SYNC_FILE_AFTER_DURATION);
-        this.workingDir = workingDir.orElse(DEFAULT_WORKING_DIR);
-        this.publishDir = publishDir.orElse(DEFAULT_PUBLISH_DIR);
+    FileStrategyConfiguration(@JsonProperty(defaultValue=DEFAULT_ROLL_EVERY) final Duration rollEvery,
+                              @JsonProperty(defaultValue=DEFAULT_SYNC_FILE_AFTER_RECORDS) final Integer syncFileAfterRecords,
+                              @JsonProperty(defaultValue=DEFAULT_SYNC_FILE_AFTER_DURATION) final Duration syncFileAfterDuration,
+                              @JsonProperty(defaultValue=DEFAULT_WORKING_DIR) final String workingDir,
+                              @JsonProperty(defaultValue=DEFAULT_PUBLISH_DIR) final String publishDir) {
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
+        this.rollEvery = rollEvery == null ? DurationDeserializer.parseDuration(DEFAULT_ROLL_EVERY) : rollEvery;
+        this.syncFileAfterRecords = syncFileAfterRecords == null ? Integer.valueOf(DEFAULT_SYNC_FILE_AFTER_RECORDS) : syncFileAfterRecords;
+        this.syncFileAfterDuration = syncFileAfterDuration == null ? DurationDeserializer.parseDuration(DEFAULT_SYNC_FILE_AFTER_DURATION) : syncFileAfterDuration;
+        this.workingDir = workingDir == null ? DEFAULT_WORKING_DIR : workingDir;
+        this.publishDir = publishDir == null ? DEFAULT_PUBLISH_DIR : publishDir;
     }
 
     @Override

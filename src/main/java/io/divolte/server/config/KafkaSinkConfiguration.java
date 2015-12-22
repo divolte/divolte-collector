@@ -1,10 +1,10 @@
 package io.divolte.server.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.MoreObjects;
-
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 @ParametersAreNonnullByDefault
 public class KafkaSinkConfiguration extends SinkConfiguration {
@@ -13,8 +13,9 @@ public class KafkaSinkConfiguration extends SinkConfiguration {
     public final String topic;
 
     @JsonCreator
-    KafkaSinkConfiguration(final Optional<String> topic) {
-        this.topic = topic.orElse(DEFAULT_TOPIC);
+    KafkaSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic) {
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
+        this.topic = topic == null ? DEFAULT_TOPIC : topic;
     }
 
     @Override
