@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ItemProcessor;
 import kafka.common.FailedToSendMessageException;
 import kafka.javaapi.producer.Producer;
@@ -61,7 +62,8 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     @Override
-    public ProcessingDirective process(final AvroRecordBuffer record) {
+    public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
+        final AvroRecordBuffer record = item.payload;
         logger.debug("Processing individual record.", record);
         return send(() -> {
             producer.send(buildMessage(record));
@@ -70,7 +72,7 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     @Override
-    public ProcessingDirective process(final Queue<AvroRecordBuffer> batch) {
+    public ProcessingDirective process(final Queue<Item<AvroRecordBuffer>> batch) {
         final int batchSize = batch.size();
         final ProcessingDirective result;
         switch (batchSize) {
@@ -85,6 +87,7 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
             logger.debug("Processing batch of {} records.", batchSize);
             final List<KeyedMessage<byte[], byte[]>> kafkaMessages =
                     batch.stream()
+                         .map(i -> i.payload)
                          .map(this::buildMessage)
                          .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
             // Clear the messages now; on failure they'll be retried as part of our

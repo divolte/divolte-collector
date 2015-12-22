@@ -16,12 +16,20 @@
 
 package io.divolte.server.hdfs;
 
-import com.google.common.collect.ImmutableMap;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.DivolteIdentifier;
-import io.divolte.server.config.ValidatedConfiguration;
+import static org.junit.Assert.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+import java.util.stream.StreamSupport;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericData.Record;
@@ -35,19 +43,14 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
-import java.util.stream.StreamSupport;
+import com.google.common.collect.ImmutableMap;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.processing.Item;
 
 @ParametersAreNonnullByDefault
 public class HdfsFlusherTest {
@@ -186,15 +189,16 @@ public class HdfsFlusherTest {
     }
 
     private void processRecords() {
-        records.forEach((record) ->
-                flusher.process(AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
-                                                            DivolteIdentifier.generate(),
-                                                            System.currentTimeMillis(),
-                                                            0,
-                                                            record)));
+        records.stream().map(
+                (record) -> AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
+                        DivolteIdentifier.generate(),
+                        System.currentTimeMillis(),
+                        0,
+                        record))
+                        .forEach((arb) -> flusher.process(Item.of(0, arb.getPartyId().value, arb)));
     }
 
-    private void deleteQuietly(Path p) {
+    private void deleteQuietly(final Path p) {
         try {
             Files.delete(p);
         } catch (final Exception e) {
@@ -202,7 +206,7 @@ public class HdfsFlusherTest {
         }
     }
 
-    private void verifyAvroFile(List<Record> expected, Schema schema, Path avroFile) {
+    private void verifyAvroFile(final List<Record> expected, final Schema schema, final Path avroFile) {
         final List<Record> result =
                 StreamSupport
                     .stream(readAvroFile(schema, avroFile.toFile()).spliterator(), false)
@@ -210,11 +214,11 @@ public class HdfsFlusherTest {
         assertEquals(expected, result);
     }
 
-    private DataFileReader<Record> readAvroFile(Schema schema, File file) {
+    private DataFileReader<Record> readAvroFile(final Schema schema, final File file) {
         final DatumReader<Record> dr = new GenericDatumReader<>(schema);
         try {
             return new DataFileReader<>(file, dr);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new RuntimeException(e);
         }
     }

@@ -36,6 +36,7 @@ import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.kafka.KafkaFlusher;
 import io.divolte.server.kafka.KafkaFlushingPool;
+import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ItemProcessor;
 import io.divolte.server.processing.ProcessingPool;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -124,7 +125,8 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
     }
 
     @Override
-    public ProcessingDirective process(final DivolteEvent event) {
+    public ProcessingDirective process(final Item<DivolteEvent> item) {
+        final DivolteEvent event = item.payload;
         if (!event.corruptEvent || keepCorrupted) {
             /*
              * Note: we cannot use the actual query string here,
@@ -145,20 +147,20 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
                         event.clientUtcOffset,
                         avroRecord);
                 listener.incomingRequest(event, avroBuffer, avroRecord);
-                doProcess(avroBuffer);
+                doProcess(item, avroBuffer);
             }
         }
 
         return CONTINUE;
     }
 
-    private void doProcess(final AvroRecordBuffer avroBuffer) {
+    private void doProcess(final Item<DivolteEvent> sourceItem, final AvroRecordBuffer avroBuffer) {
 
         if (null != kafkaFlushingPool) {
-            kafkaFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
+            kafkaFlushingPool.enqueue(Item.withCopiedAffinity(0, sourceItem, avroBuffer));
         }
         if (null != hdfsFlushingPool) {
-            hdfsFlushingPool.enqueue(avroBuffer.getPartyId().value, avroBuffer);
+            hdfsFlushingPool.enqueue(Item.withCopiedAffinity(0, sourceItem, avroBuffer));
         }
     }
 }

@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult;
+import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ItemProcessor;
 
 @ParametersAreNonnullByDefault
@@ -88,7 +89,8 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     @Override
-    public ProcessingDirective process(final AvroRecordBuffer record) {
+    public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
+        final AvroRecordBuffer record = item.payload;
         if (lastHdfsResult == SUCCESS) {
             return (lastHdfsResult = fileStrategy.append(record)) == SUCCESS ? CONTINUE : PAUSE;
         } else {

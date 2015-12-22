@@ -41,6 +41,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 
 import io.divolte.server.mincode.MincodeFactory;
+import io.divolte.server.processing.Item;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ETag;
@@ -182,7 +183,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                                                              isNewPartyId, isFirstInSession, exchange);
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
-        processingPool.enqueueIncomingExchangeForProcessing(partyId, event);
+        processingPool.enqueue(Item.of(0, partyId.value, event));
     }
 
     static DivolteEvent buildBrowserEventData(final boolean corruptEvent,

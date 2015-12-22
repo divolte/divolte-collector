@@ -108,10 +108,6 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             .orElse(null);
     }
 
-    public void enqueueIncomingExchangeForProcessing(final DivolteIdentifier partyId, final DivolteEvent event) {
-        enqueue(partyId.value, event);
-    }
-
     @Override
     public void stop() {
         super.stop();
