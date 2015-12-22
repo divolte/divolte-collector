@@ -17,29 +17,44 @@
 package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
-
-import java.util.Objects;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
 
 @ParametersAreNonnullByDefault
 public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBuffer> {
+
+    private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
+
     public KafkaFlushingPool(final ValidatedConfiguration vc) {
         this(
-                Objects.requireNonNull(vc),
                 vc.configuration().kafkaFlusher.threads,
                 vc.configuration().kafkaFlusher.maxWriteQueue,
-                vc.configuration().kafkaFlusher.maxEnqueueDelay.toMillis()
+                vc.configuration().kafkaFlusher.maxEnqueueDelay.toMillis(),
+                vc.configuration().kafkaFlusher.topic,
+                new KafkaProducer<>(vc.configuration().kafkaFlusher.producer,
+                        new DivolteIdentifierSerializer(),
+                        new AvroRecordBufferSerializer())
                 );
     }
 
-    public KafkaFlushingPool(ValidatedConfiguration vc, int numThreads, int maxWriteQueue, long maxEnqueueDelay) {
-        super(numThreads, maxWriteQueue, maxEnqueueDelay, "Kafka Flusher", () -> new KafkaFlusher(vc));
+    public KafkaFlushingPool(final int numThreads,
+                             final int maxWriteQueue,
+                             final long maxEnqueueDelay,
+                             final String topic,
+                             final Producer<DivolteIdentifier, AvroRecordBuffer> producer ) {
+        super(numThreads, maxWriteQueue, maxEnqueueDelay, "Kafka Flusher", () -> new KafkaFlusher(topic, producer));
+        this.producer = Objects.requireNonNull(producer);
     }
 
-    public void enqueueRecord(final AvroRecordBuffer record) {
-        enqueue(record.getPartyId().value, record);
+    @Override
+    public void stop() {
+        super.stop();
+        producer.close();
     }
 }
