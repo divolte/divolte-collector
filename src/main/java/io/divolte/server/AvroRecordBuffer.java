@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import com.google.common.base.MoreObjects;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
@@ -110,6 +111,15 @@ public final class AvroRecordBuffer {
      */
     public int size() {
         return byteBuffer.limit();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("partyId", getPartyId())
+                .add("sessionId", getSessionId())
+                .add("size", size())
+                .toString();
     }
 
     @ParametersAreNonnullByDefault

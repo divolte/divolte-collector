@@ -118,7 +118,7 @@ public final class Server implements Runnable {
     public void run() {
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
-        logger.info("Starting server on {}:{}", host, port);
+        logger.info("Starting server on {}:{}", host.orElse("localhost"), port);
         undertow.start();
     }
 
