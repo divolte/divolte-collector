@@ -19,8 +19,5 @@
     <rule ref="rulesets/java/finalizers.xml"/>
     <rule ref="rulesets/java/sunsecure.xml"/>
     <rule ref="rulesets/java/imports.xml"/>
-    <rule ref="rulesets/java/unnecessary.xml">
-        <!-- Java 8 method handles seem to trigger false positives with this rule. -->
-        <exclude name="UselessQualifiedThis"/>
-    </rule>
+    <rule ref="rulesets/java/unnecessary.xml"/>
 </ruleset>
