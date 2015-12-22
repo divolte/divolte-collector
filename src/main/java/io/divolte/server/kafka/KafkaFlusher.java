@@ -137,9 +137,9 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
             final Future<RecordMetadata> result = sendResults.get(i);
             try {
                 final RecordMetadata metadata = result.get();
-                if (logger.isTraceEnabled()) {
+                if (logger.isDebugEnabled()) {
                     final ProducerRecord<DivolteIdentifier, AvroRecordBuffer> record = batch.get(i);
-                    logger.trace("Finished sending event (partyId={}) to Kafka: topic/partition/offset = {}/{}/{}",
+                    logger.debug("Finished sending event (partyId={}) to Kafka: topic/partition/offset = {}/{}/{}",
                                  record.value(), metadata.topic(), metadata.partition(), metadata.offset());
                 }
             } catch (final ExecutionException e) {
