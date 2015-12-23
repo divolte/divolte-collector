@@ -30,7 +30,7 @@ public @interface OneSchemaPerSink {
 
         @Override
         public boolean isValid(final DivolteConfiguration value, final ConstraintValidatorContext context) {
-            return value.sinksWithMultipleSchemas().size() == 0;
+            return value.sinksWithMultipleSchemas().isEmpty();
         }
     }
 }
