@@ -26,6 +26,7 @@ public @interface OneSchemaPerSink {
     public static class Validator implements ConstraintValidator<OneSchemaPerSink, DivolteConfiguration> {
         @Override
         public void initialize(final OneSchemaPerSink constraintAnnotation) {
+            // Nothing needed here.
         }
 
         @Override
