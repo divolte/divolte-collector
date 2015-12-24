@@ -16,6 +16,7 @@ import javax.validation.Valid;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -39,8 +40,6 @@ public final class DivolteConfiguration {
     @Deprecated
     public final MappingConfiguration incomingRequestProcessor;
     @Deprecated
-    public final BrowserSourceConfiguration browserSourceConfiguration;
-    @Deprecated
     public final KafkaSinkConfiguration kafkaFlusher;
     @Deprecated
     public final HdfsSinkConfiguration hdfsFlusher;
@@ -57,13 +56,20 @@ public final class DivolteConfiguration {
 
         // Temporary interop
         this.incomingRequestProcessor = Iterables.get(this.mappings.values(), 0);
-        this.browserSourceConfiguration = (BrowserSourceConfiguration) Iterables.get(this.sources.values(), 0);
         this.kafkaFlusher = (KafkaSinkConfiguration) Iterators.get(this.sinks.values().stream().filter((sink) -> sink instanceof KafkaSinkConfiguration).iterator(), 0);
         this.hdfsFlusher = (HdfsSinkConfiguration) Iterators.get(this.sinks.values().stream().filter((sink) -> sink instanceof HdfsSinkConfiguration).iterator(), 0);
 
         // TODO: Optimizations:
         //  - Elide HDFS and Kafka sinks if they are globally disabled.
         //  - Elide unreferenced sources and sinks.
+    }
+
+    public BrowserSourceConfiguration getBrowserSourceConfiguration(final String sourceName) {
+        final SourceConfiguration sourceConfiguration = sources.get(sourceName);
+        Objects.requireNonNull(sourceConfiguration, () -> "No source configuration with name: " + sourceName);
+        Preconditions.checkArgument(sourceConfiguration instanceof BrowserSourceConfiguration,
+                                    "Source configuration '%s' is not a browser source", sourceName);
+        return (BrowserSourceConfiguration)sourceConfiguration;
     }
 
     // Defaults; these will eventually disappear

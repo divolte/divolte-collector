@@ -32,18 +32,17 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
 
     private static final String SCRIPT_CONSTANT_NAME = "SCRIPT_NAME";
 
-    public TrackingJavaScriptResource(final ValidatedConfiguration vc) throws IOException {
-        super(vc.configuration().browserSourceConfiguration.javascript.name,
-              createScriptConstants(vc),
-              vc.configuration().browserSourceConfiguration.javascript.debug);
+    public TrackingJavaScriptResource(final String resourceName,
+                                      final ImmutableMap<String, Object> scriptConstants,
+                                      final boolean debugMode) throws IOException {
+        super(resourceName, scriptConstants, debugMode);
     }
 
     public String getScriptName() {
         return (String)getScriptConstants().get(SCRIPT_CONSTANT_NAME);
     }
 
-    private static ImmutableMap<String, Object> createScriptConstants(final ValidatedConfiguration vc) {
-        final BrowserSourceConfiguration browserSourceConfiguration = vc.configuration().browserSourceConfiguration;
+    private static ImmutableMap<String, Object> createScriptConstants(final BrowserSourceConfiguration browserSourceConfiguration) {
         final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
         builder.put("PARTY_COOKIE_NAME", browserSourceConfiguration.partyCookie);
         builder.put("PARTY_ID_TIMEOUT_SECONDS", trimLongToMaxInt(browserSourceConfiguration.partyTimeout.get(ChronoUnit.SECONDS)));
@@ -66,5 +65,13 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
                         duration, result);
         }
         return result;
+    }
+
+    public static TrackingJavaScriptResource create(final ValidatedConfiguration vc,
+                                                    final String sourceName) throws IOException {
+        final BrowserSourceConfiguration browserSourceConfiguration = vc.configuration().getBrowserSourceConfiguration(sourceName);
+        return new TrackingJavaScriptResource(browserSourceConfiguration.javascript.name,
+                                              createScriptConstants(browserSourceConfiguration),
+                                              browserSourceConfiguration.javascript.debug);
     }
 }

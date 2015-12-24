@@ -43,7 +43,7 @@ public class TrackingJavaScriptResourceTest {
     public void setup() throws IOException {
         // Essential test to ensure at build-time that our JavaScript can be compiled.
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
-        trackingJavaScript = new TrackingJavaScriptResource(vc);
+        trackingJavaScript = TrackingJavaScriptResource.create(vc, "browser");
     }
 
     @After

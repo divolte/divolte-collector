@@ -17,6 +17,7 @@
 package io.divolte.server;
 
 import com.typesafe.config.ConfigFactory;
+import io.divolte.server.config.BrowserSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.Undertow;
@@ -62,15 +63,21 @@ public final class Server implements Runnable {
         port = vc.configuration().global.server.port;
 
         processingPool = new IncomingRequestProcessingPool(vc, listener);
-        final ClientSideCookieEventHandler clientSideCookieEventHandler =
-                new ClientSideCookieEventHandler(processingPool);
-        final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(vc);
-        final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
+        PathHandler handler = new PathHandler();
+        for (final String name : vc.configuration().sources.keySet()) {
+            final ClientSideCookieEventHandler clientSideCookieEventHandler =
+                    new ClientSideCookieEventHandler(processingPool);
+            final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(vc, name);
+            final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
+            final BrowserSourceConfiguration browserSourceConfiguration = vc.configuration().getBrowserSourceConfiguration(name);
+            final String eventPath = browserSourceConfiguration.prefix + "csc-event";
+            final String scriptPath = browserSourceConfiguration.prefix + trackingJavaScript.getScriptName();
+            handler = handler.addExactPath(eventPath, new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
+            handler = handler.addExactPath(scriptPath, javascriptHandler);
+            logger.info("Registered source[{}] script location: {}", name, scriptPath);
+            logger.info("Registered source[{}] event handler: {}", name, eventPath);
+        }
 
-        final PathHandler handler = new PathHandler();
-        handler.addExactPath(vc.configuration().browserSourceConfiguration.prefix + "csc-event",
-                             new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
-        handler.addExactPath(vc.configuration().browserSourceConfiguration.prefix + trackingJavaScript.getScriptName(), javascriptHandler);
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
         if (vc.configuration().global.server.serveStaticResources) {
             // Catch-all handler; must be last if present.
@@ -92,11 +99,11 @@ public final class Server implements Runnable {
                            .build();
     }
 
-    private TrackingJavaScriptResource loadTrackingJavaScript(final ValidatedConfiguration vc) {
+    private static TrackingJavaScriptResource loadTrackingJavaScript(final ValidatedConfiguration vc, final String sourceName) {
         try {
-            return new TrackingJavaScriptResource(vc);
+            return TrackingJavaScriptResource.create(vc, sourceName);
         } catch (final IOException e) {
-            throw new RuntimeException("Could not precompile tracking JavaScript.", e);
+            throw new RuntimeException("Could not precompile tracking JavaScript for source: " + sourceName, e);
         }
     }
 
