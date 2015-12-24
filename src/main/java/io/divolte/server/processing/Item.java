@@ -14,8 +14,7 @@ public final class Item<E> {
     public final int affinityHash;
     public final E payload;
 
-    private static final HashFunction hasher = Hashing.murmur3_32(42);
-
+    private static final HashFunction HASHER = Hashing.murmur3_32(42);
 
     private Item(final int sourceId, final int affinityHash, final E payload) {
         this.sourceId = sourceId;
@@ -27,7 +26,7 @@ public final class Item<E> {
         return new Item<>(
                 sourceId,
                 // making sure the hash result is non-negative by masking with max int
-                hasher.hashString(key, StandardCharsets.UTF_8).asInt() & Integer.MAX_VALUE,
+                HASHER.hashString(key, StandardCharsets.UTF_8).asInt() & Integer.MAX_VALUE,
                 payload);
     }
 
