@@ -47,7 +47,8 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
                                @JsonProperty(defaultValue=DEFAULT_SESSION_TIMEOUT) final Duration sessionTimeout,
                                final JavascriptConfiguration javascript) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
-        this.prefix = prefix == null ? DEFAULT_PREFIX : prefix;
+        final String rawPrefix = prefix == null ? DEFAULT_PREFIX : prefix;
+        this.prefix = rawPrefix.endsWith("/") ? rawPrefix : rawPrefix + '/';
         this.cookieDomain = cookieDomain;
         this.partyCookie = partyCookie == null ? DEFAULT_PARTY_COOKIE : partyCookie;
         this.partyTimeout = partyTimeout == null ? DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT) : partyTimeout;
