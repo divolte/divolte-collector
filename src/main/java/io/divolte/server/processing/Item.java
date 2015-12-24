@@ -1,10 +1,14 @@
 package io.divolte.server.processing;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public final class Item<E> {
     public final int sourceId;
     public final int affinityHash;
@@ -16,7 +20,7 @@ public final class Item<E> {
     private Item(final int sourceId, final int affinityHash, final E payload) {
         this.sourceId = sourceId;
         this.affinityHash = affinityHash;
-        this.payload = payload;
+        this.payload = Objects.requireNonNull(payload);
     }
 
     public static <E> Item<E> of(final int sourceId, final String key, final E payload) {
