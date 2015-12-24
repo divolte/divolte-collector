@@ -107,9 +107,9 @@ public final class Server implements Runnable {
         }
     }
 
-    private HttpHandler createStaticResourceHandler() {
+    private static HttpHandler createStaticResourceHandler() {
         final ResourceManager staticResources =
-                new ClassPathResourceManager(getClass().getClassLoader(), "static");
+                new ClassPathResourceManager(Server.class.getClassLoader(), "static");
         // Cache tuning is copied from Undertow unit tests.
         final ResourceManager cachedResources =
                 new CachingResourceManager(100, 65536,
