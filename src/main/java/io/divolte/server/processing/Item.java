@@ -30,10 +30,7 @@ public final class Item<E> {
                 payload);
     }
 
-    public static <E> Item<E> withCopiedAffinity(final int sourceId, final Item<?> affinitySource,final E payload) {
-        return new Item<>(
-                sourceId,
-                affinitySource.affinityHash,
-                payload);
+    public static <E> Item<E> withCopiedAffinity(final int sourceId, final Item<?> affinitySource, final E payload) {
+        return new Item<>(sourceId, affinitySource.affinityHash, payload);
     }
 }
