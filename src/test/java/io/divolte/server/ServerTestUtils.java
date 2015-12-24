@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import com.google.common.base.Preconditions;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
@@ -92,6 +93,8 @@ public final class ServerTestUtils {
 
             events = new ArrayBlockingQueue<>(100);
             final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);
+            Preconditions.checkArgument(vc.isValid(),
+                                        "Invalid test server configuration: %s", vc.errors());
             server = new Server(vc, (event, buffer, record) -> events.add(new EventPayload(event, buffer, record)));
         }
 
