@@ -146,7 +146,6 @@ public abstract class SeleniumTestBase {
         }
 
         server = new TestServer(configFileName);
-        server.server.run();
     }
 
     private void setupBrowserStack() throws MalformedURLException {

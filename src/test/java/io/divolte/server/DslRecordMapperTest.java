@@ -551,7 +551,6 @@ public class DslRecordMapperTest {
                 );
 
         server = new TestServer("dsl-mapping-test.conf", mappingConfig);
-        server.server.run();
     }
 
     private static void copyResourceToFile(final String resourceName, final File file) throws IOException {

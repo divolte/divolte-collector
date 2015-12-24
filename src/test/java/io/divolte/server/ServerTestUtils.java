@@ -96,6 +96,7 @@ public final class ServerTestUtils {
             Preconditions.checkArgument(vc.isValid(),
                                         "Invalid test server configuration: %s", vc.errors());
             server = new Server(vc, (event, buffer, record) -> events.add(new EventPayload(event, buffer, record)));
+            server.run();
         }
 
         public EventPayload waitForEvent() throws InterruptedException {
