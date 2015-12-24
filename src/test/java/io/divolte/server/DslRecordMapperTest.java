@@ -366,7 +366,7 @@ public class DslRecordMapperTest {
         );
 
         final Config geoConfig = ConfigFactory.parseMap(mappingConfig)
-            .withFallback(ConfigFactory.parseResources("dsl-mapping-test.conf"))
+            .withFallback(ConfigFactory.parseResources("base-test-server.conf"))
             .withFallback(ConfigFactory.parseResources("reference-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> geoConfig);
 
@@ -550,7 +550,7 @@ public class DslRecordMapperTest {
                 "divolte.mappings.test.schema_file", avroFile.getAbsolutePath()
                 );
 
-        server = new TestServer("dsl-mapping-test.conf", mappingConfig);
+        server = new TestServer("base-test-server.conf", mappingConfig);
     }
 
     private static void copyResourceToFile(final String resourceName, final File file) throws IOException {

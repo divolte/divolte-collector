@@ -174,7 +174,8 @@ public class HdfsFlusherTest {
                         "divolte.sinks.hdfs.file_strategy.roll_every", rollEvery,
                         "divolte.sinks.hdfs.file_strategy.working_dir", tempInflightDir.toString(),
                         "divolte.sinks.hdfs.file_strategy.publish_dir", tempPublishDir.toString()))
-                .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"));
+                .withFallback(ConfigFactory.parseResources("hdfs-flusher-test.conf"))
+                .withFallback(ConfigFactory.parseResources("reference-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
 
         records = LongStream.range(0, recordCount)

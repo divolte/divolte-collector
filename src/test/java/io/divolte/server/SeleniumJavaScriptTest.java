@@ -258,6 +258,6 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
     @Before
     public void setup() throws Exception {
-        doSetUp("selenium-test-config.conf");
+        doSetUp();
     }
 }

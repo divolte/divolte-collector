@@ -70,21 +70,21 @@ public final class ServerTestUtils {
         final Server server;
         final BlockingQueue<EventPayload> events;
 
+        public TestServer() {
+            this(findFreePort(), ConfigFactory.parseResources("reference-test.conf"));
+        }
+
         public TestServer(final String configResource) {
-            this(
-                    findFreePort(),
-                    ConfigFactory.parseResources(configResource)
-                                 .withFallback(ConfigFactory.parseResources("reference-test.conf"))
-                );
+            this(findFreePort(),
+                 ConfigFactory.parseResources(configResource)
+                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
         }
 
         public TestServer(final String configResource, final Map<String,Object> extraConfig) {
-            this(
-                    findFreePort(),
-                    ConfigFactory.parseMap(extraConfig, "Test-specific overrides")
-                                 .withFallback(ConfigFactory.parseResources(configResource))
-                                 .withFallback(ConfigFactory.parseResources("reference-test.conf"))
-                );
+            this(findFreePort(),
+                 ConfigFactory.parseMap(extraConfig, "Test-specific overrides")
+                              .withFallback(ConfigFactory.parseResources(configResource))
+                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
         }
 
         private TestServer(final int port, final Config config) {

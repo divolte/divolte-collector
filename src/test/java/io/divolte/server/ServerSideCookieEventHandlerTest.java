@@ -48,7 +48,7 @@ public class ServerSideCookieEventHandlerTest {
 
     @Before
     public void setUp() {
-        server = new TestServer("server-side-cookies-test.conf");
+        server = new TestServer();
     }
 
     @After

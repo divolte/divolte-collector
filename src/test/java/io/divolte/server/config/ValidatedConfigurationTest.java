@@ -23,6 +23,7 @@ public class ValidatedConfigurationTest {
         final String propertyName = "divolte.sources.browser.javascript.name";
         final String invalidValue = "404.exe";
         final Config config = ConfigFactory.parseMap(ImmutableMap.of(propertyName, invalidValue))
+                                           .withFallback(ConfigFactory.parseResources("base-test-server.conf"))
                                            .withFallback(ConfigFactory.parseResources("reference-test.conf"));
 
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> config);
