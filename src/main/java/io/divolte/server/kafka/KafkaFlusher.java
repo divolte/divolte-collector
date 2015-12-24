@@ -18,6 +18,7 @@ package io.divolte.server.kafka;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
@@ -87,7 +88,7 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
                     batch.stream()
                          .map(i -> i.payload)
                          .map(this::buildRecord)
-                         .collect(Collectors.toList());
+                         .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
             // Clear the messages now; on failure they'll be retried as part of our
             // pending operation.
             batch.clear();
@@ -123,10 +124,11 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     private ImmutableList<ProducerRecord<DivolteIdentifier,AvroRecordBuffer>> sendBatch(final List<ProducerRecord<DivolteIdentifier, AvroRecordBuffer>> batch) throws InterruptedException {
         // First start sending the messages.
         // (This will serialize them, determine the partition and then assign them to a per-partition buffer.)
+        final int batchSize = batch.size();
         final List<Future<RecordMetadata>> sendResults =
                 batch.stream()
                      .map(producer::send)
-                     .collect(Collectors.toList());
+                     .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
         // The producer will send the messages in the background. As of 0.8.x we can't
         // flush, but have to wait for that to occur based on the producer configuration.
         // (By default it will immediately flush, but users can override this.)
@@ -137,7 +139,6 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
         //  - A fatal error occurred.
         // (In addition, we can be interrupted due to shutdown.)
         final ImmutableList.Builder<ProducerRecord<DivolteIdentifier, AvroRecordBuffer>> remaining = ImmutableList.builder();
-        final int batchSize = batch.size();
         for (int i = 0; i < batchSize; ++i) {
             final Future<RecordMetadata> result = sendResults.get(i);
             try {
