@@ -104,7 +104,7 @@ public final class Server implements Runnable {
         logger.info("Initialized mapping: {}", mappingName);
 
         logger.debug("Initializing sources...");
-        final EventForwarder<DivolteEvent> processingPoolForwarder = new EventForwarder<>(ImmutableList.of(processingPool));
+        final EventForwarder<DivolteEvent> processingPoolForwarder = EventForwarder.create(ImmutableList.of(processingPool));
         PathHandler handler = new PathHandler();
         for (final String name : vc.configuration().sources.keySet()) {
             final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPoolForwarder);

@@ -54,11 +54,11 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
     private static EventForwarder<AvroRecordBuffer> buildSinksForwarder(final Function<String, Optional<ProcessingPool<?, AvroRecordBuffer>>> sinkProvider,
                                                                         final ImmutableSet<String> sinkNames) {
         // Some sinks may not be available via the provider: these have been globally disabled.
-        return new EventForwarder<>(sinkNames.stream()
-                                             .map(sinkProvider::apply)
-                                             .filter(Optional::isPresent)
-                                             .map(Optional::get)
-                                             .collect(MoreCollectors.toImmutableList()));
+        return EventForwarder.create(sinkNames.stream()
+                                              .map(sinkProvider::apply)
+                                              .filter(Optional::isPresent)
+                                              .map(Optional::get)
+                                              .collect(MoreCollectors.toImmutableList()));
     }
 
     public IncomingRequestProcessingPool(
