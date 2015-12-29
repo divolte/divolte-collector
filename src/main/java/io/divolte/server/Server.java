@@ -16,10 +16,7 @@
 
 package io.divolte.server;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import com.google.common.collect.*;
 import com.typesafe.config.ConfigFactory;
 import io.divolte.server.config.BrowserSourceConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
@@ -103,10 +100,10 @@ public final class Server implements Runnable {
 
         final String mappingName = Iterables.get(vc.configuration().mappings.keySet(), 0);
         processingPool = new IncomingRequestProcessingPool(vc, mappingName, schemaRegistry, name -> Optional.ofNullable(sinks.get(name)), listener);
+        final EventForwarder<DivolteEvent> processingPoolForwarder = new EventForwarder<>(ImmutableList.of(processingPool));
         PathHandler handler = new PathHandler();
         for (final String name : vc.configuration().sources.keySet()) {
-            final ClientSideCookieEventHandler clientSideCookieEventHandler =
-                    new ClientSideCookieEventHandler(processingPool);
+            final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPoolForwarder);
             final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(vc, name);
             final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
             final BrowserSourceConfiguration browserSourceConfiguration = vc.configuration().getBrowserSourceConfiguration(name);

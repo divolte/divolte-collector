@@ -19,7 +19,6 @@ package io.divolte.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
@@ -75,11 +74,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
     private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper(new MincodeFactory()).reader();
 
     static final String EVENT_SOURCE_NAME = "browser";
-
-    @Deprecated
-    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool) {
-        this(new EventForwarder<>(ImmutableList.of(processingPool)));
-    }
 
     public ClientSideCookieEventHandler(final EventForwarder<DivolteEvent> processingPools) {
         this.processingPools = Objects.requireNonNull(processingPools);
