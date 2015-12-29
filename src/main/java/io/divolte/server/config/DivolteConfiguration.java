@@ -10,8 +10,6 @@ import com.google.common.collect.Sets;
 import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
 import io.divolte.server.config.constraint.OneSchemaPerSink;
 import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.validation.Valid;
@@ -24,8 +22,6 @@ import java.util.stream.Stream;
 @SourceAndSinkNamesCannotCollide
 @OneSchemaPerSink
 public final class DivolteConfiguration {
-    private static Logger logger = LoggerFactory.getLogger(MappingConfiguration.class);
-
     @Valid public final GlobalConfiguration global;
 
     // Mappings, sources and sinks are all keyed by their name.
