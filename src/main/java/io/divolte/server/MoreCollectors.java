@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Map;
 import java.util.stream.Collector;
 
-public class MoreCollectors {
+public final class MoreCollectors {
     private MoreCollectors() {
         // Prevent external instantiation.
     }
