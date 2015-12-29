@@ -186,7 +186,7 @@ public class HdfsFlusherTest {
                                       .build())
                             .collect(Collectors.toList());
 
-        flusher = new HdfsFlusher(vc, schema);
+        flusher = new HdfsFlusher(vc, "hdfs", schema);
     }
 
     private void processRecords() {

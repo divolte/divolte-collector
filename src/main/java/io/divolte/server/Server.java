@@ -16,10 +16,17 @@
 
 package io.divolte.server;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.typesafe.config.ConfigFactory;
 import io.divolte.server.config.BrowserSourceConfiguration;
+import io.divolte.server.config.HdfsSinkConfiguration;
+import io.divolte.server.config.KafkaSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
+import io.divolte.server.processing.ProcessingPool;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
@@ -40,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
@@ -48,6 +56,8 @@ public final class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
     private final GracefulShutdownHandler shutdownHandler;
+
+    private final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinks;
 
     private final IncomingRequestProcessingPool processingPool;
 
@@ -62,7 +72,37 @@ public final class Server implements Runnable {
         host = vc.configuration().global.server.host;
         port = vc.configuration().global.server.port;
 
-        processingPool = new IncomingRequestProcessingPool(vc, listener);
+        // First thing we need to do is load all the schemas: the sinks need these, but they come from the
+        // mappings.
+        final SchemaRegistry schemaRegistry = new SchemaRegistry(vc);
+
+        // Build a set of referenced sinks. These are the only ones we need to instantiate.
+        final ImmutableSet<String> referencedSinkNames =
+                vc.configuration().mappings.values()
+                                           .stream()
+                                           .flatMap(mc -> mc.sinks.stream())
+                                           .collect(MoreCollectors.toImmutableSet());
+
+        // Instantiate the active sinks:
+        //  - As a practical matter, unreferenced sinks have no associated schema, which means they
+        //    can't be initialized.
+        //  - This is also where we check whether HDFS and Kafka are globally enabled/disabled.
+        logger.debug("Initializing active sinks...");
+        sinks = vc.configuration().sinks.entrySet()
+                  .stream()
+                  .filter(sink -> referencedSinkNames.contains(sink.getKey()))
+                  .filter(sink -> vc.configuration().global.hdfs.enabled || !(sink.getValue() instanceof HdfsSinkConfiguration))
+                  .filter(sink -> vc.configuration().global.kafka.enabled || !(sink.getValue() instanceof KafkaSinkConfiguration))
+                  .<Map.Entry<String,ProcessingPool<?, AvroRecordBuffer>>>map(sink ->
+                          Maps.immutableEntry(sink.getKey(),
+                                              sink.getValue()
+                                                  .getFactory()
+                                                  .create(vc, sink.getKey(), schemaRegistry)))
+                  .collect(MoreCollectors.toImmutableMap());
+        logger.info("Initialized sinks: {}", sinks.keySet());
+
+        final String mappingName = Iterables.get(vc.configuration().mappings.keySet(), 0);
+        processingPool = new IncomingRequestProcessingPool(vc, mappingName, schemaRegistry, name -> Optional.ofNullable(sinks.get(name)), listener);
         PathHandler handler = new PathHandler();
         for (final String name : vc.configuration().sources.keySet()) {
             final ClientSideCookieEventHandler clientSideCookieEventHandler =
@@ -140,7 +180,9 @@ public final class Server implements Runnable {
         }
 
         logger.info("Stopping thread pools.");
+        // Stop the mappings before the sinks to ensure work in progress doesn't get stranded.
         processingPool.stop();
+        sinks.values().forEach(ProcessingPool::stop);
 
         logger.info("Closing HDFS filesystem connection.");
         try {

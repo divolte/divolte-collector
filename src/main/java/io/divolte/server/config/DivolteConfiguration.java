@@ -1,67 +1,56 @@
 package io.divolte.server.config;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.validation.Valid;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
-
 import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
 import io.divolte.server.config.constraint.OneSchemaPerSink;
 import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.validation.Valid;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @ParametersAreNonnullByDefault
 @MappingSourceSinkReferencesMustExist
 @SourceAndSinkNamesCannotCollide
 @OneSchemaPerSink
 public final class DivolteConfiguration {
+    private static Logger logger = LoggerFactory.getLogger(MappingConfiguration.class);
+
     @Valid public final GlobalConfiguration global;
+
+    // Mappings, sources and sinks are all keyed by their name.
+    @Valid public final ImmutableMap<String,MappingConfiguration> mappings;
     @Valid public final ImmutableMap<String,SourceConfiguration> sources;
     @Valid public final ImmutableMap<String,SinkConfiguration> sinks;
-    @Valid public final ImmutableMap<String,MappingConfiguration> mappings;
 
     @Deprecated
     public final MappingConfiguration incomingRequestProcessor;
-    @Deprecated
-    public final KafkaSinkConfiguration kafkaFlusher;
-    @Deprecated
-    public final HdfsSinkConfiguration hdfsFlusher;
 
     @JsonCreator
     DivolteConfiguration(final GlobalConfiguration global,
                          final Optional<ImmutableMap<String, SourceConfiguration>> sources,
                          final Optional<ImmutableMap<String, SinkConfiguration>> sinks,
                          final Optional<ImmutableMap<String,MappingConfiguration>> mappings) {
+        this.global = Objects.requireNonNull(global);
         this.sources = sources.orElseGet(DivolteConfiguration::defaultSourceConfigurations);
         this.sinks = sinks.orElseGet(DivolteConfiguration::defaultSinkConfigurations);
         this.mappings = mappings.orElseGet(() -> defaultMappingConfigurations(this.sources.keySet(), this.sinks.keySet()));
-        this.global = Objects.requireNonNull(global);
 
         // Temporary interop
         this.incomingRequestProcessor = Iterables.get(this.mappings.values(), 0);
-        this.kafkaFlusher = (KafkaSinkConfiguration) Iterators.get(this.sinks.values().stream().filter((sink) -> sink instanceof KafkaSinkConfiguration).iterator(), 0);
-        this.hdfsFlusher = (HdfsSinkConfiguration) Iterators.get(this.sinks.values().stream().filter((sink) -> sink instanceof HdfsSinkConfiguration).iterator(), 0);
 
         // TODO: Optimizations:
         //  - Elide HDFS and Kafka sinks if they are globally disabled.
-        //  - Elide unreferenced sources and sinks.
     }
 
     public BrowserSourceConfiguration getBrowserSourceConfiguration(final String sourceName) {
@@ -70,6 +59,14 @@ public final class DivolteConfiguration {
         Preconditions.checkArgument(sourceConfiguration instanceof BrowserSourceConfiguration,
                                     "Source configuration '%s' is not a browser source", sourceName);
         return (BrowserSourceConfiguration)sourceConfiguration;
+    }
+
+    public <T> T getSinkConfiguration(final String sinkName, final Class <? extends T> sinkClass) {
+        final SinkConfiguration sinkConfiguration = sinks.get(sinkName);
+        Objects.requireNonNull(sinkConfiguration, () -> "No sink configuration with name: " + sinkName);
+        Preconditions.checkArgument(sinkClass.isInstance(sinkConfiguration),
+                                    "Sink configuration '%s' is not a %s sink", sinkName, sinkClass.getSimpleName());
+        return sinkClass.cast(sinkConfiguration);
     }
 
     // Defaults; these will eventually disappear

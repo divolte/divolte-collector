@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import io.divolte.server.config.HdfsSinkConfiguration;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -74,11 +75,16 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     private boolean isHdfsAlive;
     private long lastFixAttempt;
 
-    public SimpleRollingFileStrategy(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
+    public SimpleRollingFileStrategy(final ValidatedConfiguration vc,
+                                     final String name,
+                                     final FileSystem fs,
+                                     final short hdfsReplication,
+                                     final Schema schema) {
         Objects.requireNonNull(vc);
         this.schema = Objects.requireNonNull(schema);
 
-        final FileStrategyConfiguration fileStrategyConfiguration = vc.configuration().hdfsFlusher.fileStrategy;
+        final FileStrategyConfiguration fileStrategyConfiguration =
+                vc.configuration().getSinkConfiguration(name, HdfsSinkConfiguration.class).fileStrategy;
         syncEveryMillis = fileStrategyConfiguration.syncFileAfterDuration.toMillis();
         syncEveryRecords = fileStrategyConfiguration.syncFileAfterRecords;
         newFileEveryMillis = fileStrategyConfiguration.rollEvery.toMillis();

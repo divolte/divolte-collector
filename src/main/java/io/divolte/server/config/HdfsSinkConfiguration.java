@@ -3,6 +3,7 @@ package io.divolte.server.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import io.divolte.server.hdfs.HdfsFlushingPool;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
@@ -33,5 +34,10 @@ public class HdfsSinkConfiguration extends SinkConfiguration {
         return super.toStringHelper()
                 .add("replication", replication)
                 .add("fileStrategy", fileStrategy);
+    }
+
+    @Override
+    public SinkFactory getFactory() {
+        return HdfsFlushingPool::new;
     }
 }

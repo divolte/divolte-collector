@@ -5,6 +5,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import io.divolte.server.kafka.KafkaFlushingPool;
 
 @ParametersAreNonnullByDefault
 public class KafkaSinkConfiguration extends SinkConfiguration {
@@ -21,5 +22,10 @@ public class KafkaSinkConfiguration extends SinkConfiguration {
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper().add("topic", topic);
+    }
+
+    @Override
+    public SinkFactory getFactory() {
+        return KafkaFlushingPool::new;
     }
 }

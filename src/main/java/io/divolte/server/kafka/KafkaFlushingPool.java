@@ -16,39 +16,44 @@
 
 package io.divolte.server.kafka;
 
-import java.util.Objects;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.SchemaRegistry;
+import io.divolte.server.config.KafkaSinkConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.processing.ProcessingPool;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 
-import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.DivolteIdentifier;
-import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.processing.ProcessingPool;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
 
 @ParametersAreNonnullByDefault
 public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBuffer> {
 
     private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
 
-    public KafkaFlushingPool(final ValidatedConfiguration vc) {
+    public KafkaFlushingPool(final ValidatedConfiguration vc, final String name, final SchemaRegistry ignored) {
         this(
+                name,
                 vc.configuration().global.kafka.threads,
                 vc.configuration().global.kafka.bufferSize,
-                vc.configuration().kafkaFlusher.topic,
+                vc.configuration().getSinkConfiguration(name, KafkaSinkConfiguration.class).topic,
                 new KafkaProducer<>(vc.configuration().global.kafka.producer,
                         new DivolteIdentifierSerializer(),
                         new AvroRecordBufferSerializer())
                 );
     }
 
-    public KafkaFlushingPool(final int numThreads,
+    public KafkaFlushingPool(final String name,
+                             final int numThreads,
                              final int maxWriteQueue,
                              final String topic,
                              final Producer<DivolteIdentifier, AvroRecordBuffer> producer ) {
-        super(numThreads, maxWriteQueue, "Kafka Flusher", () -> new KafkaFlusher(topic, producer));
+        super(numThreads,
+              maxWriteQueue,
+              String.format("Kafka Flusher [%s]", Objects.requireNonNull(name)),
+              () -> new KafkaFlusher(topic, producer));
         this.producer = Objects.requireNonNull(producer);
     }
 

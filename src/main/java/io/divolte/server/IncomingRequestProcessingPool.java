@@ -16,45 +16,49 @@
 
 package io.divolte.server;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
+import com.google.common.collect.ImmutableSet;
+import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.processing.ProcessingPool;
 import org.apache.avro.Schema;
-import org.apache.avro.Schema.Parser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.divolte.record.DefaultEventRecord;
-import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.hdfs.HdfsFlushingPool;
-import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
-import io.divolte.server.ip2geo.LookupService;
-import io.divolte.server.kafka.KafkaFlushingPool;
-import io.divolte.server.processing.ProcessingPool;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.function.Function;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, DivolteEvent> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
 
-    private final Optional<KafkaFlushingPool> kafkaPool;
-    private final Optional<HdfsFlushingPool> hdfsPool;
-
-    public IncomingRequestProcessingPool(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
+    public IncomingRequestProcessingPool(final ValidatedConfiguration vc,
+                                         final String name,
+                                         final SchemaRegistry schemaRegistry,
+                                         final Function<String, Optional<ProcessingPool<?, AvroRecordBuffer>>> sinkProvider,
+                                         final IncomingRequestListener listener) {
         this (
                 vc.configuration().global.mapper.threads,
                 vc.configuration().global.mapper.bufferSize,
                 vc,
-                schemaFromConfig(vc),
-                vc.configuration().global.kafka.enabled ? new KafkaFlushingPool(vc) : null,
-                vc.configuration().global.hdfs.enabled ? new HdfsFlushingPool(vc, schemaFromConfig(vc)) : null,
+                schemaRegistry.getSchemaByMappingName(name),
+                buildSinksForwarder(sinkProvider, vc.configuration().mappings.get(name).sinks),
                 lookupServiceFromConfig(vc),
                 listener
                 );
+    }
+
+    private static EventForwarder<AvroRecordBuffer> buildSinksForwarder(final Function<String, Optional<ProcessingPool<?, AvroRecordBuffer>>> sinkProvider,
+                                                                        final ImmutableSet<String> sinkNames) {
+        // Some sinks may not be available via the provider: these have been globally disabled.
+        return new EventForwarder<>(sinkNames.stream()
+                                             .map(sinkProvider::apply)
+                                             .filter(Optional::isPresent)
+                                             .map(Optional::get)
+                                             .collect(MoreCollectors.toImmutableList()));
     }
 
     public IncomingRequestProcessingPool(
@@ -62,40 +66,18 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             final int maxQueueSize,
             final ValidatedConfiguration vc,
             final Schema schema,
-            @Nullable final KafkaFlushingPool kafkaFlushingPool,
-            @Nullable final HdfsFlushingPool hdfsFlushingPool,
-            @Nullable final LookupService geoipLookupService,
+            final EventForwarder<AvroRecordBuffer> flushingPools,
+            final Optional<LookupService> geoipLookupService,
             final IncomingRequestListener listener) {
         super(
                 numThreads,
                 maxQueueSize,
                 "Incoming Request Processor",
-                () -> new IncomingRequestProcessor(vc, kafkaFlushingPool, hdfsFlushingPool, geoipLookupService, schema, listener));
-
-        this.kafkaPool = Optional.ofNullable(kafkaFlushingPool);
-        this.hdfsPool = Optional.ofNullable(hdfsFlushingPool);
+                () -> new IncomingRequestProcessor(vc, flushingPools, geoipLookupService, schema, listener));
     }
 
-    private static Schema schemaFromConfig(final ValidatedConfiguration vc) {
-        return vc.configuration().incomingRequestProcessor.schemaFile
-            .map((schemaFileName) -> {
-                final Parser parser = new Schema.Parser();
-                logger.info("Using Avro schema from configuration: {}", schemaFileName);
-                try {
-                    return parser.parse(new File(schemaFileName));
-                } catch(final IOException ioe) {
-                    logger.error("Failed to load Avro schema file.");
-                    throw new RuntimeException("Failed to load Avro schema file.", ioe);
-                }
-            })
-            .orElseGet(() -> {
-                logger.info("Using built in default Avro schema.");
-                return DefaultEventRecord.getClassSchema();
-            });
-    }
-
-    @Nullable
-    private static LookupService lookupServiceFromConfig(final ValidatedConfiguration vc) {
+    private static Optional<LookupService> lookupServiceFromConfig(final ValidatedConfiguration vc) {
+        // XXX: This service should be a singleton, instead of per-pool.
         return vc.configuration().global.mapper.ip2geoDatabase
             .map((path) -> {
                 try {
@@ -104,15 +86,6 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                     logger.error("Failed to configure GeoIP database: " + path, e);
                     throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
                 }
-            })
-            .orElse(null);
-    }
-
-    @Override
-    public void stop() {
-        super.stop();
-
-        kafkaPool.ifPresent(KafkaFlushingPool::stop);
-        hdfsPool.ifPresent(HdfsFlushingPool::stop);
+            });
     }
 }

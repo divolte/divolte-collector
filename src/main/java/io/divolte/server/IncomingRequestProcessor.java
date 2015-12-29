@@ -16,34 +16,26 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
-
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.divolte.record.DefaultEventRecord;
 import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.hdfs.HdfsFlusher;
-import io.divolte.server.hdfs.HdfsFlushingPool;
 import io.divolte.server.ip2geo.LookupService;
-import io.divolte.server.kafka.KafkaFlusher;
-import io.divolte.server.kafka.KafkaFlushingPool;
 import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ItemProcessor;
-import io.divolte.server.processing.ProcessingPool;
 import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.DslRecordMapping;
 import io.divolte.server.recordmapping.RecordMapper;
 import io.divolte.server.recordmapping.UserAgentParserAndCache;
 import io.undertow.util.AttachmentKey;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+import java.util.Optional;
+
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
 
 @ParametersAreNonnullByDefault
 public final class IncomingRequestProcessor implements ItemProcessor<DivolteEvent> {
@@ -51,10 +43,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
 
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
-    @Nullable
-    private final ProcessingPool<KafkaFlusher, AvroRecordBuffer> kafkaFlushingPool;
-    @Nullable
-    private final ProcessingPool<HdfsFlusher, AvroRecordBuffer> hdfsFlushingPool;
+    private final EventForwarder<AvroRecordBuffer> flushingPools;
 
     private final IncomingRequestListener listener;
 
@@ -66,14 +55,11 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
     private final boolean keepDuplicates;
 
     public IncomingRequestProcessor(final ValidatedConfiguration vc,
-                                    @Nullable final KafkaFlushingPool kafkaFlushingPool,
-                                    @Nullable final HdfsFlushingPool hdfsFlushingPool,
-                                    @Nullable final LookupService geoipLookupService,
+                                    final EventForwarder<AvroRecordBuffer> flushingPools,
+                                    final Optional<LookupService> geoipLookupService,
                                     final Schema schema,
                                     final IncomingRequestListener listener) {
-
-        this.kafkaFlushingPool = kafkaFlushingPool;
-        this.hdfsFlushingPool = hdfsFlushingPool;
+        this.flushingPools = flushingPools;
         this.listener = Objects.requireNonNull(listener);
 
         keepCorrupted = !vc.configuration().incomingRequestProcessor.discardCorrupted;
@@ -84,7 +70,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
         mapper = vc.configuration().incomingRequestProcessor.mappingScriptFile
                 .map((mappingScriptFile) -> {
                     logger.info("Using script based schema mapping.");
-                    return new DslRecordMapper(vc, mappingScriptFile, Objects.requireNonNull(schema), Optional.ofNullable(geoipLookupService));
+                    return new DslRecordMapper(vc, mappingScriptFile, Objects.requireNonNull(schema), geoipLookupService);
 
                 }).orElseGet(() -> {
                     logger.info("Using built in default schema mapping.");
@@ -147,20 +133,9 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
                         event.clientUtcOffset,
                         avroRecord);
                 listener.incomingRequest(event, avroBuffer, avroRecord);
-                doProcess(item, avroBuffer);
+                flushingPools.forward(Item.withCopiedAffinity(0, item, avroBuffer));
             }
         }
-
         return CONTINUE;
-    }
-
-    private void doProcess(final Item<DivolteEvent> sourceItem, final AvroRecordBuffer avroBuffer) {
-
-        if (null != kafkaFlushingPool) {
-            kafkaFlushingPool.enqueue(Item.withCopiedAffinity(0, sourceItem, avroBuffer));
-        }
-        if (null != hdfsFlushingPool) {
-            hdfsFlushingPool.enqueue(Item.withCopiedAffinity(0, sourceItem, avroBuffer));
-        }
     }
 }

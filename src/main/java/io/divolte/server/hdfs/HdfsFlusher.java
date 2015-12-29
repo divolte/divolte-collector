@@ -25,6 +25,7 @@ import java.util.Objects;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import io.divolte.server.config.HdfsSinkConfiguration;
 import org.apache.avro.Schema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,7 +46,7 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
     private final FileCreateAndSyncStrategy fileStrategy;
     private HdfsOperationResult lastHdfsResult;
 
-    public HdfsFlusher(final ValidatedConfiguration vc, final Schema schema) {
+    public HdfsFlusher(final ValidatedConfiguration vc, final String name, final Schema schema) {
         Objects.requireNonNull(vc);
 
         final Configuration hdfsConfiguration = vc.configuration().global.hdfs.client
@@ -77,9 +78,11 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
             logger.error("Could not initialize HDFS filesystem.", e);
             throw new RuntimeException("Could not initialize HDFS filesystem", e);
         }
-        final short hdfsReplication = vc.configuration().hdfsFlusher.replication;
+        final short hdfsReplication =
+                vc.configuration()
+                  .getSinkConfiguration(Objects.requireNonNull(name), HdfsSinkConfiguration.class).replication;
 
-        fileStrategy = new SimpleRollingFileStrategy(vc, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
+        fileStrategy = new SimpleRollingFileStrategy(vc, name, hadoopFs, hdfsReplication, Objects.requireNonNull(schema));
         lastHdfsResult = fileStrategy.setup();
     }
 

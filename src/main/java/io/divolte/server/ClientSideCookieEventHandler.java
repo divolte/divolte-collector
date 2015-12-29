@@ -16,30 +16,13 @@
 
 package io.divolte.server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
-
 import io.divolte.server.mincode.MincodeFactory;
 import io.divolte.server.processing.Item;
 import io.undertow.server.HttpHandler;
@@ -48,6 +31,16 @@ import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 @ParametersAreNonnullByDefault
 public final class ClientSideCookieEventHandler implements HttpHandler {
@@ -57,7 +50,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
     private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
 
     private final ByteBuffer transparentImage;
-    protected final IncomingRequestProcessingPool processingPool;
+    private final EventForwarder<DivolteEvent> processingPools;
 
     private static final String TRUE_STRING = "t";
 
@@ -83,8 +76,13 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
     static final String EVENT_SOURCE_NAME = "browser";
 
+    @Deprecated
     public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool) {
-        this.processingPool = Objects.requireNonNull(processingPool);
+        this(new EventForwarder<>(ImmutableList.of(processingPool)));
+    }
+
+    public ClientSideCookieEventHandler(final EventForwarder<DivolteEvent> processingPools) {
+        this.processingPools = Objects.requireNonNull(processingPools);
 
         try {
             this.transparentImage = ByteBuffer.wrap(
@@ -183,7 +181,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                                                              isNewPartyId, isFirstInSession, exchange);
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
-        processingPool.enqueue(Item.of(0, partyId.value, event));
+        processingPools.forward(Item.of(0, partyId.value, event));
     }
 
     static DivolteEvent buildBrowserEventData(final boolean corruptEvent,
