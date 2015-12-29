@@ -98,8 +98,12 @@ public final class Server implements Runnable {
                   .collect(MoreCollectors.toImmutableMap());
         logger.info("Initialized sinks: {}", sinks.keySet());
 
+        logger.debug("Initializing first mapping...");
         final String mappingName = Iterables.get(vc.configuration().mappings.keySet(), 0);
         processingPool = new IncomingRequestProcessingPool(vc, mappingName, schemaRegistry, name -> Optional.ofNullable(sinks.get(name)), listener);
+        logger.info("Initialized mapping: {}", mappingName);
+
+        logger.debug("Initializing sources...");
         final EventForwarder<DivolteEvent> processingPoolForwarder = new EventForwarder<>(ImmutableList.of(processingPool));
         PathHandler handler = new PathHandler();
         for (final String name : vc.configuration().sources.keySet()) {
@@ -114,6 +118,7 @@ public final class Server implements Runnable {
             logger.info("Registered source[{}] script location: {}", name, scriptPath);
             logger.info("Registered source[{}] event handler: {}", name, eventPath);
         }
+        logger.info("Initialized sources: {}", vc.configuration().sources.keySet());
 
         handler.addExactPath("/ping", PingHandler::handlePingRequest);
         if (vc.configuration().global.server.serveStaticResources) {
