@@ -26,9 +26,6 @@ public final class DivolteConfiguration {
     @Valid public final ImmutableMap<String,SourceConfiguration> sources;
     @Valid public final ImmutableMap<String,SinkConfiguration> sinks;
 
-    @Deprecated
-    public final MappingConfiguration incomingRequestProcessor;
-
     @JsonCreator
     DivolteConfiguration(final GlobalConfiguration global,
                          final Optional<ImmutableMap<String, SourceConfiguration>> sources,
@@ -38,9 +35,6 @@ public final class DivolteConfiguration {
         this.sources = sources.orElseGet(DivolteConfiguration::defaultSourceConfigurations);
         this.sinks = sinks.orElseGet(DivolteConfiguration::defaultSinkConfigurations);
         this.mappings = mappings.orElseGet(() -> defaultMappingConfigurations(this.sources.keySet(), this.sinks.keySet()));
-
-        // Temporary interop
-        this.incomingRequestProcessor = Iterables.get(this.mappings.values(), 0);
     }
 
     public BrowserSourceConfiguration getBrowserSourceConfiguration(final String sourceName) {
@@ -49,6 +43,12 @@ public final class DivolteConfiguration {
         Preconditions.checkArgument(sourceConfiguration instanceof BrowserSourceConfiguration,
                                     "Source configuration '%s' is not a browser source", sourceName);
         return (BrowserSourceConfiguration)sourceConfiguration;
+    }
+
+    public MappingConfiguration getMappingConfiguration(final String mappingName) {
+        final MappingConfiguration mappingConfiguration = mappings.get(mappingName);
+        Objects.requireNonNull(mappingConfiguration, () -> "No mapping configuration with name: " + mappingName);
+        return mappingConfiguration;
     }
 
     public <T> T getSinkConfiguration(final String sinkName, final Class <? extends T> sinkClass) {

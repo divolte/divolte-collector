@@ -44,6 +44,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                 vc.configuration().global.mapper.threads,
                 vc.configuration().global.mapper.bufferSize,
                 vc,
+                name,
                 schemaRegistry.getSchemaByMappingName(name),
                 buildSinksForwarder(sinkProvider, vc.configuration().mappings.get(name).sinks),
                 lookupServiceFromConfig(vc),
@@ -65,6 +66,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
             final int numThreads,
             final int maxQueueSize,
             final ValidatedConfiguration vc,
+            final String name,
             final Schema schema,
             final EventForwarder<AvroRecordBuffer> flushingPools,
             final Optional<LookupService> geoipLookupService,
@@ -73,7 +75,7 @@ final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequest
                 numThreads,
                 maxQueueSize,
                 "Incoming Request Processor",
-                () -> new IncomingRequestProcessor(vc, flushingPools, geoipLookupService, schema, listener));
+                () -> new IncomingRequestProcessor(vc, name, flushingPools, geoipLookupService, schema, listener));
     }
 
     private static Optional<LookupService> lookupServiceFromConfig(final ValidatedConfiguration vc) {

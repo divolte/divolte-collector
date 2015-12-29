@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 @ParametersAreNonnullByDefault
 public final class Server implements Runnable {
@@ -55,8 +56,7 @@ public final class Server implements Runnable {
     private final GracefulShutdownHandler shutdownHandler;
 
     private final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinks;
-
-    private final IncomingRequestProcessingPool processingPool;
+    private final ImmutableMap<String, IncomingRequestProcessingPool> mappingProcessors;
 
     private final Optional<String> host;
     private final int port;
@@ -98,12 +98,23 @@ public final class Server implements Runnable {
                   .collect(MoreCollectors.toImmutableMap());
         logger.info("Initialized sinks: {}", sinks.keySet());
 
-        logger.debug("Initializing first mapping...");
-        final String mappingName = Iterables.get(vc.configuration().mappings.keySet(), 0);
-        processingPool = new IncomingRequestProcessingPool(vc, mappingName, schemaRegistry, name -> Optional.ofNullable(sinks.get(name)), listener);
-        logger.info("Initialized mapping: {}", mappingName);
+        logger.debug("Initializing mappings...");
+        final Function<String, Optional<ProcessingPool<?, AvroRecordBuffer>>> schemaProvider =
+                sinkName -> Optional.ofNullable(sinks.get(sinkName));
+        mappingProcessors =
+                ImmutableMap.copyOf(Maps.transformEntries(vc.configuration().mappings,
+                                                          (mappingName, config) ->
+                                                                  new IncomingRequestProcessingPool(vc,
+                                                                                                    mappingName,
+                                                                                                    schemaRegistry,
+                                                                                                    schemaProvider,
+                                                                                                    listener)));
+        logger.info("Initialized mappings: {}", mappingProcessors.keySet());
 
         logger.debug("Initializing sources...");
+        // TODO: Implement sources for all mappings, not just one of them.
+        @Deprecated
+        final IncomingRequestProcessingPool processingPool = Iterables.get(mappingProcessors.values(), 0);
         final EventForwarder<DivolteEvent> processingPoolForwarder = EventForwarder.create(ImmutableList.of(processingPool));
         PathHandler handler = new PathHandler();
         for (final String name : vc.configuration().sources.keySet()) {
@@ -183,7 +194,7 @@ public final class Server implements Runnable {
 
         logger.info("Stopping thread pools.");
         // Stop the mappings before the sinks to ensure work in progress doesn't get stranded.
-        processingPool.stop();
+        mappingProcessors.values().forEach(ProcessingPool::stop);
         sinks.values().forEach(ProcessingPool::stop);
 
         logger.info("Closing HDFS filesystem connection.");

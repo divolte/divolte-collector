@@ -17,6 +17,7 @@
 package io.divolte.server;
 
 import io.divolte.record.DefaultEventRecord;
+import io.divolte.server.config.MappingConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.processing.Item;
@@ -55,6 +56,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
     private final boolean keepDuplicates;
 
     public IncomingRequestProcessor(final ValidatedConfiguration vc,
+                                    final String name,
                                     final EventForwarder<AvroRecordBuffer> flushingPools,
                                     final Optional<LookupService> geoipLookupService,
                                     final Schema schema,
@@ -62,12 +64,13 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
         this.flushingPools = flushingPools;
         this.listener = Objects.requireNonNull(listener);
 
-        keepCorrupted = !vc.configuration().incomingRequestProcessor.discardCorrupted;
+        final MappingConfiguration mappingConfiguration = vc.configuration().getMappingConfiguration(name);
+        keepCorrupted = !mappingConfiguration.discardCorrupted;
 
         memory = new ShortTermDuplicateMemory(vc.configuration().global.mapper.duplicateMemorySize);
-        keepDuplicates = !vc.configuration().incomingRequestProcessor.discardDuplicates;
+        keepDuplicates = !mappingConfiguration.discardDuplicates;
 
-        mapper = vc.configuration().incomingRequestProcessor.mappingScriptFile
+        mapper = mappingConfiguration.mappingScriptFile
                 .map((mappingScriptFile) -> {
                     logger.info("Using script based schema mapping.");
                     return new DslRecordMapper(vc, mappingScriptFile, Objects.requireNonNull(schema), geoipLookupService);
