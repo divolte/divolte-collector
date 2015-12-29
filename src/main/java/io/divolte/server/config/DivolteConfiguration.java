@@ -41,9 +41,6 @@ public final class DivolteConfiguration {
 
         // Temporary interop
         this.incomingRequestProcessor = Iterables.get(this.mappings.values(), 0);
-
-        // TODO: Optimizations:
-        //  - Elide HDFS and Kafka sinks if they are globally disabled.
     }
 
     public BrowserSourceConfiguration getBrowserSourceConfiguration(final String sourceName) {
