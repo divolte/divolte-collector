@@ -3,10 +3,7 @@ package io.divolte.server.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
 import io.divolte.server.config.constraint.OneSchemaPerSink;
 import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
@@ -125,17 +122,13 @@ public final class DivolteConfiguration {
     }
 
     public Set<String> sinksWithMultipleSchemas() {
-        final Map<String,List<String>> sinkSchemas = new HashMap<>();
-        for (final MappingConfiguration mc : mappings.values()) {
-            for (final String s : mc.sinks) {
-                sinkSchemas.computeIfAbsent(s, i -> new ArrayList<>()).add(mc.schemaFile.orElse("<default>"));
-            }
-        }
-
-        return sinkSchemas.entrySet()
-                .stream()
-                .filter(e -> e.getValue().size() > 1)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
+        final Map<String, Long> countsBySink =
+                mappings.values()
+                        .stream()
+                        .flatMap(config -> config.sinks.stream()
+                                                       .map(sink -> Maps.immutableEntry(sink, config.schemaFile)))
+                        .distinct()
+                        .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.counting()));
+        return Maps.filterValues(countsBySink, count -> count > 1L).keySet();
     }
 }

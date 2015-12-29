@@ -82,8 +82,14 @@ public class ValidatedConfigurationTest {
     }
 
     @Test
-    public void sinksCanOnlyHaveOneSchema() {
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("multiple-schemas-one-sink.conf"));
+    public void sharedSinksAllowedWithSameSchema() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("multiple-mappings-same-schema-shared-sink.conf"));
+        assertTrue(vc.isValid());
+    }
+
+    @Test
+    public void sharedSinksCannotHaveDifferentSchemas() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("multiple-mappings-different-schema-shared-sink.conf"));
 
         assertFalse(vc.isValid());
         assertEquals(1, vc.errors().size());
