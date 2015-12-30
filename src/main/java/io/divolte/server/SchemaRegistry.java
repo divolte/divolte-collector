@@ -54,6 +54,7 @@ public class SchemaRegistry {
                                                  .map(sink ->
                                                          Maps.immutableEntry(sink,
                                                                              schemasByLocation.get(config.schemaFile))))
+                        .distinct()
                         .collect(MoreCollectors.toImmutableMap());
         logger.info("Inferred schemas used for sinks: {}", schemasBySinkName.keySet());
     }
