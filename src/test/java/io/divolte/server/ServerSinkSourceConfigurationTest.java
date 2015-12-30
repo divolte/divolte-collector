@@ -189,8 +189,15 @@ public class ServerSinkSourceConfigurationTest {
     }
 
     @Test
-    public void shouldRegisterDefaultHdfsSink() throws IOException, InterruptedException {
-        // Test the default hdfs source that should be present by default.
+    public void shouldSupportUnusedSource() throws IOException {
+        // Test that an unused source is still reachable.
+        startServer("browser-source-unused.conf");
+        request("/unused");
+    }
+
+    @Test
+    public void shouldSupportDefaultSourceMappingSink() throws IOException, InterruptedException {
+        // Test that with an out-of-the-box default configuration the default source, mapping and sink are present.
         startServer();
         final AvroFileLocator avroFileLocator = new AvroFileLocator(Paths.get("/tmp"));
         request();
@@ -203,11 +210,11 @@ public class ServerSinkSourceConfigurationTest {
     }
 
     @Test
-    public void shouldRegisterExplicitSinkOnly() throws IOException, InterruptedException {
-        // Test that if an explicit sink is supplied, the builtin defaults are not present.
+    public void shouldOnlyRegisterExplicitSourceMappingSink() throws IOException, InterruptedException {
+        // Test that if an explicit source-mapping-sink is supplied, the builtin defaults are not present.
         final AvroFileLocator defaultAvroFileLocator = new AvroFileLocator(Paths.get("/tmp"));
         final Path avroDirectory = createTempDirectory();
-        startServer("hdfs-sink-explicit.conf", ImmutableMap.of(
+        startServer("mapping-configuration-explicit.conf", ImmutableMap.of(
                 "divolte.sinks.test-hdfs-sink.file_strategy.working_dir", avroDirectory.toString(),
                 "divolte.sinks.test-hdfs-sink.file_strategy.publish_dir", avroDirectory.toString()
         ));
@@ -227,7 +234,7 @@ public class ServerSinkSourceConfigurationTest {
 
     @Test
     public void shouldSupportMultipleSinks() throws IOException, InterruptedException {
-        // Test that multiple hdfs sinks are supported.
+        // Test that multiple hdfs sinks are supported for a single mapping.
         final AvroFileLocator defaultAvroFileLocator = new AvroFileLocator(Paths.get("/tmp"));
         final Path avroDirectory1 = createTempDirectory();
         final Path avroDirectory2 = createTempDirectory();
@@ -252,6 +259,132 @@ public class ServerSinkSourceConfigurationTest {
                      1, explicitAvroFileLocator1.listNewRecords().count());
         assertEquals("Wrong number of new events logged in second location",
                      1, explicitAvroFileLocator2.listNewRecords().count());
+    }
+
+    @Test
+    public void shouldSupportMultipleMappings() throws IOException, InterruptedException {
+        // Test that multiple independent mappings are supported.
+        final Path avroDirectory1 = createTempDirectory();
+        final Path avroDirectory2 = createTempDirectory();
+        startServer("mapping-configuration-independent.conf", ImmutableMap.of(
+                "divolte.sinks.sink-1.file_strategy.working_dir", avroDirectory1.toString(),
+                "divolte.sinks.sink-1.file_strategy.publish_dir", avroDirectory1.toString(),
+                "divolte.sinks.sink-2.file_strategy.working_dir", avroDirectory2.toString(),
+                "divolte.sinks.sink-2.file_strategy.publish_dir", avroDirectory2.toString()
+        ));
+        final AvroFileLocator explicitAvroFileLocator1 = new AvroFileLocator(avroDirectory1);
+        final AvroFileLocator explicitAvroFileLocator2 = new AvroFileLocator(avroDirectory2);
+        request("/source-1");
+        request("/source-2");
+        request("/source-2");
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
+        // Stopping the server flushes any HDFS files.
+        stopServer();
+        // Now we can check:
+        //   - One source should have a single event.
+        //   - The other should have a two events.
+        assertEquals("Wrong number of new events logged in first location",
+                     1, explicitAvroFileLocator1.listNewRecords().count());
+        assertEquals("Wrong number of new events logged in second location",
+                     2, explicitAvroFileLocator2.listNewRecords().count());
+    }
+
+    @Test
+    public void shouldSupportMultipleMappingsPerSource() throws IOException, InterruptedException {
+        // Test that a single source can send events to multiple mappings.
+        final Path avroDirectory1 = createTempDirectory();
+        final Path avroDirectory2 = createTempDirectory();
+        startServer("mapping-configuration-shared-source.conf", ImmutableMap.of(
+                "divolte.sinks.sink-1.file_strategy.working_dir", avroDirectory1.toString(),
+                "divolte.sinks.sink-1.file_strategy.publish_dir", avroDirectory1.toString(),
+                "divolte.sinks.sink-2.file_strategy.working_dir", avroDirectory2.toString(),
+                "divolte.sinks.sink-2.file_strategy.publish_dir", avroDirectory2.toString()
+        ));
+        final AvroFileLocator explicitAvroFileLocator1 = new AvroFileLocator(avroDirectory1);
+        final AvroFileLocator explicitAvroFileLocator2 = new AvroFileLocator(avroDirectory2);
+        request();
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
+        // Stopping the server flushes any HDFS files.
+        stopServer();
+        // Now we can check:
+        //   - Both sinks should have a single event.
+        assertEquals("Wrong number of new events logged in first location",
+                     1, explicitAvroFileLocator1.listNewRecords().count());
+        assertEquals("Wrong number of new events logged in second location",
+                     1, explicitAvroFileLocator2.listNewRecords().count());
+    }
+
+    @Test
+    public void shouldSupportMultipleMappingsPerSink() throws IOException, InterruptedException {
+        // Test that a multiple mappings can send events to the same sink.
+        final Path avroDirectory = createTempDirectory();
+        startServer("mapping-configuration-shared-sink.conf", ImmutableMap.of(
+                "divolte.sinks.only-sink.file_strategy.working_dir", avroDirectory.toString(),
+                "divolte.sinks.only-sink.file_strategy.publish_dir", avroDirectory.toString()
+        ));
+        final AvroFileLocator explicitAvroFileLocator = new AvroFileLocator(avroDirectory);
+        request("/source-1");
+        request("/source-2");
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
+        // Stopping the server flushes any HDFS files.
+        stopServer();
+        // Now we can check:
+        //   - The single location should have received both events.
+        assertEquals("Wrong number of new events logged",
+                     2, explicitAvroFileLocator.listNewRecords().count());
+    }
+
+    @Test
+    public void shouldSupportComplexSourceMappingSinkConfigurations() throws IOException, InterruptedException {
+        // Test that a complex source-mapping-sink configuration is possible.
+        // (This includes combinations of shared and non-shared sources and sinks.)
+        // Test that a single source can send events to multiple mappings.
+        final Path avroDirectory1 = createTempDirectory();
+        final Path avroDirectory2 = createTempDirectory();
+        final Path avroDirectory3 = createTempDirectory();
+        final Path avroDirectory4 = createTempDirectory();
+        startServer("mapping-configuration-interdependent.conf", new ImmutableMap.Builder<String,Object>()
+                .put("divolte.sinks.sink-1.file_strategy.working_dir", avroDirectory1.toString())
+                .put("divolte.sinks.sink-1.file_strategy.publish_dir", avroDirectory1.toString())
+                .put("divolte.sinks.sink-2.file_strategy.working_dir", avroDirectory2.toString())
+                .put("divolte.sinks.sink-2.file_strategy.publish_dir", avroDirectory2.toString())
+                .put("divolte.sinks.sink-3.file_strategy.working_dir", avroDirectory3.toString())
+                .put("divolte.sinks.sink-3.file_strategy.publish_dir", avroDirectory3.toString())
+                .put("divolte.sinks.sink-4.file_strategy.working_dir", avroDirectory4.toString())
+                .put("divolte.sinks.sink-4.file_strategy.publish_dir", avroDirectory4.toString())
+                .build()
+        );
+        final AvroFileLocator explicitAvroFileLocator1 = new AvroFileLocator(avroDirectory1);
+        final AvroFileLocator explicitAvroFileLocator2 = new AvroFileLocator(avroDirectory2);
+        final AvroFileLocator explicitAvroFileLocator3 = new AvroFileLocator(avroDirectory3);
+        final AvroFileLocator explicitAvroFileLocator4 = new AvroFileLocator(avroDirectory4);
+        request("/source-1");
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
+        request("/source-2");
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
+        request("/source-3");
+        testServer.get().waitForEvent();
+        request("/source-4");
+        testServer.get().waitForEvent();
+        // Stopping the server flushes any HDFS files.
+        stopServer();
+        // Now we can check:
+        //   - Each sink should have a specific number of events in it.
+        assertEquals("Wrong number of new events logged in first location",
+                     2, explicitAvroFileLocator1.listNewRecords().count());
+        assertEquals("Wrong number of new events logged in second location",
+                     2, explicitAvroFileLocator2.listNewRecords().count());
+        assertEquals("Wrong number of new events logged in third location",
+                     5, explicitAvroFileLocator3.listNewRecords().count());
+        assertEquals("Wrong number of new events logged in fourth location",
+                     2, explicitAvroFileLocator4.listNewRecords().count());
     }
 
     @After
