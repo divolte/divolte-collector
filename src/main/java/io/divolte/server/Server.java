@@ -112,13 +112,24 @@ public final class Server implements Runnable {
         logger.info("Initialized mappings: {}", mappingProcessors.keySet());
 
         logger.debug("Initializing sources...");
-        // TODO: Implement sources for all mappings, not just one of them.
-        @Deprecated
-        final IncomingRequestProcessingPool processingPool = Iterables.get(mappingProcessors.values(), 0);
-        final EventForwarder<DivolteEvent> processingPoolForwarder = EventForwarder.create(ImmutableList.of(processingPool));
+        // First build a list of which mappings are used by each source.
+        final ImmutableMultimap<String,IncomingRequestProcessingPool> mappingProcessorsBySource =
+            vc.configuration().mappings.entrySet()
+              .stream()
+              .flatMap(mappingConfig -> {
+                  final IncomingRequestProcessingPool mappingProcessor = mappingProcessors.get(mappingConfig.getKey());
+                  return mappingConfig.getValue()
+                                      .sources
+                                      .stream()
+                                      .map(source -> Maps.immutableEntry(source, mappingProcessor));
+              })
+              .collect(MoreCollectors.toImmutableMultimap());
         PathHandler handler = new PathHandler();
+        // Now instantiate all the sources.
         for (final String name : vc.configuration().sources.keySet()) {
-            final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPoolForwarder);
+            final ImmutableCollection<IncomingRequestProcessingPool> mappingProcessors = mappingProcessorsBySource.get(name);
+            final EventForwarder<DivolteEvent> processingPoolsForwarder = EventForwarder.create(mappingProcessors);
+            final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPoolsForwarder);
             final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(vc, name);
             final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
             final BrowserSourceConfiguration browserSourceConfiguration = vc.configuration().getBrowserSourceConfiguration(name);

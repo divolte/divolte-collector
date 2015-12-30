@@ -2,6 +2,7 @@ package io.divolte.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Map;
@@ -31,5 +32,12 @@ public final class MoreCollectors {
                             ImmutableMap.Builder<K,V>::put,
                             (l, r) -> l.putAll(r.build()),
                             ImmutableMap.Builder::build);
+    }
+
+    public static <K,V> Collector<Map.Entry<K,V>, ImmutableMultimap.Builder<K,V>, ImmutableMultimap<K,V>> toImmutableMultimap() {
+        return Collector.of(ImmutableMultimap.Builder<K,V>::new,
+                            ImmutableMultimap.Builder<K,V>::put,
+                            (l, r) -> l.putAll(r.build()),
+                            ImmutableMultimap.Builder::build);
     }
 }

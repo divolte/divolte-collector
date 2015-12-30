@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.Iterables;
 import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ProcessingPool;
@@ -37,9 +37,9 @@ public abstract class EventForwarder<E> {
     }
 
     private final static class MultipleReceiverEventForwarder<E> extends EventForwarder<E> {
-        private final ImmutableList<ProcessingPool<?, E>> receivers;
+        private final ImmutableCollection<? extends ProcessingPool<?, E>> receivers;
 
-        private MultipleReceiverEventForwarder(final ImmutableList<ProcessingPool<?, E>> receivers) {
+        private MultipleReceiverEventForwarder(final ImmutableCollection<? extends ProcessingPool<?, E>> receivers) {
             this.receivers = Objects.requireNonNull(receivers);
         }
 
@@ -49,7 +49,7 @@ public abstract class EventForwarder<E> {
         }
     }
 
-    static <E> EventForwarder<E> create(final ImmutableList<ProcessingPool<?, E>> receivers) {
+    static <E> EventForwarder<E> create(final ImmutableCollection<? extends ProcessingPool<?, E>> receivers) {
         switch (receivers.size()) {
             case 0:
                 @SuppressWarnings("unchecked")
