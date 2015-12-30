@@ -16,13 +16,14 @@
 
 package io.divolte.server;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.typesafe.config.ConfigFactory;
-import io.divolte.server.config.BrowserSourceConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
 import io.divolte.server.config.KafkaSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.js.TrackingJavaScriptResource;
 import io.divolte.server.processing.ProcessingPool;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -36,7 +37,6 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
-import io.undertow.util.Methods;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,32 +124,29 @@ public final class Server implements Runnable {
                                       .map(source -> Maps.immutableEntry(source, mappingProcessor));
               })
               .collect(MoreCollectors.toImmutableMultimap());
-        PathHandler handler = new PathHandler();
-        // Now instantiate all the sources.
-        for (final String name : vc.configuration().sources.keySet()) {
-            final ImmutableCollection<IncomingRequestProcessingPool> mappingProcessors = mappingProcessorsBySource.get(name);
-            final EventForwarder<DivolteEvent> processingPoolsForwarder = EventForwarder.create(mappingProcessors);
-            final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPoolsForwarder);
-            final TrackingJavaScriptResource trackingJavaScript = loadTrackingJavaScript(vc, name);
-            final HttpHandler javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavaScript), Methods.GET);
-            final BrowserSourceConfiguration browserSourceConfiguration = vc.configuration().getBrowserSourceConfiguration(name);
-            final String eventPath = browserSourceConfiguration.prefix + "csc-event";
-            final String scriptPath = browserSourceConfiguration.prefix + trackingJavaScript.getScriptName();
-            handler = handler.addExactPath(eventPath, new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET));
-            handler = handler.addExactPath(scriptPath, javascriptHandler);
-            logger.info("Registered source[{}] script location: {}", name, scriptPath);
-            logger.info("Registered source[{}] event handler: {}", name, eventPath);
+        // Now instantiate all the sources. We do this in parallel because instantiation can be quite slow.
+        final ImmutableMap<String, BrowserSource> sources =
+                vc.configuration().sources.keySet()
+                  .parallelStream()
+                  .map(name ->
+                          Maps.immutableEntry(name, new BrowserSource(vc, name, mappingProcessorsBySource.get(name))))
+                  .collect(MoreCollectors.toImmutableMap());
+        logger.debug("Attaching sources: {}", sources.keySet());
+        // Once all created we can attach them to the server. This has to be done sequentially.
+        PathHandler pathHandler = new PathHandler();
+        for (final BrowserSource browserSource : sources.values()) {
+            pathHandler = browserSource.attachToPathHandler(pathHandler);
         }
-        logger.info("Initialized sources: {}", vc.configuration().sources.keySet());
+        logger.info("Initialized sources: {}", sources.keySet());
 
-        handler.addExactPath("/ping", PingHandler::handlePingRequest);
+        pathHandler.addExactPath("/ping", PingHandler::handlePingRequest);
         if (vc.configuration().global.server.serveStaticResources) {
             // Catch-all handler; must be last if present.
             // XXX: Our static resources assume the default 'browser' endpoint.
-            handler.addPrefixPath("/", createStaticResourceHandler());
+            pathHandler.addPrefixPath("/", createStaticResourceHandler());
         }
         final SetHeaderHandler headerHandler =
-                new SetHeaderHandler(handler, Headers.SERVER_STRING, "divolte");
+                new SetHeaderHandler(pathHandler, Headers.SERVER_STRING, "divolte");
         final HttpHandler canonicalPathHandler = new CanonicalPathHandler(headerHandler);
         final GracefulShutdownHandler rootHandler = new GracefulShutdownHandler(
                 vc.configuration().global.server.useXForwardedFor ?
@@ -161,14 +158,6 @@ public final class Server implements Runnable {
                            .addHttpListener(port, host.orElse(null))
                            .setHandler(rootHandler)
                            .build();
-    }
-
-    private static TrackingJavaScriptResource loadTrackingJavaScript(final ValidatedConfiguration vc, final String sourceName) {
-        try {
-            return TrackingJavaScriptResource.create(vc, sourceName);
-        } catch (final IOException e) {
-            throw new RuntimeException("Could not precompile tracking JavaScript for source: " + sourceName, e);
-        }
     }
 
     private static HttpHandler createStaticResourceHandler() {
