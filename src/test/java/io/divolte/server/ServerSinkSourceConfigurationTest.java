@@ -45,10 +45,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 @ParametersAreNonnullByDefault
-public class ServerSinkConfigurationTest {
+public class ServerSinkSourceConfigurationTest {
 
     private static final String BROWSER_EVENT_URL_TEMPLATE =
-        "http://localhost:%d/csc-event?"
+        "http://localhost:%d%s/csc-event?"
             + "p=0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG&"
             + "s=0%%3Ai1t84hgy%%3A95CbiPCYln_1e0a6rFvuRkDkeNnc6KC8&"
             + "v=0%%3A1fF6GFGjDOQiEx_OxnTm_tl4BH91eGLF&"
@@ -73,6 +73,10 @@ public class ServerSinkConfigurationTest {
         startServer(() ->  new TestServer(configResource, extraProperties));
     }
 
+    private void startServer(final String configResource) {
+        startServer(() -> new TestServer(configResource));
+    }
+
     private void startServer() {
         startServer(TestServer::new);
     }
@@ -94,14 +98,22 @@ public class ServerSinkConfigurationTest {
     }
 
     public void cleanupTempDirectories() {
-        tempDirectories.forEach(ServerSinkConfigurationTest::deleteRecursively);
+        tempDirectories.forEach(ServerSinkSourceConfigurationTest::deleteRecursively);
         tempDirectories.clear();
     }
 
     private void request() throws IOException {
-        final URL url = new URL(String.format(BROWSER_EVENT_URL_TEMPLATE, testServer.get().port));
+        request("");
+    }
+
+    private void request(final String sourcePrefix) throws IOException {
+        request(sourcePrefix, 200);
+    }
+
+    private void request(final String sourcePrefix, final int expectedResponseCode) throws IOException {
+        final URL url = new URL(String.format(BROWSER_EVENT_URL_TEMPLATE, testServer.get().port, sourcePrefix));
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        assertEquals(200, conn.getResponseCode());
+        assertEquals(expectedResponseCode, conn.getResponseCode());
     }
 
     @ParametersAreNonnullByDefault
@@ -139,6 +151,41 @@ public class ServerSinkConfigurationTest {
                         .filter(candidate -> isAvroFile(candidate) && !existingFiles.contains(candidate))
                         .flatMap(AvroFileLocator::listRecords);
         }
+    }
+
+    @Test
+    public void shouldRegisterDefaultBrowserSource() throws IOException, InterruptedException {
+        // Test the default browser source that should be present by default.
+        startServer();
+        request();
+        testServer.get().waitForEvent();
+    }
+
+    @Test
+    public void shouldRegisterExplicitSourceOnly() throws IOException, InterruptedException {
+        // Test that if an explicit source is supplied, the builtin defaults are not present.
+        startServer("browser-source-explicit.conf");
+        request("/a-prefix");
+        testServer.get().waitForEvent();
+        request("", 404);
+    }
+
+    @Test
+    public void shouldSupportLongSourcePaths() throws IOException, InterruptedException {
+        // Test that the browser sources work with different types of path.
+        startServer("browser-source-long-prefix.conf");
+        request("/a/multi/component/prefix");
+        testServer.get().waitForEvent();
+    }
+
+    @Test
+    public void shouldSupportMultipleBrowserSources() throws IOException, InterruptedException {
+        // Test that multiple browser sources are supported.
+        startServer("browser-source-multiple.conf");
+        request("/path1");
+        request("/path2");
+        testServer.get().waitForEvent();
+        testServer.get().waitForEvent();
     }
 
     @Test
