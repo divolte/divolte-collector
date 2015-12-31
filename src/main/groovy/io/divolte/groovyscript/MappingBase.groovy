@@ -64,16 +64,16 @@ abstract class MappingBase extends Script {
         ]
     }
 
-    static def not(ValueProducer<Boolean> producer) {
+    static ValueProducer<Boolean> not(ValueProducer<Boolean> producer) {
         producer.negate()
     }
 
-    def int32 = Integer.TYPE
-    def int64 = Long.TYPE
-    def fp32 = Float.TYPE
-    def fp64 = Double.TYPE
-    def bool = Boolean.TYPE
-    def uri = URI.class
+    final Class<Integer> int32 = Integer.TYPE
+    final Class<Long> int64 = Long.TYPE
+    final Class<Float> fp32 = Float.TYPE
+    final Class<Double> fp64 = Double.TYPE
+    final Class<Boolean> bool = Boolean.TYPE
+    final Class<URI> uri = URI.class
 
     def parse(ValueProducer<String> producer) {
         [
