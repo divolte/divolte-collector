@@ -8,6 +8,7 @@ import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.SchemaRegistry;
 import io.divolte.server.processing.ProcessingPool;
 
+import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
@@ -17,6 +18,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 })
 @ParametersAreNonnullByDefault
 public abstract class SinkConfiguration {
+    @OverridingMethodsMustInvokeSuper
     protected MoreObjects.ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this);
     }
