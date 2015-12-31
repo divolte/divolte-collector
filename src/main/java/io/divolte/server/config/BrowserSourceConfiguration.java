@@ -9,10 +9,10 @@ import javax.validation.Valid;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import io.divolte.server.BrowserSource;
 
 @ParametersAreNonnullByDefault
 public class BrowserSourceConfiguration extends SourceConfiguration {
-    private static final String DEFAULT_PREFIX = "/";
     private static final String DEFAULT_PARTY_COOKIE = "_dvp";
     private static final String DEFAULT_PARTY_TIMEOUT = "730 days";
     private static final String DEFAULT_SESSION_COOKIE = "_dvs";
@@ -26,8 +26,6 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
             DEFAULT_SESSION_COOKIE,
             DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT),
             JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
-
-    public final String prefix;
 
     public final Optional<String> cookieDomain;
     public final String partyCookie;
@@ -46,9 +44,8 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
                                @JsonProperty(defaultValue=DEFAULT_SESSION_COOKIE) final String sessionCookie,
                                @JsonProperty(defaultValue=DEFAULT_SESSION_TIMEOUT) final Duration sessionTimeout,
                                final JavascriptConfiguration javascript) {
+        super(prefix);
         // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
-        final String rawPrefix = prefix == null ? DEFAULT_PREFIX : prefix;
-        this.prefix = rawPrefix.endsWith("/") ? rawPrefix : rawPrefix + '/';
         this.cookieDomain = cookieDomain;
         this.partyCookie = partyCookie == null ? DEFAULT_PARTY_COOKIE : partyCookie;
         this.partyTimeout = partyTimeout == null ? DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT) : partyTimeout;
@@ -60,12 +57,16 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
-                .add("prefix", prefix)
                 .add("cookieDomain", cookieDomain)
                 .add("partyCookie", partyCookie)
                 .add("partyTimeout", partyTimeout)
                 .add("sessionCookie", sessionCookie)
                 .add("sessionTimeout", sessionTimeout)
                 .add("javascript", javascript);
+    }
+
+    @Override
+    public SourceFactory getFactory() {
+        return BrowserSource::new;
     }
 }

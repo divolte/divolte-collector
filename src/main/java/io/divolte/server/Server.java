@@ -125,17 +125,22 @@ public final class Server implements Runnable {
               })
               .collect(MoreCollectors.toImmutableMultimap());
         // Now instantiate all the sources. We do this in parallel because instantiation can be quite slow.
-        final ImmutableMap<String, BrowserSource> sources =
-                vc.configuration().sources.keySet()
+        final ImmutableMap<String, HttpSource> sources =
+                vc.configuration().sources.entrySet()
                   .parallelStream()
-                  .map(name ->
-                          Maps.immutableEntry(name, new BrowserSource(vc, name, mappingProcessorsBySource.get(name))))
+                  .map(source ->
+                          Maps.immutableEntry(source.getKey(),
+                                              source.getValue()
+                                                    .getFactory()
+                                                    .create(vc,
+                                                            source.getKey(),
+                                                            mappingProcessorsBySource.get(source.getKey()))))
                   .collect(MoreCollectors.toImmutableMap());
         logger.debug("Attaching sources: {}", sources.keySet());
         // Once all created we can attach them to the server. This has to be done sequentially.
         PathHandler pathHandler = new PathHandler();
-        for (final BrowserSource browserSource : sources.values()) {
-            pathHandler = browserSource.attachToPathHandler(pathHandler);
+        for (final HttpSource source : sources.values()) {
+            pathHandler = source.attachToPathHandler(pathHandler);
         }
         logger.info("Initialized sources: {}", sources.keySet());
 
