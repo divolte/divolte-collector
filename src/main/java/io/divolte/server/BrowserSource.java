@@ -17,6 +17,7 @@
 package io.divolte.server;
 
 import com.google.common.collect.ImmutableCollection;
+import io.divolte.server.config.BrowserSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.server.HttpHandler;
@@ -44,7 +45,7 @@ public class BrowserSource {
                          final String sourceName,
                          final ImmutableCollection<IncomingRequestProcessingPool> mappingProcessors) {
         this(sourceName,
-             vc.configuration().getBrowserSourceConfiguration(sourceName).prefix,
+             vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).prefix,
              loadTrackingJavaScript(vc, sourceName),
              mappingProcessors);
     }
