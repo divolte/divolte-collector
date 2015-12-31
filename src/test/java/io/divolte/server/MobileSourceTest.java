@@ -16,15 +16,30 @@
 
 package io.divolte.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ContainerNode;
 import io.divolte.server.ServerTestUtils.TestServer;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.function.Consumer;
+
+import static org.junit.Assert.assertEquals;
 
 @ParametersAreNonnullByDefault
 public class MobileSourceTest {
+    private static final String MOBILE_EVENT_URL_TEMPLATE =
+            "http://localhost:%d/mob-event/0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
     private Optional<TestServer> testServer = Optional.empty();
 
     private void startServer(final String configResource) {
@@ -37,9 +52,77 @@ public class MobileSourceTest {
         testServer = Optional.empty();
     }
 
+    private void request() throws IOException {
+        request(JSON_MAPPER.createObjectNode());
+    }
+
+    private static <T> Consumer<T> noop() {
+        return ignored -> {};
+    }
+
+    private void request(final ContainerNode json) throws IOException {
+        final HttpURLConnection conn = request(json, noop());
+        assertEquals(200, conn.getResponseCode());
+    }
+
+    private HttpURLConnection startRequest() throws IOException {
+        final URL url = new URL(String.format(MOBILE_EVENT_URL_TEMPLATE, testServer.get().port));
+        return (HttpURLConnection) url.openConnection();
+    }
+
+    private HttpURLConnection request(final ContainerNode json,
+                                      final Consumer<HttpURLConnection> preRequest) throws IOException {
+        final HttpURLConnection conn = startRequest();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+        preRequest.accept(conn);
+        try (final OutputStream requestBody = conn.getOutputStream()) {
+            JSON_MAPPER.writeValue(requestBody, json);
+        }
+        // This is the canonical way to wait for the server to respond.
+        conn.getResponseCode();
+        return conn;
+    }
+
     @Test
     public void shouldSupportMobileSource() {
         startServer("mobile-source.conf");
+    }
+
+    @Test
+    @Ignore("Not yet supported")
+    public void shouldSupportPostingJsonToEndpoint() throws IOException {
+        startServer("mobile-source.conf");
+        request();
+    }
+
+    @Test
+    @Ignore("Not yet supported")
+    public void shouldOnlySupportPostRequests() throws IOException {
+        startServer("mobile-source.conf");
+        final HttpURLConnection conn = startRequest();
+        conn.setRequestMethod("GET");
+
+        // 405: Method Not Allowed
+        assertEquals(405, conn.getResponseCode());
+        assertEquals("POST", conn.getHeaderField("Allow"));
+    }
+
+    @Test
+    @Ignore("Not yet supported")
+    public void shouldOnlySupportJsonRequests() throws IOException {
+        startServer("mobile-source.conf");
+        final HttpURLConnection conn = startRequest();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
+        conn.setDoOutput(true);
+        try (final OutputStream requestBody = conn.getOutputStream()) {
+            requestBody.write("This is not a JSON body.".getBytes(StandardCharsets.UTF_8));
+        }
+
+        // 415: Unsupported Media Type
+        assertEquals(415, conn.getResponseCode());
     }
 
     @After
