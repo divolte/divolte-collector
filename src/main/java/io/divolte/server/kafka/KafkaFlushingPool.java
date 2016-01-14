@@ -20,10 +20,13 @@ import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
+
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+
 import java.util.Objects;
 
 @ParametersAreNonnullByDefault
@@ -37,9 +40,10 @@ public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBu
                 vc.configuration().kafkaFlusher.maxWriteQueue,
                 vc.configuration().kafkaFlusher.maxEnqueueDelay.toMillis(),
                 vc.configuration().kafkaFlusher.topic,
-                new KafkaProducer<>(vc.configuration().kafkaFlusher.producer,
-                        new DivolteIdentifierSerializer(),
-                        new AvroRecordBufferSerializer())
+                new KafkaProducer<>(
+                        vc.configuration().kafkaFlusher.producer,
+                        vc.configuration().kafkaFlusher.producer.containsKey(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG) ? null : new DivolteIdentifierSerializer(),
+                        vc.configuration().kafkaFlusher.producer.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG) ? null : new AvroRecordBufferSerializer())
                 );
     }
 
