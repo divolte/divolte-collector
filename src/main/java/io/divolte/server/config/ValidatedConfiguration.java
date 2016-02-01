@@ -176,7 +176,7 @@ public final class ValidatedConfiguration {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
         // Deserialization for Duration
-        final SimpleModule module= new SimpleModule("Configuration Deserializers");
+        final SimpleModule module = new SimpleModule("Configuration Deserializers");
         module.addDeserializer(Duration.class, new DurationDeserializer());
         module.addDeserializer(Properties.class, new PropertiesDeserializer());
 

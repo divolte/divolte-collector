@@ -16,19 +16,20 @@
 
 package io.divolte.server;
 
-import com.google.common.collect.ImmutableCollection;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Objects;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.util.Methods;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Objects;
 
 @ParametersAreNonnullByDefault
 public class BrowserSource {
@@ -40,25 +41,27 @@ public class BrowserSource {
     private final HttpHandler javascriptHandler;
     private final HttpHandler eventHandler;
 
+
     public BrowserSource(final ValidatedConfiguration vc,
                          final String sourceName,
-                         final ImmutableCollection<IncomingRequestProcessingPool> mappingProcessors) {
+                         final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
              vc.configuration().getBrowserSourceConfiguration(sourceName).prefix,
              loadTrackingJavaScript(vc, sourceName),
-             mappingProcessors);
+             processingPool,
+             vc.configuration().sourceIndex(sourceName));
     }
 
     private BrowserSource(final String sourceName,
                           final String pathPrefix,
                           final TrackingJavaScriptResource trackingJavascript,
-                          final ImmutableCollection<IncomingRequestProcessingPool> mappingProcessors) {
+                          final IncomingRequestProcessingPool processingPool,
+                          final int sourceIndex) {
         this.sourceName = Objects.requireNonNull(sourceName);
         this.pathPrefix = Objects.requireNonNull(pathPrefix);
         javascriptName = trackingJavascript.getScriptName();
         javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavascript), Methods.GET);
-        final EventForwarder<DivolteEvent> processingPoolsForwarder = EventForwarder.create(mappingProcessors);
-        final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPoolsForwarder);
+        final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPool, sourceIndex);
         eventHandler = new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET);
     }
 

@@ -16,27 +16,29 @@
 
 package io.divolte.server;
 
-import io.divolte.record.DefaultEventRecord;
-import io.divolte.server.config.MappingConfiguration;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ItemProcessor;
-import io.divolte.server.recordmapping.DslRecordMapper;
-import io.divolte.server.recordmapping.DslRecordMapping;
-import io.divolte.server.recordmapping.RecordMapper;
-import io.divolte.server.recordmapping.UserAgentParserAndCache;
+import io.divolte.server.processing.ProcessingPool;
 import io.undertow.util.AttachmentKey;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Objects;
-import java.util.Optional;
-
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
 
 @ParametersAreNonnullByDefault
 public final class IncomingRequestProcessor implements ItemProcessor<DivolteEvent> {
@@ -44,101 +46,139 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
 
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
 
-    private final EventForwarder<AvroRecordBuffer> flushingPools;
-
-    private final IncomingRequestListener listener;
-
-    private final RecordMapper mapper;
-
-    private final boolean keepCorrupted;
-
     private final ShortTermDuplicateMemory memory;
-    private final boolean keepDuplicates;
+
+    private final ImmutableList<ImmutableList<Mapping>> mappingsBySourceIndex;
+    private final ImmutableList<ImmutableList<ProcessingPool<?, AvroRecordBuffer>>> sinksByMappingIndex;
 
     public IncomingRequestProcessor(final ValidatedConfiguration vc,
-                                    final String name,
-                                    final EventForwarder<AvroRecordBuffer> flushingPools,
+                                    final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinksByName,
                                     final Optional<LookupService> geoipLookupService,
-                                    final Schema schema,
+                                    final SchemaRegistry schemaRegistry,
                                     final IncomingRequestListener listener) {
-        this.flushingPools = flushingPools;
-        this.listener = Objects.requireNonNull(listener);
-
-        final MappingConfiguration mappingConfiguration = vc.configuration().getMappingConfiguration(name);
-        keepCorrupted = !mappingConfiguration.discardCorrupted;
 
         memory = new ShortTermDuplicateMemory(vc.configuration().global.mapper.duplicateMemorySize);
-        keepDuplicates = !mappingConfiguration.discardDuplicates;
 
-        mapper = mappingConfiguration.mappingScriptFile
-                .map((mappingScriptFile) -> {
-                    logger.info("Using script based schema mapping.");
-                    return new DslRecordMapper(vc, mappingScriptFile, Objects.requireNonNull(schema), geoipLookupService);
+        /*
+         * Create all Mapping instances based on their config.
+         */
+        final Map<String, Mapping> mappingsByName = vc.configuration()
+          .mappings
+          .entrySet()
+          .stream()
+          .collect(Collectors.toMap(
+                  (kv) -> kv.getKey(),
+                  (kv) -> new Mapping(
+                          vc,
+                          kv.getKey(),
+                          geoipLookupService,
+                          schemaRegistry,
+                          listener)
+                  ));
 
-                }).orElseGet(() -> {
-                    logger.info("Using built in default schema mapping.");
-                    return new DslRecordMapper(DefaultEventRecord.getClassSchema(), defaultRecordMapping(vc));
-                });
-    }
+        /*
+         * Create a mapping from source index to a list of Mapping's that apply
+         * to events generated from that source index. Finally, we use a
+         * ImmutableList<ImmutableList<Mapping>> as result, not a
+         * Map<Integer, ImmutableList<Mapping>> because that way the backing
+         * data structure is effectively a two-dimensional array and no hashing
+         * is required for retrieval (list indexes are ints already).
+         */
+        final ArrayList<ImmutableList<Mapping>> sourceMappingResult =                           // temporary mutable container for the result
+                IntStream.range(0, vc.configuration().sources.size())
+                         .<ImmutableList<Mapping>>mapToObj((ignored) -> ImmutableList.of())     // initialized with empty lists per default
+                         .collect(Collectors.toCollection(ArrayList::new));
 
-    private DslRecordMapping defaultRecordMapping(final ValidatedConfiguration vc) {
-        final DslRecordMapping result = new DslRecordMapping(DefaultEventRecord.getClassSchema(), new UserAgentParserAndCache(vc), Optional.empty());
-        result.map("detectedCorruption", result.corrupt());
-        result.map("detectedDuplicate", result.duplicate());
-        result.map("firstInSession", result.firstInSession());
-        result.map("timestamp", result.timestamp());
-        result.map("clientTimestamp", result.clientTimestamp());
-        result.map("remoteHost", result.remoteHost());
-        result.map("referer", result.referer());
-        result.map("location", result.location());
-        result.map("viewportPixelWidth", result.viewportPixelWidth());
-        result.map("viewportPixelHeight", result.viewportPixelHeight());
-        result.map("screenPixelWidth", result.screenPixelWidth());
-        result.map("screenPixelHeight", result.screenPixelHeight());
-        result.map("partyId", result.partyId());
-        result.map("sessionId", result.sessionId());
-        result.map("pageViewId", result.pageViewId());
-        result.map("eventType", result.eventType());
-        result.map("userAgentString", result.userAgentString());
-        final DslRecordMapping.UserAgentValueProducer userAgent = result.userAgent();
-        result.map("userAgentName", userAgent.name());
-        result.map("userAgentFamily", userAgent.family());
-        result.map("userAgentVendor", userAgent.vendor());
-        result.map("userAgentType", userAgent.type());
-        result.map("userAgentVersion", userAgent.version());
-        result.map("userAgentDeviceCategory", userAgent.deviceCategory());
-        result.map("userAgentOsFamily", userAgent.osFamily());
-        result.map("userAgentOsVersion", userAgent.osVersion());
-        result.map("userAgentOsVendor", userAgent.osVendor());
-        return result;
+        vc.configuration()
+          .mappings
+          .entrySet()
+          .stream()                                                               // stream of entries (mapping_name, mapping_configuration)
+          .flatMap(
+                  (kv) -> kv.getValue()
+                            .sources
+                            .stream()
+                            .map(
+                                    s -> Maps.immutableEntry(
+                                            vc.configuration().sourceIndex(s),
+                                            kv.getKey())))                        // Results in stream of (source_index, mapping_name)
+          .collect(Collectors.groupingBy(
+                  (e) -> e.getKey(),
+                  Collectors.mapping(
+                          e -> mappingsByName.get(e.getValue()),
+                               MoreCollectors.toImmutableList())
+                  ))                                                              // Results in a Map<Integer, ImmutableList<Mapping>> where the key is the source index
+          .forEach((idx, m) -> sourceMappingResult.set(idx, m));                  // Populate the temporary result in ArrayList<ImmutableList<Mapping>>
+
+        mappingsBySourceIndex = ImmutableList.copyOf(sourceMappingResult);        // Make immutable copy
+
+        /*
+         * Create a mapping from mapping index to a list of sinks (ProcessingPools)
+         * that apply for events that came from the given mapping. Similar as above,
+         * we transform the result into a list of lists, instead of a map in order
+         * to make sure the underlying lookups are array index lookups instead of
+         * hash map lookups.
+         *
+         * Note that we need to know the sinks for a mapping here, instead of on the
+         * sink thread side, since we have one pool per sink at this moment. Later
+         * we'll likely move to one pool per sink type (i.e. Kafka, HDFS) and leave
+         * it to that pool to multiplex events to different sinks destinations (HDFS
+         * files or Kafka topics), which should move this code elsewhere.
+         */
+        final ArrayList<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>> mappingMappingResult =                          // temporary mutable container for the result
+                IntStream.range(0, vc.configuration().mappings.size())
+                         .<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>>mapToObj((ignored) -> ImmutableList.of())     // initialized with empty lists per default
+                         .collect(Collectors.toCollection(ArrayList::new));
+
+        /*
+         * Without the intermediate variable (collected), The Eclipse compiler's type
+         * inference doesn't know how to handle this. Don't know about Oracle Java compiler.
+         */
+        final Map<Integer, ImmutableList<ProcessingPool<?, AvroRecordBuffer>>> collected = vc.configuration()
+                .mappings
+                .entrySet()
+                .stream()
+                .flatMap(
+                        (kv) -> kv.getValue()
+                                .sinks
+                                .stream()
+                                .map(
+                                        s -> Maps.immutableEntry(
+                                                vc.configuration().mappingIndex(kv.getKey()),
+                                                s
+                                        )))
+                .filter(e -> sinksByName.containsKey(e.getValue()))
+          .collect(Collectors.groupingBy(
+                  (e) -> e.getKey(),
+                  Collectors.mapping(
+                          e -> sinksByName.get(e.getValue()),
+                          MoreCollectors.toImmutableList()
+                          )
+                  ));
+          collected.forEach((idx, s) -> mappingMappingResult.set(idx, s));
+
+          sinksByMappingIndex = ImmutableList.copyOf(mappingMappingResult);
     }
 
     @Override
     public ProcessingDirective process(final Item<DivolteEvent> item) {
         final DivolteEvent event = item.payload;
-        if (!event.corruptEvent || keepCorrupted) {
-            /*
-             * Note: we cannot use the actual query string here,
-             * as the incoming request processor is agnostic of
-             * that sort of thing. The request may have come from
-             * an endpoint that doesn't require a query string,
-             * but rather generates these IDs on the server side.
-             */
-            final boolean duplicate = memory.isProbableDuplicate(event.partyCookie.value, event.sessionCookie.value, event.eventId);
-            event.exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
-            if (!duplicate || keepDuplicates) {
-                final GenericRecord avroRecord = mapper.newRecordFromExchange(event);
-                final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                        event.partyCookie,
-                        event.sessionCookie,
-                        event.requestStartTime,
-                        event.clientUtcOffset,
-                        avroRecord);
-                listener.incomingRequest(event, avroBuffer, avroRecord);
-                flushingPools.forward(Item.withCopiedAffinity(0, item, avroBuffer));
-            }
-        }
+        final boolean duplicate = memory.isProbableDuplicate(event.partyCookie.value, event.sessionCookie.value, event.eventId);
+        event.exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
+
+        mappingsBySourceIndex.get(item.sourceId)
+                             .stream()                                                          // For each mapping that applies to this source
+                             .map(mapping -> mapping.map(item, duplicate))
+                             .filter(optionalBufferItem -> optionalBufferItem.isPresent())      // Filter discarded for duplication or corruption
+                             .map(Optional::get)
+                             .forEach(
+                                     bufferItem -> {
+                                         sinksByMappingIndex.get(bufferItem.sourceId)
+                                                            .stream()                           // For each sink that applies to this mapping
+                                                            .forEach(sink -> {
+                                             sink.enqueue(bufferItem);
+                                         });
+                                     });
         return CONTINUE;
     }
 }

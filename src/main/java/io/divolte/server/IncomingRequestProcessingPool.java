@@ -16,66 +16,50 @@
 
 package io.divolte.server;
 
-import com.google.common.collect.ImmutableSet;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Optional;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableMap;
+
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.processing.ProcessingPool;
-import org.apache.avro.Schema;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.Optional;
-import java.util.function.Function;
 
 @ParametersAreNonnullByDefault
 final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, DivolteEvent> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
 
     public IncomingRequestProcessingPool(final ValidatedConfiguration vc,
-                                         final String name,
                                          final SchemaRegistry schemaRegistry,
-                                         final Function<String, Optional<ProcessingPool<?, AvroRecordBuffer>>> sinkProvider,
+                                         final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinksByName,
                                          final IncomingRequestListener listener) {
         this (
-                vc.configuration().global.mapper.threads,
-                vc.configuration().global.mapper.bufferSize,
                 vc,
-                name,
-                schemaRegistry.getSchemaByMappingName(name),
-                buildSinksForwarder(sinkProvider, vc.configuration().mappings.get(name).sinks),
+                schemaRegistry,
+                sinksByName,
                 lookupServiceFromConfig(vc),
                 listener
                 );
     }
 
-    private static EventForwarder<AvroRecordBuffer> buildSinksForwarder(final Function<String, Optional<ProcessingPool<?, AvroRecordBuffer>>> sinkProvider,
-                                                                        final ImmutableSet<String> sinkNames) {
-        // Some sinks may not be available via the provider: these have been globally disabled.
-        return EventForwarder.create(sinkNames.stream()
-                                              .map(sinkProvider::apply)
-                                              .filter(Optional::isPresent)
-                                              .map(Optional::get)
-                                              .collect(MoreCollectors.toImmutableList()));
-    }
-
     public IncomingRequestProcessingPool(
-            final int numThreads,
-            final int maxQueueSize,
             final ValidatedConfiguration vc,
-            final String name,
-            final Schema schema,
-            final EventForwarder<AvroRecordBuffer> flushingPools,
+            final SchemaRegistry schemaRegistry,
+            final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinksByName,
             final Optional<LookupService> geoipLookupService,
             final IncomingRequestListener listener) {
         super(
-                numThreads,
-                maxQueueSize,
+                vc.configuration().global.mapper.threads,
+                vc.configuration().global.mapper.bufferSize,
                 "Incoming Request Processor",
-                () -> new IncomingRequestProcessor(vc, name, flushingPools, geoipLookupService, schema, listener));
+                () -> new IncomingRequestProcessor(vc, sinksByName, geoipLookupService, schemaRegistry, listener));
     }
 
     private static Optional<LookupService> lookupServiceFromConfig(final ValidatedConfiguration vc) {

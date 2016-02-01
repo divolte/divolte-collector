@@ -1,18 +1,28 @@
 package io.divolte.server.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
-import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
-import io.divolte.server.config.constraint.OneSchemaPerSink;
-import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.validation.Valid;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
+import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
+import io.divolte.server.config.constraint.OneSchemaPerSink;
+import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
 
 @ParametersAreNonnullByDefault
 @MappingSourceSinkReferencesMustExist
@@ -35,6 +45,39 @@ public final class DivolteConfiguration {
         this.sources = sources.orElseGet(DivolteConfiguration::defaultSourceConfigurations);
         this.sinks = sinks.orElseGet(DivolteConfiguration::defaultSinkConfigurations);
         this.mappings = mappings.orElseGet(() -> defaultMappingConfigurations(this.sources.keySet(), this.sinks.keySet()));
+    }
+
+    /*
+     * This performs a linear search over the map. Only use in startup code;
+     * avoid in inner loops.
+     */
+    private static <T> int position(final T key, final ImmutableMap<T,?> map) {
+        final ImmutableList<T> keyList = map.keySet().asList();
+        return keyList.indexOf(key);
+    }
+
+    /**
+     * This performs a linear search over the map. Only use in startup code;
+     * avoid in inner loops.
+     */
+    public int sourceIndex(final String name) {
+        return position(name, sources);
+    }
+
+    /**
+     * This performs a linear search over the map. Only use in startup code;
+     * avoid in inner loops.
+     */
+    public int sinkIndex(final String name) {
+        return position(name, sinks);
+    }
+
+    /**
+     * This performs a linear search over the map. Only use in startup code;
+     * avoid in inner loops.
+     */
+    public int mappingIndex(final String name) {
+        return position(name, mappings);
     }
 
     public BrowserSourceConfiguration getBrowserSourceConfiguration(final String sourceName) {
