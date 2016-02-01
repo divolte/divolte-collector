@@ -2,6 +2,7 @@ package io.divolte.server.config;
 
 import com.google.common.base.MoreObjects;
 
+import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
@@ -17,6 +18,7 @@ public abstract class SinkTypeConfiguration {
         this.enabled = enabled;
     }
 
+    @OverridingMethodsMustInvokeSuper
     protected MoreObjects.ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                 .add("enabled", enabled)

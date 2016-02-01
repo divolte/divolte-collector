@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.MoreObjects;
 
+import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
@@ -12,6 +13,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 })
 @ParametersAreNonnullByDefault
 public abstract class SourceConfiguration {
+    @OverridingMethodsMustInvokeSuper
     protected MoreObjects.ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this);
     }

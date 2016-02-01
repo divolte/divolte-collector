@@ -80,23 +80,62 @@ public final class DivolteConfiguration {
         return position(name, mappings);
     }
 
-    public BrowserSourceConfiguration getBrowserSourceConfiguration(final String sourceName) {
+    /**
+     * Retrieve the configuration for the source with the given name, casting it to an expected type.
+     *
+     * It is an error to request a source that doesn't exist or is of the wrong type: the caller is
+     * responsible for knowing the name is valid and the type of source.
+     *
+     * @param sourceName    the name of the source whose configuration should be retrieved.
+     * @param sourceClass   the class of the source configuration to retrieve.
+     * @param <T>           the type of the source configuration to retrieve.
+     * @return              the configuration for the given source.
+     * @throws              IllegalArgumentException
+     *                      if no configuration exists for the given source or its type is different
+     *                      to that expected.
+     */
+    public <T> T getSourceConfiguration(final String sourceName, final Class <? extends T> sourceClass) {
         final SourceConfiguration sourceConfiguration = sources.get(sourceName);
-        Objects.requireNonNull(sourceConfiguration, () -> "No source configuration with name: " + sourceName);
-        Preconditions.checkArgument(sourceConfiguration instanceof BrowserSourceConfiguration,
-                                    "Source configuration '%s' is not a browser source", sourceName);
-        return (BrowserSourceConfiguration)sourceConfiguration;
+        Preconditions.checkArgument(null != sourceConfiguration, "No source configuration with name: %s", sourceName);
+        Preconditions.checkArgument(sourceClass.isInstance(sourceConfiguration),
+                "Source configuration '%s' is not a %s sink", sourceName, sourceClass.getSimpleName());
+        return sourceClass.cast(sourceConfiguration);
     }
 
+    /**
+     * Retrieve the configuration for the mapping with the given name.
+     *
+     * It is an error to request a mapping that doesn't exist: the caller is responsible for knowing
+     * the name is valid.
+     *
+     * @param mappingName   the name of the mapping whose configuration should be retrieved.
+     * @return              the configuration for the given mapping.
+     * @throws              IllegalArgumentException
+     *                      if no configuration exists for the given mapping.
+     */
     public MappingConfiguration getMappingConfiguration(final String mappingName) {
         final MappingConfiguration mappingConfiguration = mappings.get(mappingName);
-        Objects.requireNonNull(mappingConfiguration, () -> "No mapping configuration with name: " + mappingName);
+        Preconditions.checkArgument(null != mappingConfiguration, "No mapping configuration with name: %s", mappingName);
         return mappingConfiguration;
     }
 
+    /**
+     * Retrieve the configuration for the sink with the given name, casting it to an expected type.
+     *
+     * It is an error to request a sink that doesn't exist or is of the wrong type: the caller is
+     * responsible for knowing the name is valid and the type of sink.
+     *
+     * @param sinkName  the name of the sink whose configuration should be retrieved.
+     * @param sinkClass the class of the sink configuration to retrieve.
+     * @param <T>       the type of the sink configuration to retrieve.
+     * @return          the configuration for the given sink.
+     * @throws          IllegalArgumentException
+     *                  if no configuration exists for the given sink or its type is different
+     *                  to that expected.
+     */
     public <T> T getSinkConfiguration(final String sinkName, final Class <? extends T> sinkClass) {
         final SinkConfiguration sinkConfiguration = sinks.get(sinkName);
-        Objects.requireNonNull(sinkConfiguration, () -> "No sink configuration with name: " + sinkName);
+        Preconditions.checkArgument(null != sinkConfiguration, "No sink configuration with name: %s", sinkName);
         Preconditions.checkArgument(sinkClass.isInstance(sinkConfiguration),
                                     "Sink configuration '%s' is not a %s sink", sinkName, sinkClass.getSimpleName());
         return sinkClass.cast(sinkConfiguration);

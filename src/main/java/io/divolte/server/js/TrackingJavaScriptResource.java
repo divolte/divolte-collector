@@ -69,7 +69,8 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
 
     public static TrackingJavaScriptResource create(final ValidatedConfiguration vc,
                                                     final String sourceName) throws IOException {
-        final BrowserSourceConfiguration browserSourceConfiguration = vc.configuration().getBrowserSourceConfiguration(sourceName);
+        final BrowserSourceConfiguration browserSourceConfiguration =
+                vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class);
         return new TrackingJavaScriptResource(browserSourceConfiguration.javascript.name,
                                               createScriptConstants(browserSourceConfiguration),
                                               browserSourceConfiguration.javascript.debug);

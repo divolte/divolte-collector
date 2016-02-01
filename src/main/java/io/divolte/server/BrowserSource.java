@@ -25,6 +25,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.divolte.server.config.BrowserSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.js.TrackingJavaScriptResource;
 import io.undertow.server.HttpHandler;
@@ -46,7 +47,7 @@ public class BrowserSource {
                          final String sourceName,
                          final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
-             vc.configuration().getBrowserSourceConfiguration(sourceName).prefix,
+             vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).prefix,
              loadTrackingJavaScript(vc, sourceName),
              processingPool,
              vc.configuration().sourceIndex(sourceName));
