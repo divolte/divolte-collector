@@ -1,16 +1,15 @@
 package io.divolte.server.config;
 
+import javax.annotation.OverridingMethodsMustInvokeSuper;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableCollection;
-import io.divolte.server.DivolteEvent;
-import io.divolte.server.HttpSource;
-import io.divolte.server.processing.ProcessingPool;
 
-import javax.annotation.OverridingMethodsMustInvokeSuper;
-import javax.annotation.ParametersAreNonnullByDefault;
+import io.divolte.server.HttpSource;
+import io.divolte.server.IncomingRequestProcessingPool;
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -49,6 +48,6 @@ public abstract class SourceConfiguration {
     public interface SourceFactory {
         HttpSource create(ValidatedConfiguration configuration,
                           String sourceName,
-                          ImmutableCollection<? extends ProcessingPool<?, DivolteEvent>> mappingProcessors);
+                          IncomingRequestProcessingPool processingPool);
     }
 }

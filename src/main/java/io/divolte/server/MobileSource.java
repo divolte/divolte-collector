@@ -16,34 +16,31 @@
 
 package io.divolte.server;
 
-import com.google.common.collect.ImmutableCollection;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import io.divolte.server.config.MobileSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.processing.ProcessingPool;
 import io.undertow.server.handlers.PathHandler;
-
-import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
 public class MobileSource extends HttpSource {
     public MobileSource(final ValidatedConfiguration vc,
                         final String sourceName,
-                        final ImmutableCollection<? extends ProcessingPool<?, DivolteEvent>> mappingProcessors) {
+                        final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
              vc.configuration().getSourceConfiguration(sourceName, MobileSourceConfiguration.class).prefix,
-             mappingProcessors);
+             processingPool);
     }
 
     private MobileSource(final String sourceName,
                          final String pathPrefix,
-                         @SuppressWarnings("unused")
-                         final ImmutableCollection<? extends ProcessingPool<?, DivolteEvent>> mappingProcessors) {
+                         @SuppressWarnings("unused") final IncomingRequestProcessingPool processingPool) {
         super(sourceName, pathPrefix);
         // TODO: Implement me.
     }
 
     @Override
-    public PathHandler attachToPathHandler(PathHandler pathHandler) {
+    public PathHandler attachToPathHandler(final PathHandler pathHandler) {
         // TODO: Implement me.
         return pathHandler;
     }

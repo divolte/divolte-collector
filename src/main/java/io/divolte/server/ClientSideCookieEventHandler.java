@@ -49,7 +49,8 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
     private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
 
     private final ByteBuffer transparentImage;
-    private final EventForwarder<DivolteEvent> processingPools;
+    private final IncomingRequestProcessingPool processingPool;
+    private final int sourceIndex;
 
     private static final String TRUE_STRING = "t";
 
@@ -75,8 +76,9 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
     static final String EVENT_SOURCE_NAME = "browser";
 
-    public ClientSideCookieEventHandler(final EventForwarder<DivolteEvent> processingPools) {
-        this.processingPools = Objects.requireNonNull(processingPools);
+    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool, final int sourceIndex) {
+        this.sourceIndex = sourceIndex;
+        this.processingPool = Objects.requireNonNull(processingPool);
 
         try {
             this.transparentImage = ByteBuffer.wrap(
@@ -124,10 +126,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
         // If an ETag is present, this is a duplicate event.
         if (ETagUtils.handleIfNoneMatch(exchange, SENTINEL_ETAG, true)) {
-            /*
-             * Subclasses are responsible to logging events.
-             * We just ensure the pixel is always returned, no matter what.
-             */
             try {
                 logEvent(exchange);
             } finally {
@@ -175,7 +173,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                                                              isNewPartyId, isFirstInSession, exchange);
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
-        processingPools.forward(Item.of(0, partyId.value, event));
+        processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
 
     static DivolteEvent buildBrowserEventData(final boolean corruptEvent,

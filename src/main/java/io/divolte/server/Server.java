@@ -16,11 +16,22 @@
 
 package io.divolte.server;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.typesafe.config.ConfigFactory;
+
 import io.divolte.server.config.HdfsSinkConfiguration;
 import io.divolte.server.config.KafkaSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
@@ -37,16 +48,6 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
-import org.apache.hadoop.fs.FileSystem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
 
 @ParametersAreNonnullByDefault
 public final class Server implements Runnable {
@@ -56,7 +57,7 @@ public final class Server implements Runnable {
     private final GracefulShutdownHandler shutdownHandler;
 
     private final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinks;
-    private final ImmutableMap<String, IncomingRequestProcessingPool> mappingProcessors;
+    private final IncomingRequestProcessingPool incomingRequestProcessingPool;
 
     private final Optional<String> host;
     private final int port;
@@ -99,34 +100,14 @@ public final class Server implements Runnable {
         logger.info("Initialized sinks: {}", sinks.keySet());
 
         logger.debug("Initializing mappings...");
-        final Function<String, Optional<ProcessingPool<?, AvroRecordBuffer>>> schemaProvider =
-                sinkName -> Optional.ofNullable(sinks.get(sinkName));
-        mappingProcessors =
-                ImmutableMap.copyOf(Maps.transformEntries(vc.configuration().mappings,
-                                                          (mappingName, config) ->
-                                                                  new IncomingRequestProcessingPool(vc,
-                                                                                                    mappingName,
-                                                                                                    schemaRegistry,
-                                                                                                    schemaProvider,
-                                                                                                    listener)));
-        logger.info("Initialized mappings: {}", mappingProcessors.keySet());
+        incomingRequestProcessingPool = new IncomingRequestProcessingPool(vc, schemaRegistry, sinks, listener);
 
         logger.debug("Initializing sources...");
-        // First build a list of which mappings are used by each source.
-        final ImmutableMultimap<String,IncomingRequestProcessingPool> mappingProcessorsBySource =
-            vc.configuration().mappings.entrySet()
-              .stream()
-              .flatMap(mappingConfig -> {
-                  final IncomingRequestProcessingPool mappingProcessor = mappingProcessors.get(mappingConfig.getKey());
-                  return mappingConfig.getValue()
-                                      .sources
-                                      .stream()
-                                      .map(source -> Maps.immutableEntry(source, mappingProcessor));
-              })
-              .collect(MoreCollectors.toImmutableMultimap());
         // Now instantiate all the sources. We do this in parallel because instantiation can be quite slow.
         final ImmutableMap<String, HttpSource> sources =
-                vc.configuration().sources.entrySet()
+                vc.configuration()
+                  .sources
+                  .entrySet()
                   .parallelStream()
                   .map(source ->
                           Maps.immutableEntry(source.getKey(),
@@ -134,8 +115,9 @@ public final class Server implements Runnable {
                                                     .getFactory()
                                                     .create(vc,
                                                             source.getKey(),
-                                                            mappingProcessorsBySource.get(source.getKey()))))
+                                                            incomingRequestProcessingPool)))
                   .collect(MoreCollectors.toImmutableMap());
+
         logger.debug("Attaching sources: {}", sources.keySet());
         // Once all created we can attach them to the server. This has to be done sequentially.
         PathHandler pathHandler = new PathHandler();
@@ -199,7 +181,7 @@ public final class Server implements Runnable {
 
         logger.info("Stopping thread pools.");
         // Stop the mappings before the sinks to ensure work in progress doesn't get stranded.
-        mappingProcessors.values().forEach(ProcessingPool::stop);
+        incomingRequestProcessingPool.stop();
         sinks.values().forEach(ProcessingPool::stop);
 
         logger.info("Closing HDFS filesystem connection.");
