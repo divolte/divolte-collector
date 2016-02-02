@@ -14,13 +14,12 @@ import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.processing.Item;
 import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.DslRecordMapping;
-import io.divolte.server.recordmapping.RecordMapper;
 import io.divolte.server.recordmapping.UserAgentParserAndCache;
 
 public class Mapping {
     private static final Logger logger = LoggerFactory.getLogger(Mapping.class);
 
-    private final RecordMapper mapper;
+    private final DslRecordMapper mapper;
     private final boolean keepCorrupted;
     private final boolean keepDuplicates;
     private final int mappingIndex;

@@ -49,7 +49,7 @@ import io.divolte.server.recordmapping.DslRecordMapping.MappingAction.MappingRes
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
-public class DslRecordMapper implements RecordMapper {
+public class DslRecordMapper {
     private final static Logger logger = LoggerFactory.getLogger(DslRecordMapper.class);
 
     private final Schema schema;
@@ -87,7 +87,6 @@ public class DslRecordMapper implements RecordMapper {
         actions = mapping.actions();
     }
 
-    @Override
     public GenericRecord newRecordFromExchange(final DivolteEvent event) {
         final GenericRecordBuilder builder = new GenericRecordBuilder(schema);
         final Map<String,Optional<?>> context = Maps.newHashMapWithExpectedSize(20);

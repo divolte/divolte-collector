@@ -32,7 +32,6 @@ import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapper;
-import io.divolte.server.recordmapping.RecordMapper;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -49,7 +48,7 @@ public class MappingTestServer {
 
     private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper().reader();
 
-    private final RecordMapper mapper;
+    private final DslRecordMapper mapper;
     private final Undertow undertow;
 
     public static void main(final String[] args) throws IOException {
