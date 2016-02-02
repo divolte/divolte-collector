@@ -10,6 +10,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import io.divolte.server.BrowserSource;
+import io.divolte.server.HttpSource;
+import io.divolte.server.IncomingRequestProcessingPool;
 
 @ParametersAreNonnullByDefault
 public class BrowserSourceConfiguration extends SourceConfiguration {
@@ -66,7 +68,10 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     }
 
     @Override
-    public SourceFactory getFactory() {
-        return BrowserSource::new;
+    public HttpSource createSource(
+            final ValidatedConfiguration vc,
+            final String sourceName,
+            final IncomingRequestProcessingPool processingPool) {
+        return new BrowserSource(vc, sourceName, processingPool);
     }
 }

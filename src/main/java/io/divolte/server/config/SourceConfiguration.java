@@ -3,7 +3,6 @@ package io.divolte.server.config;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.MoreObjects;
@@ -41,13 +40,8 @@ public abstract class SourceConfiguration {
         return toStringHelper().toString();
     }
 
-    @JsonIgnore
-    public abstract SourceFactory getFactory();
-
-    @FunctionalInterface
-    public interface SourceFactory {
-        HttpSource create(ValidatedConfiguration configuration,
-                          String sourceName,
-                          IncomingRequestProcessingPool processingPool);
-    }
+    public abstract HttpSource createSource(
+            ValidatedConfiguration configuration,
+            String sourceName,
+            IncomingRequestProcessingPool processingPool);
 }

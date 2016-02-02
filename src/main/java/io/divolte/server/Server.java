@@ -112,8 +112,7 @@ public final class Server implements Runnable {
                   .map(source ->
                           Maps.immutableEntry(source.getKey(),
                                               source.getValue()
-                                                    .getFactory()
-                                                    .create(vc,
+                                                    .createSource(vc,
                                                             source.getKey(),
                                                             incomingRequestProcessingPool)))
                   .collect(MoreCollectors.toImmutableMap());

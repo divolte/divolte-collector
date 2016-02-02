@@ -18,6 +18,9 @@ package io.divolte.server.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.divolte.server.HttpSource;
+import io.divolte.server.IncomingRequestProcessingPool;
 import io.divolte.server.MobileSource;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -31,7 +34,10 @@ public class MobileSourceConfiguration extends SourceConfiguration {
     }
 
     @Override
-    public SourceFactory getFactory() {
-        return MobileSource::new;
+    public HttpSource createSource(
+            final ValidatedConfiguration vc,
+            final String sourceName,
+            final IncomingRequestProcessingPool processingPool) {
+        return new MobileSource(vc, sourceName, processingPool);
     }
 }
