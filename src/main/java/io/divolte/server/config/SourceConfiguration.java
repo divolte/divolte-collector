@@ -13,7 +13,7 @@ import io.divolte.server.IncomingRequestProcessingPool;
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value=BrowserSourceConfiguration.class, name = "browser"),
-        @JsonSubTypes.Type(value=MobileSourceConfiguration.class, name = "mobile"),
+        @JsonSubTypes.Type(value=JsonSourceConfiguration.class, name = "mobile"),
 })
 @ParametersAreNonnullByDefault
 public abstract class SourceConfiguration {

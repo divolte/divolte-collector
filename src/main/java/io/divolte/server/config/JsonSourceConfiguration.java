@@ -21,14 +21,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.divolte.server.HttpSource;
 import io.divolte.server.IncomingRequestProcessingPool;
-import io.divolte.server.MobileSource;
+import io.divolte.server.JsonSource;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
-public class MobileSourceConfiguration extends SourceConfiguration {
+public class JsonSourceConfiguration extends SourceConfiguration {
     @JsonCreator
-    MobileSourceConfiguration(@JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix) {
+    JsonSourceConfiguration(@JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
         super(prefix);
     }
@@ -38,6 +38,6 @@ public class MobileSourceConfiguration extends SourceConfiguration {
             final ValidatedConfiguration vc,
             final String sourceName,
             final IncomingRequestProcessingPool processingPool) {
-        return new MobileSource(vc, sourceName, processingPool);
+        return new JsonSource(vc, sourceName, processingPool);
     }
 }

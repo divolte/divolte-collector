@@ -18,21 +18,21 @@ package io.divolte.server;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import io.divolte.server.config.MobileSourceConfiguration;
+import io.divolte.server.config.JsonSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.undertow.server.handlers.PathHandler;
 
 @ParametersAreNonnullByDefault
-public class MobileSource extends HttpSource {
-    public MobileSource(final ValidatedConfiguration vc,
+public class JsonSource extends HttpSource {
+    public JsonSource(final ValidatedConfiguration vc,
                         final String sourceName,
                         final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
-             vc.configuration().getSourceConfiguration(sourceName, MobileSourceConfiguration.class).prefix,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).prefix,
              processingPool);
     }
 
-    private MobileSource(final String sourceName,
+    private JsonSource(final String sourceName,
                          final String pathPrefix,
                          @SuppressWarnings("unused") final IncomingRequestProcessingPool processingPool) {
         super(sourceName, pathPrefix);
