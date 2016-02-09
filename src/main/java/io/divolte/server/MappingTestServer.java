@@ -125,20 +125,19 @@ public class MappingTestServer {
                     get(payload, "screen_pixel_width", Integer.class),
                     get(payload, "screen_pixel_height", Integer.class),
                     get(payload, "device_pixel_ratio", Integer.class));
-            final DivolteEvent divolteEvent = new DivolteEvent(
+            final DivolteEvent divolteEvent = DivolteEvent.createBrowserEvent(
                     exchange,
                     get(payload, "corrupt", Boolean.class).orElse(false),
                     get(payload, "party_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
                     get(payload, "session_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
                     get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
-                    ClientSideCookieEventHandler.EVENT_SOURCE_NAME,
                     System.currentTimeMillis(),
                     0L,
                     get(payload, "new_party_id", Boolean.class).orElse(false),
                     get(payload, "first_in_session", Boolean.class).orElse(false),
                     get(payload, "event_type", String.class),
                     () -> get(payload, "parameters", JsonNode.class),
-                    Optional.of(browserEventData));
+                    browserEventData);
 
             get(payload, "remote_host", String.class)
                 .ifPresent(ip -> {

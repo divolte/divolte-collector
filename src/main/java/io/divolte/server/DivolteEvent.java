@@ -37,8 +37,8 @@ public final class DivolteEvent {
 
     // Events from all sources support these attributes.
     public final boolean corruptEvent;
-    public final DivolteIdentifier partyCookie;
-    public final DivolteIdentifier sessionCookie;
+    public final DivolteIdentifier partyId;
+    public final DivolteIdentifier sessionId;
     public final String eventId;
     public final String eventSource;
     public final Optional<String> eventType;
@@ -50,8 +50,12 @@ public final class DivolteEvent {
     public final long clientUtcOffset;
 
     public final Supplier<Optional<JsonNode>> eventParametersProducer;
-    // Extra data provided for browser events.
+
+    // Data specific to browser events.
     public final Optional<BrowserEventData> browserEventData;
+
+    // Data specific to JSON events
+    public final Optional<JsonEventData> jsonEventData;
 
     @ParametersAreNonnullByDefault
     public static final class BrowserEventData {
@@ -83,6 +87,20 @@ public final class DivolteEvent {
         }
     }
 
+    @ParametersAreNonnullByDefault
+    public static final class JsonEventData {
+        /*
+         * Empty for now. There's nothing specific to JSON events at the moment.
+         *
+         * Because of this, we can use a single instance throughtout, just to
+         * signal that a DivolteEvent is indeed a JSON source based event.
+         */
+        public static final JsonEventData EMPTY = new JsonEventData();
+
+        public JsonEventData() {
+        }
+    }
+
     DivolteEvent(final HttpServerExchange originatingExchange,
                  final boolean corruptEvent,
                  final DivolteIdentifier partyCookie,
@@ -95,11 +113,12 @@ public final class DivolteEvent {
                  final boolean firstInSession,
                  final Optional<String> eventType,
                  final Supplier<Optional<JsonNode>> eventParametersProducer,
-                 final Optional<BrowserEventData> browserEvent) {
+                 final Optional<BrowserEventData> browserEvent,
+                 final Optional<JsonEventData> jsonEvent) {
         this.exchange                = originatingExchange;
         this.corruptEvent            = corruptEvent;
-        this.partyCookie             = Objects.requireNonNull(partyCookie);
-        this.sessionCookie           = Objects.requireNonNull(sessionCookie);
+        this.partyId                 = Objects.requireNonNull(partyCookie);
+        this.sessionId               = Objects.requireNonNull(sessionCookie);
         this.eventId                 = Objects.requireNonNull(eventId);
         this.eventSource             = Objects.requireNonNull(eventSource);
         this.requestStartTime        = requestStartTime;
@@ -109,5 +128,69 @@ public final class DivolteEvent {
         this.eventType               = Objects.requireNonNull(eventType);
         this.eventParametersProducer = Objects.requireNonNull(eventParametersProducer);
         this.browserEventData        = Objects.requireNonNull(browserEvent);
+        this.jsonEventData           = Objects.requireNonNull(jsonEvent);
+    }
+
+    static DivolteEvent createBrowserEvent(
+            final HttpServerExchange originatingExchange,
+            final boolean corruptEvent,
+            final DivolteIdentifier partyCookie,
+            final DivolteIdentifier sessionCookie,
+            final String eventId,
+            final long requestStartTime,
+            final long clientUtcOffset,
+            final boolean newPartyId,
+            final boolean firstInSession,
+            final Optional<String> eventType,
+            final Supplier<Optional<JsonNode>> eventParametersProducer,
+            final BrowserEventData browserEvent) {
+        return new DivolteEvent(
+                originatingExchange,
+                corruptEvent,
+                partyCookie,
+                sessionCookie,
+                eventId,
+                BrowserSource.EVENT_SOURCE_NAME,
+                requestStartTime,
+                clientUtcOffset,
+                newPartyId,
+                firstInSession,
+                eventType,
+                eventParametersProducer,
+                Optional.of(browserEvent),
+                Optional.empty()
+                );
+    }
+
+    static DivolteEvent createJsonEvent(
+            final HttpServerExchange originatingExchange,
+            final boolean corruptEvent,
+            final DivolteIdentifier partyCookie,
+            final DivolteIdentifier sessionCookie,
+            final String eventId,
+            final String eventSource,
+            final long requestStartTime,
+            final long clientUtcOffset,
+            final boolean newPartyId,
+            final boolean firstInSession,
+            final Optional<String> eventType,
+            final Supplier<Optional<JsonNode>> eventParametersProducer,
+            final JsonEventData jsonEvent) {
+        return new DivolteEvent(
+                originatingExchange,
+                corruptEvent,
+                partyCookie,
+                sessionCookie,
+                eventId,
+                eventSource,
+                requestStartTime,
+                clientUtcOffset,
+                newPartyId,
+                firstInSession,
+                eventType,
+                eventParametersProducer,
+                Optional.empty(),
+                Optional.of(jsonEvent)
+                );
     }
 }

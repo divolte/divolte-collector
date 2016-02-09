@@ -314,11 +314,11 @@ public final class DslRecordMapping {
     }
 
     public ValueProducer<String> partyId() {
-        return new PrimitiveValueProducer<>("partyId()", String.class, (e,c) -> Optional.of(e.partyCookie.value));
+        return new PrimitiveValueProducer<>("partyId()", String.class, (e,c) -> Optional.of(e.partyId.value));
     }
 
     public ValueProducer<String> sessionId() {
-        return new PrimitiveValueProducer<>("sessionId()", String.class, (e,c) -> Optional.of(e.sessionCookie.value));
+        return new PrimitiveValueProducer<>("sessionId()", String.class, (e,c) -> Optional.of(e.sessionId.value));
     }
 
     public ValueProducer<String> pageViewId() {

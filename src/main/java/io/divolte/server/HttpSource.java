@@ -16,10 +16,15 @@
 
 package io.divolte.server;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+
+import java.net.InetSocketAddress;
+import java.util.Deque;
 import java.util.Objects;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public abstract class HttpSource {
@@ -32,4 +37,19 @@ public abstract class HttpSource {
     }
 
     public abstract PathHandler attachToPathHandler(PathHandler pathHandler);
+
+    protected static InetSocketAddress captureAndPersistSourceAddress(final HttpServerExchange exchange) {
+        /*
+         * The source address can be fetched on-demand from the peer connection, which may
+         * no longer be available after the response has been sent. So we materialize it here
+         * to ensure it's available further down the chain.
+         */
+        final InetSocketAddress sourceAddress = exchange.getSourceAddress();
+        exchange.setSourceAddress(sourceAddress);
+        return sourceAddress;
+    }
+
+    protected static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
+        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
+    }
 }

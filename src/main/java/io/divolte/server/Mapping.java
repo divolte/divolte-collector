@@ -90,8 +90,8 @@ public class Mapping {
                 (keepCorrupted || !event.corruptEvent)) {
             final GenericRecord avroRecord = mapper.newRecordFromExchange(event);
             final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                    event.partyCookie,
-                    event.sessionCookie,
+                    event.partyId,
+                    event.sessionId,
                     event.requestStartTime,
                     event.clientUtcOffset,
                     avroRecord);

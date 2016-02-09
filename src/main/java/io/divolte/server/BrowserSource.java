@@ -39,6 +39,8 @@ public class BrowserSource extends HttpSource {
     private final HttpHandler javascriptHandler;
     private final HttpHandler eventHandler;
 
+    public static final String EVENT_SOURCE_NAME = "browser";
+
     public BrowserSource(final ValidatedConfiguration vc,
                          final String sourceName,
                          final IncomingRequestProcessingPool processingPool) {

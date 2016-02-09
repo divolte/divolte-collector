@@ -16,12 +16,15 @@
 
 package io.divolte.server;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Strings;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
+
+import io.divolte.server.DivolteEvent.BrowserEventData;
 import io.divolte.server.mincode.MincodeFactory;
 import io.divolte.server.processing.Item;
 import io.undertow.server.HttpHandler;
@@ -35,11 +38,15 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+
+import static io.divolte.server.HttpSource.*;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Supplier;
 
 @ParametersAreNonnullByDefault
 public final class ClientSideCookieEventHandler implements HttpHandler {
@@ -74,8 +81,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
     private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper(new MincodeFactory()).reader();
 
-    static final String EVENT_SOURCE_NAME = "browser";
-
     public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool, final int sourceIndex) {
         this.sourceIndex = sourceIndex;
         this.processingPool = Objects.requireNonNull(processingPool);
@@ -101,13 +106,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
-        /*
-         * The source address can be fetched on-demand from the peer connection, which may
-         * no longer be available after the response has been sent. So we materialize it here
-         * to ensure it's available further down the chain.
-         */
-        final InetSocketAddress sourceAddress = exchange.getSourceAddress();
-        exchange.setSourceAddress(sourceAddress);
+        final InetSocketAddress sourceAddress = captureAndPersistSourceAddress(exchange);
 
         /*
          * Set up the headers that we always send as a response, irrespective of what type it
@@ -149,10 +148,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                 : requestUrl + '?' + queryString;
     }
 
-    static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
-        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
-    }
-
     public static class IncompleteRequestException extends Exception {
         private static final long serialVersionUID = 1L;
     }
@@ -168,56 +163,42 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
         final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
 
         final long requestTime = System.currentTimeMillis();
-        final DivolteEvent event = buildBrowserEventData(corrupt, partyId, sessionId, pageViewId, eventId,
-                                                             requestTime, clientTimeStamp - requestTime,
-                                                             isNewPartyId, isFirstInSession, exchange);
+
+        final DivolteEvent event = DivolteEvent.createBrowserEvent(exchange, corrupt, partyId, sessionId, eventId,
+                                                                   requestTime, clientTimeStamp - requestTime,
+                                                                   isNewPartyId, isFirstInSession,
+                                                                   queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
+                                                                   eventParameterSupplier(exchange),
+                                                                   browserEventData(exchange, pageViewId));
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
         processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
 
-    static DivolteEvent buildBrowserEventData(final boolean corruptEvent,
-                                              final DivolteIdentifier partyCookie,
-                                              final DivolteIdentifier sessionCookie,
-                                              final String pageViewId,
-                                              final String eventId,
-                                              final long requestStartTime,
-                                              final long clientUtcOffset,
-                                              final boolean newPartyId,
-                                              final boolean firstInSession,
-                                              final HttpServerExchange exchange) {
-        return new DivolteEvent(exchange,
-                                corruptEvent,
-                                partyCookie,
-                                sessionCookie,
-                                eventId,
-                                EVENT_SOURCE_NAME,
-                                requestStartTime,
-                                clientUtcOffset,
-                                newPartyId,
-                                firstInSession,
-                                queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-                                () -> queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
-                                    .map(encodedParameters -> {
-                                        try {
-                                            return EVENT_PARAMETERS_READER.readTree(encodedParameters);
-                                        } catch (final IOException e) {
-                                            if (logger.isDebugEnabled()) {
-                                                logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
-                                            }
-                                            return null;
-                                        }
-                                    }),
-                                Optional.of(new DivolteEvent.BrowserEventData(pageViewId,
-                                                                          queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
-                                                                          queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
-                                                                          queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int)
-                                                                          ))
-                                );
+    private BrowserEventData browserEventData(final HttpServerExchange exchange, final String pageViewId) {
+        return new DivolteEvent.BrowserEventData(
+                                                  pageViewId,
+                                                  queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
+                                                  queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
+                                                  queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                                  queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                                  queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                                  queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                                                  queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int));
+    }
+
+    private Supplier<Optional<JsonNode>> eventParameterSupplier(final HttpServerExchange exchange) {
+        return () -> queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
+            .map(encodedParameters -> {
+                try {
+                    return EVENT_PARAMETERS_READER.readTree(encodedParameters);
+                } catch (final IOException e) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
+                    }
+                    return null;
+                }
+            });
     }
 
     private static final HashFunction CHECKSUM_HASH = Hashing.murmur3_32();

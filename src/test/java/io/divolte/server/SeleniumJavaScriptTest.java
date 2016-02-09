@@ -158,11 +158,11 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         assertFalse(eventData.corruptEvent);
         assertFalse(detectedDuplicate);
 
-        assertFalse(Strings.isNullOrEmpty(eventData.partyCookie.value));
+        assertFalse(Strings.isNullOrEmpty(eventData.partyId.value));
 
         assertTrue(eventData.newPartyId);
 
-        assertFalse(Strings.isNullOrEmpty(eventData.sessionCookie.value));
+        assertFalse(Strings.isNullOrEmpty(eventData.sessionId.value));
         assertTrue(eventData.firstInSession);
 
         assertTrue(eventData.browserEventData.isPresent());

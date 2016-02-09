@@ -21,27 +21,52 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import io.divolte.server.config.JsonSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.util.Methods;
 
 @ParametersAreNonnullByDefault
 public class JsonSource extends HttpSource {
+    public static final String EVENT_SOURCE_NAME = "json";
+
+    private final JsonEventHandler handler;
+
     public JsonSource(final ValidatedConfiguration vc,
                         final String sourceName,
                         final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
              vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).prefix,
-             processingPool);
+             processingPool,
+             vc.configuration().sourceIndex(sourceName),
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).eventTypeParameter,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).partyIdParameter,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).sessionIdParameter,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).eventIdParameter,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).newPartyParameter,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).newSessionParameter,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).timeParameter
+             );
     }
 
     private JsonSource(final String sourceName,
                          final String pathPrefix,
-                         @SuppressWarnings("unused") final IncomingRequestProcessingPool processingPool) {
+                         final IncomingRequestProcessingPool processingPool,
+                         final int sourceIndex,
+                         final String eventTypeParameter,
+                         final String partyIdParameter,
+                         final String sessionIdParameter,
+                         final String eventIdParameter,
+                         final String newPartyParameter,
+                         final String newSessionParameter,
+                         final String timeParameter
+                         ) {
         super(sourceName, pathPrefix);
-        // TODO: Implement me.
+        this.handler = new JsonEventHandler(processingPool, sourceIndex, eventTypeParameter, partyIdParameter, sessionIdParameter,
+                                            eventIdParameter, newPartyParameter, newSessionParameter, timeParameter);
     }
 
     @Override
     public PathHandler attachToPathHandler(final PathHandler pathHandler) {
-        // TODO: Implement me.
-        return pathHandler;
+        return pathHandler.addExactPath(pathPrefix,
+                new AllowedMethodsHandler(          // Allow only POST for this endpoint
+                        handler, Methods.POST));
     }
 }

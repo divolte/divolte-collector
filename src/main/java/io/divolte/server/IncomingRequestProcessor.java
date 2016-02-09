@@ -163,7 +163,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
     public ProcessingDirective process(final Item<DivolteEvent> item) {
         final DivolteEvent event = item.payload;
 
-        final boolean duplicate = memory.isProbableDuplicate(event.partyCookie.value, event.sessionCookie.value, event.eventId);
+        final boolean duplicate = memory.isProbableDuplicate(event.partyId.value, event.sessionId.value, event.eventId);
         event.exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
         mappingsBySourceIndex.get(item.sourceId)
