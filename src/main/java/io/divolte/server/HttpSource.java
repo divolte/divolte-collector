@@ -49,7 +49,7 @@ public abstract class HttpSource {
         return sourceAddress;
     }
 
-    protected static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
+    public static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
         return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
     }
 }

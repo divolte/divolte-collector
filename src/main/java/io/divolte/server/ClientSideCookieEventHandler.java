@@ -95,15 +95,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
         }
     }
 
-    private void logEvent(final HttpServerExchange exchange) {
-        try {
-            handleRequestIfComplete(exchange);
-        } catch (final IncompleteRequestException ire) {
-            // improper request, could be anything
-            logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
-        }
-    }
-
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         final InetSocketAddress sourceAddress = captureAndPersistSourceAddress(exchange);
@@ -127,6 +118,9 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
         if (ETagUtils.handleIfNoneMatch(exchange, SENTINEL_ETAG, true)) {
             try {
                 logEvent(exchange);
+            } catch (final IncompleteRequestException ire) {
+                // improper request, could be anything
+                logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
             } finally {
                 // Default status code what we want: 200 OK.
                 exchange.getResponseSender().send(transparentImage.slice());
@@ -148,57 +142,62 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                 : requestUrl + '?' + queryString;
     }
 
-    public static class IncompleteRequestException extends Exception {
-        private static final long serialVersionUID = 1L;
-    }
-
-    private void handleRequestIfComplete(final HttpServerExchange exchange) throws IncompleteRequestException {
-        final boolean corrupt = !isRequestChecksumCorrect(exchange);
+    private void logEvent(final HttpServerExchange exchange) throws IncompleteRequestException {
         final DivolteIdentifier partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
-        final DivolteIdentifier sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
-        final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
-        final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
-        final boolean isNewPartyId = queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
-        final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
-        final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
-
-        final long requestTime = System.currentTimeMillis();
-
-        final DivolteEvent event = DivolteEvent.createBrowserEvent(exchange, corrupt, partyId, sessionId, eventId,
-                                                                   requestTime, clientTimeStamp - requestTime,
-                                                                   isNewPartyId, isFirstInSession,
-                                                                   queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-                                                                   eventParameterSupplier(exchange),
-                                                                   browserEventData(exchange, pageViewId));
-
-        logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
+        final UndertowEvent event = new BrowserUndertowEvent(System.currentTimeMillis(), exchange, partyId);
         processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
 
-    private BrowserEventData browserEventData(final HttpServerExchange exchange, final String pageViewId) {
-        return new DivolteEvent.BrowserEventData(
-                                                  pageViewId,
-                                                  queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
-                                                  queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
-                                                  queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                  queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                  queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                  queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                  queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int));
+    private static final class BrowserUndertowEvent extends UndertowEvent {
+        private BrowserUndertowEvent(final long requestTime, final HttpServerExchange exchange, final DivolteIdentifier partyId) {
+            super(requestTime, exchange, partyId);
+        }
+
+        @Override
+        public DivolteEvent parseRequest() throws IncompleteRequestException {
+            final boolean corrupt = !isRequestChecksumCorrect(exchange);
+            final DivolteIdentifier partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
+            final DivolteIdentifier sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
+            final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
+            final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
+            final boolean isNewPartyId = queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
+            final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
+            final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
+
+            final DivolteEvent event = DivolteEvent.createBrowserEvent(exchange, corrupt, partyId, sessionId, eventId,
+                                                                       requestTime, clientTimeStamp - requestTime,
+                                                                       isNewPartyId, isFirstInSession,
+                                                                       queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
+                                                                       eventParameterSupplier(exchange),
+                                                                       browserEventData(exchange, pageViewId));
+            return event;
+        }
     }
 
-    private Supplier<Optional<JsonNode>> eventParameterSupplier(final HttpServerExchange exchange) {
+    private static Supplier<Optional<JsonNode>> eventParameterSupplier(final HttpServerExchange exchange) {
         return () -> queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
-            .map(encodedParameters -> {
-                try {
-                    return EVENT_PARAMETERS_READER.readTree(encodedParameters);
-                } catch (final IOException e) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
+                .map(encodedParameters -> {
+                    try {
+                        return EVENT_PARAMETERS_READER.readTree(encodedParameters);
+                    } catch (final IOException e) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
+                        }
+                        return null;
                     }
-                    return null;
-                }
-            });
+                });
+    }
+
+    private static BrowserEventData browserEventData(final HttpServerExchange exchange, final String pageViewId) {
+        return new DivolteEvent.BrowserEventData(
+                pageViewId,
+                queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
+                queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
+                queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int));
     }
 
     private static final HashFunction CHECKSUM_HASH = Hashing.murmur3_32();

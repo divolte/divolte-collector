@@ -35,7 +35,7 @@ import java.util.function.Consumer;
 import static org.junit.Assert.assertEquals;
 
 @ParametersAreNonnullByDefault
-public class MobileSourceTest {
+public class JsonSourceTest {
     private static final String MOBILE_EVENT_URL_TEMPLATE =
             "http://localhost:%d/mob-event/0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();

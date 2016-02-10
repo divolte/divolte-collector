@@ -36,31 +36,16 @@ public class JsonSource extends HttpSource {
              vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).prefix,
              processingPool,
              vc.configuration().sourceIndex(sourceName),
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).eventTypeParameter,
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).partyIdParameter,
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).sessionIdParameter,
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).eventIdParameter,
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).newPartyParameter,
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).newSessionParameter,
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).timeParameter
-             );
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).partyIdParameter);
     }
 
     private JsonSource(final String sourceName,
                          final String pathPrefix,
                          final IncomingRequestProcessingPool processingPool,
                          final int sourceIndex,
-                         final String eventTypeParameter,
-                         final String partyIdParameter,
-                         final String sessionIdParameter,
-                         final String eventIdParameter,
-                         final String newPartyParameter,
-                         final String newSessionParameter,
-                         final String timeParameter
-                         ) {
+                         final String partyIdParameter) {
         super(sourceName, pathPrefix);
-        this.handler = new JsonEventHandler(processingPool, sourceIndex, eventTypeParameter, partyIdParameter, sessionIdParameter,
-                                            eventIdParameter, newPartyParameter, newSessionParameter, timeParameter);
+        this.handler = new JsonEventHandler(processingPool, sourceIndex, partyIdParameter);
     }
 
     @Override

@@ -18,6 +18,7 @@ package io.divolte.server;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -41,7 +42,7 @@ import io.divolte.server.processing.ProcessingPool;
 import io.undertow.util.AttachmentKey;
 
 @ParametersAreNonnullByDefault
-public final class IncomingRequestProcessor implements ItemProcessor<DivolteEvent> {
+public final class IncomingRequestProcessor implements ItemProcessor<UndertowEvent> {
     private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
@@ -86,7 +87,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
          */
         final ArrayList<ImmutableList<Mapping>> sourceMappingResult =                           // temporary mutable container for the result
                 IntStream.range(0, vc.configuration().sources.size())
-                         .<ImmutableList<Mapping>>mapToObj((ignored) -> ImmutableList.of())     // initialized with empty lists per default
+                         .<ImmutableList<Mapping>>mapToObj(ignored -> ImmutableList.of())     // initialized with empty lists per default
                          .collect(Collectors.toCollection(ArrayList::new));
 
         vc.configuration()
@@ -126,7 +127,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
          */
         final ArrayList<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>> mappingMappingResult =                          // temporary mutable container for the result
                 IntStream.range(0, vc.configuration().mappings.size())
-                         .<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>>mapToObj((ignored) -> ImmutableList.of())     // initialized with empty lists per default
+                         .<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>>mapToObj(ignored -> ImmutableList.of())     // initialized with empty lists per default
                          .collect(Collectors.toCollection(ArrayList::new));
 
         /*
@@ -160,15 +161,21 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
     }
 
     @Override
-    public ProcessingDirective process(final Item<DivolteEvent> item) {
-        final DivolteEvent event = item.payload;
+    public ProcessingDirective process(final Item<UndertowEvent> item) {
+        DivolteEvent event;
+        try {
+            event = item.payload.parseRequest();
+        } catch (final IncompleteRequestException e) {
+            logger.warn("Improper request received from {}.", Optional.ofNullable(item.payload.exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
+            return CONTINUE;
+        }
 
         final boolean duplicate = memory.isProbableDuplicate(event.partyId.value, event.sessionId.value, event.eventId);
         event.exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
         mappingsBySourceIndex.get(item.sourceId)
                              .stream()                                                          // For each mapping that applies to this source
-                             .map(mapping -> mapping.map(item, duplicate))
+                             .map(mapping -> mapping.map(item, event, duplicate))
                              .filter(optionalBufferItem -> optionalBufferItem.isPresent())      // Filter discarded for duplication or corruption
                              .map(Optional::get)
                              .forEach(
