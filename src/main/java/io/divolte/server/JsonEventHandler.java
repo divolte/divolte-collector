@@ -3,8 +3,12 @@ package io.divolte.server;
 import static io.divolte.server.HttpSource.*;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -31,6 +35,8 @@ public class JsonEventHandler implements HttpHandler {
     private final int sourceIndex;
     private final String partyIdParameter;
 
+    private final AsyncRequestBodyReceiver receiver;
+
     public JsonEventHandler(
             final IncomingRequestProcessingPool processingPool,
             final int sourceIndex,
@@ -38,34 +44,28 @@ public class JsonEventHandler implements HttpHandler {
         this.processingPool = processingPool;
         this.sourceIndex = sourceIndex;
         this.partyIdParameter = partyIdParameter;
+
+        receiver = new AsyncRequestBodyReceiver(1024);
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         captureAndPersistSourceAddress(exchange);
 
-        try {
-            // TODO: capture request body similar to RequestBufferingHandler
-            // XXX: This is seriously broken!
-            final ByteBuffer buffer = ByteBuffer.allocate((int) exchange.getRequestContentLength());
-            exchange.getRequestChannel().read(buffer);
-            buffer.flip();
-
-            final byte[] body = buffer.array();
-            logEvent(exchange, body);
-        } catch (final IncompleteRequestException e) {
-            // improper request, could be anything
-            logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
-        } catch (final IOException e) {
-            // Could not read request body
-            logger.warn("Error while reading request body received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
-        } finally {
-            exchange.setStatusCode(StatusCodes.NO_CONTENT);
-            exchange.endExchange();
-        }
+        receiver.receive(body -> {
+            try {
+                logEvent(exchange, body);
+            } catch (final IncompleteRequestException e) {
+                // improper request, could be anything
+                logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
+            } finally {
+                exchange.setStatusCode(StatusCodes.NO_CONTENT);
+                exchange.endExchange();
+            }
+        }, exchange);
     }
 
-    private void logEvent(final HttpServerExchange exchange, final byte[] body) throws IncompleteRequestException {
+    private void logEvent(final HttpServerExchange exchange, final InputStream body) throws IncompleteRequestException {
         final DivolteIdentifier partyId = queryParamFromExchange(exchange, partyIdParameter).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
         final UndertowEvent event = new JsonUndertowEvent(System.currentTimeMillis(), exchange, partyId, body);
         processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
@@ -85,7 +85,7 @@ public class JsonEventHandler implements HttpHandler {
             OBJECT_MAPPER = mapper;
         }
 
-        private final byte[] requestBody;
+        private final InputStream requestBody;
 
         /*
          * PMD erroneously flags that the byte array passed to this constructor
@@ -97,7 +97,7 @@ public class JsonEventHandler implements HttpHandler {
                 final long requestTime,
                 final HttpServerExchange exchange,
                 final DivolteIdentifier partyId,
-                final byte[] requestBody) throws IncompleteRequestException {
+                final InputStream requestBody) throws IncompleteRequestException {
             super(requestTime, exchange, partyId);
             this.requestBody = requestBody;
         }
@@ -124,14 +124,24 @@ public class JsonEventHandler implements HttpHandler {
             final boolean corrupt = false;
 
             /*
+             * Parse the client provided timestamp as ISO offsetted date/time. We use the ofEpochSecond creator to
+             * obtain an Instant, as the Instant#from(TemporalAccessor) performs some additional checks unnecessary
+             * in our case.
+             */
+            final TemporalAccessor parsed = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(container.clientTimestampIso);
+            final long clientTime = Instant.ofEpochSecond(parsed.getLong(ChronoField.INSTANT_SECONDS), parsed.getLong(ChronoField.NANO_OF_SECOND)).toEpochMilli();
+            /*
              * XXX: Currently, we allow the event type to be absent. With the browser end point, this
              * doesn't happen in practice, though. Should we perhaps require it to be present for a
              * valid request?
              */
             final DivolteEvent event = DivolteEvent.createJsonEvent(
-                    exchange, corrupt, partyId, DivolteIdentifier.tryParse(container.sessionId).orElseThrow(IncompleteRequestException::new),
-                    container.eventId, JsonSource.EVENT_SOURCE_NAME, requestTime, container.clientTimestamp - requestTime, container.isNewParty,
-                    container.isNewSession, Optional.of(container.eventType), () -> Optional.ofNullable(container.parameters),
+                    exchange, corrupt, partyId,
+                    DivolteIdentifier.tryParse(container.sessionId).orElseThrow(IncompleteRequestException::new),
+                    container.eventId, JsonSource.EVENT_SOURCE_NAME, requestTime,
+                    clientTime - requestTime,
+                    container.isNewParty, container.isNewSession, Optional.of(container.eventType),
+                    () -> Optional.ofNullable(container.parameters), // Note that it's possible to send a JSON event without parameters
                     DivolteEvent.JsonEventData.EMPTY);
 
             return event;
@@ -143,19 +153,19 @@ public class JsonEventHandler implements HttpHandler {
             @JsonProperty(required=true) public final String eventId;
             @JsonProperty(required=true) public final boolean isNewParty;
             @JsonProperty(required=true) public final boolean isNewSession;
-            @JsonProperty(required=true) public final long clientTimestamp;
+            @JsonProperty(required=true) public final String clientTimestampIso;
             public final JsonNode parameters;
 
             @JsonCreator
             public EventContainer(
                     final String eventType, final String sessionId, final String eventId, final boolean isNewParty,
-                    final boolean isNewSession, final long clientTimestamp, final JsonNode parameters) {
+                    final boolean isNewSession, final String clientTimestampIso, final JsonNode parameters) {
                 this.eventType = eventType;
                 this.sessionId = sessionId;
                 this.eventId = eventId;
                 this.isNewParty = isNewParty;
                 this.isNewSession = isNewSession;
-                this.clientTimestamp = clientTimestamp;
+                this.clientTimestampIso = clientTimestampIso;
                 this.parameters = parameters;
             }
         }
