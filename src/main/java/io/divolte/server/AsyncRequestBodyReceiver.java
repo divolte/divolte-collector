@@ -57,8 +57,6 @@ public class AsyncRequestBodyReceiver {
             final HttpServerExchange exchange) {
         Objects.requireNonNull(callback);
 
-        logger.debug("nb" + NUM_BUFFERS.get());
-
         if (exchange.isRequestComplete()) {
             callback.accept(EMPTY_INPUT_STREAM);
             return;
