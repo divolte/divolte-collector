@@ -117,7 +117,7 @@ public final class ValidatedConfiguration {
         final ObjectMapper mapper = new ObjectMapper();
 
         // snake_casing
-        mapper.setPropertyNamingStrategy(new PropertyNamingStrategy.LowerCaseWithUnderscoresStrategy());
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
 
         // Ignore unknown stuff in the config
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
