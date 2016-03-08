@@ -183,7 +183,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
         // Assumes cookie name and value are sensible. (For our use they are.)
         // Note: No domain means these are always first-party cookies.
         var cookieString = name + '=' + value + "; path=/; expires=" + expiry.toUTCString() + "; max-age=" + maxAgeSeconds;
-        if (domain) {
+        if (domain && domain.length) {
           cookieString += "; domain=" + domain;
         }
         document.cookie = cookieString;
