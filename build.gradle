@@ -102,7 +102,7 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.10'
-    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'2.4.0') {
+    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'2.7.0') {
         // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'
@@ -112,7 +112,7 @@ dependencies {
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '0.8.2.0'
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20160315'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.6', classifier: 'indy'
-    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.9'
+    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.1'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.2.0'
     compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.7.4'
     compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.7.4'
