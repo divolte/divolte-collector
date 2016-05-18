@@ -62,12 +62,13 @@ public class DslRecordMapper implements RecordMapper {
     public DslRecordMapper(final ValidatedConfiguration vc, final String groovyFile, final Schema schema, final Optional<LookupService> geoipService) {
         this.schema = Objects.requireNonNull(schema);
 
-        logger.info("Using mapping from script file: {}", groovyFile);
-
         try {
             final DslRecordMapping mapping = new DslRecordMapping(schema, new UserAgentParserAndCache(vc), geoipService);
 
-            final String groovyScript = Files.toString(new File(groovyFile), StandardCharsets.UTF_8);
+            final File groovyFileWithPath = new File(groovyFile);
+            logger.info("Using mapping from script file: {}", groovyFileWithPath.getAbsolutePath());
+
+            final String groovyScript = Files.toString(groovyFileWithPath, StandardCharsets.UTF_8);
 
             final CompilerConfiguration compilerConfig = new CompilerConfiguration();
             compilerConfig.setScriptBaseClass("io.divolte.groovyscript.MappingBase");
