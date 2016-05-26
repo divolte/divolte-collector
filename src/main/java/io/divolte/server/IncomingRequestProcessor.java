@@ -49,7 +49,9 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
 
     private final ShortTermDuplicateMemory memory;
 
+    // Given a source index, which mappings do we need to apply.
     private final ImmutableList<ImmutableList<Mapping>> mappingsBySourceIndex;
+    // Given a mapping index, which sinks do we need to send it to.
     private final ImmutableList<ImmutableList<ProcessingPool<?, AvroRecordBuffer>>> sinksByMappingIndex;
 
     public IncomingRequestProcessor(final ValidatedConfiguration vc,
@@ -67,15 +69,12 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
           .mappings
           .entrySet()
           .stream()
-          .collect(Collectors.toMap(
-                  (kv) -> kv.getKey(),
-                  (kv) -> new Mapping(
-                          vc,
-                          kv.getKey(),
-                          geoipLookupService,
-                          schemaRegistry,
-                          listener)
-                  ));
+          .collect(Collectors.toMap(Map.Entry::getKey,
+                                    kv -> new Mapping(vc,
+                                                      kv.getKey(),
+                                                      geoipLookupService,
+                                                      schemaRegistry,
+                                                      listener)));
 
         /*
          * Create a mapping from source index to a list of Mapping's that apply
@@ -85,7 +84,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
          * data structure is effectively a two-dimensional array and no hashing
          * is required for retrieval (list indexes are ints already).
          */
-        final ArrayList<ImmutableList<Mapping>> sourceMappingResult =                           // temporary mutable container for the result
+        final ArrayList<ImmutableList<Mapping>> sourceMappingResult =             // temporary mutable container for the result
                 IntStream.range(0, vc.configuration().sources.size())
                          .<ImmutableList<Mapping>>mapToObj(ignored -> ImmutableList.of())     // initialized with empty lists per default
                          .collect(Collectors.toCollection(ArrayList::new));
@@ -94,21 +93,16 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
           .mappings
           .entrySet()
           .stream()                                                               // stream of entries (mapping_name, mapping_configuration)
-          .flatMap(
-                  (kv) -> kv.getValue()
-                            .sources
-                            .stream()
-                            .map(
-                                    s -> Maps.immutableEntry(
-                                            vc.configuration().sourceIndex(s),
-                                            kv.getKey())))                        // Results in stream of (source_index, mapping_name)
-          .collect(Collectors.groupingBy(
-                  (e) -> e.getKey(),
-                  Collectors.mapping(
-                          e -> mappingsByName.get(e.getValue()),
-                               MoreCollectors.toImmutableList())
+          .flatMap(kv -> kv.getValue()
+                           .sources
+                           .stream()
+                           .map(s -> Maps.immutableEntry(vc.configuration().sourceIndex(s),
+                                                         kv.getKey())))           // Results in stream of (source_index, mapping_name)
+          .collect(Collectors.groupingBy(Map.Entry::getKey,
+                                         Collectors.mapping(e -> mappingsByName.get(e.getValue()),
+                                                            MoreCollectors.toImmutableList())
                   ))                                                              // Results in a Map<Integer, ImmutableList<Mapping>> where the key is the source index
-          .forEach((idx, m) -> sourceMappingResult.set(idx, m));                  // Populate the temporary result in ArrayList<ImmutableList<Mapping>>
+          .forEach(sourceMappingResult::set);                                     // Populate the temporary result in ArrayList<ImmutableList<Mapping>>
 
         mappingsBySourceIndex = ImmutableList.copyOf(sourceMappingResult);        // Make immutable copy
 
@@ -127,7 +121,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
          */
         final ArrayList<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>> mappingMappingResult =                          // temporary mutable container for the result
                 IntStream.range(0, vc.configuration().mappings.size())
-                         .<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>>mapToObj(ignored -> ImmutableList.of())     // initialized with empty lists per default
+                         .<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>>mapToObj(ignored -> ImmutableList.of())       // initialized with empty lists per default
                          .collect(Collectors.toCollection(ArrayList::new));
 
         /*
@@ -138,31 +132,22 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
                 .mappings
                 .entrySet()
                 .stream()
-                .flatMap(
-                        (kv) -> kv.getValue()
-                                .sinks
-                                .stream()
-                                .map(
-                                        s -> Maps.immutableEntry(
-                                                vc.configuration().mappingIndex(kv.getKey()),
-                                                s
-                                        )))
+                .flatMap(kv->kv.getValue()
+                               .sinks
+                               .stream()
+                               .map(s -> Maps.immutableEntry(vc.configuration().mappingIndex(kv.getKey()), s)))
                 .filter(e -> sinksByName.containsKey(e.getValue()))
-          .collect(Collectors.groupingBy(
-                  (e) -> e.getKey(),
-                  Collectors.mapping(
-                          e -> sinksByName.get(e.getValue()),
-                          MoreCollectors.toImmutableList()
-                          )
-                  ));
-          collected.forEach((idx, s) -> mappingMappingResult.set(idx, s));
+          .collect(Collectors.groupingBy(Map.Entry::getKey,
+                                         Collectors.mapping(e -> sinksByName.get(e.getValue()),
+                                                            MoreCollectors.toImmutableList())));
+          collected.forEach(mappingMappingResult::set);
 
           sinksByMappingIndex = ImmutableList.copyOf(mappingMappingResult);
     }
 
     @Override
     public ProcessingDirective process(final Item<UndertowEvent> item) {
-        DivolteEvent event;
+        final DivolteEvent event;
         try {
             event = item.payload.parseRequest();
         } catch (final IncompleteRequestException e) {
@@ -176,16 +161,11 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
         mappingsBySourceIndex.get(item.sourceId)
                              .stream()                                                          // For each mapping that applies to this source
                              .map(mapping -> mapping.map(item, event, duplicate))
-                             .filter(optionalBufferItem -> optionalBufferItem.isPresent())      // Filter discarded for duplication or corruption
+                             .filter(Optional::isPresent)                                       // Filter discarded for duplication or corruption
                              .map(Optional::get)
-                             .forEach(
-                                     bufferItem -> {
-                                         sinksByMappingIndex.get(bufferItem.sourceId)
-                                                            .stream()                           // For each sink that applies to this mapping
-                                                            .forEach(sink -> {
-                                             sink.enqueue(bufferItem);
-                                         });
-                                     });
+                             .forEach(bufferItem -> sinksByMappingIndex.get(bufferItem.sourceId)
+                                                                       .stream()                // For each sink that applies to this mapping
+                                                                       .forEach(sink -> sink.enqueue(bufferItem)));
         return CONTINUE;
     }
 }

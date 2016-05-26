@@ -28,15 +28,13 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
         if (VALUE_STRING != p.getCurrentToken()) {
             throw ctx.mappingException("Expected string value for Duration mapping.");
         }
-        return Duration.ofNanos(parse(p.getText(), ctx));
-    }
-
-    private static long parse(final String input, final DeserializationContext context) throws JsonMappingException {
+        long result;
         try {
-            return parse(input);
-        } catch(final DurationFormatException de) {
-            throw new JsonMappingException(de.getMessage(), context.getParser().getCurrentLocation(), de);
+            result = parse(p.getText());
+        } catch(final DurationFormatException e) {
+            throw new JsonMappingException(p, e.getMessage(), e);
         }
+        return Duration.ofNanos(result);
     }
 
     public static Duration parseDuration(final String input) {
