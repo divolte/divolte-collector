@@ -64,6 +64,10 @@
     "autonomous_system_number": 42,
     "autonomous_system_organization": "Level Communications",
     "domain": "divolte.io",
+    // We don't expose this; it duplicates the remote address data already
+    // available in mappings. But we need it here to allow the traits to
+    // be mocked.
+    "ip_address": "127.0.0.1",
     "is_anonymous_proxy": true,
     "is_satellite_provider": false,
     "isp": "An ISP",

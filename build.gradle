@@ -76,13 +76,13 @@ repositories {
 
 dependencies {
     // Define some key versions for components that we use lots of artifacts from.
-    def avroVersion = '1.7.7'
+    def avroVersion = '1.8.1'
     def hadoopVersion = '2.7.2'
-    def jacksonVersion = '2.7.2'
-    def slf4jVersion = '1.7.18'
+    def jacksonVersion = '2.7.4'
+    def slf4jVersion = '1.7.21'
 
     compile group: 'io.divolte', name: 'divolte-schema', version: version
-    compile group: 'io.undertow', name: 'undertow-core', version: '1.3.18.Final'
+    compile group: 'io.undertow', name: 'undertow-core', version: '1.3.22.Final'
     compile group: 'com.typesafe', name: 'config', version: '1.3.0'
     compile group: 'com.google.guava', name: 'guava', version: '19.0'
     compile group: 'org.apache.avro', name: 'avro', version: avroVersion
@@ -108,7 +108,7 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.10'
-    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'2.4.0') {
+    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'2.7.0') {
         // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'
@@ -116,9 +116,9 @@ dependencies {
     // Currently on 0.8.2.0, even though 0.9.0.0 is out, because 0.9.0.0 isn't fully compatible
     // with 0.8.X servers: Horton and Cloudera both ship 0.8, and we want to support them.
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '0.8.2.0'
-    compile group: 'com.google.javascript', name:'closure-compiler', version:'v20160208'
+    compile group: 'com.google.javascript', name:'closure-compiler', version:'v20160315'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.6', classifier: 'indy'
-    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '4.9'
+    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.1'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.2.0'
     compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: jacksonVersion
     compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: jacksonVersion
@@ -133,7 +133,7 @@ dependencies {
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
     compile group: 'org.slf4j', name: 'slf4j-api', version: slf4jVersion
-    runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.6'
+    runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.7'
     runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: slf4jVersion
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
@@ -141,8 +141,8 @@ dependencies {
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
     testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.21'
 
-    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.52.0'
-    testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.2.1'
+    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.53.0'
+    testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.3.0'
 }
 
 configurations {
@@ -206,11 +206,11 @@ pmd {
 }
 
 checkstyle {
-    toolVersion = "6.11.2"
+    toolVersion = "6.18"
 }
 
 jacoco {
-    toolVersion = "0.7.5.201505241946"
+    toolVersion = "0.7.6.201602180812"
 }
 
 findbugsMain.reports {
@@ -223,7 +223,7 @@ findbugsTest.reports {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '2.10'
+    gradleVersion = '2.13'
 }
 
 /*

@@ -113,7 +113,7 @@ public class JavaScriptResource {
         final ErrorManager errorManager = new Slf4jErrorManager(compiler);
         compiler.setErrorManager(errorManager);
         // TODO: Use an explicit list of externs instead of the default browser set, to control compatibility.
-        final List<SourceFile> externs = CommandLineRunner.getBuiltinExterns(options);
+        final List<SourceFile> externs = CommandLineRunner.getBuiltinExterns(options.getEnvironment());
         compiler.compile(externs, ImmutableList.of(source), options);
         return compiler;
     }
