@@ -229,7 +229,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                 .orElse(false);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static String buildNormalizedChecksumString(final Map<String,Deque<String>> queryParameters) {
         return buildNormalizedChecksumString(queryParameters instanceof SortedMap
                 ? (SortedMap)queryParameters

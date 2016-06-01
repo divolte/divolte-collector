@@ -92,7 +92,6 @@ public class JsonEventHandler implements HttpHandler {
          * is mutable from other code as this instance lives on. In reality,
          * this is the only scope where it is available after creation.
          */
-        @SuppressWarnings("PMD.ArrayIsStoredDirectly")
         private JsonUndertowEvent(
                 final long requestTime,
                 final HttpServerExchange exchange,

@@ -60,7 +60,6 @@ public class JsonSourceTest {
         return ignored -> {};
     }
 
-    @SuppressWarnings("rawtypes")
     private void request(final ContainerNode json) throws IOException {
         final HttpURLConnection conn = request(json, noop());
         assertEquals(200, conn.getResponseCode());
@@ -71,7 +70,6 @@ public class JsonSourceTest {
         return (HttpURLConnection) url.openConnection();
     }
 
-    @SuppressWarnings("rawtypes")
     private HttpURLConnection request(final ContainerNode json,
                                       final Consumer<HttpURLConnection> preRequest) throws IOException {
         final HttpURLConnection conn = startRequest();
