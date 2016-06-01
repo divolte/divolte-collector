@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ContainerNode;
 import io.divolte.server.ServerTestUtils.TestServer;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -113,7 +112,6 @@ public class JsonSourceTest {
     }
 
     @Test
-    @Ignore("Not yet supported")
     public void shouldOnlySupportJsonRequests() throws IOException {
         startServer("mobile-source.conf");
         final HttpURLConnection conn = startRequest();

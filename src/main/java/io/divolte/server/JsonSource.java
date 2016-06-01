@@ -20,6 +20,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 
 import io.divolte.server.config.JsonSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.util.Methods;
 
@@ -52,8 +53,8 @@ public class JsonSource extends HttpSource {
 
     @Override
     public PathHandler attachToPathHandler(final PathHandler pathHandler) {
-        return pathHandler.addExactPath(pathPrefix,
-                new AllowedMethodsHandler(          // Allow only POST for this endpoint
-                        handler, Methods.POST));
+        final HttpHandler onlyJsonHandler = new JsonContentHandler(handler);
+        final HttpHandler onlyPostHandler = new AllowedMethodsHandler(onlyJsonHandler, Methods.POST);
+        return pathHandler.addExactPath(pathPrefix, onlyPostHandler);
     }
 }
