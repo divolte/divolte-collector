@@ -104,7 +104,7 @@ public final class DslRecordMapping {
         this.geoIpService = Objects.requireNonNull(geoIpService);
 
         stack = new ArrayDeque<>();
-        stack.add(ImmutableList.<MappingAction>builder());
+        stack.add(ImmutableList.builder());
     }
 
     /*
@@ -153,7 +153,7 @@ public final class DslRecordMapping {
      * Higher order actions
      */
     public void when(final ValueProducer<Boolean> condition, final Runnable closure) {
-        stack.add(ImmutableList.<MappingAction>builder());
+        stack.add(ImmutableList.builder());
         closure.run();
 
         final List<MappingAction> actions = stack.removeLast().build();
@@ -174,7 +174,7 @@ public final class DslRecordMapping {
     }
 
     public void section(final Runnable closure) {
-        stack.add(ImmutableList.<MappingAction>builder());
+        stack.add(ImmutableList.builder());
         closure.run();
 
         final List<MappingAction> actions = stack.removeLast().build();
