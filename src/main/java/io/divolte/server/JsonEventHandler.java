@@ -112,7 +112,7 @@ public class JsonEventHandler implements HttpHandler {
             }
 
             /*
-             * XXX: A JSON event cannot be corrupt at the moment. Either the request is complete and eveything works,
+             * XXX: A JSON event cannot be corrupt at the moment. Either the request is complete and everything works,
              * or the request is incomplete and we drop it as we cannot parse enough to provide the mapping with a
              * partial event.
              */
