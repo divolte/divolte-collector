@@ -88,6 +88,7 @@ public class ChunkyByteBuffer {
             switch (readResult) {
                 case -1:
                     // End-of-file.
+                    channel.getReadSetter().set(null);
                     completionHandler.completed(new ChunkyByteBufferInputStream(chunks), getBufferSize());
                     return;
                 case 0:
@@ -106,6 +107,7 @@ public class ChunkyByteBuffer {
                             chunks[currentChunkIndex] = ByteBuffer.allocate(CHUNK_SIZE);
                         } else {
                             // Buffers are full.
+                            channel.getReadSetter().set(null);
                             completionHandler.overflow();
                             return;
                         }
