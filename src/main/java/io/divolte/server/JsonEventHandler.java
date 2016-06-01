@@ -37,15 +37,15 @@ public class JsonEventHandler implements HttpHandler {
 
     private final AsyncRequestBodyReceiver receiver;
 
-    public JsonEventHandler(
-            final IncomingRequestProcessingPool processingPool,
-            final int sourceIndex,
-            final String partyIdParameter) {
+    public JsonEventHandler(final IncomingRequestProcessingPool processingPool,
+                            final int sourceIndex,
+                            final String partyIdParameter,
+                            final int maximumBodySize) {
         this.processingPool = processingPool;
         this.sourceIndex = sourceIndex;
         this.partyIdParameter = partyIdParameter;
 
-        receiver = new AsyncRequestBodyReceiver(1024);
+        receiver = new AsyncRequestBodyReceiver(maximumBodySize);
     }
 
     @Override

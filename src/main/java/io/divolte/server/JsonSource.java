@@ -36,16 +36,18 @@ public class JsonSource extends HttpSource {
              vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).prefix,
              processingPool,
              vc.configuration().sourceIndex(sourceName),
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).partyIdParameter);
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).partyIdParameter,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).maximumBodySize);
     }
 
     private JsonSource(final String sourceName,
                          final String pathPrefix,
                          final IncomingRequestProcessingPool processingPool,
                          final int sourceIndex,
-                         final String partyIdParameter) {
+                         final String partyIdParameter,
+                         final int maximumBodySize) {
         super(sourceName, pathPrefix);
-        this.handler = new JsonEventHandler(processingPool, sourceIndex, partyIdParameter);
+        this.handler = new JsonEventHandler(processingPool, sourceIndex, partyIdParameter, maximumBodySize);
     }
 
     @Override
