@@ -1000,7 +1000,7 @@ public final class DslRecordMapping {
                                   final Map<String,Optional<?>> context) {
             @SuppressWarnings("unchecked")
             final Optional<T> result = memoize
-                    ? (Optional<T>)context.computeIfAbsent(identifier, (x) -> supplier.apply(divolteEvent, context))
+                    ? (Optional<T>)context.computeIfAbsent(identifier, x -> supplier.apply(divolteEvent, context))
                     : supplier.apply(divolteEvent, context);
             return result;
         }
