@@ -75,13 +75,9 @@ public class JsonEventHandler implements HttpHandler {
         private static final ObjectMapper OBJECT_MAPPER;
         static {
             final ObjectMapper mapper = new ObjectMapper();
-            mapper.setPropertyNamingStrategy(
-                    new PropertyNamingStrategy.LowerCaseWithUnderscoresStrategy() // snake_casing
-                    );
-            mapper.registerModules(
-                    new ParameterNamesModule() // Support JDK8 parameter name discovery
-                    );
-
+            mapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+            // Support JDK8 parameter name discovery
+            mapper.registerModules(new ParameterNamesModule());
             OBJECT_MAPPER = mapper;
         }
 
