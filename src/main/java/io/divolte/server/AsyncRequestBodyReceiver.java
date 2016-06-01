@@ -41,12 +41,12 @@ public class AsyncRequestBodyReceiver {
          * may be larger than requested because we always use a slot
          * completely.
          */
-        final int requestedSlots = calculateSlots(requestedMaxBufferSize);
+        final int requestedSlots = calculateChunks(requestedMaxBufferSize);
         numSlots = Math.max(requestedSlots, 1);
         logger.debug("Configuring to use {} buffer slots.", numSlots);
     }
 
-    private static int calculateSlots(final int length) {
+    private static int calculateChunks(final int length) {
         // Should be faster than using Math.ceil().
         return (length - 1) / ChunkyByteBuffer.CHUNK_SIZE + 1;
     }
@@ -71,7 +71,7 @@ public class AsyncRequestBodyReceiver {
         // header if that's present.
         final int provision = Optional.ofNullable(exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH))
                                       .map(Ints::tryParse)
-                                      .map(AsyncRequestBodyReceiver::calculateSlots)
+                                      .map(AsyncRequestBodyReceiver::calculateChunks)
                                       .orElseGet(NUM_CHUNKS::get);
         if (provision > numSlots) {
             exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE).endExchange();
@@ -108,7 +108,7 @@ public class AsyncRequestBodyReceiver {
             @Override
             public void completed(final InputStream body, final int bodyLength) {
                 // First bump the global default for the number of chunks that we pre-allocate.
-                final int newNumChunks = calculateSlots(bodyLength);
+                final int newNumChunks = calculateChunks(bodyLength);
                 int currentNumChunks;
                 while ((currentNumChunks = NUM_CHUNKS.get()) < newNumChunks) {
                     if (NUM_CHUNKS.compareAndSet(currentNumChunks, newNumChunks)) {
