@@ -57,7 +57,7 @@ public final class AvroRecordBuffer {
          * the entire object using a larger byte array. All subsequent instances
          * will also allocate the larger size array from that point onward.
          */
-        final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[BUFFER_SIZE.get()]);
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(BUFFER_SIZE.get());
         final DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(record.getSchema());
         final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
 
