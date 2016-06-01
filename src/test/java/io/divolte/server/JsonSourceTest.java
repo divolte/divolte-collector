@@ -36,8 +36,8 @@ import static org.junit.Assert.assertEquals;
 
 @ParametersAreNonnullByDefault
 public class JsonSourceTest {
-    private static final String MOBILE_EVENT_URL_TEMPLATE =
-            "http://localhost:%d/mob-event/0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
+    private static final String JSON_EVENT_URL_TEMPLATE =
+            "http://localhost:%d/json-event?p=0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private Optional<TestServer> testServer = Optional.empty();
@@ -47,9 +47,14 @@ public class JsonSourceTest {
         testServer = Optional.of(new TestServer(configResource));
     }
 
-    public void stopServer() {
+    private void stopServer() {
         testServer.ifPresent(testServer -> testServer.server.shutdown());
         testServer = Optional.empty();
+    }
+
+    @After
+    public void tearDown() {
+        stopServer();
     }
 
     private void request() throws IOException {
@@ -62,11 +67,11 @@ public class JsonSourceTest {
 
     private void request(final ContainerNode json) throws IOException {
         final HttpURLConnection conn = request(json, noop());
-        assertEquals(200, conn.getResponseCode());
+        assertEquals(204, conn.getResponseCode());
     }
 
     private HttpURLConnection startRequest() throws IOException {
-        final URL url = new URL(String.format(MOBILE_EVENT_URL_TEMPLATE, testServer.get().port));
+        final URL url = new URL(String.format(JSON_EVENT_URL_TEMPLATE, testServer.get().port));
         return (HttpURLConnection) url.openConnection();
     }
 
@@ -91,14 +96,12 @@ public class JsonSourceTest {
     }
 
     @Test
-    @Ignore("Not yet supported")
     public void shouldSupportPostingJsonToEndpoint() throws IOException {
         startServer("mobile-source.conf");
         request();
     }
 
     @Test
-    @Ignore("Not yet supported")
     public void shouldOnlySupportPostRequests() throws IOException {
         startServer("mobile-source.conf");
         final HttpURLConnection conn = startRequest();
@@ -123,10 +126,5 @@ public class JsonSourceTest {
 
         // 415: Unsupported Media Type
         assertEquals(415, conn.getResponseCode());
-    }
-
-    @After
-    public void tearDown() {
-        stopServer();
     }
 }
