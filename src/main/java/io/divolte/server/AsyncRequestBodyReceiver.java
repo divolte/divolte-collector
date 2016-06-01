@@ -23,8 +23,6 @@ import java.util.function.Consumer;
 public class AsyncRequestBodyReceiver {
     private static final Logger logger = LoggerFactory.getLogger(AsyncRequestBodyReceiver.class);
 
-    private static final AtomicInteger NUM_CHUNKS = new AtomicInteger(1);
-
     private static final InputStream EMPTY_INPUT_STREAM = new InputStream() {
         @Override
         public int read() throws IOException {
@@ -32,7 +30,8 @@ public class AsyncRequestBodyReceiver {
         }
     };
 
-    private final int numSlots;
+    private final AtomicInteger preallocateChunks = new AtomicInteger(1);
+    private final int maximumChunks;
 
     public AsyncRequestBodyReceiver(final int requestedMaxBufferSize) {
         /*
@@ -42,8 +41,8 @@ public class AsyncRequestBodyReceiver {
          * completely.
          */
         final int requestedSlots = calculateChunks(requestedMaxBufferSize);
-        numSlots = Math.max(requestedSlots, 1);
-        logger.debug("Configuring to use {} buffer slots.", numSlots);
+        maximumChunks = Math.max(requestedSlots, 1);
+        logger.debug("Configuring to use a maximum of {} buffer chunks.", maximumChunks);
     }
 
     private static int calculateChunks(final int length) {
@@ -54,7 +53,7 @@ public class AsyncRequestBodyReceiver {
     public void receive(final Consumer<InputStream> callback, final HttpServerExchange exchange) {
         Objects.requireNonNull(callback);
         if (logger.isDebugEnabled()) {
-            logger.debug("Number of buffers: {}", NUM_CHUNKS.get());
+            logger.debug("Pre-allocating buffer with {} chunks.", preallocateChunks.get());
         }
 
         if (exchange.isRequestComplete()) {
@@ -72,8 +71,8 @@ public class AsyncRequestBodyReceiver {
         final int provision = Optional.ofNullable(exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH))
                                       .map(Ints::tryParse)
                                       .map(AsyncRequestBodyReceiver::calculateChunks)
-                                      .orElseGet(NUM_CHUNKS::get);
-        if (provision > numSlots) {
+                                      .orElseGet(preallocateChunks::get);
+        if (provision > maximumChunks) {
             exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE).endExchange();
             return;
         }
@@ -87,10 +86,11 @@ public class AsyncRequestBodyReceiver {
          * buffers are used exclusively on heap after receiving the bytes from the
          * socket.
          */
-        ChunkyByteBuffer.fill(channel, provision, numSlots, new ChunkyByteBuffer.CompletionHandler() {
+        ChunkyByteBuffer.fill(channel, provision, maximumChunks, new ChunkyByteBuffer.CompletionHandler() {
             @Override
             public void overflow() {
-                exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE).endExchange();
+                exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE)
+                        .endExchange();
             }
             @Override
             public void failed(final Throwable e) {
@@ -110,8 +110,8 @@ public class AsyncRequestBodyReceiver {
                 // First bump the global default for the number of chunks that we pre-allocate.
                 final int newNumChunks = calculateChunks(bodyLength);
                 int currentNumChunks;
-                while ((currentNumChunks = NUM_CHUNKS.get()) < newNumChunks) {
-                    if (NUM_CHUNKS.compareAndSet(currentNumChunks, newNumChunks)) {
+                while ((currentNumChunks = preallocateChunks.get()) < newNumChunks) {
+                    if (preallocateChunks.compareAndSet(currentNumChunks, newNumChunks)) {
                         logger.info("Updated default body buffer size from {} to {}",
                                      currentNumChunks * ChunkyByteBuffer.CHUNK_SIZE,
                                      newNumChunks * ChunkyByteBuffer.CHUNK_SIZE);
