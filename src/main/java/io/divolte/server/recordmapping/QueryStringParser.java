@@ -8,16 +8,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.ParametersAreNullableByDefault;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-@ParametersAreNullableByDefault
+@ParametersAreNonnullByDefault
 @ThreadSafe
 public final class QueryStringParser {
-    public static Map<String,List<String>> parseQueryString(final String string) {
+    public static Map<String,List<String>> parseQueryString(@Nullable final String string) {
         if (string == null) {
             return Collections.emptyMap();
         }

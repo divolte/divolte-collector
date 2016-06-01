@@ -18,6 +18,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public final class UserAgentParserAndCache {
     private final static Logger logger = LoggerFactory.getLogger(UserAgentParserAndCache.class);
 
