@@ -94,16 +94,16 @@ public class AsyncRequestBodyReceiver {
             }
             @Override
             public void failed(final Throwable e) {
-                Connectors.executeRootHandler(exchange -> {
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR).endExchange();
-                    if (logger.isWarnEnabled()) {
-                        final String host = Optional.ofNullable(exchange.getSourceAddress())
-                                                    .map(InetSocketAddress::getHostString)
-                                                    .orElse("<UNKNOWN HOST>");
+                if (logger.isWarnEnabled()) {
+                    final String host = Optional.ofNullable(exchange.getSourceAddress())
+                            .map(InetSocketAddress::getHostString)
+                            .orElse("<UNKNOWN HOST>");
 
-                        logger.warn("Error while reading request body received from " + host, e);
-                    }
-                }, exchange);
+                    logger.warn("Error while reading request body received from " + host, e);
+                }
+                Connectors.executeRootHandler(exchange -> exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR)
+                                                                  .endExchange(),
+                                              exchange);
             }
             @Override
             public void completed(final InputStream body, final int bodyLength) {
