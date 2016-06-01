@@ -239,7 +239,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
     }
 
     private void possiblyCloseAndCleanup() {
-        final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
+        final long oldestAllowedRound = timeSignal / sessionTimeoutMillis - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
 
         final List<Entry<Long, RoundHdfsFile>> entriesToBeClosed = openFiles
         .entrySet()
@@ -332,7 +332,7 @@ public class SessionBinningFileStrategy implements FileCreateAndSyncStrategy {
 
         RoundHdfsFile(final long time) {
             final long requestedRound = time / sessionTimeoutMillis;
-            final long oldestAllowedRound = (timeSignal / sessionTimeoutMillis) - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
+            final long oldestAllowedRound = timeSignal / sessionTimeoutMillis - (FILE_TIME_TO_LIVE_IN_SESSION_DURATIONS - 1);
             this.round = Math.max(requestedRound, oldestAllowedRound);
 
             this.path = new Path(hdfsWorkingDir,
