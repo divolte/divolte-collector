@@ -115,13 +115,15 @@ public class JsonEventHandler implements HttpHandler {
                 logger.info("JSON mapping failed for request: {}", me.getMessage());
                 throw new IncompleteRequestException();
             } catch (final IOException e) {
-                // XXX: Is this corrupt or incomplete???
+                // This indicates we couldn't parse the data. Corrupt or incomplete,
+                // we can't proceed because mapping is all-or-nothing and we don't
+                // even have a partial object.
                 logger.warn("Parsing failed for request.", e);
                 throw new IncompleteRequestException();
             }
 
             /*
-             * XXX: A JSON event cannot be corrupt at the moment. Either the request is complete and everything works,
+             * A JSON event cannot be corrupt at the moment. Either the request is complete and everything works,
              * or the request is incomplete and we drop it as we cannot parse enough to provide the mapping with a
              * partial event.
              */
@@ -134,11 +136,6 @@ public class JsonEventHandler implements HttpHandler {
              */
             final TemporalAccessor parsed = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(container.clientTimestampIso);
             final long clientTime = Instant.ofEpochSecond(parsed.getLong(ChronoField.INSTANT_SECONDS), parsed.getLong(ChronoField.NANO_OF_SECOND)).toEpochMilli();
-            /*
-             * XXX: Currently, we allow the event type to be absent. With the browser end point, this
-             * doesn't happen in practice, though. Should we perhaps require it to be present for a
-             * valid request?
-             */
             final DivolteEvent event = DivolteEvent.createJsonEvent(
                     exchange, corrupt, partyId,
                     DivolteIdentifier.tryParse(container.sessionId).orElseThrow(IncompleteRequestException::new),

@@ -41,6 +41,8 @@ public final class DivolteEvent {
     public final DivolteIdentifier sessionId;
     public final String eventId;
     public final String eventSource;
+    // This might be mildly surprising, but technically the event type is optional.
+    // In practice it's normally filled in though.
     public final Optional<String> eventType;
 
     public final boolean newPartyId;
