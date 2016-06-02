@@ -97,11 +97,6 @@ public class JsonEventHandler implements HttpHandler {
 
         private final InputStream requestBody;
 
-        /*
-         * PMD erroneously flags that the byte array passed to this constructor
-         * is mutable from other code as this instance lives on. In reality,
-         * this is the only scope where it is available after creation.
-         */
         private JsonUndertowEvent(
                 final Instant requestTime,
                 final HttpServerExchange exchange,
