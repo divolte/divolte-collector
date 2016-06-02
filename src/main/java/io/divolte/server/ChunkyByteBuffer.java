@@ -52,7 +52,7 @@ public class ChunkyByteBuffer {
         chunks[0] = ByteBuffer.allocate(headChunkSize);
     }
 
-    private int getBufferSize() {
+    private int getBufferUsed() {
         // The buffer size is calculated as the sum of:
         //  - Size of the first buffer, which is special.
         //  - Sizes of the 'middle' buffers, which are full.
@@ -61,7 +61,7 @@ public class ChunkyByteBuffer {
         int bufferSize = 0;
         switch (currentChunkIndex) {
             default:
-                bufferSize += (currentChunkIndex - 2) * CHUNK_SIZE;
+                bufferSize += (currentChunkIndex - 1) * CHUNK_SIZE;
                 // Deliberate fall-through.
             case 1:
                 bufferSize += chunks[0].limit();
@@ -89,7 +89,9 @@ public class ChunkyByteBuffer {
                 case -1:
                     // End-of-file.
                     channel.getReadSetter().set(null);
-                    completionHandler.completed(new ChunkyByteBufferInputStream(chunks), getBufferSize());
+                    // Calculate the size before the buffers are flipped for reading.
+                    final int bufferSize = getBufferUsed();
+                    completionHandler.completed(new ChunkyByteBufferInputStream(chunks), bufferSize);
                     return;
                 case 0:
                     // Nothing pending right now.
@@ -117,27 +119,18 @@ public class ChunkyByteBuffer {
     }
 
     @ParametersAreNonnullByDefault
-    private static final class ChunkyByteBufferInputStream extends InputStream {
+    static final class ChunkyByteBufferInputStream extends InputStream {
         // The buffers wrapped by this stream.
+        // (These will be released as we no longer need them.)
         private final ByteBuffer[] buffers;
         // The index of the current buffer, or equal to the number of buffers if exhausted.
         private int currentBufferIndex;
 
-        public ChunkyByteBufferInputStream(final ByteBuffer[] buffers) {
+        public ChunkyByteBufferInputStream(final ByteBuffer... buffers) {
             this.buffers = Stream.of(buffers)
                                  .filter(Objects::nonNull)
                                  .map(Buffer::flip)
                                  .toArray(ByteBuffer[]::new);
-        }
-
-        @SuppressWarnings("PMD.EmptyWhileStmt")
-        private void advanceToNextBuffer() {
-            // Clear the current buffer prior to advancing to the next one.
-            buffers[currentBufferIndex] = null;
-            // Find the next buffer, aborting when exhausted.
-            while (++currentBufferIndex < buffers.length) {
-                // Nothing needed in body.
-            }
         }
 
         @Override
@@ -148,9 +141,9 @@ public class ChunkyByteBuffer {
                 if (0 < remaining) {
                     return remaining;
                 }
-                advanceToNextBuffer();
+                buffers[currentBufferIndex++] = null;
             }
-            return -1;
+            return 0;
         }
 
         @Override
@@ -160,7 +153,7 @@ public class ChunkyByteBuffer {
                 if (currentBuffer.hasRemaining()) {
                     return currentBuffer.get();
                 }
-                advanceToNextBuffer();
+                buffers[currentBufferIndex++] = null;
             }
             return -1;
         }
@@ -173,8 +166,9 @@ public class ChunkyByteBuffer {
                 if (0 < remaining) {
                     final int count = Math.min(remaining, length);
                     currentBuffer.get(destination, offset, count);
+                    return count;
                 }
-                advanceToNextBuffer();
+                buffers[currentBufferIndex++] = null;
             }
             return -1;
         }

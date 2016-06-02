@@ -14,7 +14,7 @@
           ~ This method uses intentional fall-through from switch labels.
           -->
         <Class name="io.divolte.server.ChunkyByteBuffer"/>
-        <Method name="getBufferSize"/>
+        <Method name="getBufferUsed"/>
         <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     </Match>
 </FindBugsFilter>

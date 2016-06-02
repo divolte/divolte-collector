@@ -30,7 +30,6 @@ import io.undertow.util.StatusCodes;
 public class JsonEventHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(JsonEventHandler.class);
 
-
     private final IncomingRequestProcessingPool processingPool;
     private final int sourceIndex;
     private final String partyIdParameter;
@@ -52,21 +51,31 @@ public class JsonEventHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) {
         captureAndPersistSourceAddress(exchange);
 
-        receiver.receive(body -> {
+        receiver.receive((body,length) -> {
             try {
-                logEvent(exchange, body);
+                if (0 < length) {
+                    logEvent(exchange, body);
+                    exchange.setStatusCode(StatusCodes.NO_CONTENT);
+                } else {
+                    // Empty body; bad by definition.
+                    exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                }
             } catch (final IncompleteRequestException e) {
-                // improper request, could be anything
-                logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
+                // Improper request, could be anything.
+                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                logger.warn("Improper request received from {}.",
+                            Optional.ofNullable(exchange.getSourceAddress())
+                                    .map(InetSocketAddress::getHostString)
+                                    .orElse("<UNKNOWN HOST>"));
             } finally {
-                exchange.setStatusCode(StatusCodes.NO_CONTENT);
                 exchange.endExchange();
             }
         }, exchange);
     }
 
     private void logEvent(final HttpServerExchange exchange, final InputStream body) throws IncompleteRequestException {
-        final DivolteIdentifier partyId = queryParamFromExchange(exchange, partyIdParameter).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
+        final DivolteIdentifier partyId = queryParamFromExchange(exchange, partyIdParameter).flatMap(DivolteIdentifier::tryParse)
+                                                                                            .orElseThrow(IncompleteRequestException::new);
         final UndertowEvent event = new JsonUndertowEvent(System.currentTimeMillis(), exchange, partyId, body);
         processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
