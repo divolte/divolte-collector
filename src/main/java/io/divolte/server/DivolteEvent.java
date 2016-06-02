@@ -94,7 +94,7 @@ public final class DivolteEvent {
         /*
          * Empty for now. There's nothing specific to JSON events at the moment.
          *
-         * Because of this, we can use a single instance throughtout, just to
+         * Because of this, we can use a single instance throughout, just to
          * signal that a DivolteEvent is indeed a JSON source based event.
          */
         public static final JsonEventData EMPTY = new JsonEventData();
