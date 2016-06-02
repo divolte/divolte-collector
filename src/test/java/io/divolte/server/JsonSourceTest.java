@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ContainerNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -30,12 +31,13 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Consumer;
 
 import static java.net.HttpURLConnection.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class JsonSourceTest {
@@ -268,5 +270,81 @@ public class JsonSourceTest {
                                                c -> c.setChunkedStreamingMode(8));
 
         assertEquals(HTTP_NO_CONTENT, conn.getResponseCode());
+    }
+
+    private static ObjectNode buildCompleteJsonEvent() {
+        final ObjectNode root = JSON_MAPPER.createObjectNode()
+            .put("event_type", "complete-event")
+            .put("client_timestamp_iso", "2016-06-01T18:54:16.123Z")
+            .put("session_id", "0:ikfm9ufy:4PxwWyVYSjqHW_ZZBQjZ3EiIovxYMBFY")
+            .put("event_id", "3c54b1491693aa646914e6feeb4a47d1")
+            .put("is_new_party", true)
+            .put("is_new_session", true);
+        root.putObject("parameters")
+            .put("parameter1", "value1");
+        return root;
+    }
+
+    @Test
+    public void shouldReceiveCompleteJsonEvent() throws IOException, InterruptedException {
+        startServer("json-source.conf");
+
+        request(buildCompleteJsonEvent());
+
+        final ServerTestUtils.EventPayload eventPayload =
+                testServer.orElseThrow(IllegalStateException::new).waitForEvent();
+
+        final DivolteEvent receivedEvent = eventPayload.event;
+        assertFalse(receivedEvent.corruptEvent);
+        assertEquals("0:i1t84hgy:5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG", receivedEvent.partyId.value);
+        assertEquals("0:ikfm9ufy:4PxwWyVYSjqHW_ZZBQjZ3EiIovxYMBFY", receivedEvent.sessionId.value);
+        assertEquals("3c54b1491693aa646914e6feeb4a47d1", receivedEvent.eventId);
+        assertEquals("json", receivedEvent.eventSource);
+        assertEquals(Optional.of("complete-event"), receivedEvent.eventType);
+        assertTrue(receivedEvent.newPartyId);
+        assertTrue(receivedEvent.firstInSession);
+        assertTrue(receivedEvent.requestStartTime.isAfter(Instant.now().minusSeconds(60)));
+        assertEquals(Instant.parse("2016-06-01T18:54:16.123Z"), receivedEvent.clientTime);
+        assertFalse(receivedEvent.browserEventData.isPresent());
+        final DivolteEvent.JsonEventData jsonEventData = receivedEvent.jsonEventData.orElseThrow(AssertionError::new);
+        assertNotNull(jsonEventData);
+        final JsonNode parameters = receivedEvent.eventParametersProducer.get().orElseThrow(AssertionError::new);
+        assertEquals("value1", parameters.path("parameter1").textValue());
+    }
+
+    private static ObjectNode buildMinimumJsonEvent() {
+        return JSON_MAPPER.createObjectNode()
+                .put("client_timestamp_iso", "2016-06-01T18:54:16.123Z")
+                .put("session_id", "0:ikfm9ufy:4PxwWyVYSjqHW_ZZBQjZ3EiIovxYMBFZ")
+                .put("event_id", "3c54b1491693aa646914e6feeb4a47d2")
+                .put("is_new_party", true)
+                .put("is_new_session", true);
+    }
+
+    @Test
+    public void shouldReceiveMinimumJsonEvent() throws IOException, InterruptedException {
+        startServer("json-source.conf");
+
+        request(buildMinimumJsonEvent());
+
+        final ServerTestUtils.EventPayload eventPayload =
+                testServer.orElseThrow(IllegalStateException::new).waitForEvent();
+
+        final DivolteEvent receivedEvent = eventPayload.event;
+        assertFalse(receivedEvent.corruptEvent);
+        assertEquals("0:i1t84hgy:5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG", receivedEvent.partyId.value);
+        assertEquals("0:ikfm9ufy:4PxwWyVYSjqHW_ZZBQjZ3EiIovxYMBFZ", receivedEvent.sessionId.value);
+        assertEquals("3c54b1491693aa646914e6feeb4a47d2", receivedEvent.eventId);
+        assertEquals("json", receivedEvent.eventSource);
+        assertFalse(receivedEvent.eventType.isPresent());
+        assertTrue(receivedEvent.newPartyId);
+        assertTrue(receivedEvent.firstInSession);
+        assertTrue(receivedEvent.requestStartTime.isAfter(Instant.now().minusSeconds(60)));
+        assertEquals(Instant.parse("2016-06-01T18:54:16.123Z"), receivedEvent.clientTime);
+        assertFalse(receivedEvent.browserEventData.isPresent());
+        final DivolteEvent.JsonEventData jsonEventData = receivedEvent.jsonEventData.orElseThrow(AssertionError::new);
+        assertNotNull(jsonEventData);
+        final Optional<JsonNode> eventParameters = receivedEvent.eventParametersProducer.get();
+        assertFalse(eventParameters.isPresent());
     }
 }
