@@ -39,12 +39,9 @@ import static org.junit.Assert.assertEquals;
 
 @ParametersAreNonnullByDefault
 public class JsonSourceTest {
-    private static final String JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE =
-            "http://localhost:%d/json-event";
-    private static final String JSON_EVENT_URL_TEMPLATE =
-            JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
-    private static final String JSON_EVENT_WITH_BROKEN_PARTYID_URL_TEMPLATE =
-            JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=notavalidpartyid";
+    private static final String JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE = "http://localhost:%d/json-event";
+    private static final String JSON_EVENT_URL_TEMPLATE = JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
+    private static final String JSON_EVENT_WITH_BROKEN_PARTYID_URL_TEMPLATE = JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=notavalidpartyid";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private static final ObjectNode EMPTY_JSON_OBJECT = JSON_MAPPER.createObjectNode();
@@ -113,12 +110,12 @@ public class JsonSourceTest {
 
     @Test
     public void shouldSupportMobileSource() {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
     }
 
     @Test
     public void shouldSupportPostingJsonToEndpoint() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
         final HttpURLConnection conn = request();
 
         assertEquals(HTTP_NO_CONTENT, conn.getResponseCode());
@@ -126,7 +123,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldOnlySupportPostRequests() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
         final HttpURLConnection conn = startRequest();
         conn.setRequestMethod("GET");
 
@@ -136,7 +133,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldOnlySupportJsonRequests() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
         final HttpURLConnection conn = startRequest();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
@@ -150,7 +147,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectEmptyRequests() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
         final HttpURLConnection conn = startJsonPostRequest();
 
         assertEquals(HTTP_BAD_REQUEST, conn.getResponseCode());
@@ -158,7 +155,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithoutPartyId() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
         urlTemplate = Optional.of(JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE);
         final HttpURLConnection conn = request();
 
@@ -167,7 +164,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithBrokenPartyId() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
         urlTemplate = Optional.of(JSON_EVENT_WITH_BROKEN_PARTYID_URL_TEMPLATE);
         final HttpURLConnection conn = request();
 
@@ -176,7 +173,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldAcceptRequestsWithoutContentLength() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
 
         final HttpURLConnection conn = request(c -> {
             // Chunked-streaming mode disables buffering and the content-length header.
@@ -188,7 +185,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithBodyLessThanContentLength() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
 
         final HttpURLConnection conn = startJsonPostRequest();
         final byte[] bodyBytes = JSON_MAPPER.writeValueAsBytes(EMPTY_JSON_OBJECT);
@@ -207,7 +204,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithBodyMoreThanContentLength() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
 
         final HttpURLConnection conn = startJsonPostRequest();
         final byte[] bodyBytes = JSON_MAPPER.writeValueAsBytes(EMPTY_JSON_OBJECT);
@@ -234,7 +231,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithTooLargeContentLength() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
 
         final HttpURLConnection conn = startJsonPostRequest();
         final byte[] bodyBytes = JSON_MAPPER.writeValueAsBytes(buildBigJsonPayload(100000));
@@ -249,7 +246,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithTooLargeBody() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
 
         final HttpURLConnection conn = startJsonPostRequest();
         // Here we're not declaring ahead of time that we will be too large. But the body will be.
@@ -263,7 +260,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldAcceptBodyLargerThanOneChunk() throws IOException {
-        startServer("mobile-source.conf");
+        startServer("json-source.conf");
 
         // Assumes the configuration has a max body size greater than 2 chunks.
         // (Disable the content-length header to force chunked reading.)
