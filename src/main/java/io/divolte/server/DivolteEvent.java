@@ -167,7 +167,6 @@ public final class DivolteEvent {
 
     static DivolteEvent createJsonEvent(
             final HttpServerExchange originatingExchange,
-            final boolean corruptEvent,
             final DivolteIdentifier partyCookie,
             final DivolteIdentifier sessionCookie,
             final String eventId,
@@ -181,7 +180,8 @@ public final class DivolteEvent {
             final JsonEventData jsonEvent) {
         return new DivolteEvent(
                 originatingExchange,
-                corruptEvent,
+                // Corruption in JSON events can't currently be detected.
+                false,
                 partyCookie,
                 sessionCookie,
                 eventId,

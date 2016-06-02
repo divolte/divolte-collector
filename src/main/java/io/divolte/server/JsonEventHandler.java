@@ -123,13 +123,6 @@ public class JsonEventHandler implements HttpHandler {
             }
 
             /*
-             * A JSON event cannot be corrupt at the moment. Either the request is complete and everything works,
-             * or the request is incomplete and we drop it as we cannot parse enough to provide the mapping with a
-             * partial event.
-             */
-            final boolean corrupt = false;
-
-            /*
              * Parse the client provided timestamp as ISO offsetted date/time. We use the ofEpochSecond creator to
              * obtain an Instant, as the Instant#from(TemporalAccessor) performs some additional checks unnecessary
              * in our case.
@@ -137,7 +130,7 @@ public class JsonEventHandler implements HttpHandler {
             final TemporalAccessor parsed = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(container.clientTimestampIso);
             final Instant clientTime = Instant.ofEpochSecond(parsed.getLong(ChronoField.INSTANT_SECONDS), parsed.getLong(ChronoField.NANO_OF_SECOND));
             final DivolteEvent event = DivolteEvent.createJsonEvent(
-                    exchange, corrupt, partyId,
+                    exchange, partyId,
                     DivolteIdentifier.tryParse(container.sessionId).orElseThrow(IncompleteRequestException::new),
                     container.eventId, JsonSource.EVENT_SOURCE_NAME, requestTime, clientTime,
                     container.isNewParty, container.isNewSession, Optional.of(container.eventType),
