@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.undertow.server.HttpServerExchange;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -48,8 +49,8 @@ public final class DivolteEvent {
     public final boolean newPartyId;
     public final boolean firstInSession;
 
-    public final long requestStartTime;
-    public final long clientUtcOffset;
+    public final Instant requestStartTime;
+    public final Instant clientTime;
 
     public final Supplier<Optional<JsonNode>> eventParametersProducer;
 
@@ -109,8 +110,8 @@ public final class DivolteEvent {
                  final DivolteIdentifier sessionCookie,
                  final String eventId,
                  final String eventSource,
-                 final long requestStartTime,
-                 final long clientUtcOffset,
+                 final Instant requestStartTime,
+                 final Instant clientTime,
                  final boolean newPartyId,
                  final boolean firstInSession,
                  final Optional<String> eventType,
@@ -123,8 +124,8 @@ public final class DivolteEvent {
         this.sessionId               = Objects.requireNonNull(sessionCookie);
         this.eventId                 = Objects.requireNonNull(eventId);
         this.eventSource             = Objects.requireNonNull(eventSource);
-        this.requestStartTime        = requestStartTime;
-        this.clientUtcOffset         = clientUtcOffset;
+        this.requestStartTime        = Objects.requireNonNull(requestStartTime);
+        this.clientTime              = Objects.requireNonNull(clientTime);
         this.newPartyId              = newPartyId;
         this.firstInSession          = firstInSession;
         this.eventType               = Objects.requireNonNull(eventType);
@@ -139,8 +140,8 @@ public final class DivolteEvent {
             final DivolteIdentifier partyCookie,
             final DivolteIdentifier sessionCookie,
             final String eventId,
-            final long requestStartTime,
-            final long clientUtcOffset,
+            final Instant requestStartTime,
+            final Instant clientUtcOffset,
             final boolean newPartyId,
             final boolean firstInSession,
             final Optional<String> eventType,
@@ -171,8 +172,8 @@ public final class DivolteEvent {
             final DivolteIdentifier sessionCookie,
             final String eventId,
             final String eventSource,
-            final long requestStartTime,
-            final long clientUtcOffset,
+            final Instant requestStartTime,
+            final Instant clientTime,
             final boolean newPartyId,
             final boolean firstInSession,
             final Optional<String> eventType,
@@ -186,7 +187,7 @@ public final class DivolteEvent {
                 eventId,
                 eventSource,
                 requestStartTime,
-                clientUtcOffset,
+                clientTime,
                 newPartyId,
                 firstInSession,
                 eventType,

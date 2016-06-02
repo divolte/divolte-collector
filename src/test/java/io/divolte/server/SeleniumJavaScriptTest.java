@@ -16,31 +16,27 @@
 
 package io.divolte.server;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
-
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import io.divolte.server.ServerTestUtils.EventPayload;
 import org.junit.Before;
 import org.junit.Test;
 import org.openqa.selenium.By;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import io.divolte.server.ServerTestUtils.EventPayload;
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
+import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest extends SeleniumTestBase {
-    private static final long HALF_DAY_MS = TimeUnit.HOURS.toMillis(12);
-
     @Test
     public void shouldRegenerateIDsOnExplicitNavigation() {
         Preconditions.checkState(null != driver && null != server);
@@ -181,8 +177,9 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
          * but we'd expect it to be a reasonably accurate clock on the same planet.
          * So, if it is within +/- 12 hours of our clock, we think it's fine.
          */
-        assertThat(eventData.clientUtcOffset,
-                allOf(greaterThan(-HALF_DAY_MS), lessThan(HALF_DAY_MS)));
+        final Instant now = Instant.now();
+        assertThat(eventData.clientTime,
+                   allOf(greaterThan(now.minus(12, ChronoUnit.HOURS)), lessThan(now.plus(12, ChronoUnit.HOURS))));
 
         /*
          * Doing true assertions against the viewport and window size

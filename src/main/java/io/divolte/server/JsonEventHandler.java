@@ -76,7 +76,7 @@ public class JsonEventHandler implements HttpHandler {
     private void logEvent(final HttpServerExchange exchange, final InputStream body) throws IncompleteRequestException {
         final DivolteIdentifier partyId = queryParamFromExchange(exchange, partyIdParameter).flatMap(DivolteIdentifier::tryParse)
                                                                                             .orElseThrow(IncompleteRequestException::new);
-        final UndertowEvent event = new JsonUndertowEvent(System.currentTimeMillis(), exchange, partyId, body);
+        final UndertowEvent event = new JsonUndertowEvent(Instant.now(), exchange, partyId, body);
         processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
 
@@ -98,7 +98,7 @@ public class JsonEventHandler implements HttpHandler {
          * this is the only scope where it is available after creation.
          */
         private JsonUndertowEvent(
-                final long requestTime,
+                final Instant requestTime,
                 final HttpServerExchange exchange,
                 final DivolteIdentifier partyId,
                 final InputStream requestBody) throws IncompleteRequestException {
@@ -135,12 +135,11 @@ public class JsonEventHandler implements HttpHandler {
              * in our case.
              */
             final TemporalAccessor parsed = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(container.clientTimestampIso);
-            final long clientTime = Instant.ofEpochSecond(parsed.getLong(ChronoField.INSTANT_SECONDS), parsed.getLong(ChronoField.NANO_OF_SECOND)).toEpochMilli();
+            final Instant clientTime = Instant.ofEpochSecond(parsed.getLong(ChronoField.INSTANT_SECONDS), parsed.getLong(ChronoField.NANO_OF_SECOND));
             final DivolteEvent event = DivolteEvent.createJsonEvent(
                     exchange, corrupt, partyId,
                     DivolteIdentifier.tryParse(container.sessionId).orElseThrow(IncompleteRequestException::new),
-                    container.eventId, JsonSource.EVENT_SOURCE_NAME, requestTime,
-                    clientTime - requestTime,
+                    container.eventId, JsonSource.EVENT_SOURCE_NAME, requestTime, clientTime,
                     container.isNewParty, container.isNewSession, Optional.of(container.eventType),
                     () -> Optional.ofNullable(container.parameters), // Note that it's possible to send a JSON event without parameters
                     DivolteEvent.JsonEventData.EMPTY);
