@@ -1,7 +1,21 @@
 package io.divolte.server;
 
-import static io.divolte.server.HttpSource.*;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import io.divolte.server.processing.Item;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.StatusCodes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -9,24 +23,13 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
+import java.util.Objects;
 import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.divolte.server.HttpSource.captureAndPersistSourceAddress;
+import static io.divolte.server.HttpSource.queryParamFromExchange;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-
-import io.divolte.server.processing.Item;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.StatusCodes;
-
+@ParametersAreNonnullByDefault
 public class JsonEventHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(JsonEventHandler.class);
 
@@ -40,9 +43,9 @@ public class JsonEventHandler implements HttpHandler {
                             final int sourceIndex,
                             final String partyIdParameter,
                             final int maximumBodySize) {
-        this.processingPool = processingPool;
-        this.sourceIndex = sourceIndex;
-        this.partyIdParameter = partyIdParameter;
+        this.processingPool   = Objects.requireNonNull(processingPool);
+        this.sourceIndex      = sourceIndex;
+        this.partyIdParameter = Objects.requireNonNull(partyIdParameter);
 
         receiver = new AsyncRequestBodyReceiver(maximumBodySize);
     }
@@ -80,6 +83,7 @@ public class JsonEventHandler implements HttpHandler {
         processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
 
+    @ParametersAreNonnullByDefault
     private static final class JsonUndertowEvent extends UndertowEvent {
         private static final ObjectMapper OBJECT_MAPPER;
         static {
@@ -87,6 +91,7 @@ public class JsonEventHandler implements HttpHandler {
             mapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
             // Support JDK8 parameter name discovery
             mapper.registerModules(new ParameterNamesModule());
+            mapper.registerModule(new Jdk8Module());
             OBJECT_MAPPER = mapper;
         }
 
@@ -103,7 +108,7 @@ public class JsonEventHandler implements HttpHandler {
                 final DivolteIdentifier partyId,
                 final InputStream requestBody) throws IncompleteRequestException {
             super(requestTime, exchange, partyId);
-            this.requestBody = requestBody;
+            this.requestBody = Objects.requireNonNull(requestBody);
         }
 
         @Override
@@ -133,33 +138,34 @@ public class JsonEventHandler implements HttpHandler {
                     exchange, partyId,
                     DivolteIdentifier.tryParse(container.sessionId).orElseThrow(IncompleteRequestException::new),
                     container.eventId, JsonSource.EVENT_SOURCE_NAME, requestTime, clientTime,
-                    container.isNewParty, container.isNewSession, Optional.of(container.eventType),
-                    () -> Optional.ofNullable(container.parameters), // Note that it's possible to send a JSON event without parameters
+                    container.isNewParty, container.isNewSession, container.eventType,
+                    () -> container.parameters, // Note that it's possible to send a JSON event without parameters
                     DivolteEvent.JsonEventData.EMPTY);
 
             return event;
         }
 
-        final static class EventContainer {
-            @JsonProperty(required=true) public final String eventType;
+        @ParametersAreNonnullByDefault
+        private final static class EventContainer {
+            public final Optional<String> eventType;
             @JsonProperty(required=true) public final String sessionId;
             @JsonProperty(required=true) public final String eventId;
             @JsonProperty(required=true) public final boolean isNewParty;
             @JsonProperty(required=true) public final boolean isNewSession;
             @JsonProperty(required=true) public final String clientTimestampIso;
-            public final JsonNode parameters;
+            public final Optional<JsonNode> parameters;
 
             @JsonCreator
             public EventContainer(
-                    final String eventType, final String sessionId, final String eventId, final boolean isNewParty,
-                    final boolean isNewSession, final String clientTimestampIso, final JsonNode parameters) {
-                this.eventType = eventType;
-                this.sessionId = sessionId;
-                this.eventId = eventId;
-                this.isNewParty = isNewParty;
-                this.isNewSession = isNewSession;
-                this.clientTimestampIso = clientTimestampIso;
-                this.parameters = parameters;
+                    final Optional<String> eventType, final String sessionId, final String eventId, final boolean isNewParty,
+                    final boolean isNewSession, final String clientTimestampIso, final Optional<JsonNode> parameters) {
+                this.eventType          = Objects.requireNonNull(eventType);
+                this.sessionId          = Objects.requireNonNull(sessionId);
+                this.eventId            = Objects.requireNonNull(eventId);
+                this.isNewParty         = Objects.requireNonNull(isNewParty);
+                this.isNewSession       = Objects.requireNonNull(isNewSession);
+                this.clientTimestampIso = Objects.requireNonNull(clientTimestampIso);
+                this.parameters         = Objects.requireNonNull(parameters);
             }
         }
     }
