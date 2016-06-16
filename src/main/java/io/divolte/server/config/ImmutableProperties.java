@@ -3,7 +3,6 @@ package io.divolte.server.config;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-import java.util.InvalidPropertiesFormatException;
 import java.util.Map;
 import java.util.Properties;
 
@@ -31,7 +30,7 @@ public class ImmutableProperties extends Properties {
     }
 
     @Override
-    public synchronized void loadFromXML(final InputStream in) throws IOException, InvalidPropertiesFormatException {
+    public synchronized void loadFromXML(final InputStream in) throws IOException {
         throw new UnsupportedOperationException();
     }
 
