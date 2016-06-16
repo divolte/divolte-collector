@@ -58,7 +58,7 @@ public class AllowedMethodsHandler implements HttpHandler {
                     .put(Headers.ALLOW, allowedMethodHeader)
                     .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
             exchange.getResponseSender()
-                    .send("HTTP method" + requestMethod + " + not allowed.", StandardCharsets.UTF_8);
+                    .send("HTTP method " + requestMethod + " not allowed.", StandardCharsets.UTF_8);
             exchange.endExchange();
         }
     }
