@@ -24,6 +24,8 @@ import io.divolte.server.IncomingRequestProcessingPool;
 import io.divolte.server.JsonSource;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public class JsonSourceConfiguration extends SourceConfiguration {
@@ -34,14 +36,15 @@ public class JsonSourceConfiguration extends SourceConfiguration {
     public final int maximumBodySize;
 
     @JsonCreator
+    @ParametersAreNullableByDefault
     JsonSourceConfiguration(
             @JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix,
             @JsonProperty(defaultValue=DEFAULT_PARTY_ID_PARAMETER) final String partyIdParameter,
             @JsonProperty(defaultValue=DEFAULT_MAXIMUM_BODY_SIZE) final Integer maximumBodySize) {
-        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
         super(prefix);
-        this.partyIdParameter = partyIdParameter == null ? DEFAULT_PARTY_ID_PARAMETER : partyIdParameter;
-        this.maximumBodySize = maximumBodySize == null ? Integer.valueOf(DEFAULT_MAXIMUM_BODY_SIZE) : maximumBodySize;
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+        this.partyIdParameter = Optional.ofNullable(partyIdParameter).orElse(DEFAULT_PARTY_ID_PARAMETER);
+        this.maximumBodySize = Optional.ofNullable(maximumBodySize).orElseGet(() -> Integer.valueOf(DEFAULT_MAXIMUM_BODY_SIZE));
     }
 
     @Override

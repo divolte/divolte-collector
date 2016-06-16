@@ -1,5 +1,6 @@
 package io.divolte.server.config;
 
+import javax.annotation.Nullable;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -9,6 +10,8 @@ import com.google.common.base.MoreObjects;
 
 import io.divolte.server.HttpSource;
 import io.divolte.server.IncomingRequestProcessingPool;
+
+import java.util.Optional;
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -21,8 +24,8 @@ public abstract class SourceConfiguration {
 
     public final String prefix;
 
-    protected SourceConfiguration(final String prefix) {
-        this.prefix = ensureTrailingSlash(prefix == null ? DEFAULT_PREFIX : prefix);
+    protected SourceConfiguration(@Nullable final String prefix) {
+        this.prefix = Optional.ofNullable(prefix).map(SourceConfiguration::ensureTrailingSlash).orElse(DEFAULT_PREFIX);
     }
 
     private static String ensureTrailingSlash(final String s) {
