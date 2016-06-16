@@ -45,7 +45,7 @@ public class ImmutableProperties extends Properties {
     }
 
     @Override
-    public synchronized void putAll(final Map<? extends Object, ? extends Object> t) {
+    public synchronized void putAll(final Map<?,?> t) {
         throw new UnsupportedOperationException();
     }
 
