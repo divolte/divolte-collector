@@ -18,7 +18,6 @@ package io.divolte.server.config;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -83,7 +82,7 @@ public final class ValidatedConfiguration {
      *            Supplier of the underlying {@code Config} instance.
      */
     public ValidatedConfiguration(final Supplier<Config> configLoader) {
-        final List<String> configurationErrors = new ArrayList<>();
+        final ImmutableList.Builder<String> configurationErrors = ImmutableList.builder();
 
         DivolteConfiguration divolteConfiguration;
         try {
@@ -112,10 +111,10 @@ public final class ValidatedConfiguration {
             divolteConfiguration = null;
         } catch (final IOException e) {
             logger.error("Error while reading configuration!", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error while reading configuration.", e);
         }
 
-        this.configurationErrors = ImmutableList.copyOf(configurationErrors);
+        this.configurationErrors = configurationErrors.build();
         this.divolteConfiguration = Optional.ofNullable(divolteConfiguration);
     }
 
