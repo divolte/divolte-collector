@@ -34,7 +34,7 @@ public class MapperConfiguration {
                 .add("bufferSize", bufferSize)
                 .add("threads", threads)
                 .add("duplicateMemorySize", duplicateMemorySize)
-                .add("userAgentParses", userAgentParser)
+                .add("userAgentParser", userAgentParser)
                 .add("ip2geoDatabase", ip2geoDatabase)
                 .toString();
     }
