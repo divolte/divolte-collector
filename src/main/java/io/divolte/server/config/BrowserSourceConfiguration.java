@@ -1,9 +1,12 @@
 package io.divolte.server.config;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
+import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
 import javax.validation.Valid;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -39,21 +42,23 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     public final JavascriptConfiguration javascript;
 
     @JsonCreator
+    @ParametersAreNullableByDefault
     BrowserSourceConfiguration(@JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix,
-                               final Optional<String> cookieDomain,
+                               @Nonnull final Optional<String> cookieDomain,
                                @JsonProperty(defaultValue=DEFAULT_PARTY_COOKIE) final String partyCookie,
                                @JsonProperty(defaultValue=DEFAULT_PARTY_TIMEOUT) final Duration partyTimeout,
                                @JsonProperty(defaultValue=DEFAULT_SESSION_COOKIE) final String sessionCookie,
                                @JsonProperty(defaultValue=DEFAULT_SESSION_TIMEOUT) final Duration sessionTimeout,
                                final JavascriptConfiguration javascript) {
-        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
-        final String rawPrefix = prefix == null ? DEFAULT_PREFIX : prefix;
+        super();
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+        final String rawPrefix = Optional.ofNullable(prefix).map((p) -> p.endsWith("/") ? p : p + '/').orElse(DEFAULT_PREFIX);
         this.prefix = rawPrefix.endsWith("/") ? rawPrefix : rawPrefix + '/';
-        this.cookieDomain = cookieDomain;
-        this.partyCookie = partyCookie == null ? DEFAULT_PARTY_COOKIE : partyCookie;
-        this.partyTimeout = partyTimeout == null ? DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT) : partyTimeout;
-        this.sessionCookie = sessionCookie == null ? DEFAULT_SESSION_COOKIE : sessionCookie;
-        this.sessionTimeout = sessionTimeout == null ? DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT) : sessionTimeout;
+        this.cookieDomain = Objects.requireNonNull(cookieDomain);
+        this.partyCookie = Optional.ofNullable(partyCookie).orElse(DEFAULT_PARTY_COOKIE);
+        this.partyTimeout = Optional.ofNullable(partyTimeout).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT));
+        this.sessionCookie = Optional.ofNullable(sessionCookie).orElse(DEFAULT_SESSION_COOKIE);
+        this.sessionTimeout = Optional.ofNullable(sessionTimeout).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT));
         this.javascript = Optional.ofNullable(javascript).orElse(JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
     }
 

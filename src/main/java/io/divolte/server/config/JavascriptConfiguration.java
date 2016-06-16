@@ -1,6 +1,7 @@
 package io.divolte.server.config;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 
@@ -9,6 +10,8 @@ import org.hibernate.validator.constraints.NotEmpty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public final class JavascriptConfiguration {
@@ -31,15 +34,16 @@ public final class JavascriptConfiguration {
     public final boolean autoPageViewEvent;
 
     @JsonCreator
+    @ParametersAreNullableByDefault
     JavascriptConfiguration(@JsonProperty(defaultValue=DEFAULT_NAME) final String name,
                             @JsonProperty(defaultValue=DEFAULT_LOGGING) final Boolean logging,
                             @JsonProperty(defaultValue=DEFAULT_DEBUG) final Boolean debug,
                             @JsonProperty(defaultValue=DEFAULT_AUTO_PAGE_VIEW_EVENT) final Boolean autoPageViewEvent) {
-        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
-        this.name = name == null ? DEFAULT_NAME : name;
-        this.logging = logging == null ? Boolean.valueOf(DEFAULT_LOGGING) : logging;
-        this.debug = debug == null ? Boolean.valueOf(DEFAULT_DEBUG) : debug;
-        this.autoPageViewEvent = autoPageViewEvent == null ? Boolean.valueOf(DEFAULT_AUTO_PAGE_VIEW_EVENT) : autoPageViewEvent;
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+        this.name = Optional.ofNullable(name).orElse(DEFAULT_NAME);
+        this.logging = Optional.ofNullable(logging).orElseGet(() -> Boolean.valueOf(DEFAULT_LOGGING));
+        this.debug = Optional.ofNullable(debug).orElseGet(() -> Boolean.valueOf(DEFAULT_DEBUG));
+        this.autoPageViewEvent = Optional.ofNullable(autoPageViewEvent).orElseGet(() -> Boolean.valueOf(DEFAULT_AUTO_PAGE_VIEW_EVENT));
     }
 
     @Override
