@@ -122,16 +122,15 @@ public final class ValidatedConfiguration {
         final String pathToError = e.getPath().stream()
                    .map(Reference::getFieldName)
                    .collect(Collectors.joining("."));
-        final String message = String.format(
+        return String.format(
                 "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'",
                 e.getOriginalMessage(),
                 Optional.ofNullable(e.getLocation()).map(JsonLocation::getSourceRef).orElse("<unknown source>"),
                 "".equals(pathToError) ? "<unknown path>" : pathToError);
-        return message;
     }
 
     private static String messageForUnrecognizedPropertyException(final UnrecognizedPropertyException e) {
-        final String message = String.format(
+        return String.format(
                 "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'%n\tAvailable properties: %s.",
                 e.getOriginalMessage(),
                 e.getLocation().getSourceRef(),
@@ -141,7 +140,6 @@ public final class ValidatedConfiguration {
                 e.getKnownPropertyIds().stream()
                                        .map(Object::toString).map(s -> "'" + s + "'")
                                        .collect(Collectors.joining(", ")));
-        return message;
     }
 
     private List<String> validate(final DivolteConfiguration divolteConfiguration) {
