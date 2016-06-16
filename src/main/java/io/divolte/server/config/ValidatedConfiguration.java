@@ -199,7 +199,7 @@ public final class ValidatedConfiguration {
     public DivolteConfiguration configuration() {
         Preconditions.checkState(configurationErrors.isEmpty(),
                                  "Attempt to access invalid configuration.");
-        return divolteConfiguration.get();
+        return divolteConfiguration.orElseThrow(() -> new IllegalStateException("Configuration not available."));
     }
 
     /**
