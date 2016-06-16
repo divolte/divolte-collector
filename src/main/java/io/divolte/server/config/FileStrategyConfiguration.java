@@ -1,8 +1,10 @@
 package io.divolte.server.config;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,17 +33,18 @@ public class FileStrategyConfiguration {
     public final Duration rollEvery;
 
     @JsonCreator
+    @ParametersAreNullableByDefault
     FileStrategyConfiguration(@JsonProperty(defaultValue=DEFAULT_ROLL_EVERY) final Duration rollEvery,
                               @JsonProperty(defaultValue=DEFAULT_SYNC_FILE_AFTER_RECORDS) final Integer syncFileAfterRecords,
                               @JsonProperty(defaultValue=DEFAULT_SYNC_FILE_AFTER_DURATION) final Duration syncFileAfterDuration,
                               @JsonProperty(defaultValue=DEFAULT_WORKING_DIR) final String workingDir,
                               @JsonProperty(defaultValue=DEFAULT_PUBLISH_DIR) final String publishDir) {
-        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
-        this.rollEvery = rollEvery == null ? DurationDeserializer.parseDuration(DEFAULT_ROLL_EVERY) : rollEvery;
-        this.syncFileAfterRecords = syncFileAfterRecords == null ? Integer.valueOf(DEFAULT_SYNC_FILE_AFTER_RECORDS) : syncFileAfterRecords;
-        this.syncFileAfterDuration = syncFileAfterDuration == null ? DurationDeserializer.parseDuration(DEFAULT_SYNC_FILE_AFTER_DURATION) : syncFileAfterDuration;
-        this.workingDir = workingDir == null ? DEFAULT_WORKING_DIR : workingDir;
-        this.publishDir = publishDir == null ? DEFAULT_PUBLISH_DIR : publishDir;
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+        this.rollEvery = Optional.ofNullable(rollEvery).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_ROLL_EVERY));
+        this.syncFileAfterRecords = Optional.ofNullable(syncFileAfterRecords).orElseGet(() -> Integer.valueOf(DEFAULT_SYNC_FILE_AFTER_RECORDS));
+        this.syncFileAfterDuration = Optional.ofNullable(syncFileAfterDuration).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_SYNC_FILE_AFTER_DURATION));
+        this.workingDir = Optional.ofNullable(workingDir).orElse(DEFAULT_WORKING_DIR);
+        this.publishDir = Optional.ofNullable(publishDir).orElse(DEFAULT_PUBLISH_DIR);
     }
 
     @Override

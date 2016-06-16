@@ -99,6 +99,10 @@ public final class ServerTestUtils {
             server.run();
         }
 
+        static TestServer createTestServerWithDefaultNonTestConfiguration() {
+            return new TestServer(findFreePort(), ConfigFactory.defaultReference());
+        }
+
         public EventPayload waitForEvent() throws InterruptedException {
             // SauceLabs can take quite a while to fire up everything.
             return Optional.ofNullable(events.poll(5, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));

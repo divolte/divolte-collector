@@ -18,7 +18,6 @@ package io.divolte.server.config;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -83,7 +82,7 @@ public final class ValidatedConfiguration {
      *            Supplier of the underlying {@code Config} instance.
      */
     public ValidatedConfiguration(final Supplier<Config> configLoader) {
-        final List<String> configurationErrors = new ArrayList<>();
+        final ImmutableList.Builder<String> configurationErrors = ImmutableList.builder();
 
         DivolteConfiguration divolteConfiguration;
         try {
@@ -112,10 +111,10 @@ public final class ValidatedConfiguration {
             divolteConfiguration = null;
         } catch (final IOException e) {
             logger.error("Error while reading configuration!", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error while reading configuration.", e);
         }
 
-        this.configurationErrors = ImmutableList.copyOf(configurationErrors);
+        this.configurationErrors = configurationErrors.build();
         this.divolteConfiguration = Optional.ofNullable(divolteConfiguration);
     }
 
@@ -123,16 +122,15 @@ public final class ValidatedConfiguration {
         final String pathToError = e.getPath().stream()
                    .map(Reference::getFieldName)
                    .collect(Collectors.joining("."));
-        final String message = String.format(
+        return String.format(
                 "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'",
                 e.getOriginalMessage(),
                 Optional.ofNullable(e.getLocation()).map(JsonLocation::getSourceRef).orElse("<unknown source>"),
                 "".equals(pathToError) ? "<unknown path>" : pathToError);
-        return message;
     }
 
     private static String messageForUnrecognizedPropertyException(final UnrecognizedPropertyException e) {
-        final String message = String.format(
+        return String.format(
                 "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'%n\tAvailable properties: %s.",
                 e.getOriginalMessage(),
                 e.getLocation().getSourceRef(),
@@ -142,7 +140,6 @@ public final class ValidatedConfiguration {
                 e.getKnownPropertyIds().stream()
                                        .map(Object::toString).map(s -> "'" + s + "'")
                                        .collect(Collectors.joining(", ")));
-        return message;
     }
 
     private List<String> validate(final DivolteConfiguration divolteConfiguration) {
@@ -202,7 +199,7 @@ public final class ValidatedConfiguration {
     public DivolteConfiguration configuration() {
         Preconditions.checkState(configurationErrors.isEmpty(),
                                  "Attempt to access invalid configuration.");
-        return divolteConfiguration.get();
+        return divolteConfiguration.orElseThrow(() -> new IllegalStateException("Configuration not available."));
     }
 
     /**

@@ -198,7 +198,7 @@ public class ServerSinkSourceConfigurationTest {
     @Test
     public void shouldSupportDefaultSourceMappingSink() throws IOException, InterruptedException {
         // Test that with an out-of-the-box default configuration the default source, mapping and sink are present.
-        startServer();
+        startServer(TestServer::createTestServerWithDefaultNonTestConfiguration);
         final AvroFileLocator avroFileLocator = new AvroFileLocator(Paths.get("/tmp"));
         request();
         testServer.get().waitForEvent();
