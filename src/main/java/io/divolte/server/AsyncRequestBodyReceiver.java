@@ -52,6 +52,7 @@ public class AsyncRequestBodyReceiver {
         numSlots = maxBufferSize / BYTE_BUFFER_SIZE;
     }
 
+    @SuppressWarnings("PMD.BrokenNullCheck")
     public void receive(
             final Consumer<InputStream> callback,
             final HttpServerExchange exchange) {
@@ -161,7 +162,7 @@ public class AsyncRequestBodyReceiver {
                 break;
             }
         } while (
-                readResult > 0 &&                             // There's possiby more bytes to read AND
+                readResult > 0 &&                             // There's possibly more bytes to read AND
                 (
                         buffers[currentBuffer].hasRemaining() // There's bytes remaining in the current buffer OR
                         || currentBuffer < numSlots - 1       // it's possible to allocate another one
@@ -174,6 +175,7 @@ public class AsyncRequestBodyReceiver {
 
         private int currentBuffer;
 
+        @SuppressWarnings("PMD.ArrayIsStoredDirectly")
         private ByteBufferArrayInputStream(final ByteBuffer[] buffers, final int maxBufferIndex) {
             Stream.of(buffers).filter(b -> b != null).forEach(ByteBuffer::flip);
             this.buffers = buffers;
