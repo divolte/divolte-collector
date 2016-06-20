@@ -53,14 +53,14 @@ public class JsonEventHandler implements HttpHandler {
         captureAndPersistSourceAddress(exchange);
 
         receiver.receive(body -> {
+            // Send response before attempting to log the event
+            exchange.setStatusCode(StatusCodes.NO_CONTENT);
+            exchange.endExchange();
             try {
                 logEvent(exchange, body);
             } catch (final IncompleteRequestException e) {
                 // improper request, could be anything
                 logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
-            } finally {
-                exchange.setStatusCode(StatusCodes.NO_CONTENT);
-                exchange.endExchange();
             }
         }, exchange);
     }

@@ -116,14 +116,15 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
         // If an ETag is present, this is a duplicate event.
         if (ETagUtils.handleIfNoneMatch(exchange, SENTINEL_ETAG, true)) {
+            // Default status code what we want: 200 OK.
+            // Sending the response before logging the event!
+            exchange.getResponseSender().send(transparentImage.slice());
+
             try {
                 logEvent(exchange);
             } catch (final IncompleteRequestException ire) {
                 // improper request, could be anything
                 logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
-            } finally {
-                // Default status code what we want: 200 OK.
-                exchange.getResponseSender().send(transparentImage.slice());
             }
         } else {
             if (logger.isDebugEnabled()) {
