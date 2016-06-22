@@ -107,7 +107,7 @@ public class DslRecordMapperTest {
         assertEquals(true, record.get("sessionStart"));
         assertEquals(true, record.get("unreliable"));
         assertEquals(false, record.get("dupe"));
-        assertEquals(event.requestStartTime, record.get("ts"));
+        assertEquals(event.requestStartTime.toEpochMilli(), record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
 

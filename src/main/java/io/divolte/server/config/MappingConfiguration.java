@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Objects;
 import java.util.Optional;
@@ -30,15 +31,19 @@ public class MappingConfiguration {
                          final ImmutableSet<String> sources,
                          @JsonProperty(required = true)
                          final ImmutableSet<String> sinks,
-                         @JsonProperty(defaultValue=DEFAULT_DISCARD_CORRUPTED) final Boolean discardCorrupted,
-                         @JsonProperty(defaultValue=DEFAULT_DISCARD_DUPLICATES) final Boolean discardDuplicates) {
+                         @JsonProperty(defaultValue=DEFAULT_DISCARD_CORRUPTED)
+                         @Nullable
+                         final Boolean discardCorrupted,
+                         @JsonProperty(defaultValue=DEFAULT_DISCARD_DUPLICATES)
+                         @Nullable
+                         final Boolean discardDuplicates) {
         this.schemaFile = Objects.requireNonNull(schemaFile);
         this.mappingScriptFile = Objects.requireNonNull(mappingScriptFile);
         this.sources = Objects.requireNonNull(sources);
         this.sinks = Objects.requireNonNull(sinks);
-        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
-        this.discardCorrupted = discardCorrupted == null ? Boolean.valueOf(DEFAULT_DISCARD_CORRUPTED) : discardCorrupted;
-        this.discardDuplicates = discardDuplicates == null ? Boolean.valueOf(DEFAULT_DISCARD_DUPLICATES) : discardDuplicates;
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+        this.discardCorrupted = Optional.ofNullable(discardCorrupted).orElseGet(() -> Boolean.valueOf(DEFAULT_DISCARD_CORRUPTED));
+        this.discardDuplicates = Optional.ofNullable(discardDuplicates).orElseGet(() -> Boolean.valueOf(DEFAULT_DISCARD_DUPLICATES));
     }
 
     @Override

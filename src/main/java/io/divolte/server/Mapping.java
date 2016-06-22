@@ -91,8 +91,6 @@ public class Mapping {
             final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
                     parsedEvent.partyId,
                     parsedEvent.sessionId,
-                    parsedEvent.requestStartTime,
-                    parsedEvent.clientUtcOffset,
                     avroRecord);
 
             /*

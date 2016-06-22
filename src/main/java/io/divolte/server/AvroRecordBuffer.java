@@ -37,17 +37,13 @@ public final class AvroRecordBuffer {
     private static final int INITIAL_BUFFER_SIZE = 100;
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
 
-    private final long eventTime;
-    private final long cookieUtcOffset;
     private final DivolteIdentifier partyId;
     private final DivolteIdentifier sessionId;
     private final ByteBuffer byteBuffer;
 
-    private AvroRecordBuffer(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final long eventTime, final long cookieUtcOffset, final GenericRecord record) throws IOException {
+    private AvroRecordBuffer(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final GenericRecord record) throws IOException {
         this.partyId = Objects.requireNonNull(partyId);
         this.sessionId = Objects.requireNonNull(sessionId);
-        this.eventTime = eventTime;
-        this.cookieUtcOffset = cookieUtcOffset;
 
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
@@ -57,7 +53,7 @@ public final class AvroRecordBuffer {
          * the entire object using a larger byte array. All subsequent instances
          * will also allocate the larger size array from that point onward.
          */
-        final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[BUFFER_SIZE.get()]);
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(BUFFER_SIZE.get());
         final DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(record.getSchema());
         final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
 
@@ -76,18 +72,10 @@ public final class AvroRecordBuffer {
         return sessionId;
     }
 
-    public long getEventTime() {
-        return eventTime;
-    }
-
-    public long getCookieUtcOffset() {
-        return cookieUtcOffset;
-    }
-
-    public static AvroRecordBuffer fromRecord(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final long eventTime, final long cookieUtcOffset, final GenericRecord record) {
+    public static AvroRecordBuffer fromRecord(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final GenericRecord record) {
         for (;;) {
             try {
-                return new AvroRecordBuffer(partyId, sessionId, eventTime, cookieUtcOffset, record);
+                return new AvroRecordBuffer(partyId, sessionId, record);
             } catch (final BufferOverflowException boe) {
                 // Increase the buffer size by about 10%
                 // Because we only ever increase the buffer size, we discard the

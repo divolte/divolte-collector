@@ -3,22 +3,18 @@ package io.divolte.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import java.util.function.BiConsumer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xnio.ChannelListener;
 import org.xnio.channels.StreamSourceChannel;
 
-import com.google.common.primitives.Longs;
+import com.google.common.primitives.Ints;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.Connectors;
@@ -30,36 +26,41 @@ import io.undertow.util.StatusCodes;
 public class AsyncRequestBodyReceiver {
     private static final Logger logger = LoggerFactory.getLogger(AsyncRequestBodyReceiver.class);
 
-    private static final int BYTE_BUFFER_SIZE = 1024;
-    private static final AtomicInteger NUM_BUFFERS = new AtomicInteger(1);
-
-    private final static InputStream EMPTY_INPUT_STREAM = new InputStream() {
+    private static final InputStream EMPTY_INPUT_STREAM = new InputStream() {
         @Override
         public int read() throws IOException {
             return -1;
         }
     };
 
-    private final int maxBufferSize;
-    private final int numSlots;
+    private final AtomicInteger preallocateChunks = new AtomicInteger(1);
+    private final int maximumChunks;
 
     public AsyncRequestBodyReceiver(final int requestedMaxBufferSize) {
         /*
-         * Require a minimal max buffer size of BYTE_BUFFER_SIZE and
-         * round up to the next multiple of BYTE_BUFFER_SIZE
+         * Convert requested buffer size into the number of slots.
+         * We always need at least one slot, and the actual buffer
+         * may be larger than requested because we always use a slot
+         * completely.
          */
-        this.maxBufferSize = ((Math.max(requestedMaxBufferSize, BYTE_BUFFER_SIZE) - 1) / BYTE_BUFFER_SIZE + 1) * BYTE_BUFFER_SIZE;
-        numSlots = maxBufferSize / BYTE_BUFFER_SIZE;
+        final int requestedSlots = calculateChunks(requestedMaxBufferSize);
+        maximumChunks = Math.max(requestedSlots, 1);
+        logger.debug("Configuring to use a maximum of {} buffer chunks.", maximumChunks);
     }
 
-    @SuppressWarnings("PMD.BrokenNullCheck")
-    public void receive(
-            final Consumer<InputStream> callback,
-            final HttpServerExchange exchange) {
+    private static int calculateChunks(final int length) {
+        // Should be faster than using Math.ceil().
+        return (length - 1) / ChunkyByteBuffer.CHUNK_SIZE + 1;
+    }
+
+    public void receive(final BiConsumer<InputStream, Integer> callback, final HttpServerExchange exchange) {
         Objects.requireNonNull(callback);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Pre-allocating buffer with {} chunks.", preallocateChunks.get());
+        }
 
         if (exchange.isRequestComplete()) {
-            callback.accept(EMPTY_INPUT_STREAM);
+            callback.accept(EMPTY_INPUT_STREAM, 0);
             return;
         }
 
@@ -68,12 +69,13 @@ public class AsyncRequestBodyReceiver {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
 
-        final long provision = Optional.ofNullable(exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH))
-                                       .map(Longs::tryParse) // Note that we're lenient about malformed numbers here and treat them as absent
-                                       .map(size -> (size - 1) / BYTE_BUFFER_SIZE + 1)
-                                       .orElse(Long.valueOf(NUM_BUFFERS.get()));
-
-        if (provision > numSlots) {
+        // Determine the number of buffer-slots to use, trusting a well-formed content-length
+        // header if that's present.
+        final Optional<Integer> contentLength = Optional.ofNullable(exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH))
+                                                        .map(Ints::tryParse);
+        final int provision = contentLength.map(AsyncRequestBodyReceiver::calculateChunks)
+                                           .orElseGet(preallocateChunks::get);
+        if (provision > maximumChunks) {
             exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE).endExchange();
             return;
         }
@@ -87,111 +89,49 @@ public class AsyncRequestBodyReceiver {
          * buffers are used exclusively on heap after receiving the bytes from the
          * socket.
          */
-        final ByteBuffer[] buffers = new ByteBuffer[numSlots];
-        IntStream.range(0, (int) provision).forEach(idx -> buffers[idx] = ByteBuffer.allocate(BYTE_BUFFER_SIZE));
-
-        int currentBuffer = 0;
-        int readResult;
-        do {
-            try {
-                readResult = channel.read(buffers[currentBuffer]);
-            } catch (final IOException e) {
-                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR).endExchange();
-                logger.warn("Error while reading request body received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"), e);
-                return;
+        ChunkyByteBuffer.fill(channel, provision, contentLength.isPresent() ? provision : maximumChunks,
+                              new ChunkyByteBuffer.CompletionHandler() {
+            @Override
+            public void overflow() {
+                exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE)
+                        .endExchange();
             }
+            @Override
+            public void failed(final Throwable e) {
+                if (logger.isWarnEnabled()) {
+                    final String host = Optional.ofNullable(exchange.getSourceAddress())
+                            .map(InetSocketAddress::getHostString)
+                            .orElse("<UNKNOWN HOST>");
 
-            switch(readResult) {
-            case -1:
-                callback.accept(new ByteBufferArrayInputStream(buffers, currentBuffer));
-
-                for (int currentNumBuffers = NUM_BUFFERS.get(); currentNumBuffers < currentBuffer + 1; currentNumBuffers = NUM_BUFFERS.get()) {
-                    NUM_BUFFERS.compareAndSet(currentNumBuffers, currentBuffer + 1);
+                    logger.warn("Error while reading request body received from " + host, e);
                 }
-                break;
-            case 0:
-                final int finalCurrentBuffer = currentBuffer; // Trick to pass on a variable to the inner type
-                channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-                    int currentBuffer = finalCurrentBuffer;
-                    @Override
-                    public void handleEvent(final StreamSourceChannel channel) {
-                        int readResult;
-                        do {
-                            try {
-                                readResult = channel.read(buffers[currentBuffer]);
-                            } catch (final IOException e) {
-                                Connectors.executeRootHandler(exchange -> {
-                                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR).endExchange();
-                                    logger.warn("Error while reading request body received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"), e);
-                                }, exchange);
-                                return;
-                            }
-                            switch(readResult) {
-                            case -1:
-                                Connectors.executeRootHandler(exchange -> {
-                                    callback.accept(new ByteBufferArrayInputStream(buffers, currentBuffer));
-                                }, exchange);
-
-                                for (int currentNumBuffers = NUM_BUFFERS.get(); currentNumBuffers < currentBuffer + 1; currentNumBuffers = NUM_BUFFERS.get()) {
-                                    NUM_BUFFERS.compareAndSet(currentNumBuffers, currentBuffer + 1);
-                                }
-
-                                break;
-                            case 0:
-                                // No bytes available right now, keep listening.
-                                break;
-                            default:
-                                if (!buffers[currentBuffer].hasRemaining() &&
-                                        ++currentBuffer < numSlots &&
-                                        buffers[currentBuffer] == null) {
-                                    buffers[currentBuffer] = ByteBuffer.allocate(BYTE_BUFFER_SIZE);
-                                }
-                                break;
-                            }
-                        } while (readResult > 0 && (buffers[currentBuffer].hasRemaining() || currentBuffer < numSlots - 1));
+                Connectors.executeRootHandler(exchange -> exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR)
+                                                                  .endExchange(),
+                                              exchange);
+            }
+            @Override
+            public void completed(final InputStream body, final int bodyLength) {
+                // Sanity check that the body size matches the content-length header, if it
+                // was supplied.
+                if (contentLength.map(l -> l != bodyLength).orElse(false)) {
+                    exchange.setStatusCode(StatusCodes.BAD_REQUEST)
+                            .endExchange();
+                    return;
+                }
+                // First bump the global default for the number of chunks that we pre-allocate.
+                final int newNumChunks = calculateChunks(bodyLength);
+                int currentNumChunks;
+                while ((currentNumChunks = preallocateChunks.get()) < newNumChunks) {
+                    if (preallocateChunks.compareAndSet(currentNumChunks, newNumChunks)) {
+                        logger.info("Updated default body buffer size from {} to {}",
+                                     currentNumChunks * ChunkyByteBuffer.CHUNK_SIZE,
+                                     newNumChunks * ChunkyByteBuffer.CHUNK_SIZE);
+                        break;
                     }
-                });
-                channel.resumeReads();
-                break;
-            default:
-                if (!buffers[currentBuffer].hasRemaining() &&
-                        ++currentBuffer < numSlots &&
-                        buffers[currentBuffer] == null) {
-                    buffers[currentBuffer] = ByteBuffer.allocate(BYTE_BUFFER_SIZE);
                 }
-                break;
+                // Pass the body on to the upstream handler.
+                callback.accept(body, bodyLength);
             }
-        } while (
-                readResult > 0 &&                             // There's possibly more bytes to read AND
-                (
-                        buffers[currentBuffer].hasRemaining() // There's bytes remaining in the current buffer OR
-                        || currentBuffer < numSlots - 1       // it's possible to allocate another one
-                ));
-    }
-
-    private static final class ByteBufferArrayInputStream extends InputStream {
-        private final ByteBuffer[] buffers;
-        private final int maxBufferIndex;
-
-        private int currentBuffer;
-
-        @SuppressWarnings("PMD.ArrayIsStoredDirectly")
-        private ByteBufferArrayInputStream(final ByteBuffer[] buffers, final int maxBufferIndex) {
-            Stream.of(buffers).filter(b -> b != null).forEach(ByteBuffer::flip);
-            this.buffers = buffers;
-            this.maxBufferIndex = maxBufferIndex;
-            currentBuffer = 0;
-        }
-
-        @Override
-        public int read() throws IOException {
-            if (buffers[currentBuffer].hasRemaining()) {
-                return buffers[currentBuffer].get();
-            } else {
-                return currentBuffer == maxBufferIndex ?
-                        -1 :
-                        buffers[++currentBuffer].hasRemaining() ? buffers[currentBuffer].get() : -1;
-            }
-        }
+        });
     }
 }

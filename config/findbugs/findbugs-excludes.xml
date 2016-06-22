@@ -9,4 +9,12 @@
         <Method name="createParser" params="java.io.File"/>
         <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
     </Match>
+    <Match>
+        <!--
+          ~ This method uses intentional fall-through from switch labels.
+          -->
+        <Class name="io.divolte.server.ChunkyByteBuffer"/>
+        <Method name="getBufferUsed"/>
+        <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
+    </Match>
 </FindBugsFilter>

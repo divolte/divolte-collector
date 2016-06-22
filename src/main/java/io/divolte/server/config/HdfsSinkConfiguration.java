@@ -6,6 +6,7 @@ import com.google.common.base.MoreObjects;
 import io.divolte.server.hdfs.HdfsFlushingPool;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
@@ -16,16 +17,11 @@ public class HdfsSinkConfiguration extends SinkConfiguration {
     public final FileStrategyConfiguration fileStrategy;
 
     @JsonCreator
+    @ParametersAreNullableByDefault
     HdfsSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_REPLICATION) final Short replication,
                           final FileStrategyConfiguration fileStrategy) {
-        // TODO: register a custom deserializer with Jackson that uses the defaultValue proprty from the annotation to fix this
-        this.replication = replication == null ? Short.valueOf(DEFAULT_REPLICATION) : replication;
-        /*
-         * Passing a null defaults to the default strategy. Reason for not making the parameter Optional<...> is
-         * that this way, we can at some point use a tool to automatically document the configuration objects
-         * including types. This type of defaults could then be documented through the parameter specific JavaDoc
-         * for that param.
-         */
+        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+        this.replication = Optional.ofNullable(replication).orElseGet(() -> Short.valueOf(DEFAULT_REPLICATION));
         this.fileStrategy = Optional.ofNullable(fileStrategy).orElse(FileStrategyConfiguration.DEFAULT_FILE_STRATEGY_CONFIGURATION);
     }
 

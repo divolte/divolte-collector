@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -145,12 +146,12 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
     private void logEvent(final HttpServerExchange exchange) throws IncompleteRequestException {
         final DivolteIdentifier partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
-        final UndertowEvent event = new BrowserUndertowEvent(System.currentTimeMillis(), exchange, partyId);
+        final UndertowEvent event = new BrowserUndertowEvent(Instant.now(), exchange, partyId);
         processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
 
     private static final class BrowserUndertowEvent extends UndertowEvent {
-        private BrowserUndertowEvent(final long requestTime, final HttpServerExchange exchange, final DivolteIdentifier partyId) {
+        private BrowserUndertowEvent(final Instant requestTime, final HttpServerExchange exchange, final DivolteIdentifier partyId) {
             super(requestTime, exchange, partyId);
         }
 
@@ -163,10 +164,10 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
             final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
             final boolean isNewPartyId = queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
             final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
-            final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
+            final Instant clientTimeStamp = Instant.ofEpochMilli(queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new));
 
             final DivolteEvent event = DivolteEvent.createBrowserEvent(exchange, corrupt, partyId, sessionId, eventId,
-                                                                       requestTime, clientTimeStamp - requestTime,
+                                                                       requestTime, clientTimeStamp,
                                                                        isNewPartyId, isFirstInSession,
                                                                        queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
                                                                        eventParameterSupplier(exchange),
@@ -230,7 +231,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                 .orElse(false);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static String buildNormalizedChecksumString(final Map<String,Deque<String>> queryParameters) {
         return buildNormalizedChecksumString(queryParameters instanceof SortedMap
                 ? (SortedMap)queryParameters

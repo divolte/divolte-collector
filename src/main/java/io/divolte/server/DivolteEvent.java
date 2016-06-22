@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.undertow.server.HttpServerExchange;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -41,13 +42,15 @@ public final class DivolteEvent {
     public final DivolteIdentifier sessionId;
     public final String eventId;
     public final String eventSource;
+    // This might be mildly surprising, but technically the event type is optional.
+    // In practice it's normally filled in though.
     public final Optional<String> eventType;
 
     public final boolean newPartyId;
     public final boolean firstInSession;
 
-    public final long requestStartTime;
-    public final long clientUtcOffset;
+    public final Instant requestStartTime;
+    public final Instant clientTime;
 
     public final Supplier<Optional<JsonNode>> eventParametersProducer;
 
@@ -92,7 +95,7 @@ public final class DivolteEvent {
         /*
          * Empty for now. There's nothing specific to JSON events at the moment.
          *
-         * Because of this, we can use a single instance throughtout, just to
+         * Because of this, we can use a single instance throughout, just to
          * signal that a DivolteEvent is indeed a JSON source based event.
          */
         public static final JsonEventData EMPTY = new JsonEventData();
@@ -107,8 +110,8 @@ public final class DivolteEvent {
                  final DivolteIdentifier sessionCookie,
                  final String eventId,
                  final String eventSource,
-                 final long requestStartTime,
-                 final long clientUtcOffset,
+                 final Instant requestStartTime,
+                 final Instant clientTime,
                  final boolean newPartyId,
                  final boolean firstInSession,
                  final Optional<String> eventType,
@@ -121,8 +124,8 @@ public final class DivolteEvent {
         this.sessionId               = Objects.requireNonNull(sessionCookie);
         this.eventId                 = Objects.requireNonNull(eventId);
         this.eventSource             = Objects.requireNonNull(eventSource);
-        this.requestStartTime        = requestStartTime;
-        this.clientUtcOffset         = clientUtcOffset;
+        this.requestStartTime        = Objects.requireNonNull(requestStartTime);
+        this.clientTime              = Objects.requireNonNull(clientTime);
         this.newPartyId              = newPartyId;
         this.firstInSession          = firstInSession;
         this.eventType               = Objects.requireNonNull(eventType);
@@ -137,8 +140,8 @@ public final class DivolteEvent {
             final DivolteIdentifier partyCookie,
             final DivolteIdentifier sessionCookie,
             final String eventId,
-            final long requestStartTime,
-            final long clientUtcOffset,
+            final Instant requestStartTime,
+            final Instant clientUtcOffset,
             final boolean newPartyId,
             final boolean firstInSession,
             final Optional<String> eventType,
@@ -164,13 +167,12 @@ public final class DivolteEvent {
 
     static DivolteEvent createJsonEvent(
             final HttpServerExchange originatingExchange,
-            final boolean corruptEvent,
             final DivolteIdentifier partyCookie,
             final DivolteIdentifier sessionCookie,
             final String eventId,
             final String eventSource,
-            final long requestStartTime,
-            final long clientUtcOffset,
+            final Instant requestStartTime,
+            final Instant clientTime,
             final boolean newPartyId,
             final boolean firstInSession,
             final Optional<String> eventType,
@@ -178,13 +180,14 @@ public final class DivolteEvent {
             final JsonEventData jsonEvent) {
         return new DivolteEvent(
                 originatingExchange,
-                corruptEvent,
+                // Corruption in JSON events can't currently be detected.
+                false,
                 partyCookie,
                 sessionCookie,
                 eventId,
                 eventSource,
                 requestStartTime,
-                clientUtcOffset,
+                clientTime,
                 newPartyId,
                 firstInSession,
                 eventType,
