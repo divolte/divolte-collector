@@ -56,15 +56,12 @@ This approach has several benefits:
   * This makes it easier to do in-flight processing as it doesn't influence the performance of the web page itself.
 
 * It allows for custom events fired from JavaScript based on interactions that would otherwise not reach the server side.
-* The JavaScript has access to some properties that the web server doesn't see:
+* JavaScript has access to some properties that the web server doesn't see:
 
   * Screen resolution of the client
   * Viewport site
-  * Timezone
 
-* The JavaScript can manage party en session identifiers on the client side
-
-  * This way the incoming data is already sessionized
+* The JavaScript can manage party and session identifiers on the client side, eliminating the need to sessionize data after collection.
 
 This is the way Divolte Collector works. In the above diagram, the components in the red outlines are the core parts of Divolte Collector: a JavaScript tag that goes in each web page and a collection server that enriches events and writes them as Avro records to HDFS files and Kafka messages.
 
@@ -114,7 +111,7 @@ Divolte Collector is written in pure Java and runs on any OS that supports the l
 * JDK, version 8 or above (Oracle's JDK is recommended)
 * At least 1GB available RAM; depending on configuration
 * Hadoop 2.0 or above (optional, see below)
-  
+
   * Tested to work against: CDH, HDP and MapR
 
 * Apache Kafka 0.8 or above (optional, see below)
