@@ -79,6 +79,7 @@ dependencies {
     compile group: 'io.undertow', name: 'undertow-core', version: '1.3.23.Final'
     compile group: 'com.typesafe', name: 'config', version: '1.3.0'
     compile group: 'com.google.guava', name: 'guava', version: '19.0'
+    // Note: we refer to the Avro documentation in our own documentation.
     compile group: 'org.apache.avro', name: 'avro', version: '1.8.1'
 
     /*
@@ -109,6 +110,7 @@ dependencies {
     }
     // Currently on 0.8.2.0, even though 0.9.0.0 is out, because 0.9.0.0 isn't fully compatible
     // with 0.8.X servers: Horton and Cloudera both ship 0.8, and we want to support them.
+    // Note: we refer to versioned producer documentation in our documentation.
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '0.8.2.0'
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20160619'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.7', classifier: 'indy'

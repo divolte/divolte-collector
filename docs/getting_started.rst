@@ -4,33 +4,34 @@ Getting Started
 
 Installation
 ============
-Currently, running Divolte Collector is only supported on Unix-like systems, such as Linux or Max OS X. While it should also work in Cygwin, we haven't tested this yet.
+Divolte Collector is currently only supported on Unix-like systems, such as Linux or Max OS X. While it should also work in Cygwin, we haven't tested this yet.
 
-Divolte Collector requires Java 8. It is recommended that you use a recent version of Oracle JDK 8. You can download a recent version from Oracle's website at this address: http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html. Please verify that you have a correct Java version by running this command::
+Divolte Collector requires Java 8. It is recommended that you use a recent version of Oracle JDK 8. You can download a recent version from `Oracle's website <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. Please verify that you have a correct Java version by running this command:
 
-  java -version
+.. code-block:: console
 
-Which should output something like this::
+  % java -version
 
-  java version "1.8.0_25"
-  Java(TM) SE Runtime Environment (build 1.8.0_25-b17)
-  Java HotSpot(TM) 64-Bit Server VM (build 25.25-b02, mixed mode)
+Which should output something like this:
 
-Next step is to download, unpack and run Divolte Collector. You can find the recentmost version on our `project homepage <https://github.com/divolte/divolte-collector>`_. Download the tarball release (.tar.gz) from there and unpack it::
+.. code-block:: none
 
-  # Extract archive
-  tar -xzf divolte-collector-*.tar.gz
+  java version "1.8.0_92"
+  Java(TM) SE Runtime Environment (build 1.8.0_92-b14)
+  Java HotSpot(TM) 64-Bit Server VM (build 25.92-b14, mixed mode)
 
-  # Move into directory
-  cd divolte-collector-*
+Next step is to download, unpack and run Divolte Collector. You can find the most recent version on our `project homepage <https://github.com/divolte/divolte-collector>`_. Download the tarball release (``.tar.gz``) from there and unpack it:
 
-  # Create empty config file
-  touch conf/divolte-collector.conf
+.. code-block:: console
 
-  # Run
-  bin/divolte-collector
+  % tar -xzf divolte-collector-*.tar.gz
+  % cd divolte-collector-*
+  % touch conf/divolte-collector.conf
+  % ./bin/divolte-collector
 
-On startup, you should see output similar to this::
+On startup, you should see output similar to this:
+
+.. code-block:: none
 
   2014-12-17 09:16:30.328+01 [main] INFO  [IncomingRequestProcessingPool]: Using built in default Avro schema.
   2014-12-17 09:16:30.456+01 [main] INFO  [IncomingRequestProcessingPool]: Using built in default Avro schema.
@@ -54,17 +55,23 @@ Now, take your web browser to http://127.0.0.1:8290/ and check that you see a pa
 Looking at the data
 ===================
 
-Now, go back to the console where Divolte Collector is running and hit CTRL+C (or kill the process). You should see output similar to this::
+Now, go back to the console where Divolte Collector is running and hit CTRL+C (or kill the process). You should see output similar to this:
+
+.. code-block:: none
 
   ^C2014-12-17 09:27:15.393+01 [Thread-8] INFO  [Server]: Stopping HTTP server.
   2014-12-17 09:27:15.396+01 [Thread-8] INFO  [Server]: Stopping thread pools.
   2014-12-17 09:27:17.399+01 [Thread-8] INFO  [Server]: Closing HDFS filesystem connection.
 
-When Divolte Collector shuts down, it will flush and close all open files, so now we can have a look at the data that was generated. By default, with no configuration, Divolte Collector will write .avro files in /tmp on the local filesystem. For convenience, Divolte Collector packages a version of the avro-tools that come with Apache Avro, so you can look at the contents of these files as JSON records. Try the following::
+When Divolte Collector shuts down it will flush and close all open files, so now we can have a look at the data that was generated. By default, with no configuration, Divolte Collector will write ``.avro`` files in ``/tmp`` on the local filesystem. For convenience, Divolte Collector packages a version of the avro-tools that come with Apache Avro, so you can look at the contents of these files as JSON records. Try the following:
 
-  find /tmp/*.avro -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs bin/avro-tools tojson --pretty
+.. code-block:: bash
 
-This finds a .avro file in your /tmp directory and passes it to the avro-tools tojson command. Depending on how many requests you made, it will display multiple records. The output for a single record should look like this::
+  % find /tmp/*.avro -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
+
+This finds a ``.avro`` file in your ``/tmp`` directory and passes it to the ``avro-tools tojson`` command. Depending on how many requests you made, it will display multiple records. The output for a single record should look like this:
+
+.. code-block:: json
 
   {
     "detectedDuplicate" : false,
@@ -133,25 +140,34 @@ This finds a .avro file in your /tmp directory and passes it to the avro-tools t
 Bring your own schema
 =====================
 
-Divolte Collector uses Avro to write data to files. Avro records require you to define a `Avro schema <http://avro.apache.org/docs/1.7.7/spec.html>`_ that defines the fields in the records. Divolte Collector comes with a `built in generic schema <https://github.com/divolte/divolte-schema>`_ that is useful for keeping track of the basics of your click stream data, but in most cases it makes sense to create your own schema with more specific fields that have a meaning within your website's domain. In order to achieve this, two things are needed: 1) A custom Avro schema and 2) a mapping, that defines how to map requests onto the custom schema. Let's create a custom schema.
+Divolte Collector uses Avro to write data to files. Avro records require you to define a `Avro schema <http://avro.apache.org/docs/1.8.1/spec.html>`_ that defines the fields in the records. Divolte Collector comes with a `built in generic schema <https://github.com/divolte/divolte-schema>`_ that is useful for keeping track of the basics of your clickstream data, but in most cases it makes sense to create your own schema with more specific fields that have a meaning within your website's domain. In order to achieve this two things are needed:
 
-Create a file called MyEventRecord.avsc with the following contents (for example in the conf/ directory under the Divolte Collector installation)::
+1. A custom Avro schema
+2. A mapping that defines how to map requests onto the custom schema.
+
+Let's create a custom schema.
+
+Create a file called ``MyEventRecord.avsc`` with the following contents (for example in the ``conf/`` directory under the Divolte Collector installation):
+
+.. code-block:: json
 
   {
     "namespace": "io.divolte.examples.record",
     "type": "record",
     "name": "MyEventRecord",
     "fields": [
-      { "name": "timestamp",               "type": "long"},
+      { "name": "timestamp",               "type": "long" },
       { "name": "remoteHost",              "type": "string"},
-      { "name": "location",                "type": ["null", "string"], "default": null},
-      { "name": "localPath",               "type": ["null", "string"], "default": null},
-      { "name": "q",                       "type": ["null", "string"], "default": null},
-      { "name": "n",                       "type": ["null", "int"],    "default": null}
+      { "name": "location",                "type": ["null", "string"], "default": null },
+      { "name": "localPath",               "type": ["null", "string"], "default": null },
+      { "name": "q",                       "type": ["null", "string"], "default": null },
+      { "name": "n",                       "type": ["null", "int"],    "default": null }
     ]
   }
 
-This is a very minimal custom schema, but it allows us to demonstrate a very important feature in Divolte Collector: mapping. In order to use the custom schema, we need to create a mapping that maps incoming requests onto the schema fields. Create a file called mapping.groovy with the following contents::
+This is a very minimal custom schema, but it allows us to demonstrate a very important feature in Divolte Collector: mapping. In order to use the custom schema, we need to create a mapping that maps incoming requests onto the schema fields. Create a file called ``mapping.groovy`` with the following contents:
+
+.. code-block:: groovy
 
   mapping {
     map timestamp() onto 'timestamp'
@@ -167,9 +183,11 @@ This is a very minimal custom schema, but it allows us to demonstrate a very imp
     map { parse localQuery.value('n') to int32 } onto 'n'
   }
 
-The mapping is defined using a internal Groovy DSL in Divolte Collector. In this example we map a number of values onto fields in the Avro schema. The values for timestamp, remoteHost and location are mapped directly onto fields in the schema. In the remainder of the script, we tell Divolte Collector to take the fragment of the location (the part after the # in the URL) and try to parse that into a (partial) URI again. From the result URI, we map the path onto a schema field. Subsequently, parse out the values to two query string parameters (q and n) and map those onto separate schema fields after trying to parse an int out of the n parameter. The mapping DSL allows for a lot more constructs, including conditional logic, regex matching and more; see the :doc:`mapping_reference` documentation for more information on this.
+The mapping is defined using a internal Groovy DSL in Divolte Collector. In this example we map a number of values onto fields in the Avro schema. The values for timestamp, remoteHost and location are mapped directly onto fields in the schema. In the remainder of the script, we tell Divolte Collector to take the fragment of the location (the part after the '#' in the URL) and try to parse that into a (partial) URI again. From the result URI, we map the path onto a schema field. Subsequently, parse out the values to two query string parameters (``q`` and ``n``) and map those onto separate schema fields after trying to parse an int out of the n parameter. The mapping DSL allows for a lot more constructs, including conditional logic, regex matching and more; see the :doc:`mapping_reference` documentation for more information on this.
 
-Finally, we need to configure Divolte Collector to use our custom schema and mapping. Edit the (empty) divolte-collector.conf file in the conf/ directory of your installation to resemble the following configuration (be sure to use the correct paths for the schema and mapping file that you just created)::
+Finally, we need to configure Divolte Collector to use our custom schema and mapping. Edit the (empty) ``divolte-collector.conf`` file in the ``conf/`` directory of your installation to resemble the following configuration (be sure to use the correct paths for the schema and mapping file that you just created):
+
+.. code-block:: none
 
   divolte {
     tracking {
@@ -181,15 +199,19 @@ Finally, we need to configure Divolte Collector to use our custom schema and map
     }
   }
 
-..
+.. note::
 
-  Note: Divolte Collector configuration uses the `Typesafe Config <https://github.com/typesafehub/config>`_ library, which uses a configuration dialect called `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`_.
+  Divolte Collector configuration uses the `Typesafe Config <https://github.com/typesafehub/config>`_ library, which uses a configuration dialect called `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`_.
 
-Now, once more, start Divolte Collector as before. Only this time, take you web browser to this address: `http://127.0.0.1:8290/#/fragment/path?q=textual&n=42 <http://127.0.0.1:8290/#/fragment/path?q=textual&n=42>`_. You can refresh the page a couple of times and perhaps change the query string parameter values that are in the URL to something else. After you have done one or more requests, stop Divolte Collector again (using CTRL+C) and look at the collected data using this command again::
+Now, once more, start Divolte Collector as before. Only this time, take your web browser to this address: `http://127.0.0.1:8290/#/fragment/path?q=textual&n=42 <http://127.0.0.1:8290/#/fragment/path?q=textual&n=42>`_. You can refresh the page a couple of times and perhaps change the query string parameter values that are in the URL to something else. After you have done one or more requests, stop Divolte Collector again (using CTRL+C) and look at the collected data using this command again:
 
-  find /tmp/*.avro -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs bin/avro-tools tojson --pretty
+.. code-block:: console
 
-Now, the records in the data should look like this::
+  % find /tmp/*.avro -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
+
+Now, the records in the data should look like this:
+
+.. code-block:: json
 
   {
     "timestamp" : 1418942046953,
@@ -208,41 +230,44 @@ Now, the records in the data should look like this::
     }
   }
 
-As you can see, the data collected by Divolte Collector is based on the custom schema and mapping. This is in fact a very powerful concept, because it means that the data that is being collected, can be enriched on the fly with domain specific fields that are extracted from the click stream. This way, you shouldn't require to parse out relevant bit and pieces of information afterwards. Also note that we were able to collect the entire location from the browser on the server side, including the part after the #. This comes in very handy when working with modern JavaScript based web applications that often depend on this part of the location for their state.
+As you can see, the data collected by Divolte Collector is based on the custom schema and mapping. This is very powerful because it means that the data that is being collected can be enriched on the fly with domain-specific fields that are extracted from the clickstream. This way you shouldn't need to parse out relevant bit and pieces of information afterwards. Also note that we were able to collect the entire location from the browser on the server side, including the fragment after the `#`. This comes in very handy when working with modern JavaScript-based web applications that often depend on this part of the location for their state.
 
 Collecting clicks for your own site
 ===================================
-Underpinning the click event data collection, is a small piece of JavaScript, which is called a tag. The tag needs to be inserted into every web page that you want to track. Usually, this is done by adding the tag to a template or footer file in your website. This depends largely on how your web pages are created / generated and organised. Here is an example of the Divolte Collector tag in a HTML page.
+Underpinning the click event data collection is a small piece of JavaScript, which is called a tag. The tag needs to be inserted into every web page that you want to track. Usually, this is done by adding the tag to a template or footer file in your website. This depends largely on how your web pages are created/generated and organised. Here is an example of the Divolte Collector tag in a HTML page.
 
-::
+.. code-block:: html
 
   <html>
     <head>
       <title>My Website with Divolte Collector</title>
     </head>
     <body>
-      <!--
-        body content
-      -->
-
+      <!-- Body content -->
       <script src="//localhost:8290/divolte.js" defer async></script>
     </body>
   </html>
 
-So, the tag is only this one line::
+The tag is the line:
+
+.. code-block:: html
 
   <script src="//localhost:8290/divolte.js" defer async></script>
 
-Nevertheless, the tag performs a number of important tasks. It generates unique identifiers for parties, sessions, pageviews and events. It collects the location, referer, screen and vieport size information from the browser. And then, it takes all this information and sends it to the Divolte Collector server, by creating a HTML img element with all information added as query string parameters to the image's URL. Using an img for this purpose is common practice amongst click event logging solutions and will give the best results (in spite of the availability of perhaps more advanced mechanisms, such as XHR requests).
+The tag performs a number of important tasks. It generates unique identifiers for parties, sessions, pageviews and events. It collects the location, referer, screen and viewport size information from the browser sends it to the Divolte Collector server.
 
-In order to instrument a web page of your own, just add the tag as above into the HTML code on each page. Additionally, once the Divolte Collector JavaScript is loaded in the browser, it is possible to fire custom events from JavaScript in the page::
+In order to instrument a web page of your own, insert the tag as above into the HTML code on each page. Additionally, once the Divolte Collector JavaScript is loaded in the browser it is possible to fire custom events from JavaScript in the page:
+
+.. code-block:: javascript
 
   // The first argument is the event type; the second argument is
   // a JavaScript object containing arbitrary event parameters,
   // which may be omitted
   divolte.signal('myCustomEvent', { param: 'foo',  otherParam: 'bar' })
 
-In order to use the custom events in your mapping, map values onto fields like this::
+In order to use the custom events in your mapping, map values onto fields like this:
+
+.. code-block:: groovy
 
   // Map the custom event type
   map eventType() onto 'eventTypeField'
@@ -254,8 +279,8 @@ In order to use the custom events in your mapping, map values onto fields like t
   /*
    * Note that custom event parameters are always interpreted
    * as string on the server side for safety. If you are sure
-   * a certain param is always of a certain type, you need to 
-   * explicitly cast it in the mapping, as below.
+   * a certain parameter is always of a certain type, you need
+   * to explicitly cast it in the mapping, as below.
    *
    * For more information on types and parsing, see the mapping
    * documentation
@@ -264,11 +289,18 @@ In order to use the custom events in your mapping, map values onto fields like t
 
 Writing to HDFS
 ===============
-So far, we've been writing our data to the local filesystem in /tmp. Although this works, this is not the intended use of Divolte Collector. The aim is to write the clickstream data to HDFS, such that it is safely and redundantly stored and, above all, is available for processing using any tool available that knows how to process Avro files (e.g. Apache Hive or Apache Spark). It is trivial to configure Divolte Collector to write to HDFS. Of course you will need to have a working HDFS instance setup, but setting this up is out of the scope of this getting started guide. There are many great resources to be found on the internet about getting started with and running Hadoop and HDFS.
+So far, we've been writing our data to the local filesystem in ``/tmp``. Although this works it not the intended use of Divolte Collector. The aim is to write the clickstream data to HDFS, such that it is safely and redundantly stored and available for processing using any tool available that knows how to process Avro files (e.g. Apache Hive or Apache Spark). It is trivial to configure Divolte Collector to write to HDFS, assuming you have a working HDFS instance setup. (Setting this up is out of the scope of this getting started guide. There are many great resources to be found on the internet about getting started with and running Hadoop and HDFS.)
 
-Assuming you have a HDFS instance running somewhere, there are two ways of making Divolte Collector write files to it: 1) by direct configuration or 2) by setting the HADOOP_CONF_DIR environment variable to point to a directory containing valid Hadoop configuration files. While the first option works, it is recommended to use the latter, as this is easier to maintain when your HDFS parameters change over time.
+Assuming you have a HDFS instance running somewhere, there are two ways of making Divolte Collector write files to it:
 
-First, we'll change the configuration to write files to HDFS. Add the following section to conf/divolte-collector.conf::
+1. Direct configuration; or
+2. Setting the ``HADOOP_CONF_DIR`` environment variable to point to a directory containing valid Hadoop configuration files.
+
+While the first option works, it is recommended to use the latter as it is easier to maintain when your HDFS parameters change over time.
+
+First, we'll change the configuration to write files to HDFS. Add the following section to ``conf/divolte-collector.conf``:
+
+.. code-block:: none
 
   divolte {
     hdfs_flusher {
@@ -304,7 +336,9 @@ First, we'll change the configuration to write files to HDFS. Add the following 
 
 Note that you need to create these directories on HDFS prior to starting Divolte Collector. It will not startup if the directories do not exist.
 
-If you have a working HDFS setup and a directory with the appropriate configuration files, Divolte Collector will use them automatically if a HADOOP_CONF_DIR environment variable is set pointing to that directory. Otherwise, it is possible to tell Divolte Collector directly about your HDFS location from the configuration::
+If you have a working HDFS setup and a directory with the appropriate configuration files, Divolte Collector will use them automatically if a ``HADOOP_CONF_DIR`` environment variable is set pointing to that directory. Otherwise, it is possible to tell Divolte Collector directly about your HDFS location from the configuration:
+
+.. code-block:: none
 
   divolte {
     hdfs_flusher {
@@ -315,24 +349,30 @@ If you have a working HDFS setup and a directory with the appropriate configurat
     }
   }
 
-Do note that in this scenario, it is not possible to set additional HDFS client configuration, as you can do when using the HADOOP_CONF_DIR environment variable. Also, when your HDFS NameNode is setup redundantly, you could configure only one using the Divolte Collector configuration. This is why it is recommended to use a HADOOP_CONF_DIR.
+Do note that in this scenario it is not possible to set additional HDFS client configuration, as you can do when using the ``HADOOP_CONF_DIR`` environment variable. Also, when your HDFS NameNode is setup redundantly you can configure only one using the Divolte Collector configuration. This is why it is recommended to use a ``HADOOP_CONF_DIR``.
 
-With everything in place, start Divolte Collector again, create some events and see verify that files are being created on HDFS::
+With everything in place, start Divolte Collector again, create some events and see verify that files are being created on HDFS:
 
-  [root@hadoophost ~]# hadoop fs -ls /divolte/inflight/
+.. code-block:: console
+
+  % hadoop fs -ls /divolte/inflight/
   Found 2 items
   -rw-r--r--   1 divolte supergroup        617 2014-08-30 11:46 /divolte/inflight/20141220152512-divolte-tracking-divoltehost-1.avro.partial
   -rw-r--r--   1 divolte supergroup        617 2014-08-30 11:46 /divolte/inflight/20141220152513-divolte-tracking-divoltehost-2.avro.partial
 
-After the rolling interval, files should show up in the publish directory with a .avro extension (without the .partial). However, if a file was opened in the working directory, but no events were ever written to it (because there was no activity or otherwise), it will not be moved to the publish directory, but will be deleted entirely instead::
+After the rolling interval, files should show up in the publish directory with a .avro extension (without the .partial). However, if a file was opened in the working directory, but no events were ever written to it (because there was no activity or otherwise), it will not be moved to the publish directory, but will be deleted entirely instead:
 
-  [root@hadoophost ~]# hadoop fs -ls /divolte/published/
+.. code-block:: console
+
+  % hadoop fs -ls /divolte/published/
   Found 1 items
   -rw-r--r--   1 divolte supergroup       2321 2014-08-30 11:48 /divolte/published/20141220152513-divolte-tracking-divoltehost-2.avro
 
 Writing to Kafka
 ================
-Configuring Divolte Collector to write data to a Kafka topic is quite similar to the HDFS configuration::
+Configuring Divolte Collector to write data to a Kafka topic is quite similar to the HDFS configuration:
+
+.. code-block:: none
 
   divolte {
     kafka_flusher {
@@ -349,19 +389,18 @@ Configuring Divolte Collector to write data to a Kafka topic is quite similar to
       // that can be passed to a Kafka producer, see this link:
       // http://kafka.apache.org/documentation.html#producerconfigs
       producer = {
-        metadata.broker.list = "10.200.8.55:9092,10.200.8.53:9092,10.200.8.54:9092"
+        bootstrap.servers = "10.200.8.55:9092,10.200.8.53:9092,10.200.8.54:9092"
       }
     }
   }
 
 Data in Kafka
 -------------
-Avro files on HDFS are written with the schema in the header. Unfortunately, Kafka doesn't really have a clear way of passing along the schema. So, instead, for the messages on Kafka queues, we expect the consumer to know the schema in advance, meaing that *the messages that are passed onto the queue only contain the raw bytes of the serialized Avro record without any metadata*. The key of each message is the party ID that belongs to the request. Divolte Collector provides a small helper library to easily create Kafka consumers in Java using Avro's code generation support. There is an example Kafka consumer with step by step instruction on getting it up and running in our usgae examples repository here: `https://github.com/divolte/divolte-examples/tree/master/tcp-kafka-consumer <https://github.com/divolte/divolte-examples/tree/master/tcp-kafka-consumer>`_.
+Avro files on HDFS are written with the schema in the header. Unfortunately Kafka doesn't really have a clear way of passing along the schema. For the messages on Kafka queues we expect the consumer to know the schema in advance, meaning that *the messages that are passed onto the queue only contain the raw bytes of the serialized Avro record without any metadata*. The key of each message is the party ID that for the event. Divolte Collector provides a small helper library to easily create Kafka consumers in Java using Avro's code generation support. There is an example Kafka consumer with step by step instruction on getting it up and running in our usage examples repository here: `https://github.com/divolte/divolte-examples/tree/master/tcp-kafka-consumer <https://github.com/divolte/divolte-examples/tree/master/tcp-kafka-consumer>`_.
 
-What's next
-===========
+What's next?
+============
 * Once you are collecting data to either HDFS or Kafka, see our `examples <https://github.com/divolte/divolte-examples>`_ to learn how to use your clickstream data in tools like Apache Spark, Apache Hive or Impala or build near real-time consumers for Apache Kafka with your Divolte Collector data.
-* Learn more about custom schema's and mapping in the :doc:`mapping_reference` documentation.
+* Learn more about custom schemas and mapping in the :doc:`mapping_reference` documentation.
 * Planning a production deployment? See the :doc:`deployment` guide.
-* Want to know how Divolte Collector works internally? See the :doc:`architecture_and_internals` documentation.
 * Review all the configuration options in the :doc:`configuration` documentation.
