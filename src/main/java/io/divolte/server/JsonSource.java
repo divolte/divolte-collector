@@ -16,16 +16,19 @@
 
 package io.divolte.server;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import io.divolte.server.config.JsonSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.util.Methods;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
 public class JsonSource extends HttpSource {
+    private static final Logger logger = LoggerFactory.getLogger(JsonSource.class);
     public static final String EVENT_SOURCE_NAME = "json";
 
     private final JsonEventHandler handler;
@@ -55,6 +58,8 @@ public class JsonSource extends HttpSource {
     public PathHandler attachToPathHandler(final PathHandler pathHandler) {
         final HttpHandler onlyJsonHandler = new JsonContentHandler(handler);
         final HttpHandler onlyPostHandler = new AllowedMethodsHandler(onlyJsonHandler, Methods.POST);
-        return pathHandler.addExactPath(pathPrefix, onlyPostHandler);
+        final PathHandler newPathHandler = pathHandler.addExactPath(pathPrefix, onlyPostHandler);
+        logger.info("Registered source[{}] event handler: {}", sourceName, pathPrefix);
+        return newPathHandler;
     }
 }
