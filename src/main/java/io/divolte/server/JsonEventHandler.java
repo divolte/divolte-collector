@@ -1,21 +1,7 @@
 package io.divolte.server;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-import io.divolte.server.processing.Item;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.StatusCodes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.divolte.server.HttpSource.*;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -26,8 +12,24 @@ import java.time.temporal.TemporalAccessor;
 import java.util.Objects;
 import java.util.Optional;
 
-import static io.divolte.server.HttpSource.captureAndPersistSourceAddress;
-import static io.divolte.server.HttpSource.queryParamFromExchange;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+
+import io.divolte.server.processing.Item;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.StatusCodes;
 
 @ParametersAreNonnullByDefault
 public class JsonEventHandler implements HttpHandler {
@@ -75,6 +77,7 @@ public class JsonEventHandler implements HttpHandler {
             }
         }, exchange);
     }
+
 
     private void logEvent(final HttpServerExchange exchange, final InputStream body) throws IncompleteRequestException {
         final DivolteIdentifier partyId = queryParamFromExchange(exchange, partyIdParameter).flatMap(DivolteIdentifier::tryParse)
