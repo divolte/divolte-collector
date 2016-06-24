@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 @ParametersAreNonnullByDefault
 public class ChunkyByteBuffer {
-    public static final int CHUNK_SIZE = 1024;
+    public static final int CHUNK_SIZE = 4096;
 
     @ParametersAreNonnullByDefault
     public interface CompletionHandler {
