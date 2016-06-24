@@ -41,8 +41,8 @@ public class ChunkyByteBuffer {
     }
 
     private ChunkyByteBuffer(final int initialChunkCount,
-                            final int maxChunkCount,
-                            final CompletionHandler completionHandler) {
+                             final int maxChunkCount,
+                             final CompletionHandler completionHandler) {
         Preconditions.checkArgument(0 < initialChunkCount && initialChunkCount <= maxChunkCount,
                                     "Initial chunk count (%s) must be greater than 0 and less than or equal to the maximum chunk count (%s)", initialChunkCount, maxChunkCount);
         this.completionHandler = Objects.requireNonNull(completionHandler);
