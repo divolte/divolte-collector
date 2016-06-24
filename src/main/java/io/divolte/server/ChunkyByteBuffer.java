@@ -82,16 +82,13 @@ public class ChunkyByteBuffer {
             try {
                 readResult = channel.read(currentChunk);
             } catch (final IOException e) {
-                completionHandler.failed(e);
+                onFailure(channel, e);
                 return;
             }
             switch (readResult) {
                 case -1:
                     // End-of-file.
-                    channel.getReadSetter().set(null);
-                    // Calculate the size before the buffers are flipped for reading.
-                    final int bufferSize = getBufferUsed();
-                    completionHandler.completed(new ChunkyByteBufferInputStream(chunks), bufferSize);
+                    endOfFile(channel);
                     return;
                 case 0:
                     // Nothing pending right now.
@@ -104,17 +101,56 @@ public class ChunkyByteBuffer {
                     //  - Might have filled current chunk; move on to next, if possible.
                     //  - Might be no more data; will check on next loop.
                     if (!currentChunk.hasRemaining()) {
-                        if (++currentChunkIndex < chunks.length) {
+                        if (currentChunkIndex + 1 < chunks.length) {
                             // We allocate chunks on demand, as we advance.
-                            chunks[currentChunkIndex] = ByteBuffer.allocate(CHUNK_SIZE);
+                            chunks[++currentChunkIndex] = ByteBuffer.allocate(CHUNK_SIZE);
                         } else {
                             // Buffers are full.
-                            channel.getReadSetter().set(null);
-                            completionHandler.overflow();
+                            channel.getReadSetter().set(this::waitForEndOfStream);
+                            channel.resumeReads();
                             return;
                         }
                     }
             }
+        }
+    }
+
+    private void endOfFile(final StreamSourceChannel channel) {
+        channel.getReadSetter().set(null);
+        // Calculate the size before the buffers are flipped for reading.
+        final int bufferSize = getBufferUsed();
+        completionHandler.completed(new ChunkyByteBufferInputStream(chunks), bufferSize);
+    }
+
+    private void onFailure(final StreamSourceChannel channel, final Throwable t) {
+        channel.getReadSetter().set(null);
+        completionHandler.failed(t);
+    }
+
+    private void waitForEndOfStream(final StreamSourceChannel channel) {
+        // So we have to supply a buffer to detect EOF.
+        // This is a corner case, and some alternatives are inappropriate:
+        //  - A singleton 1-byte buffer will lead to contention if multiple clients are in this state.
+        //  - A zero-byte buffer can't be used because the semantics for reading from it aren't properly
+        //    defined.
+        final ByteBuffer tinyBuffer = ByteBuffer.allocate(1);
+        try {
+            final int numRead = channel.read(tinyBuffer);
+            switch (numRead) {
+                case -1:
+                    // End-of-stream. Phew.
+                    endOfFile(channel);
+                    break;
+                case 0:
+                    // Still not sure. Wait.
+                    break;
+                default:
+                    // Overflow. Doh.
+                    channel.getReadSetter().set(null);
+                    completionHandler.overflow();
+            }
+        } catch (final IOException e) {
+            onFailure(channel, e);
         }
     }
 

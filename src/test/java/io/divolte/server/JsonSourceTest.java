@@ -16,11 +16,13 @@
 
 package io.divolte.server;
 
+import avro.shaded.com.google.common.collect.ImmutableMap;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ContainerNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.divolte.server.ServerTestUtils.TestServer;
+import io.divolte.server.config.JsonSourceConfiguration;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Test;
@@ -33,6 +35,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -44,6 +48,7 @@ public class JsonSourceTest {
     private static final String JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE = "http://localhost:%d/json-event";
     private static final String JSON_EVENT_URL_TEMPLATE = JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
     private static final String JSON_EVENT_WITH_BROKEN_PARTYID_URL_TEMPLATE = JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=notavalidpartyid";
+    private static final int JSON_MAXIMUM_BODY_SIZE = Integer.parseInt(JsonSourceConfiguration.DEFAULT_MAXIMUM_BODY_SIZE);
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private static final ObjectNode EMPTY_JSON_OBJECT = JSON_MAPPER.createObjectNode();
@@ -51,9 +56,13 @@ public class JsonSourceTest {
     private Optional<TestServer> testServer = Optional.empty();
     private Optional<String> urlTemplate = Optional.empty();
 
-    private void startServer(final String configResource) {
+    private void startServer() {
+        startServer(Collections.emptyMap());
+    }
+
+    private void startServer(final Map<String,Object> extraConfig) {
         stopServer();
-        testServer = Optional.of(new TestServer(configResource));
+        testServer = Optional.of(new TestServer("json-source.conf", extraConfig));
         urlTemplate = Optional.of(JSON_EVENT_URL_TEMPLATE);
     }
 
@@ -112,12 +121,12 @@ public class JsonSourceTest {
 
     @Test
     public void shouldSupportMobileSource() {
-        startServer("json-source.conf");
+        startServer();
     }
 
     @Test
     public void shouldSupportPostingJsonToEndpoint() throws IOException {
-        startServer("json-source.conf");
+        startServer();
         final HttpURLConnection conn = request();
 
         assertEquals(HTTP_NO_CONTENT, conn.getResponseCode());
@@ -125,7 +134,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldOnlySupportPostRequests() throws IOException {
-        startServer("json-source.conf");
+        startServer();
         final HttpURLConnection conn = startRequest();
         conn.setRequestMethod("GET");
 
@@ -135,7 +144,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldOnlySupportJsonRequests() throws IOException {
-        startServer("json-source.conf");
+        startServer();
         final HttpURLConnection conn = startRequest();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
@@ -149,7 +158,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectEmptyRequests() throws IOException {
-        startServer("json-source.conf");
+        startServer();
         final HttpURLConnection conn = startJsonPostRequest();
 
         assertEquals(HTTP_BAD_REQUEST, conn.getResponseCode());
@@ -157,7 +166,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithoutPartyId() throws IOException {
-        startServer("json-source.conf");
+        startServer();
         urlTemplate = Optional.of(JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE);
         final HttpURLConnection conn = request();
 
@@ -166,7 +175,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithBrokenPartyId() throws IOException {
-        startServer("json-source.conf");
+        startServer();
         urlTemplate = Optional.of(JSON_EVENT_WITH_BROKEN_PARTYID_URL_TEMPLATE);
         final HttpURLConnection conn = request();
 
@@ -175,7 +184,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldAcceptRequestsWithoutContentLength() throws IOException {
-        startServer("json-source.conf");
+        startServer();
 
         final HttpURLConnection conn = request(c -> {
             // Chunked-streaming mode disables buffering and the content-length header.
@@ -187,7 +196,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithBodyLessThanContentLength() throws IOException {
-        startServer("json-source.conf");
+        startServer();
 
         final HttpURLConnection conn = startJsonPostRequest();
         final byte[] bodyBytes = JSON_MAPPER.writeValueAsBytes(EMPTY_JSON_OBJECT);
@@ -206,7 +215,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithBodyMoreThanContentLength() throws IOException {
-        startServer("json-source.conf");
+        startServer();
 
         final HttpURLConnection conn = startJsonPostRequest();
         final byte[] bodyBytes = JSON_MAPPER.writeValueAsBytes(EMPTY_JSON_OBJECT);
@@ -223,9 +232,11 @@ public class JsonSourceTest {
         assertEquals(HTTP_BAD_REQUEST, conn.getResponseCode());
     }
 
-    private static ObjectNode buildBigJsonPayload(final int approximateSize) {
+    private static ObjectNode buildBigJsonPayload(final int payloadSize) {
         final ObjectNode root = JSON_MAPPER.createObjectNode();
-        final char[] propertyValue = new char[approximateSize];
+        // {"p":"XXXXX"}
+        final int jsonOverhead = 8;
+        final char[] propertyValue = new char[payloadSize - jsonOverhead];
         Arrays.fill(propertyValue, 'X');
         root.put("p", new String(propertyValue));
         return root;
@@ -233,10 +244,10 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithTooLargeContentLength() throws IOException {
-        startServer("json-source.conf");
+        startServer();
 
         final HttpURLConnection conn = startJsonPostRequest();
-        final byte[] bodyBytes = JSON_MAPPER.writeValueAsBytes(buildBigJsonPayload(100000));
+        final byte[] bodyBytes = JSON_MAPPER.writeValueAsBytes(buildBigJsonPayload(JSON_MAXIMUM_BODY_SIZE + 1));
         // Here we're explicitly declaring that we're going to be large.
         conn.setFixedLengthStreamingMode(bodyBytes.length);
         try (final OutputStream requestBody = conn.getOutputStream()) {
@@ -248,23 +259,33 @@ public class JsonSourceTest {
 
     @Test
     public void shouldRejectRequestsWithTooLargeBody() throws IOException {
-        startServer("json-source.conf");
+        startServer();
 
         final HttpURLConnection conn = startJsonPostRequest();
         // Here we're not declaring ahead of time that we will be too large. But the body will be.
         conn.setChunkedStreamingMode(128);
         try (final OutputStream requestBody = conn.getOutputStream()) {
-            JSON_MAPPER.writeValue(requestBody, buildBigJsonPayload(100000));
+            JSON_MAPPER.writeValue(requestBody, buildBigJsonPayload(JSON_MAXIMUM_BODY_SIZE + 1));
         }
 
         assertEquals(HTTP_ENTITY_TOO_LARGE, conn.getResponseCode());
     }
 
     @Test
-    public void shouldAcceptBodyLargerThanOneChunk() throws IOException {
-        startServer("json-source.conf");
+    public void shouldAcceptRequestsWithMaximumAllowedBodySize() throws IOException {
+        startServer();
 
-        // Assumes the configuration has a max body size greater than 2 chunks.
+        final HttpURLConnection conn = request(buildBigJsonPayload(JSON_MAXIMUM_BODY_SIZE));
+
+        assertEquals(HTTP_NO_CONTENT, conn.getResponseCode());
+    }
+
+    @Test
+    public void shouldAcceptBodyLargerThanOneChunk() throws IOException {
+        // Need to ensure the configuration allows a max body size greater than 2 chunks.
+        startServer(ImmutableMap.of("divolte.sources.test-json-source.maximum_body_size",
+                                    ChunkyByteBuffer.CHUNK_SIZE * 3));
+
         // (Disable the content-length header to force chunked reading.)
         final HttpURLConnection conn = request(buildBigJsonPayload(ChunkyByteBuffer.CHUNK_SIZE * 2),
                                                c -> c.setChunkedStreamingMode(8));
@@ -287,7 +308,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldReceiveCompleteJsonEvent() throws IOException, InterruptedException {
-        startServer("json-source.conf");
+        startServer();
 
         request(buildCompleteJsonEvent());
 
@@ -323,7 +344,7 @@ public class JsonSourceTest {
 
     @Test
     public void shouldReceiveMinimumJsonEvent() throws IOException, InterruptedException {
-        startServer("json-source.conf");
+        startServer();
 
         request(buildMinimumJsonEvent());
 

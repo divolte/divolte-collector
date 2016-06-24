@@ -2,8 +2,11 @@ package io.divolte.server;
 
 import com.google.common.primitives.Ints;
 import io.undertow.UndertowMessages;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.slf4j.Logger;
@@ -50,6 +53,12 @@ public class AsyncRequestBodyReceiver {
         return (length - 1) / ChunkyByteBuffer.CHUNK_SIZE + 1;
     }
 
+    private static void rejectLargeRequest(final HttpServerExchange exchange) {
+        exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE)
+                .setPersistent(false)
+                .endExchange();
+    }
+
     public void receive(final BiConsumer<InputStream, Integer> callback, final HttpServerExchange exchange) {
         Objects.requireNonNull(callback);
         if (logger.isDebugEnabled()) {
@@ -61,20 +70,44 @@ public class AsyncRequestBodyReceiver {
             return;
         }
 
+        // Determine the number of buffer-slots to use, trusting a well-formed content-length
+        // header if that's present.
+        final Optional<Integer> contentLength =
+                Optional.ofNullable(exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH))
+                        .map(Ints::tryParse);
+        final int provisionChunks = contentLength.map(AsyncRequestBodyReceiver::calculateChunks)
+                                                 .orElseGet(preallocateChunks::get);
+        if (provisionChunks > maximumChunks) {
+            rejectLargeRequest(exchange);
+            return;
+        }
+
+        // Some clients will pause before sending the body, waiting for a '100 Continue' response.
+        // If we've reached this point we're always going to accept the body, so continuing is fine.
+        if (HttpContinue.requiresContinueResponse(exchange)) {
+            HttpContinue.sendContinueResponse(exchange, new IoCallback() {
+                @Override
+                public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                    receive(callback, exchange, contentLength, provisionChunks);
+                }
+                @Override
+                public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                    logger.error("Error allowing request to continue.");
+                    exchange.endExchange();
+                }
+            });
+        } else {
+            receive(callback, exchange, contentLength, provisionChunks);
+        }
+    }
+
+    private void receive(final BiConsumer<InputStream, Integer> callback,
+                         final HttpServerExchange exchange,
+                         final Optional<Integer> contentLength,
+                         final int provisionChunks) {
         final StreamSourceChannel channel = exchange.getRequestChannel();
         if (channel == null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
-        }
-
-        // Determine the number of buffer-slots to use, trusting a well-formed content-length
-        // header if that's present.
-        final Optional<Integer> contentLength = Optional.ofNullable(exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH))
-                                                        .map(Ints::tryParse);
-        final int provision = contentLength.map(AsyncRequestBodyReceiver::calculateChunks)
-                                           .orElseGet(preallocateChunks::get);
-        if (provision > maximumChunks) {
-            exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE).endExchange();
-            return;
         }
 
         /*
@@ -86,12 +119,11 @@ public class AsyncRequestBodyReceiver {
          * buffers are used exclusively on heap after receiving the bytes from the
          * socket.
          */
-        ChunkyByteBuffer.fill(channel, provision, contentLength.isPresent() ? provision : maximumChunks,
+        ChunkyByteBuffer.fill(channel, provisionChunks, contentLength.isPresent() ? provisionChunks : maximumChunks,
                               new ChunkyByteBuffer.CompletionHandler() {
             @Override
             public void overflow() {
-                exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE)
-                        .endExchange();
+                rejectLargeRequest(exchange);
             }
             @Override
             public void failed(final Throwable e) {
