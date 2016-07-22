@@ -2,7 +2,7 @@
 Introduction
 ************
 
-Divolte Collector is a solution for collecting `clickstream data <http://en.wikipedia.org/wiki/Clickstream>`_ from website users and subsequently store that data into `Hadoop <http://hadoop.apache.org/>`_ as `Avro <http://avro.apache.org/>`_ files and push individual click events as messages onto a `Kafka <http://kafka.apache.org/>`_ topic. This is useful in scenario's where you need to perform off line and/or near real-time processing and analysis on user behavior in the form of click event data, such as when building recommender systems, personalization of websites or plain analytics on user behavior on a website.
+Divolte Collector is a solution for collecting `clickstream data <https://en.wikipedia.org/wiki/Clickstream>`_ from website users and subsequently store that data into `Hadoop <http://hadoop.apache.org/>`_ as `Avro <http://avro.apache.org/>`_ files and push individual click events as messages onto a `Kafka <http://kafka.apache.org/>`_ topic. This is useful in scenarios where you need to perform offline and/or near real-time processing and analysis on user behavior in the form of click event data, such as when building recommender systems, personalization of websites or plain analytics on user behavior on a website.
 
 Several solutions exist already to this problem (hosted solution like Google Analytics, Omniture, or open source systems such as Piwik). Here's what makes Divolte Collector different:
 
@@ -15,17 +15,17 @@ The remainder of this chapter introduces the concept of clickstream collection a
 
 Capturing clickstream
 =====================
-Click events are the primary data source in web optimization solutions. These events are often captured through log (file) processing and pushed down to systems for both batch and near real-time processing. So, capturing the click event data from web visitors in order to analyze and act upon user behavior is not a new problem. Over time, it has been solved in different ways, all with their own advantages and drawbacks. First, let's look at a typical architecture for building web optimization solutions:
+Click events are the primary data source in web optimization solutions. These events are often captured through log (file) processing and pushed down to systems for both batch and near real-time processing. Capturing the click event data from web visitors in order to analyze and act upon user behavior is not a new problem. Over time it has been solved in different ways, all with their own advantages and drawbacks. First, let's look at a typical architecture for building web optimization solutions:
 
 .. image:: images/web-optimization-architecture.png
    :alt: Typical components in a web optimization architecture
 
-In the above diagram, the part marked in the red outline is the problem that Divolte Collector focusses on: the collection, parsing, storing and streaming of click events.
+In the above diagram, the part marked in the red outline is the problem that Divolte Collector focuses on: the collection, parsing, storing and streaming of click events.
 
 The simplest solution to this problem (and also the one that most of the early Hadoop use cases were based on), is to simply collect the web server log files and push them onto HDFS for further processing:
 
 .. image:: images/log-file-parsing.png
-   :alt: Traditional method of collecting click stream data on Hadoop
+   :alt: Traditional method of collecting clickstream data on Hadoop
 
 This method has some drawbacks, however:
 
@@ -36,14 +36,14 @@ This method has some drawbacks, however:
   * Usually multiple versions of this parser are needed.
 
 * Requires sessionizing.
-* Log contain a lot of non-user requests, such as bots, crawlers, health checks, etc.
+* Logs contain a lot of non-user requests, such as bots, crawlers, health checks, etc.
 
 In order to overcome some of these problems, the next generation of log event collection setups would stream individual log events instead of moving entire log files around. This can be solved using a combination of tools like `syslog <http://en.wikipedia.org/wiki/Syslog>`_, `syslog-ng <http://en.wikipedia.org/wiki/Syslog-ng>`_ and `Apache Flume <http://flume.apache.org/>`_.
 
 .. image:: images/log-file-streaming.png
    :alt: Collecting log events for Hadoop and streaming work loads
 
-While this adds streaming processing to the mix, some drawbacks still exist: there is no schema, you still need a parser and it suffers from bots and crawlers alike. That's why, many of the more modern solutions take a different approach. Instead of using the server side log event as the source of event data, a event is generated on the client side, which actively calls a separate back-end serivce to handle the event logging. This method is often called `tagging (or Web Bug, if you're Wikipedia) <http://en.wikipedia.org/wiki/Web_bug>`_. In this scenario, each web page contains a special piece of JavaScript code that calls a back-end service to generate the actual event:
+While this adds streaming processing to the mix, some drawbacks still exist: there is no schema, you still need a parser and it suffers from bots and crawlers alike. Modern solutions take a different approach: instead of using the server side log event as the source of event data an event is generated on the client side and delivered to a separate back-end service to handle the event logging. This method is often called `tagging (or Web Beacon, if you're Wikipedia) <http://en.wikipedia.org/wiki/Web_beacon>`_. In this scenario, each web page contains a special piece of JavaScript code that calls a back-end service to generate the actual event:
 
 .. image:: images/tag-based-collection.png
    :alt: Modern click event collection
@@ -70,17 +70,13 @@ Features
 In addition to collecting click events, Divolte Collector provides a number of welcome features:
 
 * Single line JavaScript deployment: <script src="//collect.example.com/divolte.js" defer async></script>
-* Mapping click stream data onto a domain specific (Avro) schema; on the fly parsing
+* Mapping clickstream data onto a domain specific (Avro) schema; on the fly parsing
 
-  * Comes with a built in default schema and mapping for basic, zero-config deply
+  * Comes with a built in default schema and mapping for basic, zero-config deployment
 
 * Horizontally scalable behind a load balancer.
-* Performs in stream de-duplication of events, in the case a broser fires the same event multiple times or other sources of duplicates exist
-
-  * This happens more often than you think on the internet.
-
+* Performs in-stream deduplication of events, in the case a browser fires the same event multiple times or other sources of duplicates exist. (This happens more often than you think on the internet.)
 * Corrupt request detection for similar issues as above.
-
 * Generates unique identifiers:
 
   * party ID: a long lived cookie that is set on the client
@@ -89,15 +85,15 @@ In addition to collecting click events, Divolte Collector provides a number of w
   * event ID: a unique identifier for each event
 
 * User agent parsing: the user agent string is parsed on the fly and the resulting fields (e.g. operating system, browser type, device type) can be mapped onto the schema.
-* ip2geo lookup: on the fly geolocation lookup based on IP address can be done using the `Maxmind databases <https://www.maxmind.com/en/geoip2-databases>`_.
-* Defeat Google Chrome's pre-rendering and many other browser quirks; this prevents phantom events where the user actually never saw the page.
+* On the fly geolocation lookup based on IP address can be done using the `Maxmind databases <https://www.maxmind.com/en/geoip2-databases>`_.
+* Handle Google Chrome's pre-rendering and many other browser quirks; this prevents phantom events where the user actually never saw the page.
 * Fire custom events with custom parameters from JavaScript in your pages
 
   * The custom event parameters can be mapped directly to your schema.
 
 * It is possible to generate page view IDs on the server side when using dynamically generated pages.
 
-  * This allows to perform server side logging which can later be related to client side events.
+  * This allows to perform server side logging which can later be correlated with client-side events.
 
 * Divolte Collector comes with additional libraries to make it very easy to create custom Kafka consumers for near real-time processing and to work with your data in Apache Spark (Streaming).
 * Built with performance in mind: in testing on commodity hardware, Divolte Collector should be network IO bound before anything else.
@@ -115,8 +111,8 @@ Divolte Collector is written in pure Java and runs on any OS that supports the l
   * Tested to work against: CDH, HDP and MapR
 
 * Apache Kafka 0.8 or above (optional, see below)
-* Load balancer with SSL off loading to support HTTPS
+* Load balancer with SSL offloading to support HTTPS
 
-..
+.. note::
 
-  Note: Divolte Collector can be configured to send data to either HDFS or Kafka or both. It's not required to use both. When running locally for testing, it can also write to the local file system.
+  Divolte Collector can be configured to send data to either HDFS or Kafka or both. It's not required to use both. When running locally for testing, it can also write to the local file system.
