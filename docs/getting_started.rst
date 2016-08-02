@@ -4,7 +4,7 @@ Getting Started
 
 Installation
 ============
-Divolte Collector is currently only supported on Unix-like systems, such as Linux or Max OS X. While it should also work in Cygwin, we haven't tested this yet.
+Divolte Collector is currently only supported on Unix-like systems, such as Linux or Mac OS X. While it should also work in Cygwin, we haven't tested this yet.
 
 Divolte Collector requires Java 8. It is recommended that you use a recent version of Oracle JDK 8. You can download a recent version from `Oracle's website <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. Please verify that you have a correct Java version by running this command:
 
