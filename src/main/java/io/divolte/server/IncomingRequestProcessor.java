@@ -28,6 +28,8 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import io.divolte.record.DefaultEventRecord;
 import io.divolte.server.config.ValidatedConfiguration;
@@ -46,6 +48,8 @@ import io.undertow.util.AttachmentKey;
 
 @ParametersAreNonnullByDefault
 public final class IncomingRequestProcessor implements ItemProcessor<DivolteEvent> {
+    public static final String INVALID_DATA_MARKER = "INVALID";
+    public static final Marker invalid = MarkerFactory.getMarker(INVALID_DATA_MARKER);
     private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
     public static final AttachmentKey<Boolean> DUPLICATE_EVENT_KEY = AttachmentKey.create(Boolean.class);
@@ -150,14 +154,21 @@ public final class IncomingRequestProcessor implements ItemProcessor<DivolteEven
 
             if (!duplicate || keepDuplicates) {
                 final GenericRecord avroRecord = mapper.newRecordFromExchange(event);
-                final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
+
+                try {
+                    final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
                         event.partyCookie,
                         event.sessionCookie,
                         event.requestStartTime,
                         event.clientUtcOffset,
                         avroRecord);
-                listener.incomingRequest(event, avroBuffer, avroRecord);
-                doProcess(avroBuffer);
+                } catch (final RuntimeException e) {
+                    logger.warn(invalid, "Error processing event {} from party {} in session {}: {}",
+                                event, event.partyCookie, event.sessionCookie, avroRecord, e);
+                }
+
+		listener.incomingRequest(event, avroBuffer, avroRecord);
+		doProcess(avroBuffer);
             }
         }
 
