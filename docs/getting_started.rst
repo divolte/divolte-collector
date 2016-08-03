@@ -190,11 +190,12 @@ Finally, we need to configure Divolte Collector to use our custom schema and map
 .. code-block:: none
 
   divolte {
-    tracking {
-      schema_file = "/path/to/divolte-collector/conf/MyEventRecord.avsc"
-      schema_mapping {
-        version = 2
+    mappings {
+      my_mapping = {
+        schema_file = "/path/to/divolte-collector/conf/MyEventRecord.avsc"
         mapping_script_file = "/path/to/divolte-collector/conf/mapping.groovy"
+        sources = [browser]
+        sinks = [hdfs]
       }
     }
   }
@@ -303,55 +304,65 @@ First, we'll change the configuration to write files to HDFS. Add the following 
 .. code-block:: none
 
   divolte {
-    hdfs_flusher {
-      // Enable the HDFS flushing
-      enabled = true
+    global {
+      hdfs {
+        // Enable HDFS sinks.
+        enabled = true
 
-      // Use multiple threads to write to HDFS
-      threads = 2
+        // Use multiple threads to write to HDFS.
+        threads = 2
+      }
+    }
 
-       // Use a simple strategy of rolling files after a certain period of time.
-       // For other strategies, have a look at the configuration documentation.
-      simple_rolling_file_strategy {
-        // Create a new file every hour
-        roll_every = 1 hour
+    sinks {
+      // The name of the sink. (It's referred to by the mapping.)
+      hdfs {
+        type = hdfs
 
-        // Perform a hsync call on the HDFS files after every 1000 record written or
-        // after every 5 seconds, whichever happens first.
+        // For HDFS sinks we can control how the files are created.
+        file_strategy {
+          // Create a new file every hour
+          roll_every = 1 hour
 
-        // Performing a hsync call periodically prevents data loss incase of failure
-        // scenarios.
-        sync_file_after_records = 1000
-        sync_file_after_duration = 5 seconds
+          // Perform a hsync call on the HDFS files after every 1000 records are written
+          // or every 5 seconds, whichever happens first.
 
-        // Files that are being written will be created in a working directory.
-        // Once a file is closed, Divolte Collector will move the file to a
-        // publish directory. The working and publish directories are allowed
-        // to be the same, but this is not recommended.
-        working_dir = "/divolte/inflight"
-        publish_dir = "/divolte/published"
+          // Performing a hsync call periodically can prevent data loss in the case of
+          // some failure scenarios.
+          sync_file_after_records = 1000
+          sync_file_after_duration = 5 seconds
+
+          // Files that are being written will be created in a working directory.
+          // Once a file is closed, Divolte Collector will move the file to the
+          // publish directory. The working and publish directories are allowed
+          // to be the same, but this is not recommended.
+          working_dir = "/divolte/inflight"
+          publish_dir = "/divolte/published"
+        }
+
+        // Set the replication factor for created files.
+        replication = 3
       }
     }
   }
 
-Note that you need to create these directories on HDFS prior to starting Divolte Collector. It will not startup if the directories do not exist.
+Note that you need to create these directories prior to starting Divolte Collector. It will not startup if the directories do not exist.
 
-If you have a working HDFS setup and a directory with the appropriate configuration files, Divolte Collector will use them automatically if a ``HADOOP_CONF_DIR`` environment variable is set pointing to that directory. Otherwise, it is possible to tell Divolte Collector directly about your HDFS location from the configuration:
+If you have a working HDFS setup and a directory with the appropriate configuration files, Divolte Collector will use them automatically if a ``HADOOP_CONF_DIR`` environment variable is set pointing to that directory. Alternatively, HDFS client properties can be provided in the configuration:
 
 .. code-block:: none
 
   divolte {
-    hdfs_flusher {
+    global {
       hdfs {
-        uri = "hdfs://192.168.100.128:8020/"
-        replication = 1
+        client {
+          fs.defaultFS = "hdfs://192.168.100.128:8020/"
+        }
       }
     }
   }
 
-Do note that in this scenario it is not possible to set additional HDFS client configuration, as you can do when using the ``HADOOP_CONF_DIR`` environment variable. Also, when your HDFS NameNode is setup redundantly you can configure only one using the Divolte Collector configuration. This is why it is recommended to use a ``HADOOP_CONF_DIR``.
-
-With everything in place, start Divolte Collector again, create some events and see verify that files are being created on HDFS:
+With everything in place, start Divolte Collector again, create some events and verify that files are being created on HDFS:
 
 .. code-block:: console
 
@@ -375,21 +386,30 @@ Configuring Divolte Collector to write data to a Kafka topic is quite similar to
 .. code-block:: none
 
   divolte {
-    kafka_flusher {
-      // Enable Kafka flushing
-      enabled = true
+    global {
+      kafka {
+        // Enable Kafka flushing
+        enabled = true
 
-      // This is the name of the topic that data will be produced on
-      topic = divolte-data
+        // The properties under the producer key in this
+        // configuration are used to create a Properties object
+        // which is passed to Kafka as is. At the very least,
+        // configure the broker list here. For more options
+        // that can be passed to a Kafka producer, see this link:
+        // http://kafka.apache.org/082/documentation.html#newproducerconfigs
+        producer = {
+          bootstrap.servers = "10.200.8.55:9092,10.200.8.53:9092,10.200.8.54:9092"
+        }
+      }
+    }
 
-      // The properties under the producer key in this
-      // configuration are used to create a Properties object
-      // which is passed to Kafka as is. At the very least,
-      // configure the broker list here. For more options
-      // that can be passed to a Kafka producer, see this link:
-      // http://kafka.apache.org/documentation.html#producerconfigs
-      producer = {
-        bootstrap.servers = "10.200.8.55:9092,10.200.8.53:9092,10.200.8.54:9092"
+    sinks {
+      // The name of the sink. (It's referred to by the mapping.)
+      kafka {
+        type = kafka
+
+        // This is the name of the topic that data will be produced on
+        topic = divolte-data
       }
     }
   }
