@@ -69,7 +69,12 @@ Features
 ========
 In addition to collecting click events, Divolte Collector provides a number of welcome features:
 
-* Single line JavaScript deployment: <script src="//collect.example.com/divolte.js" defer async></script>
+* Single line JavaScript deployment:
+
+  .. code-block:: html
+
+    <script src="//collect.example.com/divolte.js" defer async></script>
+
 * Mapping clickstream data onto a domain specific (Avro) schema; on the fly parsing
 
   * Comes with a built in default schema and mapping for basic, zero-config deployment
