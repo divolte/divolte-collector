@@ -79,10 +79,10 @@ In addition to collecting click events, Divolte Collector provides a number of w
 * Corrupt request detection for similar issues as above.
 * Generates unique identifiers:
 
-  * party ID: a long lived cookie that is set on the client
-  * session ID: a cookie that expires after 30 minutes of inactivity
-  * pageview ID: a unique identifier for each pageview and subsequent custom events fired from the same page
-  * event ID: a unique identifier for each event
+  * Party ID: a long lived cookie that is set on the client
+  * Session ID: a cookie that expires after 30 minutes of inactivity
+  * Pageview ID: a unique identifier for each pageview and subsequent custom events fired from the same page
+  * Event ID: a unique identifier for each event
 
 * User agent parsing: the user agent string is parsed on the fly and the resulting fields (e.g. operating system, browser type, device type) can be mapped onto the schema.
 * On the fly geolocation lookup based on IP address can be done using the `Maxmind databases <https://www.maxmind.com/en/geoip2-databases>`_.
