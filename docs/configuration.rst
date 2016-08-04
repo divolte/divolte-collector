@@ -837,7 +837,7 @@ If *any* sinks are configured these implicit sinks are not present and all sinks
 HDFS Sinks
 ^^^^^^^^^^
 
-A HDFS sink uses a HDFS client to write `Avro files <http://avro.apache.org/docs/1.8.0/spec.html#Object+Container+Files>`_ containing records produced by mapping. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
+A HDFS sink uses a HDFS client to write `Avro files <http://avro.apache.org/docs/1.8.1/spec.html#Object+Container+Files>`_ containing records produced by mapping. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
 
 The HDFS client used to write files is configured according to the global HDFS settings. Depending on the HDFS client version in use, HDFS sinks can write to various locations:
 
@@ -948,7 +948,7 @@ A Kafka sink uses a Kafka producer to write Avro records as individual messages 
 
 Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
 
-The body of each Kafka message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.0/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+The body of each Kafka message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
 
 Within the namespace for a Kafka sink properties are used to configure it.
 
