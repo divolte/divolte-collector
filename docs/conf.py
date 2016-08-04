@@ -103,6 +103,8 @@ pygments_style = 'sphinx'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
 
+# If true, Sphinx will warn about all references where the target cannot be found.
+nitpicky = True
 
 # -- Options for HTML output ----------------------------------------------
 
