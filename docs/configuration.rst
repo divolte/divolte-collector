@@ -740,7 +740,7 @@ Mapping property: ``sinks``
 Mapping property: ``schema_file``
 """""""""""""""""""""""""""""""""
 :Description:
-  By default a mapping will produce records that conform to a `built-in Avro schema <https://github.com/divolte/divolte-schema>`_. However, a custom schema makes usually makes sense that contains fields specific to the domain and custom events.
+  By default a mapping will produce records that conform to a `built-in Avro schema <https://github.com/divolte/divolte-schema>`_. However, a custom schema makes usually makes sense that contains fields specific to the domain and custom events. Note that the value for this property is ignored unless ``mapping_script_file`` is also set.
 :Default:
   |Built-in schema|_
 :Example:
@@ -757,7 +757,9 @@ Mapping property: ``schema_file``
 Mapping property: ``mapping_script_file``
 """""""""""""""""""""""""""""""""""""""""
 :Description:
-  The location of the Groovy script that defines the how events from sources will be mapped to Avro records that are written to sinks. If unset, a default built-in mapping will be used. See the :doc:`mapping_reference` for details on mapping events.
+  The location of the Groovy script that defines the how events from sources will be mapped to Avro records that are written to sinks. If unset, a default built-in mapping will be used. (In this case any value for the ``schema_file`` property is ignored: the default built-in mapping always produces records conforming to the `built-in schema <https://github.com/divolte/divolte-schema>`.)
+
+  See the :doc:`mapping_reference` for details on mapping events.
 :Default:
   *Built-in mapping*
 :Example:
