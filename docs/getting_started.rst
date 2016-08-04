@@ -55,7 +55,7 @@ Now, take your web browser to http://127.0.0.1:8290/ and check that you see a pa
 Looking at the data
 ===================
 
-Now, go back to the console where Divolte Collector is running and hit CTRL+C (or kill the process). You should see output similar to this:
+Now, go back to the console where Divolte Collector is running and hit :kbd:`Control-c` (or kill the process). You should see output similar to this:
 
 .. code-block:: none
 
@@ -63,13 +63,13 @@ Now, go back to the console where Divolte Collector is running and hit CTRL+C (o
   2014-12-17 09:27:15.396+01 [Thread-8] INFO  [Server]: Stopping thread pools.
   2014-12-17 09:27:17.399+01 [Thread-8] INFO  [Server]: Closing HDFS filesystem connection.
 
-When Divolte Collector shuts down it will flush and close all open files, so now we can have a look at the data that was generated. By default, with no configuration, Divolte Collector will write ``.avro`` files in ``/tmp`` on the local filesystem. For convenience, Divolte Collector packages a version of the avro-tools that come with Apache Avro, so you can look at the contents of these files as JSON records. Try the following:
+When Divolte Collector shuts down it will flush and close all open files, so now we can have a look at the data that was generated. By default, with no configuration, Divolte Collector will write ``.avro`` files in :file:`/tmp` on the local filesystem. For convenience, Divolte Collector packages a version of the avro-tools that come with Apache Avro, so you can look at the contents of these files as JSON records. Try the following:
 
 .. code-block:: bash
 
   % find /tmp/*.avro -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
 
-This finds a ``.avro`` file in your ``/tmp`` directory and passes it to the ``avro-tools tojson`` command. Depending on how many requests you made, it will display multiple records. The output for a single record should look like this:
+This finds a ``.avro`` file in your :file:`/tmp` directory and passes it to the :code:`avro-tools tojson` command. Depending on how many requests you made, it will display multiple records. The output for a single record should look like this:
 
 .. code-block:: json
 
@@ -140,14 +140,14 @@ This finds a ``.avro`` file in your ``/tmp`` directory and passes it to the ``av
 Bring your own schema
 =====================
 
-Divolte Collector uses Avro to write data to files. Avro records require you to define a `Avro schema <http://avro.apache.org/docs/1.8.1/spec.html>`_ that defines the fields in the records. Divolte Collector comes with a `built in generic schema <https://github.com/divolte/divolte-schema>`_ that is useful for keeping track of the basics of your clickstream data, but in most cases it makes sense to create your own schema with more specific fields that have a meaning within your website's domain. In order to achieve this two things are needed:
+Divolte Collector uses Avro to write data to files. Avro records require you to define a `Avro schema <http://avro.apache.org/docs/1.8.1/spec.html>`_ that defines the fields in the records. Divolte Collector comes with a `built-in generic schema <https://github.com/divolte/divolte-schema>`_ that is useful for keeping track of the basics of your clickstream data, but in most cases it makes sense to create your own schema with more specific fields that have a meaning within your website's domain. In order to achieve this two things are needed:
 
 1. A custom Avro schema
 2. A mapping that defines how to map requests onto the custom schema.
 
 Let's create a custom schema.
 
-Create a file called ``MyEventRecord.avsc`` with the following contents (for example in the ``conf/`` directory under the Divolte Collector installation):
+Create a file called :file:`MyEventRecord.avsc` with the following contents (for example in the :file:`conf/` directory under the Divolte Collector installation):
 
 .. code-block:: json
 
@@ -165,7 +165,7 @@ Create a file called ``MyEventRecord.avsc`` with the following contents (for exa
     ]
   }
 
-This is a very minimal custom schema, but it allows us to demonstrate a very important feature in Divolte Collector: mapping. In order to use the custom schema, we need to create a mapping that maps incoming requests onto the schema fields. Create a file called ``mapping.groovy`` with the following contents:
+This is a very minimal custom schema, but it allows us to demonstrate a very important feature in Divolte Collector: mapping. In order to use the custom schema, we need to create a mapping that maps incoming requests onto the schema fields. Create a file called :file:`mapping.groovy` with the following contents:
 
 .. code-block:: groovy
 
@@ -185,7 +185,7 @@ This is a very minimal custom schema, but it allows us to demonstrate a very imp
 
 The mapping is defined using a internal Groovy DSL in Divolte Collector. In this example we map a number of values onto fields in the Avro schema. The values for timestamp, remoteHost and location are mapped directly onto fields in the schema. In the remainder of the script, we tell Divolte Collector to take the fragment of the location (the part after the ``#`` in the URL) and try to parse that into a (partial) URI again. From the result URI, we map the path onto a schema field. Subsequently, parse out the values to two query string parameters (``q`` and ``n``) and map those onto separate schema fields after trying to parse an integer out of the ``n`` parameter. The mapping DSL allows for a lot more constructs, including conditional logic, regex matching and more; see the :doc:`mapping_reference` documentation for more information on this.
 
-Finally, we need to configure Divolte Collector to use our custom schema and mapping. Edit the (empty) ``divolte-collector.conf`` file in the ``conf/`` directory of your installation to resemble the following configuration (be sure to use the correct paths for the schema and mapping file that you just created):
+Finally, we need to configure Divolte Collector to use our custom schema and mapping. Edit the (empty) :file:`divolte-collector.conf` file in the :file:`conf/` directory of your installation to resemble the following configuration (be sure to use the correct paths for the schema and mapping file that you just created):
 
 .. code-block:: none
 
@@ -204,7 +204,7 @@ Finally, we need to configure Divolte Collector to use our custom schema and map
 
   Divolte Collector configuration uses the `Typesafe Config <https://github.com/typesafehub/config>`_ library, which uses a configuration dialect called `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`_.
 
-Now, once more, start Divolte Collector as before. Only this time, take your web browser to this address: `http://127.0.0.1:8290/#/fragment/path?q=textual&n=42 <http://127.0.0.1:8290/#/fragment/path?q=textual&n=42>`_. You can refresh the page a couple of times and perhaps change the query string parameter values that are in the URL to something else. After you have done one or more requests, stop Divolte Collector again (using CTRL+C) and look at the collected data using this command again:
+Now, once more, start Divolte Collector as before. Only this time, take your web browser to this address: `http://127.0.0.1:8290/#/fragment/path?q=textual&n=42 <http://127.0.0.1:8290/#/fragment/path?q=textual&n=42>`_. You can refresh the page a couple of times and perhaps change the query string parameter values that are in the URL to something else. After you have done one or more requests, stop Divolte Collector again (using :kbd:`Control-c`) and look at the collected data using this command again:
 
 .. code-block:: console
 
@@ -255,7 +255,7 @@ The tag is the line:
 
   <script src="//localhost:8290/divolte.js" defer async></script>
 
-The tag performs a number of important tasks. It generates unique identifiers for parties, sessions, pageviews and events. It collects the location, referer, screen and viewport size information from the browser sends it to the Divolte Collector server.
+The tag performs a number of important tasks. It generates unique identifiers for parties, sessions, page-views and events. It collects the location, referer, screen and viewport size information from the browser sends it to the Divolte Collector server.
 
 In order to instrument a web page of your own, insert the tag as above into the HTML code on each page. Additionally, once the Divolte Collector JavaScript is loaded in the browser it is possible to fire custom events from JavaScript in the page:
 
@@ -290,16 +290,16 @@ In order to use the custom events in your mapping, map values onto fields like t
 
 Writing to HDFS
 ===============
-So far, we've been writing our data to the local filesystem in ``/tmp``. Although this works it not the intended use of Divolte Collector. The aim is to write the clickstream data to HDFS, such that it is safely and redundantly stored and available for processing using any tool available that knows how to process Avro files (e.g. Apache Hive or Apache Spark). It is trivial to configure Divolte Collector to write to HDFS, assuming you have a working HDFS instance setup. (Setting this up is out of the scope of this getting started guide. There are many great resources to be found on the internet about getting started with and running Hadoop and HDFS.)
+So far, we've been writing our data to the local filesystem in :file:`/tmp`. Although this works it not the intended use of Divolte Collector. The aim is to write the clickstream data to HDFS, such that it is safely and redundantly stored and available for processing using any tool available that knows how to process Avro files (e.g. Apache Hive or Apache Spark). It is trivial to configure Divolte Collector to write to HDFS, assuming you have a working HDFS instance setup. (Setting this up is out of the scope of this getting started guide. There are many great resources to be found on the internet about getting started with and running Hadoop and HDFS.)
 
 Assuming you have a HDFS instance running somewhere, there are two ways of making Divolte Collector write files to it:
 
 1. Direct configuration; or
-2. Setting the ``HADOOP_CONF_DIR`` environment variable to point to a directory containing valid Hadoop configuration files.
+2. Setting the :envvar:`HADOOP_CONF_DIR` environment variable to point to a directory containing valid Hadoop configuration files.
 
 While the first option works, it is recommended to use the latter as it is easier to maintain when your HDFS parameters change over time.
 
-First, we'll change the configuration to write files to HDFS. Add the following section to ``conf/divolte-collector.conf``:
+First, we'll change the configuration to write files to HDFS. Add the following section to :file:`conf/divolte-collector.conf`:
 
 .. code-block:: none
 
@@ -348,7 +348,7 @@ First, we'll change the configuration to write files to HDFS. Add the following 
 
 Note that you need to create these directories prior to starting Divolte Collector. It will not startup if the directories do not exist.
 
-If you have a working HDFS setup and a directory with the appropriate configuration files, Divolte Collector will use them automatically if a ``HADOOP_CONF_DIR`` environment variable is set pointing to that directory. Alternatively, HDFS client properties can be provided in the configuration:
+If you have a working HDFS setup and a directory with the appropriate configuration files, Divolte Collector will use them automatically if a :envvar:`HADOOP_CONF_DIR` environment variable is set pointing to that directory. Alternatively, HDFS client properties can be provided in the configuration:
 
 .. code-block:: none
 
@@ -371,7 +371,7 @@ With everything in place, start Divolte Collector again, create some events and 
   -rw-r--r--   1 divolte supergroup        617 2014-08-30 11:46 /divolte/inflight/20141220152512-divolte-tracking-divoltehost-1.avro.partial
   -rw-r--r--   1 divolte supergroup        617 2014-08-30 11:46 /divolte/inflight/20141220152513-divolte-tracking-divoltehost-2.avro.partial
 
-After the rolling interval, files should show up in the publish directory with a .avro extension (without the .partial). However, if a file was opened in the working directory, but no events were ever written to it (because there was no activity or otherwise), it will not be moved to the publish directory, but will be deleted entirely instead:
+After the rolling interval, files should show up in the publish directory with a ``.avro`` extension (without the ``.partial``). However, if a file was opened in the working directory, but no events were ever written to it (because there was no activity or otherwise), it will not be moved to the publish directory, but will be deleted entirely instead:
 
 .. code-block:: console
 

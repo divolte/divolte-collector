@@ -104,7 +104,7 @@ pygments_style = 'sphinx'
 #keep_warnings = False
 
 # If true, Sphinx will warn about all references where the target cannot be found.
-nitpicky = True
+#nitpicky = False
 
 # -- Options for HTML output ----------------------------------------------
 

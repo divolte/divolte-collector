@@ -7,13 +7,13 @@ Configuration files
 ===================
 The main configuration for Divolte Collector consists of three files:
 
-- ``divolte-env.sh``: a shell script that is included in the startup script to set environment variables and JVM startup arguments.
-- ``logback.xml``: the logging configuration.
-- ``divolte-collector.conf``: the main configuration file for Divolte Collector.
+- :file:`divolte-env.sh`: a shell script that is included in the startup script to set environment variables and JVM startup arguments.
+- :file:`logback.xml`: the logging configuration.
+- :file:`divolte-collector.conf`: the main configuration file for Divolte Collector.
 
 Configuration directory
 -----------------------
-Divolte Collector will try to find configuration files at startup in the configuration directory. Typically this is the ``conf/`` directory nested under the Divolte Collector installation. Divolte Collector will try to locate the configuration directory at ``../conf`` relative to the startup script. The configuration directory can be overridden by setting the ``DIVOLTE_CONF_DIR`` environment variable. If set, the value will be used as configuration directory. If you have installed Divolte Collector from a RPM, the init script will set this variable to ``/etc/divolte-collector``.
+Divolte Collector will try to find configuration files at startup in the configuration directory. Typically this is the :file:`conf/` directory nested under the Divolte Collector installation. Divolte Collector will try to locate the configuration directory at :file:`../conf` relative to the startup script. The configuration directory can be overridden by setting the :envvar:`DIVOLTE_CONF_DIR` environment variable. If set, the value will be used as configuration directory. If you have installed Divolte Collector from a RPM, the init script will set this variable to :file:`/etc/divolte-collector`.
 
 divolte-env.sh
 --------------
@@ -33,7 +33,7 @@ HADOOP_CONF_DIR
 JAVA_HOME
 ^^^^^^^^^
 :Description:
-  The directory where the JRE/JDK is located. Divolte Collector will use ``$JAVA_HOME/bin/java`` as the Java executable during startup. If this is not set, Divolte Collector will attempt to find a suitable JDK in a number of common Java installation locations on Linux systems. It is however not recommended to rely on this mechanism for production use.
+  The directory where the JRE/JDK is located. Divolte Collector will use :command:`$JAVA_HOME/bin/java` as the Java executable during startup. If this is not set, Divolte Collector will attempt to find a suitable JDK in a number of common Java installation locations on Linux systems. It is however not recommended to rely on this mechanism for production use.
 
 :Example:
 
@@ -44,7 +44,7 @@ JAVA_HOME
 DIVOLTE_JAVA_OPTS
 ^^^^^^^^^^^^^^^^^
 :Description:
-  Additional arguments passed to the Java Virtual Machine on startup. If not set, by default Divolte Collector will start the JVM with ``-XX:+UseG1GC -Djava.awt.headless=true``. It is recommended to use the G1 garbage collector. For light and medium traffic, the defaults tend to work fine. *If this setting is set, Divolte Collector will not add any arguments by itself; this setting overrides the defaults.*
+  Additional arguments passed to the Java Virtual Machine on startup. If not set, by default Divolte Collector will start the JVM with :code:`-XX:+UseG1GC -Djava.awt.headless=true`. It is recommended to use the G1 garbage collector. For light and medium traffic, the defaults tend to work fine. *If this setting is set, Divolte Collector will not add any arguments by itself; this setting overrides the defaults.*
 
 :Example:
 
@@ -54,7 +54,7 @@ DIVOLTE_JAVA_OPTS
 
 logback.xml
 -----------
-Divolte Collector uses the `Logback Project <http://logback.qos.ch>`_ as its logging provider. This provider is configured through the ``logback.xml`` file in the configuration directory. For more information about the settings in this file, review the `Configuration chapter in the Logback Manual <http://logback.qos.ch/manual/configuration.html>`_.
+Divolte Collector uses the `Logback Project <http://logback.qos.ch>`_ as its logging provider. This provider is configured through the :file:`logback.xml` file in the configuration directory. For more information about the settings in this file, review the `Configuration chapter in the Logback Manual <http://logback.qos.ch/manual/configuration.html>`_.
 
 divolte-collector.conf
 ----------------------
@@ -76,7 +76,7 @@ Nesting and dot separated namespacing can be used interchangeably:
   // Is the same as this:
   divolte.global.server.host = 127.0.0.1
 
-Environment variable overrides can be used. In this example the ``divolte.global.server.port`` setting defaults to 8290, unless the ``DIVOLTE_PORT`` environment variable is set:
+Environment variable overrides can be used. In this example the ``divolte.global.server.port`` setting defaults to 8290, unless the :envvar:`DIVOLTE_PORT` environment variable is set:
 
 .. code-block:: none
 
@@ -126,7 +126,7 @@ For a full overview please refer to the `HOCON features and specification <https
 Configuration reference
 =======================
 
-The main configuration is read from ``divolte-collector.conf``, which consists of several sections:
+The main configuration is read from :file:`divolte-collector.conf`, which consists of several sections:
 
 - *Global* (``divolte.global``): Global settings that affect the entire service.
 - *Sources* (``divolte.sources``): Configured sources for Divolte Collector events.
@@ -147,7 +147,7 @@ This section controls the settings for the internal HTTP server of Divolte Colle
 Property: ``divolte.global.server.host``
 """"""""""""""""""""""""""""""""""""""""
 :Description:
-  The address to which the server binds. Set to a specific IP address to selectively listen on that interface, or `0.0.0.0` to listen on all interfaces.
+  The address to which the server binds. Set to a specific IP address to selectively listen on that interface, or ``0.0.0.0`` to listen on all interfaces.
 :Default:
   The address of a loopback interface.
 :Example:
@@ -163,7 +163,7 @@ Property: ``divolte.global.server.port``
 :Description:
   The TCP port on which the server listens.
 :Default:
-  ``8290``, or the content of the ``DIVOLTE_PORT`` environment variable if set.
+  ``8290``, or the content of the :envvar:`DIVOLTE_PORT` environment variable if set.
 :Example:
 
   .. code-block:: none
@@ -175,7 +175,7 @@ Property: ``divolte.global.server.port``
 Property: ``divolte.global.server.use_x_forwarded_for``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  Whether to use the ``X-Forwarded-For`` HTTP header for determining the source IP of a request, if present. If multiple values are present, the last value is used.
+  Whether to use the :mailheader:`X-Forwarded-For` HTTP header for determining the source IP of a request, if present. If multiple values are present, the last value is used.
 
   Both of these examples would yield a source IP of ``11.34.82.30``:
 
@@ -184,7 +184,7 @@ Property: ``divolte.global.server.use_x_forwarded_for``
      | ``X-Forwarded-For: 11.45.82.30``
 
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
@@ -198,7 +198,7 @@ Property: ``divolte.global.server.serve_static_resources``
 :Description:
   When true Divolte Collector serves a static test page at ``/``.
 :Default:
-  ``true``
+  :code:`true`
 :Example:
 
   .. code-block:: none
@@ -318,7 +318,7 @@ Property: ``divolte.global.hdfs.enabled``
 :Description:
   Whether or not HDFS support is enabled or not. If disabled all HDFS sinks are ignored.
 :Default:
-  ``true``
+  :code:`true`
 :Example:
 
   .. code-block:: none
@@ -358,7 +358,7 @@ Property: ``divolte.global.hdfs.buffer_size``
 Property: ``divolte.global.hdfs.client``
 """"""""""""""""""""""""""""""""""""""""
 :Description:
-  Properties that will be used to configure the HDFS client used by HDFS sinks. If set, these properties will be used *instead of* the settings from ``hdfs-site.xml`` in the directory specified by the ``HADOOP_CONF_DIR``. Although it is possible to configure all settings here instead of in ``HADOOP_CONF_DIR`` this is not recommended.
+  Properties that will be used to configure the HDFS client used by HDFS sinks. If set, these properties will be used *instead of* the settings from :file:`hdfs-site.xml` in the directory specified by the :envvar:`HADOOP_CONF_DIR`. Although it is possible to configure all settings here instead of in :envvar:`HADOOP_CONF_DIR` this is not recommended.
 :Default:
   *Not set*
 :Example:
@@ -378,7 +378,7 @@ Property: ``divolte.global.kafka.enabled``
 :Description:
   This controls whether flushing to Kafka is enabled or not. If disabled all Kafka sinks are ignored. (This is disabled by default because the producer configuration for Kafka is normally site-specific.)
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
@@ -434,6 +434,8 @@ Property: ``divolte.global.kafka.producer``
       compression.type = lz4
       max.in.flight.requests.per.connection = 1
     }
+
+  Note the use of :envvar:`DIVOLTE_KAFKA_BROKER_LIST` and :envvar:`DIVOLTE_KAFKA_CLIENT_ID` environment variables, if they have been set.
 
 :Example:
 
@@ -499,7 +501,7 @@ events:
     divolte.signal('eventType', { 'foo': 'divolte', 'bar': 42 })
   </script>
 
-The first argument to the ``divolte.signal(...)`` function is the type of event, while the second argument is an arbitrary object containing custom parameters associated with the event. Storing the event and its parameters into the configured Avro schema is controlled via mapping; see the :doc:`mapping_reference` chapter for details.
+The first argument to the :samp:`divolte.signal({...})` function is the type of event, while the second argument is an arbitrary object containing custom parameters associated with the event. Storing the event and its parameters into the configured Avro schema is controlled via mapping; see the :doc:`mapping_reference` chapter for details.
 
 Browser sources are able to detect some cases of corruption in the event data. The most common source of this is due to URLs being truncated, but there are also other sources of corruption between the client and the server. Corrupted events are flagged as such but still made available for mapping. (Mappings may choose to discard corrupted events, but by default they are processed normally.)
 
@@ -627,7 +629,7 @@ Browser source property: ``javascript.logging``
 :Description:
   Enable or disable the logging to the JavaScript console in the browser.
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
@@ -642,7 +644,7 @@ Browser source property: ``javascript.debug``
 :Description:
   When enabled, the served JavaScript will be less compact and *slightly* easier to debug. This setting is mainly intended to help track down problems in either the minification process used to reduce the size of the tracking script, or in the behaviour of specific browser versions.
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
@@ -657,7 +659,7 @@ Browser source property: ``javascript.auto_page_view_event``
 :Description:
   When enabled the JavaScript tag automatically generates a ``pageView`` event when loaded, simplifying site integration. If sites wish to control all events (including the initial ``pageView`` event) this can be disabled.
 :Default:
-  ``true``
+  :code:`true`
 :Example:
 
   .. code-block:: none
@@ -771,7 +773,7 @@ Mapping property: ``discard_corrupted``
 :Description:
   Events contain a flag indicating whether the source detected corruption in the event data. If this property is enabled corrupt events will be discarded and not subject to mapping and further processing. Otherwise a best effort will be made to map and process the event as if it was normal.
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
@@ -785,7 +787,7 @@ Mapping property: ``discard_duplicates``
 :Description:
   Clients sometimes deliver events to sources multiple times, normally within a short period of time. Sources contain a probabilistic filter which can detect this and set a flag on the event. If this property is enabled events flagged as duplicates will be discarded without further mapping or processing.
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
@@ -871,7 +873,7 @@ HDFS Sink Property: ``file_strategy.working_dir``
 :Description:
   Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
 :Default:
-  ``/tmp``
+  :file:`/tmp`
 :Example:
 
   .. code-block:: none
@@ -886,7 +888,7 @@ HDFS Sink Property: ``file_strategy.publish_dir``
 :Description:
   Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
 :Default:
-  ``/tmp``
+  :file:`/tmp`
 :Example:
 
   .. code-block:: none
@@ -914,7 +916,7 @@ HDFS Sink Property: ``file_strategy.roll_every``
 HDFS Sink Property: ``file_strategy.sync_file_after_records``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The maximum number of records that should be written to the working file since the last flush before flushing again. Flushing is performed by issuing a ``hsync()`` call to flush HDFS data.
+  The maximum number of records that should be written to the working file since the last flush before flushing again. Flushing is performed by issuing a :code:`hsync()` call to flush HDFS data.
 :Default:
   1000
 :Example:
@@ -929,7 +931,7 @@ HDFS Sink Property: ``file_strategy.sync_file_after_records``
 HDFS Sink Property: ``file_strategy.sync_file_after_duration``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The maximum time that may elapse after a record is written to the working file before it is flushed. Flushing is performed by issuing a ``hsync()`` call to flush HDFS data.
+  The maximum time that may elapse after a record is written to the working file before it is flushed. Flushing is performed by issuing a :code:`hsync()` call to flush HDFS data.
 :Default:
   30 seconds
 :Example:
