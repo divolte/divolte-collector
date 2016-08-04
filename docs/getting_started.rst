@@ -418,6 +418,21 @@ Data in Kafka
 -------------
 Avro files on HDFS are written with the schema in the header. Unfortunately Kafka doesn't really have a clear way of passing along the schema. For the messages on Kafka queues we expect the consumer to know the schema in advance, meaning that *the messages that are passed onto the queue only contain the raw bytes of the serialized Avro record without any metadata*. The key of each message is the party ID that for the event. Divolte Collector provides a small helper library to easily create Kafka consumers in Java using Avro's code generation support. There is an example Kafka consumer with step by step instruction on getting it up and running in our usage examples repository here: `https://github.com/divolte/divolte-examples/tree/master/tcp-kafka-consumer <https://github.com/divolte/divolte-examples/tree/master/tcp-kafka-consumer>`_.
 
+Event Flows
+===========
+
+So far we've seen a single source of events being mapped to HDFS, and Kafka if you tried this. However Divolte can be
+configured with multiple:
+
+- *Sources* of events, which is where Divolte events arrive.
+- *Sinks* (destinations) where Avro records can be written after they have been produced by mapping Divolte events.
+- *Mappings* between sources and sinks, which controls which sources are connected to which sinks, and how the events
+  are converted to Avro records.
+
+Events flow from sources to sinks, via an intermediate mapping. Allowing multiple sources, sinks and mappings allows Divolte to support multiple sites and domains, each of which may require independent mapping. Note, however, that a sink can only support a single Avro schema: all mappings which refer to it must be configured to produce records conforming to the same Avro schema.
+
+An event flow imposes a partial ordering on the events it receives: events from a source that have the same party identifier will be written to sinks in the same order that they were received in. (This doesn't apply to events received across different sources: even if they share the same party identifier their relative ordering is not guaranteed.)
+
 What's next?
 ============
 * Once you are collecting data to either HDFS or Kafka, see our `examples <https://github.com/divolte/divolte-examples>`_ to learn how to use your clickstream data in tools like Apache Spark, Apache Hive or Impala or build near real-time consumers for Apache Kafka with your Divolte Collector data.
