@@ -1629,7 +1629,7 @@ Derived simple value: :code:`ip2geo().latitude()`
     map ip2geo().latitude() onto 'latitudeField'
 
 :Description:
-  The latitude for the geolocation in English.
+  The latitude for the geolocation.
 
 :Type:
   :code:`double`
@@ -1643,7 +1643,7 @@ Derived simple value: :code:`ip2geo().longitude()`
     map ip2geo().longitude() onto 'longitudeField'
 
 :Description:
-  The longitude for the geolocation in English.
+  The longitude for the geolocation.
 
 :Type:
   :code:`double`
