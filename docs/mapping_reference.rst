@@ -1517,7 +1517,7 @@ Derived simple value: :code:`ip2geo().cityId()`
     map ip2geo().cityId() onto 'cityIdField'
 
 :Description:
-  The City ID for the geolocation as known by http://www.geonames.org/.
+  The `GeoNames`_ City ID for the geolocation.
 
 :Type:
   :code:`int`
@@ -1559,7 +1559,7 @@ Derived simple value: :code:`ip2geo().continentId()`
     map ip2geo().continentId() onto 'continentIdField'
 
 :Description:
-  The Continent Id for the geolocation as known by http://www.geonames.org/.
+  The `GeoNames`_ Continent Id for the geolocation.
 
 :Type:
   :code:`int`
@@ -1601,7 +1601,7 @@ Derived simple value: :code:`ip2geo().countryId()`
     map ip2geo().countryId() onto 'countryIdField'
 
 :Description:
-  The Country Id for the geolocation as known by http://www.geonames.org/.
+  The `GeoNames`_ Country Id for the geolocation.
 
 :Type:
   :code:`int`
@@ -1699,7 +1699,7 @@ Derived simple value: :code:`ip2geo().mostSpecificSubdivisionId()`
     map ip2geo().mostSpecificSubdivisionId() onto 'mostSpecificSubdivisionIdField'
 
 :Description:
-  The ID for the most specific subdivision known for the geolocation as known by http://www.geonames.org/.
+  The `GeoNames`_ ID for the most specific subdivision known for the geolocation.
 
 :Type:
   :code:`int`
@@ -1778,7 +1778,7 @@ Derived complex value: :code:`ip2geo().subdivisionIds()`
     map ip2geo().subdivisionIds() onto 'subdivisionIdsFields'
 
 :Description:
-  The IDs for all subdivisions for the geolocation in order from least specific to most specific as known by http://www.geonames.org/.
+  The `GeoNames`_ IDs for all subdivisions for the geolocation in order from least to most specific.
 
 :Type:
   :code:`List<String>`
@@ -1820,3 +1820,5 @@ Derived complex value: :code:`ip2geo().subdivisionNames()`
 
   Geo IP satelliteProvider
   ~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _GeoNames: http://www.geonames.org/
