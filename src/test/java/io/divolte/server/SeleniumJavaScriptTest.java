@@ -19,6 +19,7 @@ package io.divolte.server;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.divolte.server.ServerTestUtils.EventPayload;
+import io.divolte.server.config.BrowserSourceConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 import org.openqa.selenium.By;
@@ -229,13 +230,13 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         driver.get(urlOf(BASIC));
         server.waitForEvent();
 
-        final Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.party_cookie")).getValue());
+        final Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(BrowserSourceConfiguration.DEFAULT_BROWSER_SOURCE_CONFIGURATION.partyCookie).getValue());
         assertTrue(parsedPartyCookieOption.isPresent());
         assertThat(
                 parsedPartyCookieOption.get(),
                 isA(DivolteIdentifier.class));
 
-        final Optional<DivolteIdentifier> parsedSessionCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(server.config.getString("divolte.tracking.session_cookie")).getValue());
+        final Optional<DivolteIdentifier> parsedSessionCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(BrowserSourceConfiguration.DEFAULT_BROWSER_SOURCE_CONFIGURATION.sessionCookie).getValue());
         assertTrue(parsedSessionCookieOption.isPresent());
         assertThat(
                 parsedSessionCookieOption.get(),

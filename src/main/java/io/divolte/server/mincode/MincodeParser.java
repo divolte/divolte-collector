@@ -59,8 +59,7 @@ public class MincodeParser extends ParserBase {
         this.objectCodec = objectCodec;
     }
 
-    @Override
-    protected boolean loadMore() throws IOException {
+    private boolean _loadMore() throws IOException {
         _currInputProcessed += _inputEnd;
         _currInputRowStart -= _inputEnd;
         final boolean loadedMore;
@@ -79,13 +78,13 @@ public class MincodeParser extends ParserBase {
     }
 
     private int nextChar() throws IOException {
-        return _inputPtr < _inputEnd || loadMore() ? inputBuffer[_inputPtr++] : -1;
+        return _inputPtr < _inputEnd || _loadMore() ? inputBuffer[_inputPtr++] : -1;
     }
 
     private char nextChar(final String eofMsg) throws IOException {
         final int nextChar = nextChar();
         if (-1 == nextChar) {
-            _reportInvalidEOF(eofMsg);
+            _reportInvalidEOF(eofMsg, _currToken);
         }
         return (char)nextChar;
     }
@@ -129,8 +128,8 @@ public class MincodeParser extends ParserBase {
         //         and rolling over to new ones as necessary.
         loop:
         for (;;) {
-            if (_inputPtr >= _inputEnd && !loadMore()) {
-                _reportInvalidEOF(": was expecting end of string value");
+            if (_inputPtr >= _inputEnd && !_loadMore()) {
+                _reportInvalidEOF(": was expecting end of string value", _currToken);
             }
             char c = inputBuffer[_inputPtr++];
             switch (c) {
