@@ -1,5 +1,5 @@
 #
-# Copyright 2014 GoDataDriven B.V.
+# Copyright 2016 GoDataDriven B.V.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,26 +14,19 @@
 # limitations under the License.
 #
 
-# Gradle
-/.gradle
-/build/
+# Top-most EditorConfig file.
+root = true
 
-# Finder
-.DS_Store
+# Universal settings.
+[*]
+indent_style = space
+indent_size = 4
+tab_width = 8
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
 
-# IntelliJ.
-*.iml
-/.idea/
-/out
-
-# Eclipse.
-/.project
-/.classpath
-/.settings
-/.cache
-/bin
-
-/target/
-
-# Local/non-default configuration
-application.conf
+# Some exceptions for HOCON, JavaScript and our Documentation (ReStructuredText).
+[*.{conf,js,rst}]
+indent_size = 2
