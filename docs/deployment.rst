@@ -36,7 +36,7 @@ Example nginx configuration
 When using `nginx <http://nginx.org/>`_ as a reverse proxy and load balancer in front of Divolte Collector, you can use this snippet for configuring nginx::
 
   upstream divolte {
-      hash $request_uri consistent; 
+      hash $request_uri consistent;
 
       server divolte1.internaldomain:8290;
       server divolte1.internaldomain:8290;
