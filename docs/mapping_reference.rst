@@ -1368,7 +1368,7 @@ Derived simple value: :code:`userAgent().family()`
     map userAgent().family() onto 'uaFamilyField'
 
 :Description:
-  The canonical name for the family of the parsed user agent. E.g. 'Mobile Safari' for Apple's mobile browser.
+  The canonical name for the family of the parsed user agent. E.g. ``Mobile Safari`` for Apple's mobile browser.
 
 :Type:
   :code:`String`
@@ -1384,7 +1384,7 @@ Derived simple value: :code:`userAgent().vendor()`
     map userAgent().vendor() onto 'uaVendorField'
 
 :Description:
-  The name of the company or organisation that produces the user agent software. E.g. 'Google Inc.' for Google Chrome browsers.
+  The name of the company or organisation that produces the user agent software. E.g. ``Google Inc.`` for Google Chrome browsers.
 
 :Type:
   :code:`String`
@@ -1400,7 +1400,7 @@ Derived simple value: :code:`userAgent().type()`
     map userAgent().type() onto 'uaTypeField'
 
 :Description:
-  The type of user agent that was used. E.g. 'Browser' for desktop browsers.
+  The type of user agent that was used. E.g. ``Browser`` for desktop browsers.
 
 :Type:
   :code:`String`
@@ -1416,7 +1416,7 @@ Derived simple value: :code:`userAgent().version()`
     map userAgent().version() onto 'uaVersionField'
 
 :Description:
-  The version string of the user agent software. E.g. '39.0.2171.71' for Google Chrome 39.
+  The version string of the user agent software. E.g. ``39.0.2171.71`` for Google Chrome 39.
 
 :Type:
   :code:`String`
@@ -1432,7 +1432,7 @@ Derived simple value: :code:`userAgent().deviceCategory()`
     map userAgent().deviceCategory() onto 'uaDeviceCategoryField'
 
 :Description:
-  The type of device that the user agent runs on. E.g. 'Tablet' for a tablet based browser.
+  The type of device that the user agent runs on. E.g. ``Tablet`` for a tablet based browser.
 
 :Type:
   :code:`String`
@@ -1448,7 +1448,7 @@ Derived simple value: :code:`userAgent().osFamily()`
     map userAgent().osFamily() onto 'uaOSFamilyField'
 
 :Description:
-  The operating system family that the user agent runs on. E.g. 'OS X' for a Apple OS X based desktop.
+  The operating system family that the user agent runs on. E.g. ``OS X`` for an Apple Mac OS X based desktop.
 
 :Type:
   :code:`String`
@@ -1466,7 +1466,7 @@ Derived simple value: :code:`userAgent().osVersion()`
     map userAgent().osVersion() onto 'uaOSVersionField'
 
 :Description:
-  The version string of the operating system that the user agent runs on. E.g. '10.10.1' for Max OS X 10.10.1.
+  The version string of the operating system that the user agent runs on. E.g. ``10.10.1`` for Mac OS X 10.10.1.
 
 :Type:
   :code:`String`
@@ -1482,7 +1482,7 @@ Derived simple value: :code:`userAgent().osVendor()`
     map userAgent().osVendor() onto 'uaOSVendorField'
 
 :Description:
-  The name of the company or organisation that produces the operating system that the user agent software runs on. E.g. 'Apple Computer, Inc.' for Apple Mac OS X.
+  The name of the company or organisation that produces the operating system that the user agent software runs on. E.g. ``Apple Computer, Inc.`` for Apple Mac OS X.
 
 :Type:
   :code:`String`
