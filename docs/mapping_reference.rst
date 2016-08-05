@@ -1657,7 +1657,7 @@ Derived simple value: :code:`ip2geo().metroCode()`
     map ip2geo().metroCode() onto 'metroCodeField'
 
 :Description:
-  The ISO metro code for the geolocation.
+  The Metro Code for the geolocation.
 
 :Type:
   :code:`String`
