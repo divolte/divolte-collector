@@ -1671,7 +1671,7 @@ Derived simple value: :code:`ip2geo().timeZone()`
     map ip2geo().timeZone() onto 'timeZoneField'
 
 :Description:
-  The time zone name for the geolocation as found in the `IANA Time Zone Database <http://www.iana.org/time-zones>`_.
+  The name of the time zone for the geolocation as found in the `IANA Time Zone Database <http://www.iana.org/time-zones>`_.
 
 :Type:
   :code:`String`
@@ -1764,7 +1764,7 @@ Derived complex value: :code:`ip2geo().subdivisionCodes()`
     map ip2geo().subdivisionCodes() onto 'subdivisionCodesField'
 
 :Description:
-  The ISO codes for all subdivisions for the geolocation in order from least specific to most specific.
+  The ISO codes for all subdivisions for the geolocation in order from least to most specific.
 
 :Type:
   :code:`List<String>`
