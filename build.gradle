@@ -197,14 +197,14 @@ findbugs() {
 }
 
 pmd {
-    toolVersion = "5.4.2"
+    toolVersion = "5.5.1"
     ruleSetFiles = files("config/pmd/ruleset.xml")
     // The default set includes 'basic', so empty it. (We include basic via our custom ruleset.)
     ruleSets = []
 }
 
 checkstyle {
-    toolVersion = "6.19"
+    toolVersion = "7.1"
 }
 
 jacoco {
