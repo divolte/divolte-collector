@@ -41,6 +41,7 @@ public final class AvroRecordBuffer {
     private final long cookieUtcOffset;
     private final DivolteIdentifier partyId;
     private final DivolteIdentifier sessionId;
+    private final GenericRecord record;
     private final ByteBuffer byteBuffer;
 
     private AvroRecordBuffer(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final long eventTime, final long cookieUtcOffset, final GenericRecord record) throws IOException {
@@ -48,6 +49,7 @@ public final class AvroRecordBuffer {
         this.sessionId = Objects.requireNonNull(sessionId);
         this.eventTime = eventTime;
         this.cookieUtcOffset = cookieUtcOffset;
+        this.record = record;
 
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
@@ -82,6 +84,10 @@ public final class AvroRecordBuffer {
 
     public long getCookieUtcOffset() {
         return cookieUtcOffset;
+    }
+
+    public GenericRecord getRecord() {
+        return record;
     }
 
     public static AvroRecordBuffer fromRecord(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final long eventTime, final long cookieUtcOffset, final GenericRecord record) {
