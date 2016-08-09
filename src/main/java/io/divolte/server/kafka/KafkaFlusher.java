@@ -16,19 +16,9 @@
 
 package io.divolte.server.kafka;
 
-import com.google.common.collect.ImmutableList;
-import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.DivolteIdentifier;
-import io.divolte.server.processing.ItemProcessor;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.errors.RetriableException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
@@ -36,8 +26,22 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.errors.RetriableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.processing.Item;
+import io.divolte.server.processing.ItemProcessor;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -55,18 +59,19 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
         this.producer = Objects.requireNonNull(producer);
     }
 
-    private ProducerRecord<DivolteIdentifier, AvroRecordBuffer> buildRecord(AvroRecordBuffer record) {
+    private ProducerRecord<DivolteIdentifier, AvroRecordBuffer> buildRecord(final AvroRecordBuffer record) {
         return new ProducerRecord<>(topic, record.getPartyId(), record);
     }
 
     @Override
-    public ProcessingDirective process(final AvroRecordBuffer record) {
+    public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
+        final AvroRecordBuffer record = item.payload;
         logger.debug("Processing individual record: {}", record);
         return flush(ImmutableList.of(buildRecord(record)));
     }
 
     @Override
-    public ProcessingDirective process(final Queue<AvroRecordBuffer> batch) {
+    public ProcessingDirective process(final Queue<Item<AvroRecordBuffer>> batch) {
         final int batchSize = batch.size();
         final ProcessingDirective result;
         switch (batchSize) {
@@ -81,8 +86,9 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
             logger.debug("Processing batch of {} records.", batchSize);
             final List<ProducerRecord<DivolteIdentifier, AvroRecordBuffer>> kafkaMessages =
                     batch.stream()
+                         .map(i -> i.payload)
                          .map(this::buildRecord)
-                         .collect(Collectors.toList());
+                         .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
             // Clear the messages now; on failure they'll be retried as part of our
             // pending operation.
             batch.clear();
@@ -118,10 +124,11 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
     private ImmutableList<ProducerRecord<DivolteIdentifier,AvroRecordBuffer>> sendBatch(final List<ProducerRecord<DivolteIdentifier, AvroRecordBuffer>> batch) throws InterruptedException {
         // First start sending the messages.
         // (This will serialize them, determine the partition and then assign them to a per-partition buffer.)
+        final int batchSize = batch.size();
         final List<Future<RecordMetadata>> sendResults =
                 batch.stream()
                      .map(producer::send)
-                     .collect(Collectors.toList());
+                     .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
         // The producer will send the messages in the background. As of 0.8.x we can't
         // flush, but have to wait for that to occur based on the producer configuration.
         // (By default it will immediately flush, but users can override this.)
@@ -132,7 +139,6 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
         //  - A fatal error occurred.
         // (In addition, we can be interrupted due to shutdown.)
         final ImmutableList.Builder<ProducerRecord<DivolteIdentifier, AvroRecordBuffer>> remaining = ImmutableList.builder();
-        final int batchSize = batch.size();
         for (int i = 0; i < batchSize; ++i) {
             final Future<RecordMetadata> result = sendResults.get(i);
             try {

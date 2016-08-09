@@ -1,24 +1,27 @@
 package io.divolte.server.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.Optional;
+import java.util.Properties;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Objects;
-import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.base.MoreObjects;
 
 @ParametersAreNonnullByDefault
-public final class HdfsConfiguration {
-    public final Optional<String> uri;
-    public final short replication;
+public final class HdfsConfiguration extends SinkTypeConfiguration {
+
+    public final Optional<Properties> client;
 
     @JsonCreator
-    private HdfsConfiguration(final Optional<String> uri, final short replication) {
-        this.uri = Objects.requireNonNull(uri);
-        this.replication = replication;
+    HdfsConfiguration(final boolean enabled, final int bufferSize, final int threads, final Optional<Properties> client) {
+        super(bufferSize, threads, enabled);
+        this.client = client.map(ImmutableProperties::fromSource);
     }
 
     @Override
-    public String toString() {
-        return "HdfsConfiguration [uri=" + uri + ", replication=" + replication + "]";
+    protected MoreObjects.ToStringHelper toStringHelper() {
+        return super.toStringHelper()
+                .add("client", client);
     }
 }

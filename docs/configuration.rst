@@ -5,15 +5,15 @@ This chapter describes the configuration mechanisms and available options for Di
 
 Configuration files
 ===================
-The configuration for Divolte Collector consists of three files:
+The main configuration for Divolte Collector consists of three files:
 
-- ``divolte-env.sh``: a shell script that is included in the startup script to set environment variables and JVM startup arguments.
-- ``divolte-collector.conf``: the main configuration file for Divolte Collector.
-- ``logback.xml``: the logging configuration.
+- :file:`divolte-env.sh`: a shell script that is included in the startup script to set environment variables and JVM startup arguments.
+- :file:`logback.xml`: the logging configuration.
+- :file:`divolte-collector.conf`: the main configuration file for Divolte Collector.
 
 Configuration directory
 -----------------------
-Divolte Collector will try to find configuration files at startup in the configuration directory. Typically this is the ``conf/`` directory nested under the Divolte Collector installation. Divolte Collector will try to locate the configuration directory at ``../conf`` relative to the startup script. The configuration directory can be overridden by setting the ``DIVOLTE_CONF_DIR`` environment variable. If set, the value will be used as configuration directory. If you have installed Divolte Collector from a RPM, the init script will set this variable to ``/etc/divolte-collector``.
+Divolte Collector will try to find configuration files at startup in the configuration directory. Typically this is the :file:`conf/` directory nested under the Divolte Collector installation. Divolte Collector will try to locate the configuration directory at :file:`../conf` relative to the startup script. The configuration directory can be overridden by setting the :envvar:`DIVOLTE_CONF_DIR` environment variable. If set, the value will be used as configuration directory. If you have installed Divolte Collector from a RPM, the init script will set this variable to :file:`/etc/divolte-collector`.
 
 divolte-env.sh
 --------------
@@ -22,7 +22,7 @@ This shell script is run by the startup script prior to starting the Divolte Col
 HADOOP_CONF_DIR
 ^^^^^^^^^^^^^^^
 :Description:
-  Directory where Hadoop / HDFS configuration files are to be found. This directory is included in the classpath on startup, which causes the HDFS client to load the configuration files.
+  Directory where Hadoop/HDFS configuration files are to be found. This directory is included in the classpath on startup, which causes the HDFS client to load the configuration files.
 
 :Example:
 
@@ -33,7 +33,7 @@ HADOOP_CONF_DIR
 JAVA_HOME
 ^^^^^^^^^
 :Description:
-  The directory where the JRE/JDK is located. Divolte Collector will use ``$JAVA_HOME/bin/java`` as Java executable for startup. If this is not set, Divolte Collector will attempt to find a suitable JDK in a number of common Java installation locations on Linux systems. It is however not recommended to rely on this mechanism for production use.
+  The directory where the JRE/JDK is located. Divolte Collector will use :command:`$JAVA_HOME/bin/java` as the Java executable during startup. If this is not set, Divolte Collector will attempt to find a suitable JDK in a number of common Java installation locations on Linux systems. It is however not recommended to rely on this mechanism for production use.
 
 :Example:
 
@@ -44,13 +44,17 @@ JAVA_HOME
 DIVOLTE_JAVA_OPTS
 ^^^^^^^^^^^^^^^^^
 :Description:
-  Additional arguments passed to the Java Virtual Machine on startup. If not set, by default Divolte Collector will start the JVM with ``-XX:+UseG1GC -Djava.awt.headless=true``. It is recommended to use the G1 garbage collector. For light and medium traffic, the defaults tend to work fine. *If this setting is set, Divolte Collector will not add any arguments by itself; this setting overrides the defaults.*
+  Additional arguments passed to the Java Virtual Machine on startup. If not set, by default Divolte Collector will start the JVM with :code:`-XX:+UseG1GC -Djava.awt.headless=true`. It is recommended to use the G1 garbage collector. For light and medium traffic, the defaults tend to work fine. *If this setting is set, Divolte Collector will not add any arguments by itself; this setting overrides the defaults.*
 
 :Example:
 
   .. code-block:: bash
 
     DIVOLTE_JAVA_OPTS="-XX:+UseG1GC -Djava.awt.headless=true -XX:+HeapDumpOnOutOfMemoryError"
+
+logback.xml
+-----------
+Divolte Collector uses the `Logback Project <http://logback.qos.ch>`_ as its logging provider. This provider is configured through the :file:`logback.xml` file in the configuration directory. For more information about the settings in this file, review the `Configuration chapter in the Logback Manual <http://logback.qos.ch/manual/configuration.html>`_.
 
 divolte-collector.conf
 ----------------------
@@ -62,22 +66,26 @@ Nesting and dot separated namespacing can be used interchangeably:
 
   // This:
   divolte {
-    server {
-      host = 127.0.0.1
+    global {
+      server {
+        host = 127.0.0.1
+      }
     }
   }
 
   // Is the same as this:
-  divolte.server.host = 127.0.0.1
+  divolte.global.server.host = 127.0.0.1
 
-Environment variable overrides can be used. In this example the ``divolte.server.port`` setting defaults to 8290, unless the ``DIVOLTE_PORT`` environment variable is set:
+Environment variable overrides can be used. In this example the ``divolte.global.server.port`` setting defaults to 8290, unless the :envvar:`DIVOLTE_PORT` environment variable is set:
 
 .. code-block:: none
 
   divolte {
-    server {
-      port = 8290
-      port = ${?DIVOLTE_PORT}
+    global {
+      server {
+        port = 8290
+        port = ${?DIVOLTE_PORT}
+      }
     }
   }
 
@@ -87,73 +95,87 @@ Objects are merged:
 
   // This configuration
   divolte {
-    server {
-      host = 0.0.0.0
+    global {
+      server {
+        host = 0.0.0.0
+      }
     }
   }
 
-  divolte.server {
+  divolte.global.server {
     port = 8290
   }
 
   // Will result in this:
-  divolte.server.host = 0.0.0.0
-  divolte.server.port = 8290
+  divolte.global.server.host = 0.0.0.0
+  divolte.global.server.port = 8290
 
 For a full overview please refer to the `HOCON features and specification <https://github.com/typesafehub/config/blob/master/HOCON.md>`_.
 
 .. warning::
 
-  Be careful when enclosing values in quotes. Quotes are optional, but if present they must be JSON-style double-quotes (``"``).
-  This can easily lead to confusion:
+  Be careful when enclosing values in quotes. Quotes are optional, but if present they must be JSON-style double-quotes (``"``). This can easily lead to confusion:
 
   .. code-block:: none
 
     // This ...
-    divolte.tracking.cookie_domain = '.example.com'
+    divolte.sources.browser.cookie_domain = '.example.com'
     // ... is really equivalent to:
-    divolte.tracking.cookie_domain = "'.example.com'"
+    divolte.sources.browser.cookie_domain = "'.example.com'"
 
 Configuration reference
 =======================
-The following sections and settings are available in the ``divolte-collector.conf`` file. Note that in this documentation the path notation for configuration options is used (e.g. ``divolte.server``) but in examples the path and nested notation is used interchangeably.
 
-divolte.server
---------------
+The main configuration is read from :file:`divolte-collector.conf`, which consists of several sections:
+
+- *Global* (``divolte.global``): Global settings that affect the entire service.
+- *Sources* (``divolte.sources``): Configured sources for Divolte Collector events.
+- *Mappings* (``divolte.mappings``): Configured mappings between sources and sinks.
+- *Sinks* (``divolte.sinks``): Configured sinks, where Avro events are written.
+
+This documentation uses the path notation for configuration options (e.g. ``divolte.global.server``) but in examples the path and nested notations are used interchangeably.
+
+Global Settings (``divolte.global``)
+------------------------------------
+
+This section contains settings which are global in nature. All settings have default values.
+
+HTTP Server Settings (``divolte.global.server``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section controls the settings for the internal HTTP server of Divolte Collector.
 
-divolte.server.host
-^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.server.host``
+""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The address to which the server binds. Set to a specific IP address to selectively listen on that interface.
+  The address to which the server binds. Set to a specific IP address to selectively listen on that interface, or ``0.0.0.0`` to listen on all interfaces.
 :Default:
-  ``0.0.0.0``
+  The address of a loopback interface.
 :Example:
 
   .. code-block:: none
 
-    divolte.server {
+    divolte.global.server {
       host = 0.0.0.0
     }
 
-divolte.server.port
-^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.server.port``
+""""""""""""""""""""""""""""""""""""""""
 :Description:
   The TCP port on which the server listens.
 :Default:
-  ``8290``
+  ``8290``, or the content of the :envvar:`DIVOLTE_PORT` environment variable if set.
 :Example:
 
   .. code-block:: none
 
-    divolte.server {
+    divolte.global.server {
       port = 8290
     }
 
-divolte.server.use_x_forwarded_for
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.server.use_x_forwarded_for``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  Whether to use the ``X-Forwarded-For`` HTTP header for determining the source IP of a request, if present. If multiple values are present, the last value is used.
+  Whether to use the :mailheader:`X-Forwarded-For` HTTP header for determining the source IP of a request, if present. If multiple values are present, the last value is used.
 
   Both of these examples would yield a source IP of ``11.34.82.30``:
 
@@ -162,106 +184,77 @@ divolte.server.use_x_forwarded_for
      | ``X-Forwarded-For: 11.45.82.30``
 
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
 
-    divolte.server {
+    divolte.global.server {
       use_x_forwarded_for = true
     }
 
-divolte.server.serve_static_resources
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.server.serve_static_resources``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   When true Divolte Collector serves a static test page at ``/``.
 :Default:
-  ``true``
+  :code:`true`
 :Example:
 
   .. code-block:: none
 
-    divolte.server {
+    divolte.global.server {
       serve_static_resources = false
     }
 
-divolte.tracking
-----------------
-This section controls the tracking mechanism for Divolte Collector, covering areas such as the cookies and session timeouts, user agent parsing and ip2geo lookups.
+Global Mapper Settings (``divolte.global.mapper``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section controls global settings related to the processing of incoming requests after they have been received by the server. Incoming requests for Divolte Collector are responded to as quickly as possible, with mapping and flushing occurring in the background.
 
-divolte.tracking.party_cookie
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.mapper.threads``
+"""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The name of the cookie used for setting a party ID.
+  The total number of threads that mappers will use to process events. This is a global total; all mappings share the same threads.
 :Default:
-  ``_dvp``
+  1
 :Example:
 
   .. code-block:: none
 
-    divolte.tracking {
-      party_cookie = _pid
+    divolte.global.mapper {
+      threads = 4
     }
 
-divolte.tracking.party_timeout
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.mapper.buffer_size``
+"""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The expiry timeout for the party identifier. If no events occur for this duration, the party identifier is discarded.
-  Any subsequent events will be assigned a new party identifier.
+  The maximum number of incoming events, rounded up to the nearest power of 2, to queue for processing *per mapper thread* before starting to drop incoming events. While this buffer is full new events are dropped and a warning is logged. (Dropped requests are not reported to the client: Divolte Collector always responds to clients immediately once minimal validation has taken place.)
 :Default:
-  730 days
+  1048576
 :Example:
 
   .. code-block:: none
 
-    divolte.tracking {
-      party_timeout = 1000 days
+    divolte.global.mapper {
+      buffer_size = 10M
     }
 
-divolte.tracking.session_cookie
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.mapper.duplicate_memory_size``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The name of the cookie used for tracking the session ID.
+  Clients will sometimes deliver an event multiple times, normally within a short period of time. Divolte Collector contains a probabilistic filter which can detect this, trading off memory for improved results. This setting configures the size of the filter *per mapper thread*, and is multiplied by 8 to yield the actual memory usage.
 :Default:
-  ``_dvs``
+  1000000
 :Example:
 
   .. code-block:: none
 
-    divolte.tracking {
-      session_cookie = _sid
+    divolte.global.mapper {
+      duplicate_memory_size = 10000000
     }
 
-divolte.tracking.session_timeout
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  The expiry timeout for a session. A session lapses if no events occur for this duration.
-:Default:
-  30 minutes
-:Example:
-
-  .. code-block:: none
-
-    divolte.tracking {
-      session_timeout = 1 hour
-    }
-
-divolte.tracking.cookie_domain
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  The cookie domain that is assigned to the cookies. When left empty, the cookies will have no domain explicitly associated with them, which effectively sets it to the website domain of the page that loaded the Divolte Collector JavaScript.
-:Default:
-  *Empty*
-:Example:
-
-  .. code-block:: none
-
-    divolte.tracking {
-      cookie_domain = ".example.com"
-    }
-
-divolte.tracking.ip2geo_database
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.mapper.ip2geo_database``
+"""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   This configures the ip2geo database for geographic lookups. An ip2geo database can be obtained from `MaxMind <https://www.maxmind.com/en/geoip2-databases>`_. (Free 'lite' versions and commercial versions are available.)
 
@@ -272,16 +265,16 @@ divolte.tracking.ip2geo_database
 
   .. code-block:: none
 
-    divolte.tracking {
+    divolte.global.mapper {
       ip2geo_database = "/etc/divolte/ip2geo/GeoLite2-City.mmdb"
     }
 
-divolte.tracking.ua_parser
---------------------------
+Property: ``divolte.global.mapper.user_agent_parser``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
 This section controls the user agent parsing settings. The user agent parsing is based on an `open source parsing library <https://github.com/before/uadetector>`_ and supports dynamic reloading of the backing database if an internet connection is available.
 
-divolte.tracking.ua_parser.type
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.mapper.user_agent_parser.type``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   This setting controls the updating behavior of the user agent parser.
 
@@ -298,12 +291,12 @@ divolte.tracking.ua_parser.type
 
   .. code-block:: none
 
-    divolte.tracking.ua_parser {
-       type = caching_and_updating
+    divolte.global.mapper.user_agent_parser {
+      type = caching_and_updating
     }
 
-divolte.tracking.ua_parser.cache_size
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.mapper.user_agent_parser.cache_size``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   User agent parsing is a relatively expensive operation that requires many regular expression evaluations. Very often the same user agent will make consecutive requests and many clients will have the exact same user agent as well. It therefore makes sense to cache the parsing results for re-use in subsequent requests. This setting determines how many unique user agent strings will be cached.
 :Default:
@@ -312,212 +305,497 @@ divolte.tracking.ua_parser.cache_size
 
   .. code-block:: none
 
-    divolte.tracking.ua_parser {
+    divolte.global.mapper.user_agent_parser {
       cache_size = 10000
     }
 
-divolte.tracking.schema_file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  By default, Divolte Collector will use a built-in Avro schema for writing data and a default mapping, which is documented in the Mapping section of the user documentation. If not set, a `default built-in schema <https://github.com/divolte/divolte-schema>`_ will be used.
+Global HDFS Settings (``divolte.global.hdfs``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section controls global HDFS settings shared by all HDFS sinks.
 
-  Typically, users will configure their own schema, usually with fields specific to their domain and custom events and other mappings. When using a user defined schema, it is also required to provide a mapping script. See :doc:`mapping_reference` for further reference.
+Property: ``divolte.global.hdfs.enabled``
+"""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Whether or not HDFS support is enabled or not. If disabled all HDFS sinks are ignored.
 :Default:
-  *`Built-in schema <https://github.com/divolte/divolte-schema>`_*
+  :code:`true`
 :Example:
 
   .. code-block:: none
 
-    divolte.tracking {
-      schema_file = /etc/divolte/MyEventRecord.avsc
+    divolte.global.hdfs {
+      enabled = false
     }
 
-divolte.tracking.schema_mapping
--------------------------------
-This section controls the schema mapping to use. Schema mapping is an important feature of Divolte Collector, as it allows users to map incoming requests onto custom Avro schemas in non-trivial ways. See :doc:`mapping_reference` for details about this process and the internal mapping DSL used for defining mappings.
-
-divolte.tracking.schema_mapping.version
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.hdfs.threads``
+"""""""""""""""""""""""""""""""""""""""""
 :Description:
-  Prior versions of Divolte Collector supported an alternative mapping DSL. The current version is 2, and this is the only
-  value supported if the built-in mapping is not being used.
+  Number of threads to use per HDFS sink for writing events. Each thread creates its own files on HDFS.
 :Default:
-  *Not set (for built-in mapping)*
+  2
 :Example:
 
   .. code-block:: none
 
-    divolte.tracking.schema_mapping {
-      version = 2
+    divolte.global.hdfs {
+      threads = 1
     }
 
-divolte.tracking.schema_mapping.mapping_script_file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Property: ``divolte.global.hdfs.buffer_size``
+"""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The location of the Groovy script that defines the how events will be mapped to Avro records. If unset, a default built-in mapping will be used.
+  The maximum number of mapped events to queue internally *per sink thread* for HDFS before starting to drop them. This value will be rounded up to the nearest power of 2.
 :Default:
-  *Built-in mapping*
+  1048576
 :Example:
 
   .. code-block:: none
 
-    divolte.tracking.schema_mapping {
-      mapping_script_file = /etc/divolte/my-mapping.groovy
+    divolte.global.hdfs.buffer_size {
+      max_write_queue = 10M
     }
 
-divolte.javascript
-------------------
-This section controls various aspects of the JavaScript tag that will be loaded.
+Property: ``divolte.global.hdfs.client``
+""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Properties that will be used to configure the HDFS client used by HDFS sinks. If set, these properties will be used *instead of* the settings from :file:`hdfs-site.xml` in the directory specified by the :envvar:`HADOOP_CONF_DIR`. Although it is possible to configure all settings here instead of in :envvar:`HADOOP_CONF_DIR` this is not recommended.
+:Default:
+  *Not set*
+:Example:
 
-divolte.javascript.name
+  .. code-block:: none
+
+    divolte.global.hdfs.client {
+      fs.defaultFS = "file:///var/log/divolte/"
+    }
+
+Global Kafka Settings (``divolte.global.kafka``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section controls global Kafka settings shared by all Kafka sinks. At present Divolte Collector only supports connecting to a single Kafka cluster.
+
+Property: ``divolte.global.kafka.enabled``
+""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  This controls whether flushing to Kafka is enabled or not. If disabled all Kafka sinks are ignored. (This is disabled by default because the producer configuration for Kafka is normally site-specific.)
+:Default:
+  :code:`false`
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.kafka {
+      enabled = true
+    }
+
+Property: ``divolte.global.kafka.threads``
+""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Number of threads to use per Kafka sink for flushing events to Kafka.
+:Default:
+  2
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.kafka {
+      threads = 1
+    }
+
+Property: ``divolte.global.kafka.buffer_size``
+""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum number of mapped events to queue internally *per sink thread* for Kafka before starting to drop them. This value will be rounded up to the nearest power of 2.
+:Default:
+  1048576
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.kafka.buffer_size {
+      max_write_queue = 10M
+    }
+
+Property: ``divolte.global.kafka.producer``
+"""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The configuration to use for Kafka producers. All settings are used as-is to configure the Kafka producer; refer to the `Kafka Documentation <http://kafka.apache.org/082/documentation.html#newproducerconfigs>`_ for further details.
+:Default:
+
+  .. code-block:: none
+
+    {
+      bootstrap.servers = ["localhost:9092"]
+      bootstrap.servers = ${?DIVOLTE_KAFKA_BROKER_LIST}
+      client.id = divolte.collector
+      client.id = ${?DIVOLTE_KAFKA_CLIENT_ID}
+
+      acks = 1
+      retries = 0
+      compression.type = lz4
+      max.in.flight.requests.per.connection = 1
+    }
+
+  Note the use of :envvar:`DIVOLTE_KAFKA_BROKER_LIST` and :envvar:`DIVOLTE_KAFKA_CLIENT_ID` environment variables, if they have been set.
+
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.kafka.producer = {
+      metadata.broker.list = ["broker1:9092", "broker2:9092", "broker3:9092"]
+      client.id = divolte.collector
+
+      acks = 0
+      retries = 5
+    }
+
+Sources (``divolte.sources``)
+-----------------------------
+
+Sources are endpoints that can receive events. Each source has a name used to identify it when configuring a mapper that uses the source. A source cannot have the same name as a sink (and vice versa). Sources are configured in sections using their name as the configuration path. (Due to the `HOCON merging rules <https://github.com/typesafehub/config/blob/master/HOCON.md#duplicate-keys-and-object-merging>`_, it's not possible to configure multiple sources with the same name.)
+
+Each source has a type configured via a mandatory ``type`` property. At present the only supported type is ``browser``.
+
+For example:
+
+.. code-block:: none
+
+  divolte.sources {
+    // The name of the source is 'my_source'
+    my_source = {
+      // This is a browser source.
+      type = browser
+    }
+  }
+
+Implicit default source
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+If no sources are specified a single implicit browser source is created that is equivalent to:
+
+.. code-block:: none
+
+  divolte.sources {
+    // The name of the implicit source is 'browser'
+    browser = {
+      type = browser
+    }
+  }
+
+If *any* sources are configured this implicit source is not present and all sources must be explicitly specified.
+
+Browser Sources
+^^^^^^^^^^^^^^^
+
+A browser source is intended to receive tracking events from a browser. Each browser source serves up a tracking tag (JavaScript). This tag must be integrated into a website for Divolte Collector to receive tracking events. Each page of a website needs to include this:
+
+.. code-block:: html
+
+  <script src="//track.example.com/divolte.js" defer async></script>
+
+The URL will need to use the domain name where you are hosting Divolte Collector, and ``divolte.js`` needs to match the ``javascript.name`` setting of the browser source.
+
+By default loading the tag will trigger a ``pageView`` event. The tag also provides an API for issuing custom
+events:
+
+.. code-block:: html
+
+  <script>
+    divolte.signal('eventType', { 'foo': 'divolte', 'bar': 42 })
+  </script>
+
+The first argument to the :samp:`divolte.signal({...})` function is the type of event, while the second argument is an arbitrary object containing custom parameters associated with the event. Storing the event and its parameters into the configured Avro schema is controlled via mapping; see the :doc:`mapping_reference` chapter for details.
+
+Browser sources are able to detect some cases of corruption in the event data. The most common source of this is due to URLs being truncated, but there are also other sources of corruption between the client and the server. Corrupted events are flagged as such but still made available for mapping. (Mappings may choose to discard corrupted events, but by default they are processed normally.)
+
+Within the namespace for a browser source properties are used to configure it.
+
+Browser source property: ``prefix``
+"""""""""""""""""""""""""""""""""""
 :Description:
-  The path with which the JavaScript is served. This changes the ``divolte.js`` part in the script url: http://example.com/divolte.js.
+  The path prefix under which the tracking tag is available. Each browser source must have a unique prefix. A trailing slash (``/``) is automatically appended if not specified.
+:Default:
+  ``/``
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      prefix = /tracking
+    }
+
+  In this case the tracking tag could be included using:
+
+  .. code-block:: html
+
+    <script src="//track.example.com/tracking/divolte.js" defer async></script>
+
+Browser source property: ``party_cookie``
+"""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The name of the cookie used for setting a party identifier.
+:Default:
+  ``_dvp``
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      party_cookie = _pid
+    }
+
+Browser source property: ``party_timeout``
+""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The expiry timeout for the party identifier. If no events occur for this duration, the party identifier is discarded by the browser. Any subsequent events will be cause a new party identifier to be assigned to the browser.
+:Default:
+  730 days
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      party_timeout = 1000 days
+    }
+
+Browser source property: ``session_cookie``
+"""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The name of the cookie used for tracking the session identifier.
+:Default:
+  ``_dvs``
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      session_cookie = _sid
+    }
+
+Browser source property: ``session_timeout``
+""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The expiry timeout for a session. A session lapses if no events occur for this duration.
+:Default:
+  30 minutes
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      session_timeout = 1 hour
+    }
+
+Browser source property: ``cookie_domain``
+""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The cookie domain that is assigned to the cookies. When left empty, the cookies will have no domain explicitly associated with them, which effectively sets it to the website domain of the page that loaded the tag.
+:Default:
+  *Empty*
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      cookie_domain = ".example.com"
+    }
+
+Browser source property: ``javascript.name``
+""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The name of the JavaScript loaded as the tag. This is appended to the value of the ``prefix`` property to form the complete path of the tag in the URL.
 :Default:
   ``divolte.js``
 :Example:
 
   .. code-block:: none
 
-    divolte.javascript {
-      name = tracking.js
+    divolte.sources.a_source {
+      type = browser
+      javascript.name = tracking.js
     }
 
-divolte.javascript.logging
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+  In this case the tracking tag could be included using:
+
+  .. code-block:: html
+
+    <script src="//track.example.com/tracking.js" defer async></script>
+
+Browser source property: ``javascript.logging``
+"""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  Enable or disable the logging on the JavaScript console in the browser.
+  Enable or disable the logging to the JavaScript console in the browser.
 :Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
 
-    divolte.javascript {
-      logging = true
+    divolte.sources.a_source {
+      type = browser
+      javascript.logging = true
     }
 
-divolte.javascript.debug
+Browser source property: ``javascript.debug``
+"""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  When enabled, the served JavaScript will be less compact and *slightly* easier to debug. This setting is mainly intended to help track down problems in either the minification process used to reduce the size of the tracking script, or in the behaviour of specific browser versions.
+:Default:
+  :code:`false`
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      javascript.debug = true
+    }
+
+Browser source property: ``javascript.auto_page_view_event``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  When enabled the JavaScript tag automatically generates a ``pageView`` event when loaded, simplifying site integration. If sites wish to control all events (including the initial ``pageView`` event) this can be disabled.
+:Default:
+  :code:`true`
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      javascript.auto_page_view_event = false
+    }
+
+Mappings (``divolte.mappings``)
+-------------------------------
+
+Mappings are used to specify event flows between sources and sinks, along with the transformation ("mapping") required to convert events into Avro records that conform to a schema. Schema mapping is an important feature of Divolte Collector as it allows incoming events to be mapped onto custom Avro schemas in non-trivial ways. See :doc:`mapping_reference` for details about this process and the internal mapping DSL used for defining mappings.
+
+Each configured mapping has a name and produces homogenous records conforming to an Avro schema. It may consume events from multiple sources, and the resulting records may be sent to multiple sinks. Sources and sinks may be shared between multiple mappings. If multiple mappings produce records for the same sink, all mappings must use the same Avro schema.
+
+An example mapping configuration could be:
+
+.. code-block:: none
+
+  divolte.mappings {
+    // The name of the mapping is 'a_mapping'
+    a_mapping = {
+      schema_file = /some/dir/MySchema.avsc
+      mapping_script_file = schema-mapping.groovy
+      sources = [browser]
+      sinks = [hdfs,kafka]
+    }
+  }
+
+Implicit default mapping
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+If no mappings are specified a single implicit mapping is created that is equivalent to:
+
+.. code-block:: none
+
+  divolte.mappings {
+    // The name of the implicit mapping is 'default'
+    default = {
+      sources = [ /* All configured sources */ ]
+      sinks = [ /* All configured sinks */ ]
+    }
+  }
+
+If *any* mappings are configured this implicit mapping is not present and all mappings must be explicitly specified.
+
+Mapping properties
+^^^^^^^^^^^^^^^^^^
+
+Within the namespace for a mapping properties are used to configure it. At a minimum the ``sources`` and ``sinks`` should be specified; without these a mapping has no work to do.
+
+Mapping property: ``sources``
+"""""""""""""""""""""""""""""
 :Description:
-  When enabled, the served JavaScript will be less compact and *slightly* easier to debug. This setting is mainly intended
-  to help track down problems in either the minification process used to reduce the size of the tracking script, or in the
-  behaviour of specific browser versions.
+  A list of the names of the sources that this mapping should consume events from. A source may be shared by multiple mappings; each mapping will process every event from the source.
 :Default:
-  ``false``
+  *Not specified*
 :Example:
 
   .. code-block:: none
 
-    divolte.javascript {
-      debug = true
+    divolte.mappings.a_mapping {
+      sources = [site1, site2]
     }
 
-divolte.javascript.auto_page_view_event
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mapping property: ``sinks``
+"""""""""""""""""""""""""""
 :Description:
-  When enabled the JavaScript tag automatically generates a ``pageView`` event when loaded, simplifying site integration.
-  If sites wish to control all events (including the initial ``pageView`` event) this can be disabled.
+  A list of the names of the sinks that this mapping should write produced Avro records to. Each produced record is written to all sinks. A sink may be shared by multiple mappings; in this case all mappings must produce records conforming to the same Avro schema.
 :Default:
-  ``true``
+  *Not specified*
 :Example:
 
   .. code-block:: none
 
-    divolte.javascript {
-      auto_page_view_event = false
+    divolte.mappings.a_mapping {
+      sinks = [hdfs, kafka]
     }
 
-
-divolte.incoming_request_processor
-----------------------------------
-This section controls settings related to the processing of incoming requests after they have been received by the server. Incoming requests for Divolte Collector are responded to as quickly as possible, with mapping and flushing occurring in the
- background. Only minimal validation is performed before issuing a HTTP `200 OK` response that contains a transparent 1x1 pixel GIF image.containing a handled by a pool of HTTP threads, which immediately respond with a HTTP code 200 and send the response payload (a 1x1 pixel transparent GIF image). The background mapping and processing is performed by the incoming request processor and configured in this section.
-
-divolte.incoming_request_processor.threads
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mapping property: ``schema_file``
+"""""""""""""""""""""""""""""""""
 :Description:
-  Number of threads to use for processing incoming requests. All requests for a single party are processed on the same thread.
+  By default a mapping will produce records that conform to a `built-in Avro schema <https://github.com/divolte/divolte-schema>`_. However, a custom schema makes usually makes sense that contains fields specific to the domain and custom events. Note that the value for this property is ignored unless ``mapping_script_file`` is also set.
 :Default:
-  ``2``
+  |Built-in schema|_
 :Example:
 
   .. code-block:: none
 
-    divolte.incoming_request_processor {
-      threads = 1
+    divolte.mappings.a_mapping {
+      schema_file = /etc/divolte/MyEventRecord.avsc
     }
 
-divolte.incoming_request_processor.max_write_queue
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. |Built-in schema| replace:: *Built-in schema*
+.. _Built-in schema: https://github.com/divolte/divolte-schema
+
+Mapping property: ``mapping_script_file``
+"""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The maximum number of incoming requests to queue for processing *per thread* before starting to drop incoming requests. While this queue is full new requests are dropped and a warning is logged. (Dropped requests are not reported to the client: Divolte Collector will always respond with a HTTP 200 status code once minimal validation has taken place.).
+  The location of the Groovy script that defines the how events from sources will be mapped to Avro records that are written to sinks. If unset, a default built-in mapping will be used. (In this case any value for the ``schema_file`` property is ignored: the default built-in mapping always produces records conforming to the `built-in schema <https://github.com/divolte/divolte-schema>`.)
+
+  See the :doc:`mapping_reference` for details on mapping events.
 :Default:
-  ``100000``
+  *Built-in mapping*
 :Example:
 
   .. code-block:: none
 
-    divolte.incoming_request_processor {
-      max_write_queue = 1000000
+    divolte.mappings.a_mapping {
+      mapping_script_file = /etc/divolte/my-mapping.groovy
     }
 
-divolte.incoming_request_processor.max_enqueue_delay
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mapping property: ``discard_corrupted``
+"""""""""""""""""""""""""""""""""""""""
 :Description:
-  The maximum time to wait if the queue is full before dropping an event.
+  Events contain a flag indicating whether the source detected corruption in the event data. If this property is enabled corrupt events will be discarded and not subject to mapping and further processing. Otherwise a best effort will be made to map and process the event as if it was normal.
 :Default:
-  1 second
+  :code:`false`
 :Example:
 
   .. code-block:: none
 
-    divolte.incoming_request_processor {
-      max_enqueue_delay = 20 seconds
-    }
-
-divolte.incoming_request_processor.discard_corrupted
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Events from the JavaScript tag contain a checksum to detect corrupted events. (The most common source of this is
-  URLs being truncated, but there are also other sources of corruption between the client and the server.) If enabled,
-  corrupt events will be discarded and not subject to mapping and further processing. If disabled, a best effort will
-  be made to map and process the event as if it was normal.
-:Default:
-  ``false``
-:Example:
-
-  .. code-block:: none
-
-    divolte.incoming_request_processor {
+    divolte.mappings.a_mapping {
       discard_corrupted = true
     }
 
-divolte.incoming_request_processor.duplicate_memory_size
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mapping property: ``discard_duplicates``
+""""""""""""""""""""""""""""""""""""""""
 :Description:
-  Browsers and other clients will sometimes deliver an event to the Divolte Collector multiple times, normally
-  within a short period of time. Divolte Collector contains a probabilistic filter which can detect this, trading
-  off memory for improved results. This setting configures the size of the filter *per thread*, and is multuplied
-  by 8 to yield the actual memory usage.
+  Clients sometimes deliver events to sources multiple times, normally within a short period of time. Sources contain a probabilistic filter which can detect this and set a flag on the event. If this property is enabled events flagged as duplicates will be discarded without further mapping or processing.
 :Default:
-  ``1000000``
-:Example:
-
-  .. code-block:: none
-
-    divolte.incoming_request_processor {
-      duplicate_memory_size = 10000000
-    }
-
-divolte.incoming_request_processor.discard_duplicates
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Browsers and other clients will sometimes deliver an event to the Divolte Collector multiple times, normally
-  within a short period of time. Divolte Collector contains a probabilistic filter which can detect this, and
-  when this setting is enabled events considered duplicates will be discarded without further mapping or processing.
-:Default:
-  ``false``
+  :code:`false`
 :Example:
 
   .. code-block:: none
@@ -526,69 +804,169 @@ divolte.incoming_request_processor.discard_duplicates
       discard_duplicates = true
     }
 
-divolte.kafka_flusher
----------------------
-This section controls settings related to forwarding the event stream to a Apache Kafka topic. Events for Kafka topics
-are keyed by their party identifier.
+Sinks (``divolte.sinks``)
+-------------------------
 
-divolte.kafka_flusher.enabled
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sinks are used to write Avro records that have been mapped from received events. Each sink has a name used to identify it when configuring a mapper that produces records for the sink. A sink cannot have the same name as a source (and vice versa). Sinks are configured in sections using their name as the configuration path. (Due to the `HOCON merging rules <https://github.com/typesafehub/config/blob/master/HOCON.md#duplicate-keys-and-object-merging>`_, it's not possible to configure multiple sinks with the same name.)
+
+Each sink has a type configured via a mandatory ``type`` property. The supported types are:
+
+- ``hdfs``
+- ``kafka``
+
+For example:
+
+.. code-block:: none
+
+  divolte.sinks {
+    // The name of the source is 'my_sink'
+    my_sink = {
+      // This is a HDFS sink.
+      type = hdfs
+    }
+  }
+
+Implicit default sinks
+^^^^^^^^^^^^^^^^^^^^^^
+
+If no sinks are specified two implicit sinks are created that are equivalent to:
+
+.. code-block:: none
+
+  divolte.sinks {
+    // The name of the implicit sinks are 'hdfs' and 'kakfa'.
+    hdfs = {
+      type = hdfs
+      replication_factor = 1
+    }
+    kafka = {
+      type = kafka
+    }
+  }
+
+If *any* sinks are configured these implicit sinks are not present and all sinks must be explicitly specified.
+
+
+HDFS Sinks
+^^^^^^^^^^
+
+A HDFS sink uses a HDFS client to write `Avro files <http://avro.apache.org/docs/1.8.1/spec.html#Object+Container+Files>`_ containing records produced by mapping. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
+
+The HDFS client used to write files is configured according to the global HDFS settings. Depending on the HDFS client version in use, HDFS sinks can write to various locations:
+
+- Native HDFS in a Hadoop cluster.
+- A local filesystem.
+- S3 in Amazon Web Services (AWS). (See `here <https://wiki.apache.org/hadoop/AmazonS3>`_ for details.)
+
+A HDFS sink uses multiple threads to write the records as they are produced. Each thread writes to its own Avro file, flushing regularly. Periodically the Avro files are closed and new ones started. Files are initially created in the configured working directory and have an extension of ``.avro.partial`` while open and being written to. When closed, they are renamed to have an extension of ``.avro`` and moved to the publish directory. This happens in a single (atomic) move operation, so long as the underlying storage supports this.
+
+Records produced from events with the same party identifier are always written to the same Avro file, and in the order they were received by the originating source. (The relative ordering of records produced from events with the same party identifier is undefined if they originated from different sources, although they will still be written to the same Avro file.)
+
+Within the namespace for a HDFS sink properties are used to configure it.
+
+HDFS Sink Property: ``replication``
+"""""""""""""""""""""""""""""""""""
 :Description:
-  This controls whether flushing to Kafka is enabled or not. (This is disabled by default because the producer configuration for Kafka is normally site-specific.)
+  The HDFS replication factor to use when creating files.
 :Default:
-  ``false``
+  3
 :Example:
 
   .. code-block:: none
 
-    divolte.kafka_flusher {
-      enabled = true
+    divolte.sinks.a_sink {
+      type = hdfs
+      replication = 1
     }
 
-divolte.kafka_flusher.threads
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HDFS Sink Property: ``file_strategy.working_dir``
+"""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  Number of threads to use for flushing events to Kafka.
+  Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
 :Default:
-  ``2``
+  :file:`/tmp`
 :Example:
 
   .. code-block:: none
 
-    divolte.kafka_flusher {
-      threads = 1
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.working_dir = /webdata/inflight
     }
 
-divolte.kafka_flusher.max_write_queue
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HDFS Sink Property: ``file_strategy.publish_dir``
+"""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The maximum number of mapped events to queue internally *per thread* for Kafka before starting to drop them.
+  Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
 :Default:
-  ``200000``
+  :file:`/tmp`
 :Example:
 
   .. code-block:: none
 
-    divolte.kafka_flusher {
-      max_write_queue = 1000000
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.publish_dir = /webdata/published
     }
 
-divolte.kafka_flusher.max_enqueue_delay
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HDFS Sink Property: ``file_strategy.roll_every``
+""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The maximum time to wait before dropping the event if the internal queue for one of the Kafka threads is full.
+  Roll over files on HDFS after this amount of time. (If the working file doesn't contain any records it will be discarded.)
 :Default:
-  1 second
+  1 hour
 :Example:
 
   .. code-block:: none
 
-    divolte.kafka_flusher {
-      max_enqueue_delay = 20 seconds
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.roll_every = 15 minutes
     }
 
-divolte.kafka_flusher.topic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HDFS Sink Property: ``file_strategy.sync_file_after_records``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum number of records that should be written to the working file since the last flush before flushing again. Flushing is performed by issuing a :code:`hsync()` call to flush HDFS data.
+:Default:
+  1000
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.sync_file_after_records = 100
+    }
+
+HDFS Sink Property: ``file_strategy.sync_file_after_duration``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum time that may elapse after a record is written to the working file before it is flushed. Flushing is performed by issuing a :code:`hsync()` call to flush HDFS data.
+:Default:
+  30 seconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.sync_file_after_duration = 10 seconds
+    }
+
+Kafka Sinks
+^^^^^^^^^^^
+
+A Kafka sink uses a Kafka producer to write Avro records as individual messages on a Kafka topic. The producer is configured according to the global Kafka settings.
+
+Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
+
+The body of each Kafka message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+
+Within the namespace for a Kafka sink properties are used to configure it.
+
+Kafka sink property: ``topic``
+""""""""""""""""""""""""""""""
 :Description:
   The Kafka topic onto which events are published.
 :Default:
@@ -597,272 +975,7 @@ divolte.kafka_flusher.topic
 
   .. code-block:: none
 
-    divolte.kafka_flusher {
+    divolte.sinks.a_sink {
+      type = kafka
       topic = clickevents
     }
-
-divolte.kafka_flusher.producer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  The producer configuration. All settings are used as-is to configure the Kafka producer; refer to the `Kafka Documentation <http://kafka.apache.org/082/documentation.html#newproducerconfigs>`_ for further details.
-:Default:
-
-  .. code-block:: none
-
-    producer = {
-      bootstrap.servers = "localhost:9092"
-      bootstrap.servers = ${?DIVOLTE_KAFKA_BROKER_LIST}
-
-      client.id = divolte.collector
-      client.id = ${?DIVOLTE_KAFKA_CLIENT_ID}
-
-      acks = 0
-      retries = 5
-      retry.backoff.ms = 200
-    }
-
-:Example:
-
-  .. code-block:: none
-
-    divolte.kafka_flusher.producer = {
-      metadata.broker.list = ["broker1:9092", "broker2:9092", "broker3:9092"]
-      client.id = divolte.collector
-
-      request.required.acks = 0
-      message.send.max.retries = 5
-      retry.backoff.ms = 200
-    }
-
-divolte.hdfs_flusher
---------------------
-This section controls settings related to flushing the event stream.
-
-divolte.hdfs_flusher.enabled
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  This controls whether flushing to HDFS is enabled. Note that in absence of further HDFS configuration events will be written to the local filesystem.
-:Default:
-  ``true``
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs_flusher {
-      enabled = false
-    }
-
-divolte.hdfs_flusher.threads
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Number of threads to use for flushing events to HDFS. Each thread creates its own files on HDFS. Depending on the flushing strategy, multiple concurrent files can be kept open per thread.
-:Default:
-  ``2``
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs_flusher {
-      threads = 1
-    }
-
-divolte.hdfs_flusher.max_write_queue
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  The maximum number of mapped events to queue internally *per thread* for HDFS before starting to drop them.
-:Default:
-  100000
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs_flusher {
-      max_write_queue = 1000000
-    }
-
-divolte.hdfs_flusher.max_enqueue_delay
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  The maximum time to wait before dropping the event if the internal queue for one of the HDFS threads is full.
-:Default:
-  1 second
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs_flusher {
-      max_enqueue_delay = 20 seconds
-    }
-
-divolte.hdfs_flusher.hdfs
--------------------------
-HDFS specific settings. Although it is possible to configure a HDFS URI here, it is more advisable to configure HDFS settings by specifying a ``HADOOP_CONF_DIR`` environment variable which will be added to the classpath on startup.
-
-divolte.hdfs_flusher.hdfs.uri
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  The filesystem URI to configure the HDFS client with. When absent, the URI is not set. When using ``HADOOP_CONF_DIR`` this should not be set.
-:Default:
-  *Not set*
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs_flusher.hdfs {
-      uri = "file:///"
-    }
-
-divolte.hdfs_flusher.hdfs.replication
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  The HDFS replication factor to use when creating files.
-:Default:
-  ``1``
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs_flusher.hdfs {
-      replication = 3
-    }
-
-divolte.hdfs.file_strategy
---------------------------
-Divolte Collector has two strategies for creating files on HDFS and flushing data. One of these must be configured, but not both. Which strategy to use is set using the `type` property of this configuration; accepted values are either ``SIMPLE_ROLLING_FILE` (default) or ``SESSION_BINNING``.
-
-Simple rolling file strategy
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-By default a simple rolling file strategy is employed. This opens one file per thread and rolls over to a new file after a configurable interval. Files that are being written to have an extension of ``.avro.partial`` and are created in the the directory configured in the ``working_dir`` setting. When a file is closed, it is renamed to have an ``.avro`` extension and moved to the directory configured in the ``publish_dir`` setting. This happens in a single (atomic) filesystem move operation.
-
-Session binning file strategy
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A more complex strategy is the session binning strategy. This strategy attempts to place events that belong to the same session in the same file.
-
-Events are assigned to files using the following rules:
-
-- The strategy always has a 'current' open file to which events will be written.
-- When a session starts, its events are assigned to the current file and will be written there for as long as possible.
-- When a period of time the length of the configured session timeout has elapsed, a new file is opened and designed 'current'.
-- The previously current file remains open for a further period of time equal to twice the session timeout. During this
-  period events for sessions assigned to that file will be written there.
-- If an event arrives assigned to file that has been closed, the session's events will be reassigned to the oldest open
-  file.
-
-.. note::
-
-  If the Divolte Collector is shutdown or fails, open files are not moved into the published directory. Instead they
-  remain in the working directory and need to be manually processed.
-
-divolte.hdfs.file_strategy.type
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Identify which strategy to use for flushing HDFS files. Type can be either `SIMPLE_ROLLING_FILE` or `SESSION_BINNING` for the respective strategies.
-:Default:
-  ``SIMPLE_ROLLING_FILE``
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs.file_strategy {
-      type = SESSION_BINNING
-    }
-
-divolte.hdfs.file_strategy.sync_file_after_records
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  How often a ``hsync()`` should be issued to flush HDFS data based on the number of records that have been written since the last flush.
-:Default:
-  ``1000``
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs.file_strategy {
-      sync_file_after_records = 100
-    }
-
-divolte.hdfs.file_strategy.sync_file_after_duration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  How often a ``hsync()`` should be issued to flush HDFS data based on how long it is since the last flush.
-:Default:
-  30 seconds
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs.file_strategy {
-      sync_file_after_duration = 1 minute
-    }
-
-divolte.hdfs.file_strategy.working_dir
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Directory where files are created and kept while being written to.
-:Default:
-  ``/tmp``
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs.file_strategy {
-      working_dir = /webdata/inflight
-    }
-
-divolte.hdfs.file_strategy.publish_dir
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Directory where files are moved to after they are closed.
-:Default:
-  ``/tmp``
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs.file_strategy {
-      publish_dir = /webdata/published
-    }
-
-divolte.hdfs.file_strategy.roll_every *(simple rolling strategy only)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Description:
-  Roll over files on HDFS after this amount of time.
-:Default:
-  60 minutes
-:Example:
-
-  .. code-block:: none
-
-    divolte.hdfs.file_strategy {
-      roll_every = 15 minutes
-    }
-
-logback.xml
------------
-Divolte Collector uses the `Logback Project <http://logback.qos.ch>`_ as its logging provider. This provider is configured through the ``logback.xml`` file in the configuration directory. For more information about the settings in this file, review the `Configuration chapter in the Logback Manual <http://logback.qos.ch/manual/configuration.html>`_.
-
-Website integration
-===================
-Next to the server side configuration, Divolte Collector needs to be integrated into a website in order to log events. The minimum integration involves adding a single tag to collect pageviews. This can be extended with custom events for tracking specific user interactions.
-
-The tag
--------
-The tag for Divolte Collector to include in each page of a website is this:
-
-.. code-block:: html
-
-  <script src="//track.example.com/divolte.js" defer async></script>
-
-The URL will need to use the domain name where you are hosting Divolte Collector, and ``divolte.js`` needs to match the ``divolte.javascript.name`` configuration setting.
-
-Custom events
--------------
-The tracking tag provides an API for pages to fire custom events:
-
-.. code-block:: html
-
-  <script>
-    divolte.signal('eventType', { 'foo': 'divolte', 'bar': 42 })
-  </script>
-
-The first argument to the ``divolte.signal(...)`` function is the event type parameter. The second argument is a arbitrary object with custom event parameters. Storing the event parameter and the custom event parameters into the configured Avro data is achieved through the mapping. See the :doc:`mapping_reference` chapter for details.

@@ -55,10 +55,6 @@ public class DslRecordMapper implements RecordMapper {
     private final Schema schema;
     private final List<DslRecordMapping.MappingAction> actions;
 
-    public DslRecordMapper(final ValidatedConfiguration vc, final Schema schema, final Optional<LookupService> geoipService) {
-        this(vc, vc.configuration().tracking.schemaMapping.get().mappingScriptFile, schema, geoipService);
-    }
-
     public DslRecordMapper(final ValidatedConfiguration vc, final String groovyFile, final Schema schema, final Optional<LookupService> geoipService) {
         this.schema = Objects.requireNonNull(schema);
 

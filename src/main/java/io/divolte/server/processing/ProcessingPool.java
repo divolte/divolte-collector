@@ -17,7 +17,6 @@
 package io.divolte.server.processing;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
-import io.divolte.server.processing.ItemProcessor.ProcessingDirective;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -42,6 +41,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import io.divolte.server.processing.ItemProcessor.ProcessingDirective;
+
 @ParametersAreNonnullByDefault
 public class ProcessingPool<T extends ItemProcessor<E>, E> {
     private static final Logger logger = LoggerFactory.getLogger(ProcessingPool.class);
@@ -49,8 +50,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
     private static final int MAX_BATCH_SIZE = 128;
 
     private final ExecutorService executorService;
-    private final List<BlockingQueue<E>> queues;
-    private final long maxEnqueueDelay;
+    private final List<BlockingQueue<Item<E>>> queues;
 
     private volatile boolean running;
 
@@ -60,7 +60,6 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
     public ProcessingPool(
             final int numThreads,
             final int maxQueueSize,
-            final long maxEnqueueDelay,
             final String threadBaseName,
             final Supplier<T> processorSupplier) {
 
@@ -73,9 +72,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
         final ThreadFactory factory = createThreadFactory(threadGroup, threadBaseName + " - %d");
         executorService = Executors.newFixedThreadPool(numThreads, factory);
 
-        this.maxEnqueueDelay = maxEnqueueDelay;
-
-        this.queues = Stream.<ArrayBlockingQueue<E>>
+        this.queues = Stream.<ArrayBlockingQueue<Item<E>>>
                 generate(() -> new ArrayBlockingQueue<>(maxQueueSize))
                 .limit(numThreads)
                 .collect(Collectors.toCollection(() -> new ArrayList<>(numThreads)));
@@ -87,14 +84,10 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
 
     }
 
-    public void enqueue(String key, E e) {
-        // We mask the hash-code to ensure we always get a positive bucket index.
-        if (!offerQuietly(
-                queues.get((key.hashCode() & Integer.MAX_VALUE) % queues.size()),
-                e,
-                maxEnqueueDelay,
-                TimeUnit.MILLISECONDS)) {
-            logger.warn("Failed to enqueue item for {} ms. Dropping event.", maxEnqueueDelay);
+    public void enqueue(final Item<E> item) {
+        final BlockingQueue<Item<E>> queue = queues.get(item.affinityHash % queues.size());
+        if (!queue.offer(item)) {
+            logger.warn("Failed to enqueue item. Dropping event.");
         }
     }
 
@@ -103,12 +96,12 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             running = false;
             executorService.shutdown();
             executorService.awaitTermination(1, TimeUnit.HOURS);
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }
 
-    private void scheduleQueueReader(final ExecutorService es, final BlockingQueue<E> queue, final ItemProcessor<E> processor) {
+    private void scheduleQueueReader(final ExecutorService es, final BlockingQueue<Item<E>> queue, final ItemProcessor<E> processor) {
         CompletableFuture.runAsync(microBatchingQueueDrainerWithHeartBeat(queue, processor), es).whenComplete((voidValue, error) -> {
             processor.cleanup();
 
@@ -122,12 +115,12 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
     }
 
     private Runnable microBatchingQueueDrainerWithHeartBeat(
-            final BlockingQueue<E> queue,
+            final BlockingQueue<Item<E>> queue,
             final ItemProcessor<E> processor) {
         return () -> {
             // The default item processor implementation removes items one-by-one as they
             // are processed. Using a Queue ensures that this is efficient.
-            final Queue<E> batch = new ArrayDeque<>(MAX_BATCH_SIZE);
+            final Queue<Item<E>> batch = new ArrayDeque<>(MAX_BATCH_SIZE);
 
             while (!queue.isEmpty() || running) {
                 ProcessingDirective directive;
@@ -158,7 +151,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
     private static void sleepOneSecond() {
         try {
             Thread.sleep(1000);
-        } catch(InterruptedException e) {
+        } catch(final InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }
@@ -166,18 +159,9 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
     private static <E> E pollQuietly(final BlockingQueue<E> queue, final long timeout, final TimeUnit unit) {
         try {
             return queue.poll(timeout, unit);
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;
-        }
-    }
-
-    private static <E> boolean offerQuietly(final BlockingQueue<E> queue, final E item, final long timeout, final TimeUnit unit) {
-        try {
-            return queue.offer(item, timeout, unit);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
         }
     }
 

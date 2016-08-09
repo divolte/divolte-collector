@@ -16,33 +16,41 @@
 
 package io.divolte.server.config;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+
+import org.hibernate.validator.HibernateValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonMappingException.Reference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.jasonclawson.jackson.dataformat.hocon.HoconTreeTraversingParser;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
-import org.hibernate.validator.HibernateValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-import java.util.function.Supplier;
 
 /**
  * Container for a validated configuration loaded from a {@code Config}
@@ -59,9 +67,10 @@ import java.util.function.Supplier;
 public final class ValidatedConfiguration {
     private final static Logger logger = LoggerFactory.getLogger(ValidatedConfiguration.class);
 
-    private final List<String> configurationErrors;
-    @Nullable
-    private final DivolteConfiguration divolteConfiguration;
+    private final static Joiner DOT_JOINER = Joiner.on('.');
+
+    private final ImmutableList<String> configurationErrors;
+    private final Optional<DivolteConfiguration> divolteConfiguration;
 
     /**
      * Creates an instance of a validated configuration. The underlying
@@ -73,7 +82,7 @@ public final class ValidatedConfiguration {
      *            Supplier of the underlying {@code Config} instance.
      */
     public ValidatedConfiguration(final Supplier<Config> configLoader) {
-        final List<String> configurationErrors = new ArrayList<>();
+        final ImmutableList.Builder<String> configurationErrors = ImmutableList.builder();
 
         DivolteConfiguration divolteConfiguration;
         try {
@@ -83,22 +92,57 @@ public final class ValidatedConfiguration {
              * errors to the resulting list of error messages.
              */
             final Config config = configLoader.get();
-            divolteConfiguration = mapped(config.getConfig("divolte"));
-            validate(configurationErrors, divolteConfiguration);
+            divolteConfiguration = mapped(config.getConfig("divolte").resolve());
+            configurationErrors.addAll(validate(divolteConfiguration));
         } catch(final ConfigException e) {
             logger.debug("Configuration error caught during validation.", e);
             configurationErrors.add(e.getMessage());
             divolteConfiguration = null;
+        } catch (final UnrecognizedPropertyException e) {
+            // Add a special case for unknown property as we add the list of available properties to the message.
+            logger.debug("Configuration error. Exception while mapping.", e);
+            final String message = messageForUnrecognizedPropertyException(e);
+            configurationErrors.add(message);
+            divolteConfiguration = null;
+        } catch (final JsonMappingException e) {
+            logger.debug("Configuration error. Exception while mapping.", e);
+            final String message = messageForMappingException(e);
+            configurationErrors.add(message);
+            divolteConfiguration = null;
         } catch (final IOException e) {
             logger.error("Error while reading configuration!", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error while reading configuration.", e);
         }
 
-        this.configurationErrors = ImmutableList.copyOf(configurationErrors);
-        this.divolteConfiguration = divolteConfiguration;
+        this.configurationErrors = configurationErrors.build();
+        this.divolteConfiguration = Optional.ofNullable(divolteConfiguration);
     }
 
-    private void validate(final List<String> configurationErrors, final DivolteConfiguration divolteConfiguration) {
+    private String messageForMappingException(final JsonMappingException e) {
+        final String pathToError = e.getPath().stream()
+                   .map(Reference::getFieldName)
+                   .collect(Collectors.joining("."));
+        return String.format(
+                "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'",
+                e.getOriginalMessage(),
+                Optional.ofNullable(e.getLocation()).map(JsonLocation::getSourceRef).orElse("<unknown source>"),
+                "".equals(pathToError) ? "<unknown path>" : pathToError);
+    }
+
+    private static String messageForUnrecognizedPropertyException(final UnrecognizedPropertyException e) {
+        return String.format(
+                "%s.%n\tLocation: %s.%n\tConfiguration path to error: '%s'%n\tAvailable properties: %s.",
+                e.getOriginalMessage(),
+                e.getLocation().getSourceRef(),
+                e.getPath().stream()
+                           .map(Reference::getFieldName)
+                           .collect(Collectors.joining(".")),
+                e.getKnownPropertyIds().stream()
+                                       .map(Object::toString).map(s -> "'" + s + "'")
+                                       .collect(Collectors.joining(", ")));
+    }
+
+    private List<String> validate(final DivolteConfiguration divolteConfiguration) {
         final Validator validator = Validation
                 .byProvider(HibernateValidator.class)
                 .configure()
@@ -107,9 +151,15 @@ public final class ValidatedConfiguration {
 
         final Set<ConstraintViolation<DivolteConfiguration>> validationErrors = validator.validate(divolteConfiguration);
 
-        validationErrors.forEach((e) -> configurationErrors.add(
-                String.format("Property 'divolte.%s' %s. Found: '%s'.", e.getPropertyPath(), e.getMessage(), e.getInvalidValue())
-                ));
+        return validationErrors
+                .stream()
+                .map(
+                        (e) -> String.format(
+                                "Property '%s' %s. Found: '%s'.",
+                                DOT_JOINER.join("divolte", e.getPropertyPath()),
+                                e.getMessage(),
+                                e.getInvalidValue()))
+                .collect(Collectors.toList());
     }
 
     private static DivolteConfiguration mapped(final Config input) throws IOException {
@@ -123,12 +173,13 @@ public final class ValidatedConfiguration {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
         // Deserialization for Duration
-        final SimpleModule module= new SimpleModule("Configuration Deserializers");
+        final SimpleModule module = new SimpleModule("Configuration Deserializers");
         module.addDeserializer(Duration.class, new DurationDeserializer());
         module.addDeserializer(Properties.class, new PropertiesDeserializer());
 
         mapper.registerModules(
                 new Jdk8Module(),                   // JDK8 types (Optional, etc.)
+                new GuavaModule(),                  // Guava types (immutable collections)
                 new ParameterNamesModule(),         // Support JDK8 parameter name discovery
                 module                              // Register custom deserializers module
                 );
@@ -146,9 +197,9 @@ public final class ValidatedConfiguration {
      *             When validation errors exist.
      */
     public DivolteConfiguration configuration() {
-        Preconditions.checkState(null != divolteConfiguration && configurationErrors.isEmpty(),
+        Preconditions.checkState(configurationErrors.isEmpty(),
                                  "Attempt to access invalid configuration.");
-        return divolteConfiguration;
+        return divolteConfiguration.orElseThrow(() -> new IllegalStateException("Configuration not available."));
     }
 
     /**

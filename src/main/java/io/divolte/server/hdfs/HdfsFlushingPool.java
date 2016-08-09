@@ -17,6 +17,7 @@
 package io.divolte.server.hdfs;
 
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.SchemaRegistry;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
 
@@ -28,26 +29,24 @@ import org.apache.avro.Schema;
 
 @ParametersAreNonnullByDefault
 public final class HdfsFlushingPool extends ProcessingPool<HdfsFlusher, AvroRecordBuffer>{
-    public HdfsFlushingPool(final ValidatedConfiguration vc, final Schema schema) {
-        this(
-                Objects.requireNonNull(vc),
-                Objects.requireNonNull(schema),
-                vc.configuration().hdfsFlusher.threads,
-                vc.configuration().hdfsFlusher.maxWriteQueue,
-                vc.configuration().hdfsFlusher.maxEnqueueDelay.toMillis()
-                );
+    public HdfsFlushingPool(final ValidatedConfiguration vc,
+                            final String name,
+                            final SchemaRegistry schemaRegistry) {
+        this(vc,
+             name,
+             schemaRegistry.getSchemaBySinkName(name),
+             vc.configuration().global.hdfs.threads,
+             vc.configuration().global.hdfs.bufferSize);
     }
 
-    public HdfsFlushingPool(final ValidatedConfiguration vc, final Schema schema, final int numThreads, final int maxQueueSize, final long maxEnqueueDelay) {
-        super(
-                numThreads,
-                maxQueueSize,
-                maxEnqueueDelay,
-                "Hdfs Flusher",
-                () -> new HdfsFlusher(vc, schema));
-    }
-
-    public void enqueueRecordsForFlushing(final AvroRecordBuffer record)  {
-        enqueue(record.getPartyId().value, record);
+    public HdfsFlushingPool(final ValidatedConfiguration vc,
+                            final String name,
+                            final Schema schema,
+                            final int numThreads,
+                            final int maxQueueSize) {
+        super(numThreads,
+              maxQueueSize,
+              String.format("Hdfs Flusher [%s]", Objects.requireNonNull(name)),
+              () -> new HdfsFlusher(Objects.requireNonNull(vc), name, Objects.requireNonNull(schema)));
     }
 }

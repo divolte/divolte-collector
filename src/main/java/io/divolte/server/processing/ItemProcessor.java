@@ -16,14 +16,14 @@
 
 package io.divolte.server.processing;
 
-import java.util.Queue;
-
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
-public interface ItemProcessor<E> {
-    ProcessingDirective process(E e);
+import java.util.Queue;
 
-    default ProcessingDirective process(final Queue<E> batch) {
+public interface ItemProcessor<E> {
+    ProcessingDirective process(Item<E> e);
+
+    default ProcessingDirective process(final Queue<Item<E>> batch) {
         ProcessingDirective directive;
         do {
             // Note: processing should not throw an unchecked
