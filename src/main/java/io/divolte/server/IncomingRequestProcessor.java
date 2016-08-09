@@ -42,9 +42,13 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 @ParametersAreNonnullByDefault
 public final class IncomingRequestProcessor implements ItemProcessor<HttpServerExchange> {
+    public static final String INVALID_DATA_MARKER = "INVALID";
+    public static final Marker invalid = MarkerFactory.getMarker(INVALID_DATA_MARKER);
     private static final Logger logger = LoggerFactory.getLogger(IncomingRequestProcessor.class);
 
     public static final AttachmentKey<DivolteEvent> DIVOLTE_EVENT_KEY = AttachmentKey.create(DivolteEvent.class);
@@ -63,6 +67,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
 
     private final ShortTermDuplicateMemory memory;
     private final boolean keepDuplicates;
+
 
     public IncomingRequestProcessor(final ValidatedConfiguration vc,
                                     @Nullable final KafkaFlushingPool kafkaFlushingPool,
@@ -156,13 +161,17 @@ public final class IncomingRequestProcessor implements ItemProcessor<HttpServerE
 
             if (!duplicate || keepDuplicates) {
                 final GenericRecord avroRecord = mapper.newRecordFromExchange(exchange);
-                final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                        party,
-                        session,
-                        eventData.requestStartTime,
-                        eventData.clientUtcOffset,
-                        avroRecord);
-                doProcess(exchange, avroRecord, avroBuffer);
+		try { //want to make sure a failure here doesn't bubble up and cause the thread to die
+		    final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
+										    party,
+										    session,
+										    eventData.requestStartTime,
+										    eventData.clientUtcOffset,
+										    avroRecord);
+		    doProcess(exchange, avroRecord, avroBuffer);
+		} catch (final RuntimeException e) {
+		    logger.warn(invalid, "Error processing event {} from party {} in session {}: {}", event, party, session, avroRecord, e);
+		}
             }
         }
 
