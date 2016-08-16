@@ -16,32 +16,42 @@
 
 package io.divolte.server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.google.common.base.Strings;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
+import com.google.common.io.Resources;
+import io.divolte.server.mincode.MincodeFactory;
+import io.divolte.server.processing.Item;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
-
-import io.divolte.server.mincode.MincodeFactory;
-import io.undertow.server.HttpServerExchange;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 @ParametersAreNonnullByDefault
-public final class ClientSideCookieEventHandler extends BaseEventHandler {
+public final class ClientSideCookieEventHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(ClientSideCookieEventHandler.class);
+
+    private final static ETag SENTINEL_ETAG = new ETag(false, "6b3edc43-20ec-4078-bc47-e965dd76b88a");
+    private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
+
+    private final ByteBuffer transparentImage;
+    private final IncomingRequestProcessingPool processingPool;
+    private final int sourceIndex;
+
     private static final String TRUE_STRING = "t";
 
     private static final String PARTY_ID_QUERY_PARAM = "p";
@@ -66,18 +76,85 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
 
     static final String EVENT_SOURCE_NAME = "browser";
 
-    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool pool) {
-        super(pool);
+    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool, final int sourceIndex) {
+        this.sourceIndex = sourceIndex;
+        this.processingPool = Objects.requireNonNull(processingPool);
+
+        try {
+            this.transparentImage = ByteBuffer.wrap(
+                Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
+            ).asReadOnlyBuffer();
+        } catch (final IOException e) {
+            // Should throw something more specific than this.
+            throw new RuntimeException("Could not load transparent image resource.", e);
+        }
     }
 
-    @Override
-    protected void logEvent(final HttpServerExchange exchange) {
+    private void logEvent(final HttpServerExchange exchange) {
         try {
             handleRequestIfComplete(exchange);
         } catch (final IncompleteRequestException ire) {
             // improper request, could be anything
             logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
         }
+    }
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) {
+        /*
+         * The source address can be fetched on-demand from the peer connection, which may
+         * no longer be available after the response has been sent. So we materialize it here
+         * to ensure it's available further down the chain.
+         */
+        final InetSocketAddress sourceAddress = exchange.getSourceAddress();
+        exchange.setSourceAddress(sourceAddress);
+
+        /*
+         * Set up the headers that we always send as a response, irrespective of what type it
+         * will be. Note that the client is responsible for ensuring that ensures that each request
+         * is unique.
+         * The cache-related headers are intended to prevent spurious reloads for an event.
+         * (Being a GET request, agents are free to re-issue the request at will. We don't want this.)
+         * As a last resort, we try to detect duplicates via the ETag header.
+         */
+        exchange.getResponseHeaders()
+                .put(Headers.CONTENT_TYPE, "image/gif")
+                .put(Headers.ETAG, SENTINEL_ETAG_VALUE)
+                .put(Headers.CACHE_CONTROL, "private, no-cache, proxy-revalidate")
+                .put(Headers.PRAGMA, "no-cache")
+                .put(Headers.EXPIRES, "Fri, 14 Apr 1995 11:30:00 GMT");
+
+        // If an ETag is present, this is a duplicate event.
+        if (ETagUtils.handleIfNoneMatch(exchange, SENTINEL_ETAG, true)) {
+            try {
+                logEvent(exchange);
+            } finally {
+                // Default status code what we want: 200 OK.
+                exchange.getResponseSender().send(transparentImage.slice());
+            }
+        } else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Ignoring duplicate event from {}: {}", sourceAddress, getFullUrl(exchange));
+            }
+            exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
+            exchange.endExchange();
+        }
+    }
+
+    private static String getFullUrl(final HttpServerExchange exchange) {
+        final String queryString = exchange.getQueryString();
+        final String requestUrl = exchange.getRequestURL();
+        return Strings.isNullOrEmpty(queryString)
+                ? requestUrl
+                : requestUrl + '?' + queryString;
+    }
+
+    static Optional<String> queryParamFromExchange(final HttpServerExchange exchange, final String param) {
+        return Optional.ofNullable(exchange.getQueryParameters().get(param)).map(Deque::getFirst);
+    }
+
+    public static class IncompleteRequestException extends Exception {
+        private static final long serialVersionUID = 1L;
     }
 
     private void handleRequestIfComplete(final HttpServerExchange exchange) throws IncompleteRequestException {
@@ -96,7 +173,7 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                                                              isNewPartyId, isFirstInSession, exchange);
 
         logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
-        processingPool.enqueueIncomingExchangeForProcessing(partyId, event);
+        processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
     }
 
     static DivolteEvent buildBrowserEventData(final boolean corruptEvent,

@@ -9,7 +9,6 @@ import java.util.Deque;
 import java.util.Properties;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -23,7 +22,7 @@ public class PropertiesDeserializer extends JsonDeserializer<Properties> {
     private final static Joiner COMMA_JOINER = Joiner.on(',');
 
     @Override
-    public Properties deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
+    public Properties deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
         if (START_OBJECT == p.getCurrentToken()) {
             final Properties properties = new Properties();
             final Deque<String> stack = new ArrayDeque<>();

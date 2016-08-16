@@ -127,6 +127,14 @@ public abstract class SeleniumTestBase {
     }
 
     protected void doSetUp(final String configFileName) throws Exception {
+        doSetUp(Optional.of(configFileName));
+    }
+
+    protected void doSetUp() throws Exception {
+        doSetUp(Optional.empty());
+    }
+
+    protected void doSetUp(final Optional<String> configFileName) throws Exception {
         final String driverName = System.getenv().getOrDefault(DRIVER_ENV_VAR, PHANTOMJS_DRIVER);
 
         switch (driverName) {
@@ -145,8 +153,7 @@ public abstract class SeleniumTestBase {
             break;
         }
 
-        server = new TestServer(configFileName);
-        server.server.run();
+        server = configFileName.map(TestServer::new).orElseGet(TestServer::new);
     }
 
     private void setupBrowserStack() throws MalformedURLException {

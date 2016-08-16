@@ -16,6 +16,14 @@
 
 package io.divolte.server;
 
+import com.google.common.base.Preconditions;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
+import io.divolte.server.config.ValidatedConfiguration;
+import org.apache.avro.generic.GenericRecord;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Map;
@@ -24,16 +32,6 @@ import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.apache.avro.generic.GenericRecord;
-
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigValueFactory;
-
-import io.divolte.server.config.ValidatedConfiguration;
 
 public final class ServerTestUtils {
     /*
@@ -72,30 +70,37 @@ public final class ServerTestUtils {
         final Server server;
         final BlockingQueue<EventPayload> events;
 
+        public TestServer() {
+            this(findFreePort(), ConfigFactory.parseResources("reference-test.conf"));
+        }
+
         public TestServer(final String configResource) {
-            this(
-                    findFreePort(),
-                    ConfigFactory.parseResources(configResource)
-                                 .withFallback(ConfigFactory.parseResources("reference-test.conf"))
-                );
+            this(findFreePort(),
+                 ConfigFactory.parseResources(configResource)
+                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
         }
 
         public TestServer(final String configResource, final Map<String,Object> extraConfig) {
-            this(
-                    findFreePort(),
-                    ConfigFactory.parseMap(extraConfig)
-                                 .withFallback(ConfigFactory.parseResources(configResource))
-                                 .withFallback(ConfigFactory.parseResources("reference-test.conf"))
-                );
+            this(findFreePort(),
+                 ConfigFactory.parseMap(extraConfig, "Test-specific overrides")
+                              .withFallback(ConfigFactory.parseResources(configResource))
+                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
         }
 
         private TestServer(final int port, final Config config) {
             this.port = port;
-            this.config = config.withValue("divolte.server.port", ConfigValueFactory.fromAnyRef(port));
+            this.config = config.withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
 
             events = new ArrayBlockingQueue<>(100);
             final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);
+            Preconditions.checkArgument(vc.isValid(),
+                                        "Invalid test server configuration: %s", vc.errors());
             server = new Server(vc, (event, buffer, record) -> events.add(new EventPayload(event, buffer, record)));
+            server.run();
+        }
+
+        static TestServer createTestServerWithDefaultNonTestConfiguration() {
+            return new TestServer(findFreePort(), ConfigFactory.defaultReference());
         }
 
         public EventPayload waitForEvent() throws InterruptedException {

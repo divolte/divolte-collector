@@ -16,23 +16,22 @@
 
 package io.divolte.server;
 
-import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import io.divolte.server.ServerTestUtils.EventPayload;
+import io.divolte.server.ServerTestUtils.TestServer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Preconditions;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Map;
 
-import io.divolte.server.ServerTestUtils.EventPayload;
-import io.divolte.server.ServerTestUtils.TestServer;
+import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class RequestChecksumTest {
@@ -93,10 +92,12 @@ public class RequestChecksumTest {
             + "t=sentinelEvent&"
             + "x=-y99lem";
 
-    private String serverConfigurationResourceName;
+    private boolean discardCorruptEvents;
 
     @Nullable
     private TestServer server;
+    @Nullable
+    private ImmutableMap<String,Object> serverProperties;
 
     @Test
     public void shouldFlagCorrectChecksumAsNotCorrupted() throws IOException, InterruptedException {
@@ -144,7 +145,7 @@ public class RequestChecksumTest {
 
     @Test
     public void shouldDiscardCorruptedEventsIfConfigured() throws InterruptedException, IOException {
-        serverConfigurationResourceName = "checksum-discard-corrupt-test.conf";
+        discardCorruptEvents = true;
         request(URL_QUERY_CHECKSUM_BAD);
         request(URL_QUERY_SENTINEL);
         Preconditions.checkState(null != server);
@@ -155,22 +156,23 @@ public class RequestChecksumTest {
     }
 
     private void request(final String queryString) throws IOException {
-        setServerConf(serverConfigurationResourceName);
+        setServerConf(ImmutableMap.of("divolte.mappings.test.discard_corrupted", discardCorruptEvents));
         Preconditions.checkState(null != server);
         final URL url = new URL(String.format(URL_STRING, server.port) + queryString);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         assertEquals(200, conn.getResponseCode());
     }
 
-    private void setServerConf(final String configurationResourceName) {
-        if (null == server || !configurationResourceName.equals(server.config.origin().resource())) {
-            setServer(new TestServer(configurationResourceName));
+    private void setServerConf(final Map<String,Object> configurationProperties) {
+        if (null == server || !configurationProperties.equals(serverProperties)) {
+            serverProperties = ImmutableMap.copyOf(configurationProperties);
+            setServer(new TestServer("base-test-server.conf", serverProperties));
         }
     }
 
     @Before
     public void setUp() {
-        serverConfigurationResourceName = "checksum-test.conf";
+        discardCorruptEvents = false;
     }
 
     @After
@@ -185,9 +187,6 @@ public class RequestChecksumTest {
                 oldServer.server.shutdown();
             }
             this.server = newServer;
-            if (null != newServer) {
-                newServer.server.run();
-            }
         }
     }
 }

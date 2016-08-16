@@ -94,7 +94,7 @@ public class MappingTestServer {
 
     @Nullable
     private static LookupService lookupServiceFromConfig(final ValidatedConfiguration vc) {
-        return vc.configuration().tracking.ip2geoDatabase
+        return vc.configuration().global.mapper.ip2geoDatabase
                 .map((path) -> {
                     try {
                         return new ExternalDatabaseLookupService(Paths.get(path));

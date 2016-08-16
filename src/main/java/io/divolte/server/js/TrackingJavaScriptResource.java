@@ -16,17 +16,15 @@
 
 package io.divolte.server.js;
 
+import com.google.common.collect.ImmutableMap;
+import io.divolte.server.config.BrowserSourceConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
-
-import java.io.IOException;
-import java.time.temporal.ChronoUnit;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.time.temporal.ChronoUnit;
 
 @ParametersAreNonnullByDefault
 public class TrackingJavaScriptResource extends JavaScriptResource {
@@ -34,25 +32,26 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
 
     private static final String SCRIPT_CONSTANT_NAME = "SCRIPT_NAME";
 
-    public TrackingJavaScriptResource(final ValidatedConfiguration vc) throws IOException {
-        super("divolte.js", createScriptConstants(vc), vc.configuration().javascript.debug);
+    public TrackingJavaScriptResource(final String resourceName,
+                                      final ImmutableMap<String, Object> scriptConstants,
+                                      final boolean debugMode) throws IOException {
+        super(resourceName, scriptConstants, debugMode);
     }
 
     public String getScriptName() {
         return (String)getScriptConstants().get(SCRIPT_CONSTANT_NAME);
     }
 
-    private static ImmutableMap<String, Object> createScriptConstants(final ValidatedConfiguration vc) {
+    private static ImmutableMap<String, Object> createScriptConstants(final BrowserSourceConfiguration browserSourceConfiguration) {
         final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        builder.put("PARTY_COOKIE_NAME", vc.configuration().tracking.partyCookie);
-        builder.put("PARTY_ID_TIMEOUT_SECONDS", trimLongToMaxInt(vc.configuration().tracking.partyTimeout.get(ChronoUnit.SECONDS)));
-        builder.put("SESSION_COOKIE_NAME", vc.configuration().tracking.sessionCookie);
-        builder.put("SESSION_ID_TIMEOUT_SECONDS", trimLongToMaxInt(vc.configuration().tracking.sessionTimeout.get(ChronoUnit.SECONDS)));
-        vc.configuration().tracking.cookieDomain
-                      .ifPresent((v) -> builder.put("COOKIE_DOMAIN", v));
-        builder.put("LOGGING", vc.configuration().javascript.logging);
-        builder.put(SCRIPT_CONSTANT_NAME, vc.configuration().javascript.name);
-        builder.put("AUTO_PAGE_VIEW_EVENT", vc.configuration().javascript.autoPageViewEvent);
+        builder.put("PARTY_COOKIE_NAME", browserSourceConfiguration.partyCookie);
+        builder.put("PARTY_ID_TIMEOUT_SECONDS", trimLongToMaxInt(browserSourceConfiguration.partyTimeout.get(ChronoUnit.SECONDS)));
+        builder.put("SESSION_COOKIE_NAME", browserSourceConfiguration.sessionCookie);
+        builder.put("SESSION_ID_TIMEOUT_SECONDS", trimLongToMaxInt(browserSourceConfiguration.sessionTimeout.get(ChronoUnit.SECONDS)));
+        browserSourceConfiguration.cookieDomain.ifPresent((v) -> builder.put("COOKIE_DOMAIN", v));
+        builder.put("LOGGING", browserSourceConfiguration.javascript.logging);
+        builder.put(SCRIPT_CONSTANT_NAME, browserSourceConfiguration.javascript.name);
+        builder.put("AUTO_PAGE_VIEW_EVENT", browserSourceConfiguration.javascript.autoPageViewEvent);
         return builder.build();
     }
 
@@ -66,5 +65,14 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
                         duration, result);
         }
         return result;
+    }
+
+    public static TrackingJavaScriptResource create(final ValidatedConfiguration vc,
+                                                    final String sourceName) throws IOException {
+        final BrowserSourceConfiguration browserSourceConfiguration =
+                vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class);
+        return new TrackingJavaScriptResource(browserSourceConfiguration.javascript.name,
+                                              createScriptConstants(browserSourceConfiguration),
+                                              browserSourceConfiguration.javascript.debug);
     }
 }

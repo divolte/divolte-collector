@@ -17,11 +17,8 @@
 package io.divolte.server.hdfs;
 
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.config.FileStrategyConfiguration.Types;
-import io.divolte.server.config.ValidatedConfiguration;
 
-import org.apache.avro.Schema;
-import org.apache.hadoop.fs.FileSystem;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 /*
  * Used by the HdfsFlusher to actually flush events to HDFS. Different implementation
@@ -31,22 +28,12 @@ import org.apache.hadoop.fs.FileSystem;
  * heartbeat() when no events are available. When either append(...) or heartbeat return FAILURE,
  * clients MUST NOT call append(...) any more, until a call to heartbeat() has returned SUCCESS.
  */
+@ParametersAreNonnullByDefault
 interface FileCreateAndSyncStrategy {
     HdfsOperationResult setup();
     HdfsOperationResult heartbeat();
     HdfsOperationResult append(final AvroRecordBuffer record);
     void cleanup();
-
-    static FileCreateAndSyncStrategy create(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
-        if (vc.configuration().hdfsFlusher.fileStrategy.type == Types.SESSION_BINNING) {
-            return new SessionBinningFileStrategy(vc, fs, hdfsReplication, schema);
-        } else if (vc.configuration().hdfsFlusher.fileStrategy.type == Types.SIMPLE_ROLLING_FILE) {
-            return new SimpleRollingFileStrategy(vc, fs, hdfsReplication, schema);
-        } else {
-            // Should not occur with a validate configuration.
-            throw new RuntimeException("No valid HDFS file flushing strategy was configured.");
-        }
-    }
 
     enum HdfsOperationResult {
         SUCCESS,

@@ -138,7 +138,6 @@ public class ShortTermDuplicateMemoryTest {
     @Before
     public void setUp() {
         server = new TestServer("duplicates-test.conf");
-        server.server.run();
     }
 
     @After
