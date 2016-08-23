@@ -214,7 +214,7 @@ This section controls global settings related to the processing of incoming requ
 Property: ``divolte.global.mapper.threads``
 """""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The number of threads that each mapper should use to process events.
+  The total number of threads that mappers will use to process events. This is a global total; all mappings share the same threads.
 :Default:
   1
 :Example:
@@ -468,6 +468,9 @@ For example:
     }
   }
 
+Implicit default source
+^^^^^^^^^^^^^^^^^^^^^^^
+
 If no sources are specified a single implicit browser source is created that is equivalent to:
 
 .. code-block:: none
@@ -690,6 +693,9 @@ An example mapping configuration could be:
     }
   }
 
+Implicit default mapping
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 If no mappings are specified a single implicit mapping is created that is equivalent to:
 
 .. code-block:: none
@@ -819,6 +825,9 @@ For example:
       type = hdfs
     }
   }
+
+Implicit default sinks
+^^^^^^^^^^^^^^^^^^^^^^
 
 If no sinks are specified two implicit sinks are created that are equivalent to:
 

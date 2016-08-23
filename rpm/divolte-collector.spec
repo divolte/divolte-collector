@@ -50,7 +50,7 @@ sed -e "s/scmVersion\.version/'%{version}%{snapshot}'/g" build.gradle > build.gr
 %install
 rm -rf "%{buildroot}"
 
-./gradlew --no-daemon --exclude-task test installApp
+./gradlew --no-daemon --exclude-task test installDist
 
 %{__mkdir_p} "%{buildroot}/etc/divolte"
 %{__mkdir_p} "%{buildroot}/etc/init.d"
