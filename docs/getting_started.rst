@@ -243,6 +243,8 @@ Now, the records in the data should look like this:
 
 As you can see, the data collected by Divolte Collector is based on the custom schema and mapping. This is very powerful because it means that the data that is being collected can be enriched on the fly with domain-specific fields that are extracted from the clickstream. This way you shouldn't need to parse out relevant bit and pieces of information afterwards. Also note that we were able to collect the entire location from the browser on the server side, including the fragment after the ``#``. This comes in very handy when working with modern JavaScript-based web applications that often depend on this part of the location for their state.
 
+.. _collecting-clicks-label:
+
 Collecting clicks for your own site
 ===================================
 Underpinning the click event data collection is a small piece of JavaScript, which is called a tag. The tag needs to be inserted into every web page that you want to track. Usually, this is done by adding the tag to a template or footer file in your website. This depends largely on how your web pages are created/generated and organised. Here is an example of the Divolte Collector tag in a HTML page.
@@ -439,6 +441,81 @@ configured with multiple:
 Events flow from sources to sinks, via an intermediate mapping. Allowing multiple sources, sinks and mappings allows Divolte to support multiple sites and domains, each of which may require independent mapping. Note, however, that a sink can only support a single Avro schema: all mappings which refer to it must be configured to produce records conforming to the same Avro schema.
 
 An event flow imposes a partial ordering on the events it receives: events from a source that have the same party identifier will be written to sinks in the same order that they were received in. (This doesn't apply to events received across different sources: even if they share the same party identifier their relative ordering is not guaranteed.)
+
+Low-level JSON sources
+----------------------
+
+In addition to the browser sources demonstrated above, Divolte Collector supports a lower-level event source where JSON-formatted events can be posted. Let's add a new JSON source and update the mapping section to also process its events:
+
+.. code-block:: none
+
+  divolte {
+    sources {
+      // Once we specify a source, we need to specify all of them.
+      // Here's the definition for the browser source we've been using until now.
+      browser = {
+        type = browser
+      }
+      // Here's the low-level JSON source we're adding.
+      json = {
+        type = json
+        prefix = /json/
+      }
+    }
+    mappings {
+      my_mapping = {
+        schema_file = "/path/to/divolte-collector/conf/MyEventRecord.avsc"
+        mapping_script_file = "/path/to/divolte-collector/conf/mapping.groovy"
+        // In addition to mapping events from the browser source, we also map from the new JSON source.
+        sources = [browser, json]
+        sinks = [hdfs]
+      }
+    }
+  }
+
+At this point all the existing browser-based examples should still work, but you can now also submit a JSON-formatted event:
+
+.. code-block:: console
+
+  % curl 'http://localhost:8290/json/?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
+      --dump-header - \
+      --header 'Content-Type: application/json' \
+      --data '
+  {
+    "session_id": "0:is8tiwk4:XLEUVj9hA6AXRUOp2zuIdUpaeFOC~7AU",
+    "event_id": "AruZ~Em0WNlAnbyzVmwM~GR0cMb6Xl9s",
+    "is_new_party": true,
+    "is_new_session": true,
+    "client_timestamp_iso": "2016-08-24T13:29:39.412+02:00",
+    "event_type": "anEvent"
+  }'
+
+As before we can display the events that have been collected:
+
+.. code-block:: console
+
+  % find /tmp/ -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
+
+There should be an event that looks something like:
+
+.. code-block:: json
+
+  {
+    "timestamp" : 1472046897112,
+    "remoteHost" : "127.0.0.1",
+    "eventType" : {
+      "string" : "anEvent"
+    },
+    "location" : null,
+    "localPath" : null,
+    "q" : null,
+    "n" : null
+  }
+
+Our mapping was able to produce an event based on the JSON event, but many fields don't have a value because they are only supplied by browser events. For low-level events instead:
+
+1. Custom data instead needs to be supplied in a ``parameters`` JSON property;
+2. The mapping needs to be updated, as mentioned briefly in the :ref:`collecting-clicks-label` section above.
 
 What's next?
 ============

@@ -18,9 +18,25 @@ Before you dive in to creating your own mappings, it is important to understand 
 
 .. image:: images/mapping-request-run-time.png
 
+Schema evolution and default values
+-----------------------------------
+Schema evolution is the process of changing the schema over time as requirements change. For example when a new feature is added to your website, you add additional fields to the schema that contain specific information about user interactions with this new feature. In this scenario, you would update the schema to have these additional fields, update the mapping and then run Divolte Collector with the new schema and mapping. This means that there will be a difference between data that was written prior to the update and data that is written after the update. Also, it means that after the update, there can still be consumers of the data (from HDFS or Kafka) that still use the old schema. In order to make sure that this isn't a problem, the readers with the old schema need to be able to read data written with the new schema and readers with the new schema should also still work on data written with the old schema.
+
+Luckily, Avro supports both of these cases. When reading newer data with an older schema, the fields that are not present in the old schema are simply ignored by the reader. The other way around is slightly trickier. When reading older data with a new schema, Avro will fill in the default values for fields that are present in the schema but not in the data. *This is provided that there is a default value.* Basically, this means that it is recommended to always provide a default value for all your fields in the schema. In case of nullable fields, the default value could just be null.
+
+One other reason to always provide a default value is that Avro does not allow to create records with missing values if there are no default values. As a result of this, fields that have no default value always must be populated in the mapping, otherwise an error will occur. This is problematic if the mapping for some reason fails to set a field (e.g. because of a user typing in a non-conforming location in the browser).
+
+In addition to introducing new fields with defaults, other forms of changes such as renaming and type changes can be permitted under some circumstances. For full details on the changes that are permitted and how the writing and reading schemas are reconciled refer to the `Avro documentation on schema resolution <https://avro.apache.org/docs/1.8.1/spec.html#Schema+Resolution>`_.
+
+Mapping DSL
+===========
+Mappings are specified by Groovy scripts that are compiled and run by Divolte Collector on startup. Each mapping script is written in the mapping DSL. The result of running this script is a mapping that Divolte Collector can use to map incoming events from its configured sources onto an Avro schema.
+
+The values that are available on an event depend on the type of source that produced it. Currently browser events make more values available than events produced by JSON sources.
+
 Built-in default mapping
 ------------------------
-Divolte Collector comes with a built-in default schema and mapping. A mapping will use these if the mapping schema or script file are not specified. The default mapping will map pretty much all of the basics that you would expect from a clickstream data collector. The Avro schema that is used can be found in the `divolte-schema Github repository <https://github.com/divolte/divolte-schema>`_. The following mappings are present in the default mapping:
+Divolte Collector comes with a built-in default schema and mapping. A mapping will use these if the mapping schema or script file are not specified. The default mapping is intended to map events from a browser source and will map most things that you would expect from a clickstream data collector. The Avro schema that is used can be found in the `divolte-schema Github repository <https://github.com/divolte/divolte-schema>`_. The following mappings are present in the default mapping:
 
 ===============================  =================
 Mapped value                     Avro schema field
@@ -54,20 +70,6 @@ Mapped value                     Avro schema field
 ===============================  =================
 
 The default schema is not available as a mapping script. Instead, it is hard coded into Divolte Collector. This allows Divolte Collector to do something useful out-of-the-box without any complex configuration.
-
-Schema evolution and default values
------------------------------------
-Schema evolution is the process of changing the schema over time as requirements change. For example when a new feature is added to your website, you add additional fields to the schema that contain specific information about user interactions with this new feature. In this scenario, you would update the schema to have these additional fields, update the mapping and then run Divolte Collector with the new schema and mapping. This means that there will be a difference between data that was written prior to the update and data that is written after the update. Also, it means that after the update, there can still be consumers of the data (from HDFS or Kafka) that still use the old schema. In order to make sure that this isn't a problem, the readers with the old schema need to be able to read data written with the new schema and readers with the new schema should also still work on data written with the old schema.
-
-Luckily, Avro supports both of these cases. When reading newer data with an older schema, the fields that are not present in the old schema are simply ignored by the reader. The other way around is slightly trickier. When reading older data with a new schema, Avro will fill in the default values for fields that are present in the schema but not in the data. *This is provided that there is a default value.* Basically, this means that it is recommended to always provide a default value for all your fields in the schema. In case of nullable fields, the default value could just be null.
-
-One other reason to always provide a default value is that Avro does not allow to create records with missing values if there are no default values. As a result of this, fields that have no default value always must be populated in the mapping, otherwise an error will occur. This is problematic if the mapping for some reason fails to set a field (e.g. because of a user typing in a non-conforming location in the browser).
-
-In addition to introducing new fields with defaults, other forms of changes such as renaming and type changes can be permitted under some circumstances. For full details on the changes that are permitted and how the writing and reading schemas are reconciled refer to the `Avro documentation on schema resolution <https://avro.apache.org/docs/1.8.1/spec.html#Schema+Resolution>`_.
-
-Mapping DSL
-===========
-Mappings are specified by Groovy scripts that are compiled and run by Divolte Collector on startup. Each mapping script is written in the mapping DSL. The result of running this script is a mapping that Divolte Collector can use to map incoming events from its configured sources onto an Avro schema.
 
 Values, fields and mappings
 ---------------------------
@@ -113,9 +115,11 @@ This is most often used in combination with `Conditional mapping (when)`_ as in 
     map true onto 'directTraffic'
   }
 
-Value presence and nulls
-""""""""""""""""""""""""
-Not all values are present in each event. For example, when using a custom cookie value there could be incoming events where the cookie is not sent by the client. In this case the cookie value is said to absent. Divolte Collector will never actively set a null value. Instead for absent values it does nothing at all: the mapped field is not set on the Avro record. When values that are absent are used in subsequent expressions the derived values will also be absent. In the following example the :code:`intField` field will never be set because the incoming request has no referrer. This is not an error:
+Value presence
+""""""""""""""
+Not all values are present in each event. For example, when using a custom cookie value there could be incoming events where the cookie is not sent by the client. In this case the cookie value is said to absent. Similarly, events from a JSON source do not have a location value; this is specific to events from a browser source.
+
+Divolte Collector will never actively set an absent value. Instead for absent values it does nothing at all: the mapped field is not set on the Avro record. When values that are absent are used in subsequent expressions the derived values will also be absent. In the following example the :code:`intField` field will never be set because the incoming request has no referrer. This is not an error:
 
 .. code-block:: groovy
 
@@ -380,9 +384,9 @@ Any boolean value can be used as a condition. In order to be able to create flex
 +-------------------------------------------------+----------------------------------------------------------------+
 | Condition                                       | Description                                                    |
 +=================================================+================================================================+
-| :samp:`{value}.isPresent()`                     | True if the value is present. See: `Value presence and nulls`_ |
+| :samp:`{value}.isPresent()`                     | True if the value is present. See: `Value presence`_           |
 +-------------------------------------------------+----------------------------------------------------------------+
-| :samp:`{value}.isAbsent()`                      | True if the value is absent. See: `Value presence and nulls`_  |
+| :samp:`{value}.isAbsent()`                      | True if the value is absent. See: `Value presence`_            |
 +-------------------------------------------------+----------------------------------------------------------------+
 | :samp:`{value}.equalTo({otherValue})`           | True if both values are equal. Values must be of the same type.|
 +-------------------------------------------------+----------------------------------------------------------------+
@@ -549,8 +553,12 @@ Simple value: :code:`location()`
 
     map location() onto 'locationField'
 
+:Sources:
+
+  ``browser``
+
 :Description:
-  The location URL for the page-view that triggered the event: the full address in the address bar of the user's browser. This includes the fragment part if this is present (the part after the ``#``), which is different from server side request logs which do not contain the fragment part.
+  The location URL of the page where the event was triggered: the full address in the address bar of the user's browser. This includes the fragment part if this is present (the part after the ``#``), which is different from server side request logs which do not contain the fragment part.
 
 :Type:
   :code:`string`
@@ -564,6 +572,10 @@ Simple value: :code:`referer()`
   .. code-block:: groovy
 
     map referer() onto 'refererField'
+
+:Sources:
+
+  ``browser``
 
 :Description:
   The referrer URL for the page-view that triggered the event. Unlike :code:`location()`, the referer will not contain any fragment part.
@@ -581,6 +593,10 @@ Simple value: :code:`firstInSession()`
 
     map firstInSession() onto 'first'
 
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
   A boolean flag that is true if a new session ID was generated for this event and false otherwise. If true a new session has started.
 
@@ -597,8 +613,14 @@ Simple value: :code:`corrupt()`
 
     map corrupt() onto 'detectedCorruption'
 
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
   A boolean flag that is true if the source for the event detected corruption of the event data. Event corruption usually occurs when intermediate parties try to re-write HTTP requests or truncate long URLs. Real-world proxies and anti-virus software has been observed doing this.
+
+  Note that although this field is available on events from all sources, only browser sources currently detect corruption and set this value accordingly.
 
 :Type:
   :code:`Boolean`
@@ -612,6 +634,10 @@ Simple value: :code:`duplicate()`
   .. code-block:: groovy
 
     map duplicate() onto 'detectedDuplicate'
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   A boolean flag that true when the event is believed to be a duplicate of an earlier one. Duplicate detection in Divolte Collector utilizes a probabilistic data structure that has a low false positive and false negative rate. Nonetheless classification mistakes can still occur. Duplicate events often arrive due to certain types of anti-virus software and certain proxies. Additionally, browsers sometimes go haywire and send the same request large numbers of times (in the tens of thousands). Duplicate detection can be used to mitigate the effects when this occurs. This is particularly handy in real-time processing where it is not practical to perform de-duplication of the data based on a full data scan.
@@ -629,6 +655,10 @@ Simple value: :code:`timestamp()`
 
     map timestamp() onto 'timeField'
 
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
   The timestamp of the time the the request was received by the server, in milliseconds since the UNIX epoch.
 
@@ -644,6 +674,10 @@ Simple value: :code:`clientTimestamp()`
   .. code-block:: groovy
 
     map clientTimestamp() onto 'timeField'
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   The timestamp that was recorded on the client side immediately prior to sending the request, in milliseconds since the UNIX epoch.
@@ -661,6 +695,10 @@ Simple value: :code:`remoteHost()`
 
     map remoteHost() onto 'ipAddressField'
 
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
   The remote IP address of the request. Depending on configuration, Divolte Collector will use any :mailheader:`X-Forwarded-For` headers set by intermediate proxies or load balancers.
 
@@ -676,6 +714,10 @@ Simple value: :code:`viewportPixelWidth()`
   .. code-block:: groovy
 
     map viewportPixelWidth() onto 'widthField'
+
+:Sources:
+
+  ``browser``
 
 :Description:
   The width of the client's browser viewport in pixels.
@@ -693,6 +735,10 @@ Simple value: :code:`viewportPixelHeight()`
 
     map viewportPixelHeight() onto 'widthField'
 
+:Sources:
+
+  ``browser``
+
 :Description:
   The height of the client's browser viewport in pixels.
 
@@ -708,6 +754,10 @@ Simple value: :code:`screenPixelWidth()`
   .. code-block:: groovy
 
     map screenPixelWidth() onto 'widthField'
+
+:Sources:
+
+  ``browser``
 
 :Description:
   The width of the client's screen in pixels.
@@ -725,6 +775,10 @@ Simple value: :code:`screenPixelHeight()`
 
     map screenPixelHeight() onto 'widthField'
 
+:Sources:
+
+  ``browser``
+
 :Description:
   The height of the client's screen in pixels.
 
@@ -740,6 +794,10 @@ Simple value: :code:`devicePixelRatio()`
   .. code-block:: groovy
 
     map devicePixelRatio() onto 'ratioField'
+
+:Sources:
+
+  ``browser``
 
 :Description:
   The ratio of physical pixels to logical pixels on the client's device. Some devices use a scaled resolution, meaning that the resolution and the actual available pixels are different. This is common on retina-type displays, with very high pixel density.
@@ -757,8 +815,12 @@ Simple value: :code:`partyId()`
 
     map partyId() onto 'partyField'
 
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
-  A long-lived unique identifier stored by a client that is associated with each event from that source. All events from the same client should have the same party identifier.
+  A long-lived unique identifier stored by a client that is associated with each event they send. All events from the same client should have the same party identifier.
 
   For browser sources this value is stored in a cookie.
 
@@ -774,6 +836,10 @@ Simple value: :code:`sessionId()`
   .. code-block:: groovy
 
     map sessionId() onto 'sessionField'
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   A short-lived unique identifier stored by a client that is associated with each event from that source within a session of activity. All events from the same client within a session should have the same session identifier.
@@ -793,6 +859,10 @@ Simple value: :code:`pageViewId()`
 
     map pageViewId() onto 'pageviewField'
 
+:Sources:
+
+  ``browser``
+
 :Description:
   A unique identifier that is generated for each page-view. All events from a client within the same page-view will have the same page-view identifier.
 
@@ -811,6 +881,10 @@ Simple value: :code:`eventId()`
 
     map eventId() onto 'eventField'
 
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
   A unique identifier that is associated with each event received from a source. (This identifier is assigned by the client, not by the server.)
 
@@ -826,6 +900,10 @@ Simple value: :code:`userAgentString()`
   .. code-block:: groovy
 
     map userAgentString() onto 'uaField'
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   The full user agent identification string reported by the client HTTP headers when sending an event.
@@ -845,6 +923,11 @@ Simple value: :samp:`cookie({name})`
 
     map cookie('cookie_name') onto 'customCookieField'
 
+
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
   The value of a cookie included in the client HTTP headers when sending an event.
 
@@ -860,6 +943,10 @@ Simple value: :code:`eventType()`
   .. code-block:: groovy
 
     map eventType() onto 'eventTypeField'
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   The type of event being processed.
@@ -878,13 +965,31 @@ Complex value: :code:`eventParameters()`
 """"""""""""""""""""""""""""""""""""""""
 :Usage:
 
+  When submitting custom events from a client:
+
+  +---------------------------------------------------------+--------------------------------------------------------+
+  | Source type: ``browser``                                | Source type: ``json``                                  |
+  +=========================================================+========================================================+
+  | .. code-block:: javascript                              | .. code-block:: json                                   |
+  |                                                         |                                                        |
+  |   // In the JavaScript                                  |   {                                                    |
+  |   divolte.signal('myEvent', { foo: 'hello', bar: 42 }); |     "eventType": "myEvent",                            |
+  |                                                         |     "parameters": {                                    |
+  |                                                         |       "foo": "hello",                                  |
+  |                                                         |       "bar": 42                                        |
+  |                                                         |     }                                                  |
+  |                                                         |   }                                                    |
+  +---------------------------------------------------------+--------------------------------------------------------+
+
+  In the mapping:
+
   .. code-block:: groovy
 
-    // on the client in JavaScript:
-    divolte.signal('myEvent', { foo: 'hello', bar: 42 });
-
-    // in the mapping
     map eventParameters() onto 'parametersField'
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   A JSON object or array (:code:`JsonNode`) containing the custom parameters that were submitted with
@@ -899,11 +1004,21 @@ Derived simple value: :samp:`eventParameters().value({name})`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 :Usage:
 
-  On a site submitting events to a browser source:
+  When submitting custom events from a client:
 
-  .. code-block:: javascript
-
-    divolte.signal('myEvent', { foo: 'hello', bar: 42 });
+  +---------------------------------------------------------+--------------------------------------------------------+
+  | Source type: ``browser``                                | Source type: ``json``                                  |
+  +=========================================================+========================================================+
+  | .. code-block:: javascript                              | .. code-block:: json                                   |
+  |                                                         |                                                        |
+  |   // In the JavaScript                                  |   {                                                    |
+  |   divolte.signal('myEvent', { foo: 'hello', bar: 42 }); |     "eventType": "myEvent",                            |
+  |                                                         |     "parameters": {                                    |
+  |                                                         |       "foo": "hello",                                  |
+  |                                                         |       "bar": 42                                        |
+  |                                                         |     }                                                  |
+  |                                                         |   }                                                    |
+  +---------------------------------------------------------+--------------------------------------------------------+
 
   In the mapping:
 
@@ -924,15 +1039,21 @@ Derived complex value: :samp:`eventParameters().path({expression})`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 :Usage:
 
-  On a site submitting events to a browser source:
+  When submitting custom events from a client:
 
-  .. code-block:: javascript
-
-    // On the client in JavaScript:
-    divolte.signal('searchResults', [
-      { "sku": "0886974140818", "score": 0.9 },
-      { "sku": "0094638246817", "score": 0.8 }
-    ]);
+  +---------------------------------------------------------+--------------------------------------------------------+
+  | Source type: ``browser``                                | Source type: ``json``                                  |
+  +=========================================================+========================================================+
+  | .. code-block:: javascript                              | .. code-block:: json                                   |
+  |                                                         |                                                        |
+  |   // In the JavaScript                                  |   {                                                    |
+  |   divolte.signal('searchResults', [                     |     "eventType": "searchResults",                      |
+  |     { "sku": "0886974140818", "score": 0.9 },           |     "parameters": [                                    |
+  |     { "sku": "0094638246817", "score": 0.8 }            |       { "sku": "0886974140818", "score": 0.9 },        |
+  |   ]);                                                   |       { "sku": "0094638246817", "score": 0.8 }         |
+  |                                                         |     ]                                                  |
+  |                                                         |   }                                                    |
+  +---------------------------------------------------------+--------------------------------------------------------+
 
   In the Avro schema:
 
@@ -1260,6 +1381,10 @@ Complex value: :samp:`header({name})`
 
     map header('header-name') onto 'fieldName'
 
+:Sources:
+
+  ``browser``, ``json``
+
 :Description:
   The list of all values associated with the given HTTP header from the incoming request. A HTTP header can be present in a request multiple times, yielding multiple values for the same header name; these are returned as a list. The Avro type of the target field for this mapping must be a list of string:
 
@@ -1334,6 +1459,10 @@ Complex value: :code:`userAgent()`
   .. code-block:: groovy
 
     def ua = userAgent()
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   Attempts to parse a the result of `userAgentString`_ string into a user agent object. Note that this result is not directly mappable onto any Avro field. Instead, the subfields from this object, described below, can be mapped onto fields. When the parsing of the user agent string fails, either because the user agent is unknown or malformed, or because the user agent was not sent by the browser, this value and all subfield values are absent.
@@ -1499,6 +1628,11 @@ Complex value: :code:`ip2geo({optionalIP})`
     // If a load balancer sets custom headers for IP addresses, use like this
     def ip = header('X-Custom-Header').first()
     def myUa = ip2geo(ip)
+
+
+:Sources:
+
+  ``browser``, ``json``
 
 :Description:
   Attempts to turn a IPv4 address into a geo location by performing a lookup into a configured `MaxMind GeoIP City database <https://www.maxmind.com/en/geoip2-city>`_. This database is not distributed with Divolte Collector, but must be provided separately. See the :doc:`configuration` chapter for more details on this.

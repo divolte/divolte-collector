@@ -454,17 +454,25 @@ Sources (``divolte.sources``)
 
 Sources are endpoints that can receive events. Each source has a name used to identify it when configuring a mapper that uses the source. A source cannot have the same name as a sink (and vice versa). Sources are configured in sections using their name as the configuration path. (Due to the `HOCON merging rules <https://github.com/typesafehub/config/blob/master/HOCON.md#duplicate-keys-and-object-merging>`_, it's not possible to configure multiple sources with the same name.)
 
-Each source has a type configured via a mandatory ``type`` property. At present the only supported type is ``browser``.
+Each source has a type configured via a mandatory ``type`` property. Two types of source are supported:
+
+1. ``browser``: An event source for collecting events from users' Web browser activity.
+2. ``json``: A low-level event source for collecting events from server or mobile applications.
 
 For example:
 
 .. code-block:: none
 
   divolte.sources {
-    // The name of the source is 'my_source'
-    my_source = {
+    // The name of the source is 'web_source'
+    web_source = {
       // This is a browser source.
       type = browser
+    }
+
+    app_source = {
+      // This is a JSON source.
+      type = json
     }
   }
 
@@ -672,6 +680,144 @@ Browser source property: ``javascript.auto_page_view_event``
       javascript.auto_page_view_event = false
     }
 
+JSON Sources
+^^^^^^^^^^^^
+
+A JSON source is intended for receiving tracking events from mobile and server applications. Events are encoded using JSON and submitted using a ``POST`` request. A HTTP request submitting an event must:
+
+- Use the ``POST`` HTTP method. All other methods are forbidden.
+- Include a :mailheader:`Content-Type` header specifying the body content is :mimetype:`application/json`. Any other content type will not be accepted.
+- Have a ``p`` query parameter containing the party identifier associated with the event.
+
+In addition a :mailheader:`Content-Length` header should be provided.
+
+The request body must contain a JSON object with the following properties:
+
+- ``session_id``: A string that contains the identifier of the session with which this event is associated.
+- ``event_id``: A string that contains a unique identifier for this event.
+- ``is_new_party``: A boolean that should be :code:`true` if this is the first event for the supplied party identifier, or :code:`false` otherwise.
+- ``is_new_session``: A boolean that should be :code:`true` if this is the first event within the session, or :code:`false` otherwise.
+- ``client_timestamp_iso``: The time the event was generated according to the client, specified as a string in the `ISO-8601 extended format <https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations>`_. Separators, including the ``T``, are mandatory. A timezone offset is optional; if omitted then UTC is assumed.
+
+The JSON object may optionally contain:
+
+- ``event_type``: A string that specifies the type of event.
+- ``parameters``: A JSON value that can contain additional information pertaining to the event.
+
+The server will respond to with a ``204 No Content`` response once it has received the request and will process it further.
+
+.. note::
+  The JSON is not parsed and validated before the HTTP response is generated. Invalid JSON or requests that do not contain the mandatory properties will be silently discarded.
+
+Unlike with browser sources, clients are responsible for:
+
+- Generating and maintaining party and session identifiers. These must be globally unique and conform to a specific format, described below. The duration for which a party or session identifier remains valid is determined by the client.
+- Generating a unique identifier for each event. This must also be globally unique.
+
+Party and session identifiers must conform to the following format:
+
+.. productionlist:: divolte_identifier
+  identifier: "0", ":", `timestamp`, ":", `unique_id`;
+  timestamp: [ "-" | "+" ], `digits`+;
+  unique_id: { `upper` | `lower` | `digits` | `punct` }+;
+  digits: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+  upper: "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" |
+       : "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z";
+  lower: "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" |
+       : "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z";
+  punct: "~" | "_" | "!";
+
+A :token:`timestamp` is the time at which the identifier was generated, represented as the `Base36-encoded <https://en.wikipedia.org/wiki/Base36>`_ number of milliseconds since midnight, January 1, 1970 UTC.
+
+Assuming a JSON source has been configured with a prefix of ``/json-source/``, the first two events for a new user could be sent using something like:
+
+.. code-block:: console
+
+  % curl 'https://track.example.com/json-source/?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
+      --dump-header - \
+      --header 'Content-Type: application/json' \
+      --data '
+  {
+    "session_id": "0:is8tiwk4:XLEUVj9hA6AXRUOp2zuIdUpaeFOC~7AU",
+    "event_id": "AruZ~Em0WNlAnbyzVmwM~GR0cMb6Xl9r",
+    "is_new_party": true,
+    "is_new_session": true,
+    "client_timestamp_iso": "2016-08-24T13:29:39.412+02:00",
+    "event_type": "newUser",
+    "parameters": {
+      "channel": "google"
+    }
+  }'
+  HTTP/1.1 204 No Content
+  Server: divolte
+  Date: Wed, 24 Aug 2016 11:29:39 GMT
+  % curl 'https://track.example.com/json-source/?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
+      --dump-header - \
+      --header 'Content-Type: application/json' \
+      --data '
+  {
+    "session_id": "0:is8tiwk4:XLEUVj9hA6AXRUOp2zuIdUpaeFOC~7AU",
+    "event_id": "QSQMAp66OeNX_PooUvdmjNSSn7ffqjAk",
+    "is_new_party": false,
+    "is_new_session": false,
+    "client_timestamp_iso": "2016-08-24T13:29:39.412+02:00",
+    "event_type": "screenView",
+    "parameters": {
+      "screen": "home"
+    }
+  }'
+  HTTP/1.1 204 No Content
+  Server: divolte
+  Date: Wed, 24 Aug 2016 11:29:39 GMT
+
+Within the namespace for a JSON source properties are used to configure it.
+
+JSON source property: ``prefix``
+""""""""""""""""""""""""""""""""
+:Description:
+  The path which should be used for sending events to this source. A trailing slash (``/``) is automatically appended if not specified.
+:Default:
+  ``/``
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = json
+      prefix = /mob-event/
+    }
+
+JSON source property: ``party_id_parameter``
+""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The name of the query parameter that will contain the party identifier for a request.
+:Default:
+  ``p``
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = json
+      party_id_parameter = id
+    }
+
+JSON source property: ``maximum_body_size``
+"""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum acceptable size (in bytes) of the JSON body for an event. The HTTP request is aborted as quickly as possible once it becomes apparent this value is exceeded. Clients can use the HTTP Expect/Continue mechanism to determine whether a request body is too large.
+
+:Default:
+  4 KB
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = json
+      maximum_body_size = 16K
+    }
+
 Mappings (``divolte.mappings``)
 -------------------------------
 
@@ -780,6 +926,8 @@ Mapping property: ``discard_corrupted``
 """""""""""""""""""""""""""""""""""""""
 :Description:
   Events contain a flag indicating whether the source detected corruption in the event data. If this property is enabled corrupt events will be discarded and not subject to mapping and further processing. Otherwise a best effort will be made to map and process the event as if it was normal.
+
+  Only browser sources currently detect corruption and set this flag accordingly.
 :Default:
   :code:`false`
 :Example:
