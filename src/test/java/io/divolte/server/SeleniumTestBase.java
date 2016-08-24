@@ -134,7 +134,7 @@ public abstract class SeleniumTestBase {
         doSetUp(Optional.empty());
     }
 
-    protected void doSetUp(final Optional<String> configFileName) throws Exception {
+    private void doSetUp(final Optional<String> configFileName) throws Exception {
         final String driverName = System.getenv().getOrDefault(DRIVER_ENV_VAR, PHANTOMJS_DRIVER);
 
         switch (driverName) {
