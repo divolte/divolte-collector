@@ -34,8 +34,8 @@ public class JsonSource extends HttpSource {
     private final JsonEventHandler handler;
 
     public JsonSource(final ValidatedConfiguration vc,
-                        final String sourceName,
-                        final IncomingRequestProcessingPool processingPool) {
+                      final String sourceName,
+                      final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
              vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).prefix,
              processingPool,
