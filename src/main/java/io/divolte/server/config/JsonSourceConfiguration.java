@@ -29,20 +29,22 @@ import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public class JsonSourceConfiguration extends SourceConfiguration {
-    public final static String DEFAULT_PARTY_ID_PARAMETER = "p";
+    private final static String DEFAULT_EVENT_PATH = "/";
+    private final static String DEFAULT_PARTY_ID_PARAMETER = "p";
     public final static String DEFAULT_MAXIMUM_BODY_SIZE = "4096";
 
+    public final String eventPath;
     public final String partyIdParameter;
     public final int maximumBodySize;
 
     @JsonCreator
     @ParametersAreNullableByDefault
     JsonSourceConfiguration(
-            @JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix,
+            @JsonProperty(defaultValue=DEFAULT_EVENT_PATH) final String eventPath,
             @JsonProperty(defaultValue=DEFAULT_PARTY_ID_PARAMETER) final String partyIdParameter,
             @JsonProperty(defaultValue=DEFAULT_MAXIMUM_BODY_SIZE) final Integer maximumBodySize) {
-        super(prefix);
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+        this.eventPath = Optional.ofNullable(eventPath).orElse(DEFAULT_EVENT_PATH);
         this.partyIdParameter = Optional.ofNullable(partyIdParameter).orElse(DEFAULT_PARTY_ID_PARAMETER);
         this.maximumBodySize = Optional.ofNullable(maximumBodySize).orElseGet(() -> Integer.valueOf(DEFAULT_MAXIMUM_BODY_SIZE));
     }

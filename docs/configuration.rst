@@ -729,11 +729,11 @@ Party and session identifiers must conform to the following format:
 
 A :token:`timestamp` is the time at which the identifier was generated, represented as the `Base36-encoded <https://en.wikipedia.org/wiki/Base36>`_ number of milliseconds since midnight, January 1, 1970 UTC.
 
-Assuming a JSON source has been configured with a prefix of ``/json-source/``, the first two events for a new user could be sent using something like:
+Assuming a JSON source has been configured with a path of ``/json-source``, the first two events for a new user could be sent using something like:
 
 .. code-block:: console
 
-  % curl 'https://track.example.com/json-source/?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
+  % curl 'https://track.example.com/json-source?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
       --dump-header - \
       --header 'Content-Type: application/json' \
       --data '
@@ -751,7 +751,7 @@ Assuming a JSON source has been configured with a prefix of ``/json-source/``, t
   HTTP/1.1 204 No Content
   Server: divolte
   Date: Wed, 24 Aug 2016 11:29:39 GMT
-  % curl 'https://track.example.com/json-source/?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
+  % curl 'https://track.example.com/json-source?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
       --dump-header - \
       --header 'Content-Type: application/json' \
       --data '
@@ -772,10 +772,10 @@ Assuming a JSON source has been configured with a prefix of ``/json-source/``, t
 
 Within the namespace for a JSON source properties are used to configure it.
 
-JSON source property: ``prefix``
-""""""""""""""""""""""""""""""""
+JSON source property: ``event_path``
+""""""""""""""""""""""""""""""""""""
 :Description:
-  The path which should be used for sending events to this source. A trailing slash (``/``) is automatically appended if not specified.
+  The path which should be used for sending events to this source.
 :Default:
   ``/``
 :Example:
@@ -784,7 +784,7 @@ JSON source property: ``prefix``
 
     divolte.sources.a_source {
       type = json
-      prefix = /mob-event/
+      event_path = /mob-event
     }
 
 JSON source property: ``party_id_parameter``

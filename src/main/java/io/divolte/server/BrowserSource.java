@@ -35,6 +35,7 @@ import io.undertow.util.Methods;
 public class BrowserSource extends HttpSource {
     private static final Logger logger = LoggerFactory.getLogger(BrowserSource.class);
 
+    private final String pathPrefix;
     private final String javascriptName;
     private final HttpHandler javascriptHandler;
     private final HttpHandler eventHandler;
@@ -56,7 +57,8 @@ public class BrowserSource extends HttpSource {
                           final TrackingJavaScriptResource trackingJavascript,
                           final IncomingRequestProcessingPool processingPool,
                           final int sourceIndex) {
-        super(sourceName, pathPrefix);
+        super(sourceName);
+        this.pathPrefix = pathPrefix;
         javascriptName = trackingJavascript.getScriptName();
         javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavascript), Methods.GET);
         final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPool, sourceIndex);

@@ -31,13 +31,14 @@ public class JsonSource extends HttpSource {
     private static final Logger logger = LoggerFactory.getLogger(JsonSource.class);
     public static final String EVENT_SOURCE_NAME = "json";
 
+    private final String eventPath;
     private final JsonEventHandler handler;
 
     public JsonSource(final ValidatedConfiguration vc,
                       final String sourceName,
                       final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
-             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).prefix,
+             vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).eventPath,
              processingPool,
              vc.configuration().sourceIndex(sourceName),
              vc.configuration().getSourceConfiguration(sourceName, JsonSourceConfiguration.class).partyIdParameter,
@@ -45,12 +46,13 @@ public class JsonSource extends HttpSource {
     }
 
     private JsonSource(final String sourceName,
-                         final String pathPrefix,
+                         final String eventPath,
                          final IncomingRequestProcessingPool processingPool,
                          final int sourceIndex,
                          final String partyIdParameter,
                          final int maximumBodySize) {
-        super(sourceName, pathPrefix);
+        super(sourceName);
+        this.eventPath = eventPath;
         this.handler = new JsonEventHandler(processingPool, sourceIndex, partyIdParameter, maximumBodySize);
     }
 
@@ -58,8 +60,8 @@ public class JsonSource extends HttpSource {
     public PathHandler attachToPathHandler(final PathHandler pathHandler) {
         final HttpHandler onlyJsonHandler = new JsonContentHandler(handler);
         final HttpHandler onlyPostHandler = new AllowedMethodsHandler(onlyJsonHandler, Methods.POST);
-        final PathHandler newPathHandler = pathHandler.addExactPath(pathPrefix, onlyPostHandler);
-        logger.info("Registered source[{}] event handler: {}", sourceName, pathPrefix);
+        final PathHandler newPathHandler = pathHandler.addExactPath(eventPath, onlyPostHandler);
+        logger.info("Registered source[{}] event handler: {}", sourceName, eventPath);
         return newPathHandler;
     }
 }

@@ -29,11 +29,9 @@ import java.util.Optional;
 @ParametersAreNonnullByDefault
 public abstract class HttpSource {
     protected final String sourceName;
-    protected final String pathPrefix;
 
-    protected HttpSource(final String sourceName, final String pathPrefix) {
+    protected HttpSource(final String sourceName) {
         this.sourceName = Objects.requireNonNull(sourceName);
-        this.pathPrefix = Objects.requireNonNull(pathPrefix);
     }
 
     public abstract PathHandler attachToPathHandler(PathHandler pathHandler);

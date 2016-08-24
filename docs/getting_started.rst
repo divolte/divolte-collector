@@ -459,7 +459,7 @@ In addition to the browser sources demonstrated above, Divolte Collector support
       // Here's the low-level JSON source we're adding.
       json = {
         type = json
-        prefix = /json/
+        event_path = /json
       }
     }
     mappings {
@@ -477,7 +477,7 @@ At this point all the existing browser-based examples should still work, but you
 
 .. code-block:: console
 
-  % curl 'http://localhost:8290/json/?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
+  % curl 'http://localhost:8290/json?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
       --dump-header - \
       --header 'Content-Type: application/json' \
       --data '
