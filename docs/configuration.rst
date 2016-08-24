@@ -883,6 +883,8 @@ HDFS Sink Property: ``file_strategy.working_dir``
 """""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
+
+  This directory has to exist when Divolte Collector starts; it will not be automatically created. The user that Divolte Collector is running as needs to have write permissions for this directory.
 :Default:
   :file:`/tmp`
 :Example:
@@ -898,6 +900,8 @@ HDFS Sink Property: ``file_strategy.publish_dir``
 """""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
+
+  This directory has to exist when Divolte Collector starts; it will not be automatically created. The user that Divolte Collector is running as needs to have write permissions for this directory.
 :Default:
   :file:`/tmp`
 :Example:
