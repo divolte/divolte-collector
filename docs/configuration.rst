@@ -19,8 +19,8 @@ divolte-env.sh
 --------------
 This shell script is run by the startup script prior to starting the Divolte Collector JVM. The following environment variables influence Divolte Collector.
 
-HADOOP_CONF_DIR
-^^^^^^^^^^^^^^^
+.. envvar:: HADOOP_CONF_DIR
+
 :Description:
   Directory where Hadoop/HDFS configuration files are to be found. This directory is included in the classpath on startup, which causes the HDFS client to load the configuration files.
 
@@ -30,8 +30,8 @@ HADOOP_CONF_DIR
 
     HADOOP_CONF_DIR=/etc/hadoop/conf
 
-JAVA_HOME
-^^^^^^^^^
+.. envvar:: JAVA_HOME
+
 :Description:
   The directory where the JRE/JDK is located. Divolte Collector will use :command:`$JAVA_HOME/bin/java` as the Java executable during startup. If this is not set, Divolte Collector will attempt to find a suitable JDK in a number of common Java installation locations on Linux systems. It is however not recommended to rely on this mechanism for production use.
 
@@ -41,8 +41,8 @@ JAVA_HOME
 
     JAVA_HOME=/usr/java/default
 
-DIVOLTE_JAVA_OPTS
-^^^^^^^^^^^^^^^^^
+.. envvar:: DIVOLTE_JAVA_OPTS
+
 :Description:
   Additional arguments passed to the Java Virtual Machine on startup. If not set, by default Divolte Collector will start the JVM with :code:`-XX:+UseG1GC -Djava.awt.headless=true`. It is recommended to use the G1 garbage collector. For light and medium traffic, the defaults tend to work fine. *If this setting is set, Divolte Collector will not add any arguments by itself; this setting overrides the defaults.*
 
@@ -1031,6 +1031,8 @@ HDFS Sink Property: ``file_strategy.working_dir``
 """""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
+
+  This directory has to exist when Divolte Collector starts; it will not be automatically created. The user that Divolte Collector is running as needs to have write permissions for this directory.
 :Default:
   :file:`/tmp`
 :Example:
@@ -1046,6 +1048,8 @@ HDFS Sink Property: ``file_strategy.publish_dir``
 """""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
+
+  This directory has to exist when Divolte Collector starts; it will not be automatically created. The user that Divolte Collector is running as needs to have write permissions for this directory.
 :Default:
   :file:`/tmp`
 :Example:
