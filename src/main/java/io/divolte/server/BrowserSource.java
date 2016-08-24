@@ -36,6 +36,7 @@ public class BrowserSource extends HttpSource {
     private static final Logger logger = LoggerFactory.getLogger(BrowserSource.class);
 
     private final String pathPrefix;
+    private final String eventSuffix;
     private final String javascriptName;
     private final HttpHandler javascriptHandler;
     private final HttpHandler eventHandler;
@@ -47,6 +48,7 @@ public class BrowserSource extends HttpSource {
                          final IncomingRequestProcessingPool processingPool) {
         this(sourceName,
              vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).prefix,
+             vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).eventSuffix,
              loadTrackingJavaScript(vc, sourceName),
              processingPool,
              vc.configuration().sourceIndex(sourceName));
@@ -54,11 +56,13 @@ public class BrowserSource extends HttpSource {
 
     private BrowserSource(final String sourceName,
                           final String pathPrefix,
+                          final String eventSuffix,
                           final TrackingJavaScriptResource trackingJavascript,
                           final IncomingRequestProcessingPool processingPool,
                           final int sourceIndex) {
         super(sourceName);
         this.pathPrefix = pathPrefix;
+        this.eventSuffix = eventSuffix;
         javascriptName = trackingJavascript.getScriptName();
         javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavascript), Methods.GET);
         final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPool, sourceIndex);
@@ -70,7 +74,7 @@ public class BrowserSource extends HttpSource {
         final String javascriptPath = pathPrefix + javascriptName;
         pathHandler = pathHandler.addExactPath(javascriptPath, javascriptHandler);
         logger.info("Registered source[{}] script location: {}", sourceName, javascriptPath);
-        final String eventPath = pathPrefix + "csc-event";
+        final String eventPath = pathPrefix + eventSuffix;
         pathHandler = pathHandler.addExactPath(eventPath, eventHandler);
         logger.info("Registered source[{}] event handler: {}", sourceName, eventPath);
         return pathHandler;

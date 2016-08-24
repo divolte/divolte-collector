@@ -23,9 +23,11 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     private static final String DEFAULT_SESSION_COOKIE = "_dvs";
     private static final String DEFAULT_SESSION_TIMEOUT = "30 minutes";
     private static final String DEFAULT_PREFIX = "/";
+    private static final String DEFAULT_EVENT_SUFFIX = "csc-event";
 
     public static final BrowserSourceConfiguration DEFAULT_BROWSER_SOURCE_CONFIGURATION = new BrowserSourceConfiguration(
             DEFAULT_PREFIX,
+            DEFAULT_EVENT_SUFFIX,
             Optional.empty(),
             DEFAULT_PARTY_COOKIE,
             DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT),
@@ -34,6 +36,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
             JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
 
     public final String prefix;
+    public final String eventSuffix;
     public final Optional<String> cookieDomain;
     public final String partyCookie;
     public final Duration partyTimeout;
@@ -46,6 +49,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     @JsonCreator
     @ParametersAreNullableByDefault
     BrowserSourceConfiguration(@JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix,
+                               @JsonProperty(defaultValue=DEFAULT_EVENT_SUFFIX) final String eventSuffix,
                                @Nonnull final Optional<String> cookieDomain,
                                @JsonProperty(defaultValue=DEFAULT_PARTY_COOKIE) final String partyCookie,
                                @JsonProperty(defaultValue=DEFAULT_PARTY_TIMEOUT) final Duration partyTimeout,
@@ -54,6 +58,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
                                final JavascriptConfiguration javascript) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
         this.prefix = Optional.ofNullable(prefix).map(BrowserSourceConfiguration::ensureTrailingSlash).orElse(DEFAULT_PREFIX);
+        this.eventSuffix = Optional.ofNullable(eventSuffix).orElse(DEFAULT_EVENT_SUFFIX);
         this.cookieDomain = Objects.requireNonNull(cookieDomain);
         this.partyCookie = Optional.ofNullable(partyCookie).orElse(DEFAULT_PARTY_COOKIE);
         this.partyTimeout = Optional.ofNullable(partyTimeout).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT));
@@ -70,6 +75,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
                 .add("prefix", prefix)
+                .add("eventSuffix", eventSuffix)
                 .add("cookieDomain", cookieDomain)
                 .add("partyCookie", partyCookie)
                 .add("partyTimeout", partyTimeout)
