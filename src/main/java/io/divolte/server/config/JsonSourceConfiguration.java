@@ -19,6 +19,7 @@ package io.divolte.server.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.google.common.base.MoreObjects;
 import io.divolte.server.HttpSource;
 import io.divolte.server.IncomingRequestProcessingPool;
 import io.divolte.server.JsonSource;
@@ -47,6 +48,14 @@ public class JsonSourceConfiguration extends SourceConfiguration {
         this.eventPath = Optional.ofNullable(eventPath).orElse(DEFAULT_EVENT_PATH);
         this.partyIdParameter = Optional.ofNullable(partyIdParameter).orElse(DEFAULT_PARTY_ID_PARAMETER);
         this.maximumBodySize = Optional.ofNullable(maximumBodySize).orElseGet(() -> Integer.valueOf(DEFAULT_MAXIMUM_BODY_SIZE));
+    }
+
+    @Override
+    protected MoreObjects.ToStringHelper toStringHelper() {
+        return super.toStringHelper()
+            .add("eventPath", eventPath)
+            .add("partyIdParameter", partyIdParameter)
+            .add("maximumBodySize", maximumBodySize);
     }
 
     @Override
