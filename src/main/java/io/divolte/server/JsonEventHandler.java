@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.util.Objects;
 import java.util.Optional;
@@ -131,7 +130,7 @@ public class JsonEventHandler implements HttpHandler {
              * in our case.
              */
             final TemporalAccessor parsed = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(container.clientTimestampIso);
-            final Instant clientTime = Instant.ofEpochSecond(parsed.getLong(ChronoField.INSTANT_SECONDS), parsed.getLong(ChronoField.NANO_OF_SECOND));
+            final Instant clientTime = Instant.from(parsed);
             final DivolteEvent event = DivolteEvent.createJsonEvent(
                     exchange, partyId,
                     DivolteIdentifier.tryParse(container.sessionId).orElseThrow(IncompleteRequestException::new),
