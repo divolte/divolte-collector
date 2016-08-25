@@ -34,6 +34,8 @@ var COOKIE_DOMAIN = '';
 var LOGGING = false;
 /** @define {string} */
 var SCRIPT_NAME = 'divolte.js';
+/** @define {string} */
+var EVENT_SUFFIX = 'csc-event';
 /** @define {boolean} */
 var AUTO_PAGE_VIEW_EVENT = true;
 
@@ -676,7 +678,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
         signalQueue.deliverFirstPendingEvent();
       }
     };
-    image.src = divolteUrl + 'csc-event?' + this.queue[0];
+    image.src = divolteUrl + EVENT_SUFFIX + '?' + this.queue[0];
   };
 
   /**

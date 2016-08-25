@@ -539,6 +539,23 @@ Browser source property: ``prefix``
 
     <script src="//track.example.com/tracking/divolte.js" defer async></script>
 
+Browser source property: ``event_suffix``
+"""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The path suffix that will be added to the prefix to determine the complete path that the tracking tag should use for submitting events. Configuring this should not normally be necessary.
+:Default:
+    ``csc-event``
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      event_suffix = web-event
+    }
+
+  In this case the tracking tag will submit events using ``/web-event`` as the URL path.
+
 Browser source property: ``party_cookie``
 """""""""""""""""""""""""""""""""""""""""
 :Description:

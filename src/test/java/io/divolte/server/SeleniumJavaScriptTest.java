@@ -39,7 +39,8 @@ import static org.junit.Assert.*;
 @ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
-    public void shouldRegenerateIDsOnExplicitNavigation() {
+    public void shouldRegenerateIDsOnExplicitNavigation() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
 
         // do a sequence of explicit navigation by setting the browser location
@@ -55,7 +56,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldRegenerateIDsOnRefresh() {
+    public void shouldRegenerateIDsOnRefresh() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
 
         // Navigate to the same page twice
@@ -68,7 +70,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldRegenerateIDsOnForwardBackNavigation() {
+    public void shouldRegenerateIDsOnForwardBackNavigation() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
 
         // Navigate to the same page twice
@@ -88,7 +91,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldGenerateIDsOnComplexSeriesOfEvents() {
+    public void shouldGenerateIDsOnComplexSeriesOfEvents() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
 
         // Navigate to the same page twice
@@ -141,7 +145,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldSignalWhenOpeningPage() throws InterruptedException {
+    public void shouldSignalWhenOpeningPage() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
 
         final String location = urlOf(BASIC);
@@ -205,7 +210,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldSendCustomEvent() throws RuntimeException, InterruptedException {
+    public void shouldSendCustomEvent() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
         driver.get(urlOf(BASIC));
         server.waitForEvent();
@@ -225,7 +231,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldSetAppropriateCookies() throws RuntimeException, InterruptedException {
+    public void shouldSetAppropriateCookies() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
         driver.get(urlOf(BASIC));
         server.waitForEvent();
@@ -244,7 +251,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldPickupProvidedPageViewIdFromHash() throws RuntimeException, InterruptedException {
+    public void shouldPickupProvidedPageViewIdFromHash() throws Exception {
+        doSetUp();
         Preconditions.checkState(null != driver && null != server);
         driver.get(urlOf(PAGE_VIEW_SUPPLIED));
         final EventPayload payload = server.waitForEvent();
@@ -254,8 +262,14 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
     }
 
-    @Before
-    public void setup() throws Exception {
-        doSetUp();
+    @Test
+    public void shouldUseConfiguredEventSuffix() throws Exception {
+        doSetUp("selenium-test-custom-event-suffix.conf");
+        Preconditions.checkState(null != driver && null != server);
+        driver.get(urlOf(BASIC));
+        final EventPayload payload = server.waitForEvent();
+        final DivolteEvent eventData = payload.event;
+
+        assertEquals("pageView", eventData.eventType.get());
     }
 }
