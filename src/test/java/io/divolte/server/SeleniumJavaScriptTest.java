@@ -20,7 +20,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.config.BrowserSourceConfiguration;
-import org.junit.Before;
 import org.junit.Test;
 import org.openqa.selenium.By;
 
