@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2016 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,51 +18,37 @@ package io.divolte.server;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Objects;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableSet;
-
 @ParametersAreNonnullByDefault
-public class AllowedMethodsHandler implements HttpHandler {
+public class JsonContentHandler implements HttpHandler {
 
-    private final ImmutableSet<HttpString> allowedMethods;
     private final HttpHandler next;
-    private final String allowedMethodHeader;
 
-    public AllowedMethodsHandler(final HttpHandler next, final ImmutableSet<HttpString> allowedMethods) {
-        this.allowedMethods = Objects.requireNonNull(allowedMethods);
+    public JsonContentHandler(final HttpHandler next) {
         this.next = Objects.requireNonNull(next);
-        this.allowedMethodHeader = Joiner.on(", ").join(allowedMethods);
-    }
-
-    public AllowedMethodsHandler(final HttpHandler next, final HttpString... allowedMethods) {
-        this(next, ImmutableSet.copyOf(allowedMethods));
-    }
-
-    public AllowedMethodsHandler(final HttpHandler next, final HttpString allowed) {
-        this(next, ImmutableSet.of(allowed));
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final HttpString requestMethod = exchange.getRequestMethod();
-        if (allowedMethods.contains(requestMethod)) {
+        final HeaderValues contentType = exchange.getRequestHeaders().get(Headers.CONTENT_TYPE);
+        if (null != contentType
+                && contentType.size() == 1
+                && contentType.getFirst().toLowerCase(Locale.ROOT).equals("application/json")) {
             next.handleRequest(exchange);
         } else {
-            exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
+            exchange.setStatusCode(StatusCodes.UNSUPPORTED_MEDIA_TYPE);
             exchange.getResponseHeaders()
-                    .put(Headers.ALLOW, allowedMethodHeader)
                     .put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
             exchange.getResponseSender()
-                    .send("HTTP method " + requestMethod + " not allowed.", StandardCharsets.UTF_8);
+                    .send("Content type must be application/json.", StandardCharsets.UTF_8);
             exchange.endExchange();
         }
     }

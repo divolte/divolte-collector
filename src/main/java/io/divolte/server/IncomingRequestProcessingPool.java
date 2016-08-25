@@ -33,7 +33,7 @@ import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.processing.ProcessingPool;
 
 @ParametersAreNonnullByDefault
-final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, DivolteEvent> {
+public final class IncomingRequestProcessingPool extends ProcessingPool<IncomingRequestProcessor, UndertowEvent> {
     private final static Logger logger = LoggerFactory.getLogger(IncomingRequestProcessingPool.class);
 
     public IncomingRequestProcessingPool(final ValidatedConfiguration vc,

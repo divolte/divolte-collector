@@ -255,7 +255,6 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         int recordsSinceLastSync;
         long totalRecords;
 
-        @SuppressWarnings("resource")
         public HadoopFile(final Path path) throws IOException {
             this.path = path;
             this.stream = hdfs.create(path, hdfsReplication);

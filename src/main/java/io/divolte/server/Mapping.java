@@ -14,13 +14,12 @@ import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.processing.Item;
 import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.DslRecordMapping;
-import io.divolte.server.recordmapping.RecordMapper;
 import io.divolte.server.recordmapping.UserAgentParserAndCache;
 
 public class Mapping {
     private static final Logger logger = LoggerFactory.getLogger(Mapping.class);
 
-    private final RecordMapper mapper;
+    private final DslRecordMapper mapper;
     private final boolean keepCorrupted;
     private final boolean keepDuplicates;
     private final int mappingIndex;
@@ -84,17 +83,14 @@ public class Mapping {
         return result;
     }
 
-    public Optional<Item<AvroRecordBuffer>> map(final Item<DivolteEvent> item, final boolean duplicate) {
-        final DivolteEvent event = item.payload;
+    public Optional<Item<AvroRecordBuffer>> map(final Item<UndertowEvent> originalIem, final DivolteEvent parsedEvent, final boolean duplicate) {
         if (
                 (keepDuplicates || !duplicate) &&
-                (keepCorrupted || !event.corruptEvent)) {
-            final GenericRecord avroRecord = mapper.newRecordFromExchange(event);
+                (keepCorrupted || !parsedEvent.corruptEvent)) {
+            final GenericRecord avroRecord = mapper.newRecordFromExchange(parsedEvent);
             final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                    event.partyCookie,
-                    event.sessionCookie,
-                    event.requestStartTime,
-                    event.clientUtcOffset,
+                    parsedEvent.partyId,
+                    parsedEvent.sessionId,
                     avroRecord);
 
             /*
@@ -102,9 +98,9 @@ public class Mapping {
              * mapping process in isolation of the server.
              * In the many-to-many setup, this call is potentially amplified.
              */
-            listener.incomingRequest(event, avroBuffer, avroRecord);
+            listener.incomingRequest(parsedEvent, avroBuffer, avroRecord);
 
-            return Optional.of(Item.withCopiedAffinity(mappingIndex, item, avroBuffer));
+            return Optional.of(Item.withCopiedAffinity(mappingIndex, originalIem, avroBuffer));
         } else {
             return Optional.empty();
         }

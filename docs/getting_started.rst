@@ -33,20 +33,23 @@ On startup, you should see output similar to this:
 
 .. code-block:: none
 
-  2014-12-17 09:16:30.328+01 [main] INFO  [IncomingRequestProcessingPool]: Using built in default Avro schema.
-  2014-12-17 09:16:30.456+01 [main] INFO  [IncomingRequestProcessingPool]: Using built in default Avro schema.
-  2014-12-17 09:16:30.869+01 [main] INFO  [IncomingRequestProcessor]: Using built in default schema mapping.
-  2014-12-17 09:16:30.879+01 [main] INFO  [UserAgentParserAndCache]: Using non-updating (resource module based) user agent parser.
-  2014-12-17 09:16:31.143+01 [main] INFO  [UserAgentParserAndCache]: User agent parser data version: 20141003-01
-  2014-12-17 09:16:31.169+01 [main] INFO  [IncomingRequestProcessor]: Using built in default schema mapping.
-  2014-12-17 09:16:31.169+01 [main] INFO  [UserAgentParserAndCache]: Using non-updating (resource module based) user agent parser.
-  2014-12-17 09:16:31.169+01 [main] INFO  [UserAgentParserAndCache]: User agent parser data version: 20141003-01
-  2014-12-17 09:16:33.366+01 [main] INFO  [Slf4jErrorManager]: 0 error(s), 0 warning(s), 85.72274881516587% typed
-  2014-12-17 09:16:33.366+01 [main] INFO  [JavaScriptResource]: Pre-compiled JavaScript source: divolte.js
-  2014-12-17 09:16:33.392+01 [main] INFO  [GzippableHttpBody]: Compressed resource: 7197 -> 3576
-  2014-12-17 09:16:33.429+01 [main] INFO  [Server]: Starting server on 0.0.0.0:8290
-  2014-12-17 09:16:33.439+01 [main] INFO  [xnio]: XNIO version 3.2.0.Final
-  2014-12-17 09:16:33.518+01 [main] INFO  [nio]: XNIO NIO Implementation Version 3.2.0.Final
+  2016-08-24 14:44:56.794+02 [main] INFO  [Version]: HV000001: Hibernate Validator 5.2.4.Final
+  2016-08-24 14:44:56.998+02 [main] INFO  [SchemaRegistry]: Using builtin default Avro schema.
+  2016-08-24 14:44:57.102+02 [main] INFO  [SchemaRegistry]: Loaded schemas used for mappings: [default]
+  2016-08-24 14:44:57.103+02 [main] INFO  [SchemaRegistry]: Inferred schemas used for sinks: [hdfs, kafka]
+  2016-08-24 14:44:57.448+02 [main] INFO  [Server]: Initialized sinks: [hdfs]
+  2016-08-24 14:44:57.458+02 [main] INFO  [Mapping]: Using built in default schema mapping.
+  2016-08-24 14:44:57.473+02 [main] INFO  [UserAgentParserAndCache]: Using non-updating (resource module based) user agent parser.
+  2016-08-24 14:44:57.699+02 [main] INFO  [UserAgentParserAndCache]: User agent parser data version: 20141024-01
+  2016-08-24 14:45:00.539+02 [main] INFO  [Slf4jErrorManager]: 0 error(s), 0 warning(s), 87.7136258660508% typed
+  2016-08-24 14:45:00.539+02 [main] INFO  [JavaScriptResource]: Pre-compiled JavaScript source: divolte.js
+  2016-08-24 14:45:00.559+02 [main] INFO  [GzippableHttpBody]: Compressed resource: 9052 -> 4133
+  2016-08-24 14:45:00.575+02 [main] INFO  [BrowserSource]: Registered source[browser] script location: /divolte.js
+  2016-08-24 14:45:00.575+02 [main] INFO  [BrowserSource]: Registered source[browser] event handler: /csc-event
+  2016-08-24 14:45:00.575+02 [main] INFO  [Server]: Initialized sources: [browser]
+  2016-08-24 14:45:00.606+02 [main] INFO  [Server]: Starting server on localhost:8290
+  2016-08-24 14:45:00.639+02 [main] INFO  [xnio]: XNIO version 3.3.6.Final
+  2016-08-24 14:45:00.658+02 [main] INFO  [nio]: XNIO NIO Implementation Version 3.3.6.Final
 
 Now, take your web browser to http://127.0.0.1:8290/ and check that you see a page there. This webpage has the Divolte Collector JavaScript tag inserted into it, so loading the page will register a pageview event with the server. Also, you can click the banner a one or more times to generate additional events or reload the page a few times. If you enable the developer tools in your browser, you can see the additional HTTP request being made by the JavaScript tag:
 
@@ -59,15 +62,15 @@ Now, go back to the console where Divolte Collector is running and hit :kbd:`Con
 
 .. code-block:: none
 
-  ^C2014-12-17 09:27:15.393+01 [Thread-8] INFO  [Server]: Stopping HTTP server.
-  2014-12-17 09:27:15.396+01 [Thread-8] INFO  [Server]: Stopping thread pools.
-  2014-12-17 09:27:17.399+01 [Thread-8] INFO  [Server]: Closing HDFS filesystem connection.
+  ^C2016-08-24 15:24:46.359+02 [Thread-9] INFO  [Server]: Stopping HTTP server.
+  2016-08-24 15:24:46.365+02 [Thread-9] INFO  [Server]: Stopping thread pools.
+  2016-08-24 15:24:47.679+02 [Thread-9] INFO  [Server]: Closing HDFS filesystem connection.
 
 When Divolte Collector shuts down it will flush and close all open files, so now we can have a look at the data that was generated. By default, with no configuration, Divolte Collector will write ``.avro`` files in :file:`/tmp` on the local filesystem. For convenience, Divolte Collector packages a version of the avro-tools that come with Apache Avro, so you can look at the contents of these files as JSON records. Try the following:
 
 .. code-block:: bash
 
-  % find /tmp/*.avro -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
+  % find /tmp/ -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
 
 This finds a ``.avro`` file in your :file:`/tmp` directory and passes it to the :code:`avro-tools tojson` command. Depending on how many requests you made, it will display multiple records. The output for a single record should look like this:
 
@@ -76,37 +79,39 @@ This finds a ``.avro`` file in your :file:`/tmp` directory and passes it to the 
   {
     "detectedDuplicate" : false,
     "detectedCorruption" : false,
-    "firstInSession" : false,
-    "timestamp" : 1418804737090,
+    "firstInSession" : true,
+    "timestamp" : 1472042832571,
+    "clientTimestamp" : 1472042832560,
     "remoteHost" : "127.0.0.1",
     "referer" : null,
     "location" : {
       "string" : "http://127.0.0.1:8290/"
     },
     "viewportPixelWidth" : {
-      "int" : 777
+      "int" : 1261
     },
     "viewportPixelHeight" : {
-      "int" : 252
+      "int" : 953
     },
     "screenPixelWidth" : {
-      "int" : 1680
+      "int" : 1676
     },
     "screenPixelHeight" : {
-      "int" : 974
+      "int" : 1027
     },
     "partyId" : {
-      "string" : "0:i0ec7okl:wfw0FS6PU2F5kq03ZXid94SEhYNoKjQS"
+      "string" : "0:is8wamy0:7ApW71OgjsCmUbgmu71ggU9pTb1f9VQl"
     },
     "sessionId" : {
-      "string" : "0:i3sfjh3q:jgMGfkJ1kNTEq0d_gkGYSAGmhcR9EJwq"
+      "string" : "0:is8wamy0:fnXKXyXHB_Sb5mbnMocnhMDsg0JVf37C"
     },
     "pageViewId" : {
-      "string" : "0:XKmxLm9hkxKiUVZBRKw1eT5pKAglq078"
+      "string" : "0:LcV0xy~Zzf2Ac5aUwxb4ZeXsFo7ZtKXm"
     },
     "eventType" : "pageView",
     "userAgentString" : {
-      "string" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
+      "string" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/5
+  37.36"
     },
     "userAgentName" : {
       "string" : "Chrome"
@@ -121,7 +126,7 @@ This finds a ``.avro`` file in your :file:`/tmp` directory and passes it to the 
       "string" : "Browser"
     },
     "userAgentVersion" : {
-      "string" : "39.0.2171.71"
+      "string" : "52.0.2743.116"
     },
     "userAgentDeviceCategory" : {
       "string" : "Personal computer"
@@ -130,7 +135,7 @@ This finds a ``.avro`` file in your :file:`/tmp` directory and passes it to the 
       "string" : "OS X"
     },
     "userAgentOsVersion" : {
-      "string" : "10.10.1"
+      "string" : "10.11.6"
     },
     "userAgentOsVendor" : {
       "string" : "Apple Computer, Inc."
@@ -156,12 +161,13 @@ Create a file called :file:`MyEventRecord.avsc` with the following contents (for
     "type": "record",
     "name": "MyEventRecord",
     "fields": [
-      { "name": "timestamp",               "type": "long" },
-      { "name": "remoteHost",              "type": "string"},
-      { "name": "location",                "type": ["null", "string"], "default": null },
-      { "name": "localPath",               "type": ["null", "string"], "default": null },
-      { "name": "q",                       "type": ["null", "string"], "default": null },
-      { "name": "n",                       "type": ["null", "int"],    "default": null }
+      { "name": "timestamp",  "type": "long" },
+      { "name": "remoteHost", "type": "string"},
+      { "name": "eventType",  "type": ["null", "string"], "default": null },
+      { "name": "location",   "type": ["null", "string"], "default": null },
+      { "name": "localPath",  "type": ["null", "string"], "default": null },
+      { "name": "q",          "type": ["null", "string"], "default": null },
+      { "name": "n",          "type": ["null", "int"],    "default": null }
     ]
   }
 
@@ -172,6 +178,7 @@ This is a very minimal custom schema, but it allows us to demonstrate a very imp
   mapping {
     map timestamp() onto 'timestamp'
     map remoteHost() onto 'remoteHost'
+    map eventType() onto 'eventType'
     map location() onto 'location'
 
     def locationUri = parse location() to uri
@@ -183,7 +190,7 @@ This is a very minimal custom schema, but it allows us to demonstrate a very imp
     map { parse localQuery.value('n') to int32 } onto 'n'
   }
 
-The mapping is defined using a internal Groovy DSL in Divolte Collector. In this example we map a number of values onto fields in the Avro schema. The values for timestamp, remoteHost and location are mapped directly onto fields in the schema. In the remainder of the script, we tell Divolte Collector to take the fragment of the location (the part after the ``#`` in the URL) and try to parse that into a (partial) URI again. From the result URI, we map the path onto a schema field. Subsequently, parse out the values to two query string parameters (``q`` and ``n``) and map those onto separate schema fields after trying to parse an integer out of the ``n`` parameter. The mapping DSL allows for a lot more constructs, including conditional logic, regex matching and more; see the :doc:`mapping_reference` documentation for more information on this.
+The mapping is defined using a internal Groovy DSL in Divolte Collector. In this example we map a number of values onto fields in the Avro schema. The values for :code:`timestamp`, :code:`remoteHost` and :code:`location` are mapped directly onto fields in the schema. In the remainder of the script, we tell Divolte Collector to take the fragment of the location (the part after the ``#`` in the URL) and try to parse that into a (partial) URI again. From the result URI, we map the path onto a schema field. Subsequently, parse out the values to two query string parameters (``q`` and ``n``) and map those onto separate schema fields after trying to parse an integer out of the ``n`` parameter. The mapping DSL allows for a lot more constructs, including conditional logic, regex matching and more; see the :doc:`mapping_reference` documentation for more information on this.
 
 Finally, we need to configure Divolte Collector to use our custom schema and mapping. Edit the (empty) :file:`divolte-collector.conf` file in the :file:`conf/` directory of your installation to resemble the following configuration (be sure to use the correct paths for the schema and mapping file that you just created):
 
@@ -208,15 +215,18 @@ Now, once more, start Divolte Collector as before. Only this time, take your web
 
 .. code-block:: console
 
-  % find /tmp/*.avro -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
+  % find /tmp/ -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
 
 Now, the records in the data should look like this:
 
 .. code-block:: json
 
   {
-    "timestamp" : 1418942046953,
+    "timestamp" : 1472045780911,
     "remoteHost" : "127.0.0.1",
+    "eventType" : {
+      "string" : "pageView"
+    },
     "location" : {
       "string" : "http://127.0.0.1:8290/#/fragment/path?q=textual&n=42"
     },
@@ -232,6 +242,8 @@ Now, the records in the data should look like this:
   }
 
 As you can see, the data collected by Divolte Collector is based on the custom schema and mapping. This is very powerful because it means that the data that is being collected can be enriched on the fly with domain-specific fields that are extracted from the clickstream. This way you shouldn't need to parse out relevant bit and pieces of information afterwards. Also note that we were able to collect the entire location from the browser on the server side, including the fragment after the ``#``. This comes in very handy when working with modern JavaScript-based web applications that often depend on this part of the location for their state.
+
+.. _collecting-clicks-label:
 
 Collecting clicks for your own site
 ===================================
@@ -269,9 +281,6 @@ In order to instrument a web page of your own, insert the tag as above into the 
 In order to use the custom events in your mapping, map values onto fields like this:
 
 .. code-block:: groovy
-
-  // Map the custom event type
-  map eventType() onto 'eventTypeField'
 
   // Map the custom event parameters
   map eventParameter('param') onto 'paramField'
@@ -432,6 +441,81 @@ configured with multiple:
 Events flow from sources to sinks, via an intermediate mapping. Allowing multiple sources, sinks and mappings allows Divolte to support multiple sites and domains, each of which may require independent mapping. Note, however, that a sink can only support a single Avro schema: all mappings which refer to it must be configured to produce records conforming to the same Avro schema.
 
 An event flow imposes a partial ordering on the events it receives: events from a source that have the same party identifier will be written to sinks in the same order that they were received in. (This doesn't apply to events received across different sources: even if they share the same party identifier their relative ordering is not guaranteed.)
+
+Low-level JSON sources
+----------------------
+
+In addition to the browser sources demonstrated above, Divolte Collector supports a lower-level event source where JSON-formatted events can be posted. Let's add a new JSON source and update the mapping section to also process its events:
+
+.. code-block:: none
+
+  divolte {
+    sources {
+      // Once we specify a source, we need to specify all of them.
+      // Here's the definition for the browser source we've been using until now.
+      browser = {
+        type = browser
+      }
+      // Here's the low-level JSON source we're adding.
+      json = {
+        type = json
+        event_path = /json
+      }
+    }
+    mappings {
+      my_mapping = {
+        schema_file = "/path/to/divolte-collector/conf/MyEventRecord.avsc"
+        mapping_script_file = "/path/to/divolte-collector/conf/mapping.groovy"
+        // In addition to mapping events from the browser source, we also map from the new JSON source.
+        sources = [browser, json]
+        sinks = [hdfs]
+      }
+    }
+  }
+
+At this point all the existing browser-based examples should still work, but you can now also submit a JSON-formatted event:
+
+.. code-block:: console
+
+  % curl 'http://localhost:8290/json?p=0:is8tiwk4:GKv5gCc5TtrvBTs9bXfVD8KIQ3oO~sEg' \
+      --dump-header - \
+      --header 'Content-Type: application/json' \
+      --data '
+  {
+    "session_id": "0:is8tiwk4:XLEUVj9hA6AXRUOp2zuIdUpaeFOC~7AU",
+    "event_id": "AruZ~Em0WNlAnbyzVmwM~GR0cMb6Xl9s",
+    "is_new_party": true,
+    "is_new_session": true,
+    "client_timestamp_iso": "2016-08-24T13:29:39.412+02:00",
+    "event_type": "anEvent"
+  }'
+
+As before we can display the events that have been collected:
+
+.. code-block:: console
+
+  % find /tmp/ -name '*divolte-tracking-*.avro' | sort | tail -n1 | xargs ./bin/avro-tools tojson --pretty
+
+There should be an event that looks something like:
+
+.. code-block:: json
+
+  {
+    "timestamp" : 1472046897112,
+    "remoteHost" : "127.0.0.1",
+    "eventType" : {
+      "string" : "anEvent"
+    },
+    "location" : null,
+    "localPath" : null,
+    "q" : null,
+    "n" : null
+  }
+
+Our mapping was able to produce an event based on the JSON event, but many fields don't have a value because they are only supplied by browser events. For low-level events instead:
+
+1. Custom data instead needs to be supplied in a ``parameters`` JSON property;
+2. The mapping needs to be updated, as mentioned briefly in the :ref:`collecting-clicks-label` section above.
 
 What's next?
 ============

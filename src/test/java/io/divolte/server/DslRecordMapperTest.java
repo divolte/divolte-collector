@@ -107,7 +107,7 @@ public class DslRecordMapperTest {
         assertEquals(true, record.get("sessionStart"));
         assertEquals(true, record.get("unreliable"));
         assertEquals(false, record.get("dupe"));
-        assertEquals(event.requestStartTime, record.get("ts"));
+        assertEquals(event.requestStartTime.toEpochMilli(), record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
 
@@ -122,8 +122,8 @@ public class DslRecordMapperTest {
         assertEquals("10.10.1", record.get("userAgentOsVersion"));
         assertEquals("Apple Computer, Inc.", record.get("userAgentOsVendor"));
 
-        assertEquals(event.partyCookie.value, record.get("client"));
-        assertEquals(event.sessionCookie.value, record.get("session"));
+        assertEquals(event.partyId.value, record.get("client"));
+        assertEquals(event.sessionId.value, record.get("session"));
         assertEquals(event.browserEventData.get().pageViewId, record.get("pageview"));
         assertEquals(event.eventId, record.get("event"));
         assertEquals(1018, record.get("viewportWidth"));

@@ -18,7 +18,6 @@ package io.divolte.server;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Objects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -33,15 +32,15 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.util.Methods;
 
 @ParametersAreNonnullByDefault
-public class BrowserSource {
+public class BrowserSource extends HttpSource {
     private static final Logger logger = LoggerFactory.getLogger(BrowserSource.class);
 
-    private final String sourceName;
     private final String pathPrefix;
     private final String javascriptName;
     private final HttpHandler javascriptHandler;
     private final HttpHandler eventHandler;
 
+    public static final String EVENT_SOURCE_NAME = "browser";
 
     public BrowserSource(final ValidatedConfiguration vc,
                          final String sourceName,
@@ -58,14 +57,15 @@ public class BrowserSource {
                           final TrackingJavaScriptResource trackingJavascript,
                           final IncomingRequestProcessingPool processingPool,
                           final int sourceIndex) {
-        this.sourceName = Objects.requireNonNull(sourceName);
-        this.pathPrefix = Objects.requireNonNull(pathPrefix);
+        super(sourceName);
+        this.pathPrefix = pathPrefix;
         javascriptName = trackingJavascript.getScriptName();
         javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavascript), Methods.GET);
         final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPool, sourceIndex);
         eventHandler = new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET);
     }
 
+    @Override
     public PathHandler attachToPathHandler(PathHandler pathHandler) {
         final String javascriptPath = pathPrefix + javascriptName;
         pathHandler = pathHandler.addExactPath(javascriptPath, javascriptHandler);

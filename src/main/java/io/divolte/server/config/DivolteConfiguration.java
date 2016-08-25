@@ -38,8 +38,8 @@ public final class DivolteConfiguration {
 
     @JsonCreator
     DivolteConfiguration(final GlobalConfiguration global,
-                         final Optional<ImmutableMap<String, SourceConfiguration>> sources,
-                         final Optional<ImmutableMap<String, SinkConfiguration>> sinks,
+                         final Optional<ImmutableMap<String,SourceConfiguration>> sources,
+                         final Optional<ImmutableMap<String,SinkConfiguration>> sinks,
                          final Optional<ImmutableMap<String,MappingConfiguration>> mappings) {
         this.global = Objects.requireNonNull(global);
         this.sources = sources.orElseGet(DivolteConfiguration::defaultSourceConfigurations);

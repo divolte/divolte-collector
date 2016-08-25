@@ -241,6 +241,14 @@ run {
     }
 }
 
+test {
+    /*
+     * Some tests do low-level manipulation with HttpUrlConnection. This
+     * property gives them more freedom.
+     */
+    systemProperty "sun.net.http.allowRestrictedHeaders", "true"
+}
+
 /*
  * Build distribution .tar.gz or .zip. We don't use the distribution
  * plugin as that allows for less flexibility in laying out the

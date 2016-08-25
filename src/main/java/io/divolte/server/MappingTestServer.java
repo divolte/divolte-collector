@@ -1,38 +1,15 @@
 package io.divolte.server;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Parser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xnio.streams.ChannelInputStream;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableList;
 import com.typesafe.config.ConfigFactory;
-
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.ExternalDatabaseLookupService;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.recordmapping.DslRecordMapper;
-import io.divolte.server.recordmapping.RecordMapper;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -42,6 +19,26 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Parser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.streams.ChannelInputStream;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.Optional;
+
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 public class MappingTestServer {
@@ -49,7 +46,7 @@ public class MappingTestServer {
 
     private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper().reader();
 
-    private final RecordMapper mapper;
+    private final DslRecordMapper mapper;
     private final Undertow undertow;
 
     public static void main(final String[] args) throws IOException {
@@ -126,20 +123,19 @@ public class MappingTestServer {
                     get(payload, "screen_pixel_width", Integer.class),
                     get(payload, "screen_pixel_height", Integer.class),
                     get(payload, "device_pixel_ratio", Integer.class));
-            final DivolteEvent divolteEvent = new DivolteEvent(
+            final Instant now = Instant.now();
+            final DivolteEvent divolteEvent = DivolteEvent.createBrowserEvent(
                     exchange,
                     get(payload, "corrupt", Boolean.class).orElse(false),
                     get(payload, "party_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
                     get(payload, "session_id", String.class).flatMap(DivolteIdentifier::tryParse).orElse(DivolteIdentifier.generate()),
                     get(payload, "event_id", String.class).orElse(generatedPageViewId + "0"),
-                    ClientSideCookieEventHandler.EVENT_SOURCE_NAME,
-                    System.currentTimeMillis(),
-                    0L,
+                    now, now,
                     get(payload, "new_party_id", Boolean.class).orElse(false),
                     get(payload, "first_in_session", Boolean.class).orElse(false),
                     get(payload, "event_type", String.class),
                     () -> get(payload, "parameters", JsonNode.class),
-                    Optional.of(browserEventData));
+                    browserEventData);
 
             get(payload, "remote_host", String.class)
                 .ifPresent(ip -> {

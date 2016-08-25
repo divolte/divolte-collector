@@ -192,10 +192,8 @@ public class HdfsFlusherTest {
     private void processRecords() {
         records.stream().map(
                 (record) -> AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
-                        DivolteIdentifier.generate(),
-                        System.currentTimeMillis(),
-                        0,
-                        record))
+                                                        DivolteIdentifier.generate(),
+                                                        record))
                         .forEach((arb) -> flusher.process(Item.of(0, arb.getPartyId().value, arb)));
     }
 
