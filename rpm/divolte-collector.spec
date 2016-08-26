@@ -98,8 +98,8 @@ fi
 %defattr(-,root,root,0755)
 
 %dir /etc/divolte
-%config /etc/divolte/%{name}.conf
-%config /etc/divolte/logback.xml
+%config(noreplace) /etc/divolte/%{name}.conf
+%config(noreplace) /etc/divolte/logback.xml
 %config /etc/init.d/%{name}
 /etc/divolte/*.example
 /usr/bin/%{name}
