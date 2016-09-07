@@ -105,7 +105,6 @@ fi
 /usr/bin/%{name}
 %dir /usr/share/divolte
 %dir /usr/share/divolte/bin
-/usr/share/divolte/bin/%{name}
 /usr/share/divolte/bin/*
 %dir /usr/share/divolte/lib
 /usr/share/divolte/lib/*.jar
