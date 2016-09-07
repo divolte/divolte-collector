@@ -7,7 +7,7 @@
 
 Name:           divolte-collector
 Version:        0.4.1
-Release:        1%{?dist}
+Release:        %{?snapshotVersion:1}%{?!snapshotVersion:2}%{?dist}
 Summary:        The Divolte click-stream collection agent.
 
 License:        Apache License, Version 2.0
