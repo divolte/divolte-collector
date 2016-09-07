@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2016 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
                                                     final String sourceName) throws IOException {
         final BrowserSourceConfiguration browserSourceConfiguration =
                 vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class);
-        return new TrackingJavaScriptResource(browserSourceConfiguration.javascript.name,
+        return new TrackingJavaScriptResource("divolte.js",
                                               createScriptConstants(browserSourceConfiguration),
                                               browserSourceConfiguration.javascript.debug);
     }
