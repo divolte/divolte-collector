@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2016 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -259,6 +259,18 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         assertEquals("supercalifragilisticexpialidocious", eventData.browserEventData.get().pageViewId);
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
+    }
+
+    @Test
+    public void shouldSupportCustomJavascriptName() throws Exception {
+        doSetUp("selenium-test-custom-javascript-name.conf");
+        Preconditions.checkState(null != driver && null != server);
+
+        driver.get(urlOf(CUSTOM_JAVASCRIPT_NAME));
+        final EventPayload payload = server.waitForEvent();
+        final DivolteEvent eventData = payload.event;
+
+        assertEquals("pageView", eventData.eventType.get());
     }
 
     @Test
