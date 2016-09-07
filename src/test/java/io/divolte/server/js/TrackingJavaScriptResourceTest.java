@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2016 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,14 @@
 
 package io.divolte.server.js;
 
+import com.google.common.collect.ImmutableList;
+import com.typesafe.config.ConfigFactory;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.undertow.util.ETag;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.junit.After;
@@ -28,16 +31,35 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
+@ParametersAreNonnullByDefault
 public class TrackingJavaScriptResourceTest {
 
-    private final Config config = ConfigFactory.load();
+    @Parameterized.Parameters(name = "{index}: {0} configuration")
+    public static Iterable<Object[]> configurations() {
+        return ImmutableList.of(
+            new Object[] { "default",          ConfigFactory.load() },
+            new Object[] { "non-default-name", ConfigFactory.load("browser-source-custom-javascript-name.conf")},
+            new Object[] { "logging-enabled",  ConfigFactory.load("browser-source-javascript-logging.conf")},
+            new Object[] { "verbose-enabled",  ConfigFactory.load("browser-source-javascript-debugging.conf")}
+        );
+    }
+
+    private final Config config;
 
     private TrackingJavaScriptResource trackingJavaScript;
+
+    public TrackingJavaScriptResourceTest(final String name, final Config config) {
+        this.config = Objects.requireNonNull(config);
+    }
 
     @Before
     public void setup() throws IOException {
