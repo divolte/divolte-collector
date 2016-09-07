@@ -23,7 +23,6 @@ import io.undertow.util.ETag;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
 
