@@ -100,7 +100,7 @@ fi
 %dir /etc/divolte
 %config(noreplace) /etc/divolte/%{name}.conf
 %config(noreplace) /etc/divolte/logback.xml
-%config /etc/init.d/%{name}
+/etc/init.d/%{name}
 /etc/divolte/*.example
 /usr/bin/%{name}
 %dir /usr/share/divolte
