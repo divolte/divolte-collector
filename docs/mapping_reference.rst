@@ -199,8 +199,8 @@ Below is a table of all types that can be produced in a mapping and the correspo
 |                                  | See :ref:`mapping-json-label`.                                         |
 +----------------------------------+------------------------------------------------------------------------+
 
-Casting/parsing
-"""""""""""""""
+**Casting/parsing**
+"""""""""""""""""""
 Many of the simple values that can be extracted from an event are strings. Sometimes these values are not intended to be strings. Because type information about things like query parameters or path components is not present in a HTTP request, Divolte Collector can only treat these values as strings. It is, however, possible to parse a string to a primitive or other type in the mapping using this construct:
 
 .. code-block:: groovy
@@ -243,8 +243,8 @@ Because :code:`int`, :code:`long`, :code:`Boolean`, etc. are reserved words in G
 
 .. _mapping-json-label:
 
-Mapping JSON (:code:`JsonNode`) to Avro fields
-""""""""""""""""""""""""""""""""""""""""""""""
+**Mapping JSON (:code:`JsonNode`) to Avro fields**
+""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Some expressions, for example, :code:`eventParameters()` (and its :code:`path()` method), produce a :code:`JsonNode` value that represents JSON supplied by a client. Because Avro doesn't have a type for handling arbitrary JSON data, a *compatible* Avro type must be chosen to match the expected structure of the JSON from the client. The following table lists the rules for compatibility between JSON values and Avro types.
 
@@ -377,8 +377,8 @@ As an alternative syntax, it is possible to use a closure that produces the bool
     map true onto 'signedInUser'
   }
 
-Conditions
-""""""""""
+**Conditions**
+""""""""""""""
 Any boolean value can be used as a condition. In order to be able to create flexible conditional mappings, the mapping DSL provides a number of methods on values that return booleans useful in conditional mappings, such as equality comparisons and boolean logic:
 
 +-------------------------------------------------+----------------------------------------------------------------+
