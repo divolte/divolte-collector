@@ -116,9 +116,9 @@ This is most often used in combination with `Conditional mapping (when)`_ as in 
   }
 
 Value presence
-""""""""""""""
-Not all values are present in each event. For example, when using a custom cookie value there could be incoming events where the cookie is not sent by the client. In this case the cookie value is said to absent. Similarly, events from a JSON source do not have a location value; this is specific to events from a browser source.
+^^^^^^^^^^^^^^
 
+Not all values are present in each event. For example, when using a custom cookie value there could be incoming events where the cookie is not sent by the client. In this case the cookie value is said to be absent. Similarly, events from a JSON source do not have a location value; this is specific to events from a browser source.
 Divolte Collector will never actively set an absent value. Instead for absent values it does nothing at all: the mapped field is not set on the Avro record. When values that are absent are used in subsequent expressions the derived values will also be absent. In the following example the :code:`intField` field will never be set because the incoming request has no referrer. This is not an error:
 
 .. code-block:: groovy
