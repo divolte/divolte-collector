@@ -438,7 +438,7 @@ The :code:`exit()` function will, at any point, break out of the enclosing secti
 
   // other mappings here
 
-There is a optional shorthand syntax for conditionally exiting from a section which leaves out the :code:`apply` keyword and closure:
+There is an optional shorthand syntax for conditionally exiting from a section which leaves out the :code:`apply` keyword and closure:
 
 .. code-block:: groovy
 
@@ -618,7 +618,7 @@ Simple value: :code:`corrupt()`
   ``browser``, ``json``
 
 :Description:
-  A boolean flag that is true if the source for the event detected corruption of the event data. Event corruption usually occurs when intermediate parties try to re-write HTTP requests or truncate long URLs. Real-world proxies and anti-virus software has been observed doing this.
+  A boolean flag that is true if the source for the event detected corruption of the event data. Event corruption usually occurs when intermediate parties try to re-write HTTP requests or truncate long URLs. Real-world proxies and anti-virus softwares have been observed doing this.
 
   Note that although this field is available on events from all sources, only browser sources currently detect corruption and set this value accordingly.
 
@@ -844,7 +844,7 @@ Simple value: :code:`sessionId()`
 :Description:
   A short-lived unique identifier stored by a client that is associated with each event from that source within a session of activity. All events from the same client within a session should have the same session identifier.
 
-  For browser sources a session to expire when 30 minutes has elapsed without any events occurring.
+  For browser sources a session expires when 30 minutes has elapsed without any events occurring.
 
 :Type:
   :code:`String`
@@ -959,7 +959,7 @@ Simple value: :code:`eventType()`
 
 Complex values
 ^^^^^^^^^^^^^^
-Complex values often return intermediate objects that you extract derived, simple values for mapping onto fields. The main exception to this is when working with event-parameters: the :code:`JsonNode` results can be mapped directly to fields, so long as they are of the right 'shape'; see :ref:`mapping-json-label` for more details.
+Complex values often return intermediate objects that you extract derived, simple values for mapping onto fields. The main exception to this is when working with event-parameters: the :code:`JsonNode` results can be mapped directly to fields, as long as they are of the right 'shape'; see :ref:`mapping-json-label` for more details.
 
 Complex value: :code:`eventParameters()`
 """"""""""""""""""""""""""""""""""""""""
@@ -1090,7 +1090,7 @@ Complex conversion: :code:`uri`
     def locationUri = parse location() to uri
 
 :Description:
-  Attempts to parse a string as a URI. The most obvious candidates to use for this are the :code:`location()` and :code:`referer()` values, but you can equally do this same with custom event parameters or any other string value. If the parser fails to create a URI from a string, then the value will be absent. Note that the parsed URI itself is not directly mappable onto any Avro field.
+  Attempts to parse a string as a URI. The most obvious candidates to use for this are the :code:`location()` and :code:`referer()` values, but you can equally do the same with custom event parameters or any other string value. If the parser fails to create a URI from a string, then the value will be absent. Note that the parsed URI itself is not directly mappable onto any Avro field.
 
 :Type:
   :code:`URI`
