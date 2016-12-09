@@ -300,29 +300,29 @@ task zip(dependsOn: build, type: Zip) {
 /*
  * Generate Sphinx documentation
  */
+import org.apache.tools.ant.filters.ReplaceTokens
 task processUserDoc {
     ext.source = file("docs")
     ext.sphinxDir = new File(buildDir, "sphinx")
     inputs.dir source
     outputs.dir sphinxDir
-}
 
-import org.apache.tools.ant.filters.ReplaceTokens
+    doLast {
 
-processUserDoc << {
-    // Copy/replace @version@
-    copy {
-        from(source) {
-            filter(ReplaceTokens, tokens: ["version": version])
+        // Copy/replace @version@
+        copy {
+            from(source) {
+                filter(ReplaceTokens, tokens: ["version": version])
+            }
+            into sphinxDir
+            exclude "**/*.png"
         }
-        into sphinxDir
-        exclude "**/*.png"
-    }
-    // Copy images (no replacement)
-    copy {
-        from(source)
-        into sphinxDir
-        include "**/*.png"
+        // Copy images (no replacement)
+        copy {
+            from(source)
+            into sphinxDir
+            include "**/*.png"
+        }
     }
 }
 
