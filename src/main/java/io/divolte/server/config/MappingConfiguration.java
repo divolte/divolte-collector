@@ -17,6 +17,7 @@ public class MappingConfiguration {
 
     public final Optional<String> schemaFile;
     public final Optional<String> mappingScriptFile;
+    public final Optional<Integer> schemaId;
 
     public final ImmutableSet<String> sources;
     public final ImmutableSet<String> sinks;
@@ -27,6 +28,7 @@ public class MappingConfiguration {
     @JsonCreator
     MappingConfiguration(final Optional<String> schemaFile,
                          final Optional<String> mappingScriptFile,
+                         final Optional<Integer> schemaId,
                          @JsonProperty(required = true)
                          final ImmutableSet<String> sources,
                          @JsonProperty(required = true)
@@ -39,6 +41,7 @@ public class MappingConfiguration {
                          final Boolean discardDuplicates) {
         this.schemaFile = Objects.requireNonNull(schemaFile);
         this.mappingScriptFile = Objects.requireNonNull(mappingScriptFile);
+        this.schemaId = Objects.requireNonNull(schemaId);
         this.sources = Objects.requireNonNull(sources);
         this.sinks = Objects.requireNonNull(sinks);
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
@@ -51,6 +54,7 @@ public class MappingConfiguration {
         return MoreObjects.toStringHelper(this)
                 .add("schemaFile", schemaFile)
                 .add("mappingScriptFile", mappingScriptFile)
+                .add("schemaId", schemaId)
                 .add("sources", sources)
                 .add("sinks", sinks)
                 .add("discardCorrupted", discardCorrupted)

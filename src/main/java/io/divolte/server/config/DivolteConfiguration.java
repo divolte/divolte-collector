@@ -148,12 +148,13 @@ public final class DivolteConfiguration {
 
     private static ImmutableMap<String,SinkConfiguration> defaultSinkConfigurations() {
         return ImmutableMap.of("hdfs", new HdfsSinkConfiguration((short) 1, FileStrategyConfiguration.DEFAULT_FILE_STRATEGY_CONFIGURATION),
-                               "kafka", new KafkaSinkConfiguration(null));
+                               "kafka", new KafkaSinkConfiguration(null, KafkaSinkMode.NAKED));
     }
 
     private static ImmutableMap<String,MappingConfiguration> defaultMappingConfigurations(final ImmutableSet<String> sourceNames,
                                                                                           final ImmutableSet<String> sinkNames) {
         return ImmutableMap.of("default", new MappingConfiguration(Optional.empty(),
+                                                                   Optional.empty(),
                                                                    Optional.empty(),
                                                                    sourceNames,
                                                                    sinkNames,

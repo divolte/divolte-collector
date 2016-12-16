@@ -16,12 +16,14 @@ public class KafkaSinkConfiguration extends SinkConfiguration {
     private static final String DEFAULT_TOPIC = "divolte";
 
     public final String topic;
+    public final KafkaSinkMode mode;
 
     @JsonCreator
     @ParametersAreNullableByDefault
-    KafkaSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic) {
+    KafkaSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic, @JsonProperty final KafkaSinkMode mode) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
         this.topic = Optional.ofNullable(topic).orElse(DEFAULT_TOPIC);
+        this.mode = Optional.ofNullable(mode).orElse(KafkaSinkMode.NAKED);
     }
 
     @Override

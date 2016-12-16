@@ -22,8 +22,8 @@ import java.util.function.Function;
 public class SchemaRegistry {
     private static final Logger logger = LoggerFactory.getLogger(SchemaRegistry.class);
 
-    private final ImmutableMap<String,Schema> schemasByMappingName;
-    private final ImmutableMap<String,Schema> schemasBySinkName;
+    private final ImmutableMap<String,DivolteSchema> schemasByMappingName;
+    private final ImmutableMap<String,DivolteSchema> schemasBySinkName;
 
     public SchemaRegistry(final ValidatedConfiguration vc) {
         final ImmutableMap<String, MappingConfiguration> mappings = vc.configuration().mappings;
@@ -32,13 +32,27 @@ public class SchemaRegistry {
         final ImmutableMap<String,Optional<String>> schemaLocationsByMapping =
                 ImmutableMap.copyOf(Maps.transformValues(mappings, config -> config.schemaFile));
 
+        // Build a mapping of the schema location for each mapping.
+        final ImmutableMap<String,Optional<Integer>> schemaIdsByLocation =
+            mappings.values()
+            .stream()
+            .filter(config -> config.schemaFile.isPresent())
+            .collect(ImmutableMap.toImmutableMap(config -> config.schemaFile.get(), config -> config.schemaId));
+
         // Load the actual schemas. Once.
         logger.debug("Loading schemas for mappings: {}", schemaLocationsByMapping.keySet());
-        final ImmutableMap<Optional<String>,Schema> schemasByLocation =
+        final ImmutableMap<Optional<String>, DivolteSchema> schemasByLocation =
                 schemaLocationsByMapping.values()
                                         .stream()
                                         .distinct()
-                                        .collect(ImmutableMap.toImmutableMap(Function.identity(), SchemaRegistry::loadSchema));
+                                        .collect(ImmutableMap.toImmutableMap(
+                                            Function.identity(),
+                                            schemaLocation -> {
+                                                Schema schema = loadSchema(schemaLocation);
+                                                Optional<Integer> schemaId = schemaLocation.flatMap(schemaIdsByLocation::get);
+                                                return new DivolteSchema(schemaId, schema);
+                                            })
+                                        );
 
         // Store the schema for each mapping.
         schemasByMappingName =
@@ -60,14 +74,14 @@ public class SchemaRegistry {
         logger.info("Inferred schemas used for sinks: {}", schemasBySinkName.keySet());
     }
 
-    public Schema getSchemaByMappingName(final String mappingName) {
-        final Schema schema = schemasByMappingName.get(mappingName);
+    public DivolteSchema getSchemaByMappingName(final String mappingName) {
+        final DivolteSchema schema = schemasByMappingName.get(mappingName);
         Preconditions.checkArgument(null != schema, "Illegal mapping name: %s", mappingName);
         return schema;
     }
 
-    public Schema getSchemaBySinkName(final String sinkName) {
-        final Schema schema = schemasBySinkName.get(sinkName);
+    public DivolteSchema getSchemaBySinkName(final String sinkName) {
+        final DivolteSchema schema = schemasBySinkName.get(sinkName);
         // This means that the sink either doesn't exist, or isn't associated with a mapping.
         // (Without a mapping, we can't infer the schema.)
         Preconditions.checkArgument(null != schema, "Illegal sink name: %s", sinkName);

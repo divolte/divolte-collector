@@ -98,4 +98,16 @@ public class ValidatedConfigurationTest {
                   .get(0)
                   .startsWith("Property 'divolte.' Any sink can only use one schema. The following sinks have multiple mappings with different schema's linked to them: [kafka].."));
     }
+
+    @Test
+    public void kafkaSinkSupportsConfluentMode() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent.conf"));
+        assertTrue(vc.isValid());
+    }
+
+    @Test
+    public void mappingCanContainSchemaId() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("mapping-with-schema-id.conf"));
+        assertTrue(vc.isValid());
+    }
 }
