@@ -1043,6 +1043,20 @@ Mapping property: ``schema_file``
 .. |Built-in schema| replace:: *Built-in schema*
 .. _Built-in schema: https://github.com/divolte/divolte-schema
 
+Mapping property: ``schema_id``
+"""""""""""""""""""""""""""""""
+:Description:
+  The avro records written to Kafka are 'naked' by default.  Which schema was used to write them is therefore not clear from the message itself.  When the schema evolves over time, such metadata is necessary to be able to read the records.  The ``schema_id`` allows the avro serializer to prepend each record with this id.  This becomes effective when the kafka sink mode is ``confluent``, for example.
+:Default:
+    *Not specified*
+:Example:
+
+    .. code-block:: none
+
+    divolte.mappings.a_mapping {
+      schema_id = 1234
+    }
+
 Mapping property: ``mapping_script_file``
 """""""""""""""""""""""""""""""""""""""""
 :Description:
@@ -1336,4 +1350,19 @@ Kafka sink property: ``topic``
     divolte.sinks.a_sink {
       type = kafka
       topic = clickevents
+    }
+
+Kafka sink property: ``mode``
+"""""""""""""""""""""""""""""
+:Description:
+  The Kafka sink mode.  By default, Avro records are written directly as the Kafka message.  So it is not clear from the message itself which schema was used to write it.  The sink mode determines which "envelope" should be wrapped around the serialized Avro record.  The ``confluent`` mode does this in a way that is compatible with the `Confluent Schema Registry <http://docs.confluent.io/3.0.0/schema-registry/docs/>`_.  Note that this mode does require the schema ID to be specified in the ``mappings`` section.
+:Default:
+    ``naked``
+:Example:
+
+    .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = kafka
+      mode = confluent
     }
