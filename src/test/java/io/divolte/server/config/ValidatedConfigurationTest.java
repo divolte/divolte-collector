@@ -106,6 +106,19 @@ public class ValidatedConfigurationTest {
     }
 
     @Test
+    public void confluentSinkMustBeReferencedWithSchemaInMapping() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-without-schema.conf"));
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        System.out.println(vc.errors().get(0));
+        assertTrue(
+            vc.errors()
+            .get(0)
+            .startsWith("Property 'divolte.' Any Confluent sink must have a schema id. The following mappings refer to a Confluent sink, but do not have a schema ID: [test]..")
+        );
+    }
+
+    @Test
     public void mappingCanContainSchemaId() {
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("mapping-with-schema-id.conf"));
         assertTrue(vc.isValid());

@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import io.divolte.server.config.constraint.MappingToConfluentMustHaveSchemaId;
 import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
 import io.divolte.server.config.constraint.OneSchemaPerSink;
 import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
@@ -28,6 +29,7 @@ import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
 @MappingSourceSinkReferencesMustExist
 @SourceAndSinkNamesCannotCollide
 @OneSchemaPerSink
+@MappingToConfluentMustHaveSchemaId
 public final class DivolteConfiguration {
     @Valid public final GlobalConfiguration global;
 
@@ -210,5 +212,36 @@ public final class DivolteConfiguration {
                         .distinct()
                         .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.counting()));
         return Maps.filterValues(countsBySink, count -> count > 1L).keySet();
+    }
+
+    public Set<String> mappingsToConfluentSinksWithoutSchemaIds() {
+        final Set<String> confluentSinks =
+            sinks.entrySet()
+                .stream()
+                .flatMap(entry -> {
+                    if (entry.getValue() instanceof KafkaSinkConfiguration) {
+                        final KafkaSinkConfiguration kafkaSinkConfiguration = (KafkaSinkConfiguration) entry.getValue();
+                        if (kafkaSinkConfiguration.mode == KafkaSinkMode.CONFLUENT) {
+                            return Stream.of(entry.getKey());
+                        }
+                    }
+                    return Stream.empty();
+                }).collect(Collectors.toSet());
+        return mappings.entrySet()
+            .stream()
+            .flatMap(config ->
+                config.getValue()
+                    .sinks
+                    .stream()
+                    .flatMap(sink -> {
+                        MappingConfiguration mapping = config.getValue();
+                        if (confluentSinks.contains(sink) &&
+                            (mapping.schemaId == null || !mapping.schemaId.isPresent())) {
+                            return Stream.of(config.getKey());
+                        } else {
+                            return Stream.empty();
+                        }
+                    })
+            ).collect(Collectors.toSet());
     }
 }
