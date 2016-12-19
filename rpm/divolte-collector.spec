@@ -6,8 +6,8 @@
 %define snapshot %{nil}%{?snapshotVersion}
 
 Name:           divolte-collector
-Version:        0.4.0
-Release:        1%{?dist}
+Version:        0.5.0
+Release:        %{?snapshotVersion:1}%{?!snapshotVersion:2}%{?dist}
 Summary:        The Divolte click-stream collection agent.
 
 License:        Apache License, Version 2.0
@@ -50,10 +50,10 @@ sed -e "s/scmVersion\.version/'%{version}%{snapshot}'/g" build.gradle > build.gr
 %install
 rm -rf "%{buildroot}"
 
-./gradlew --no-daemon --exclude-task test installApp
+./gradlew --no-daemon --exclude-task test installDist
 
 %{__mkdir_p} "%{buildroot}/etc/divolte"
-%{__mkdir_p} "%{buildroot}/etc/init.d"
+%{__mkdir_p} "%{buildroot}/etc/rc.d/init.d"
 %{__mkdir_p} "%{buildroot}/usr/bin"
 %{__mkdir_p} "%{buildroot}/usr/share/divolte/bin"
 %{__mkdir_p} "%{buildroot}/usr/share/divolte/lib"
@@ -61,7 +61,7 @@ rm -rf "%{buildroot}"
 
 %{__install} -m 0644 "%{S:1}" "%{buildroot}/etc/divolte/%{name}.conf"
 %{__install} -m 0644 "%{S:3}" "%{buildroot}/etc/divolte/logback.xml"
-%{__install} -m 0755 "%{S:2}" "%{buildroot}/etc/init.d/%{name}"
+%{__install} -m 0755 "%{S:2}" "%{buildroot}/etc/rc.d/init.d/%{name}"
 %{__cp} -R build/install/%{name}/lib/* "%{buildroot}/usr/share/divolte/lib"
 %{__cp} -R src/scripts/* "%{buildroot}/usr/share/divolte/bin"
 %{__cp} -R src/dist/conf/* "%{buildroot}/etc/divolte"
@@ -98,14 +98,13 @@ fi
 %defattr(-,root,root,0755)
 
 %dir /etc/divolte
-%config /etc/divolte/%{name}.conf
-%config /etc/divolte/logback.xml
-%config /etc/init.d/%{name}
+%config(noreplace) /etc/divolte/%{name}.conf
+%config(noreplace) /etc/divolte/logback.xml
+/etc/rc.d/init.d/%{name}
 /etc/divolte/*.example
 /usr/bin/%{name}
 %dir /usr/share/divolte
 %dir /usr/share/divolte/bin
-/usr/share/divolte/bin/%{name}
 /usr/share/divolte/bin/*
 %dir /usr/share/divolte/lib
 /usr/share/divolte/lib/*.jar

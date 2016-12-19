@@ -17,9 +17,6 @@
 package io.divolte.server.hdfs;
 
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
-import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.config.SimpleRollingFileStrategyConfiguration;
-import io.divolte.server.config.ValidatedConfiguration;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -34,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import io.divolte.server.config.HdfsSinkConfiguration;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -43,6 +41,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.config.FileStrategyConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
 
 @NotThreadSafe
 @ParametersAreNonnullByDefault
@@ -73,11 +75,16 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     private boolean isHdfsAlive;
     private long lastFixAttempt;
 
-    public SimpleRollingFileStrategy(final ValidatedConfiguration vc, final FileSystem fs, final short hdfsReplication, final Schema schema) {
+    public SimpleRollingFileStrategy(final ValidatedConfiguration vc,
+                                     final String name,
+                                     final FileSystem fs,
+                                     final short hdfsReplication,
+                                     final Schema schema) {
         Objects.requireNonNull(vc);
         this.schema = Objects.requireNonNull(schema);
 
-        final SimpleRollingFileStrategyConfiguration fileStrategyConfiguration = vc.configuration().hdfsFlusher.fileStrategy.as(SimpleRollingFileStrategyConfiguration.class);
+        final FileStrategyConfiguration fileStrategyConfiguration =
+                vc.configuration().getSinkConfiguration(name, HdfsSinkConfiguration.class).fileStrategy;
         syncEveryMillis = fileStrategyConfiguration.syncFileAfterDuration.toMillis();
         syncEveryRecords = fileStrategyConfiguration.syncFileAfterRecords;
         newFileEveryMillis = fileStrategyConfiguration.rollEvery.toMillis();
@@ -108,7 +115,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
     private static String findLocalHostName() {
         try {
             return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
+        } catch (final UnknownHostException e) {
             return "localhost";
         }
     }
@@ -202,7 +209,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             final Path newFilePath = newFilePath();
             try {
                 currentFile = openNewFile(newFilePath);
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 throwsIoException(() -> hdfs.delete(newFilePath, false));
                 throw e;
             }
@@ -248,8 +255,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
         int recordsSinceLastSync;
         long totalRecords;
 
-        @SuppressWarnings("resource")
-        public HadoopFile(Path path) throws IOException {
+        public HadoopFile(final Path path) throws IOException {
             this.path = path;
             this.stream = hdfs.create(path, hdfsReplication);
 
@@ -274,6 +280,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             return new Path(hdfsPublishDir, pathName.substring(0, pathName.length() - INFLIGHT_EXTENSION.length()));
         }
 
+        @Override
         public void close() throws IOException {
             totalRecords += recordsSinceLastSync;
             writer.close();

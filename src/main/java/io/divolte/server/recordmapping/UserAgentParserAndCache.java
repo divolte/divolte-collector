@@ -1,5 +1,6 @@
 package io.divolte.server.recordmapping;
 
+import io.divolte.server.config.UserAgentParserConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 
 import java.util.Optional;
@@ -17,14 +18,17 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public final class UserAgentParserAndCache {
     private final static Logger logger = LoggerFactory.getLogger(UserAgentParserAndCache.class);
 
     private final LoadingCache<String,ReadableUserAgent> cache;
 
     public UserAgentParserAndCache(final ValidatedConfiguration vc) {
-        final UserAgentStringParser parser = parserBasedOnTypeConfig(vc.configuration().tracking.uaParser.type);
-        this.cache = sizeBoundCacheFromLoadingFunction(parser::parse, vc.configuration().tracking.uaParser.cacheSize);
+        final UserAgentStringParser parser = parserBasedOnTypeConfig(vc.configuration().global.mapper.userAgentParser.type);
+        this.cache = sizeBoundCacheFromLoadingFunction(parser::parse, vc.configuration().global.mapper.userAgentParser.cacheSize);
         logger.info("User agent parser data version: {}", parser.getDataVersion());
     }
 
@@ -37,15 +41,15 @@ public final class UserAgentParserAndCache {
         }
     }
 
-    private static UserAgentStringParser parserBasedOnTypeConfig(String type) {
+    private static UserAgentStringParser parserBasedOnTypeConfig(UserAgentParserConfiguration.ParserType type) {
         switch (type) {
-        case "caching_and_updating":
+        case CACHING_AND_UPDATING:
             logger.info("Using caching and updating user agent parser.");
             return UADetectorServiceFactory.getCachingAndUpdatingParser();
-        case "online_updating":
+        case ONLINE_UPDATING:
             logger.info("Using online updating user agent parser.");
             return UADetectorServiceFactory.getOnlineUpdatingParser();
-        case "non_updating":
+        case NON_UPDATING:
             logger.info("Using non-updating (resource module based) user agent parser.");
             return UADetectorServiceFactory.getResourceModuleParser();
         default:

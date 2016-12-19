@@ -37,6 +37,9 @@ import java.util.stream.Stream;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import io.divolte.server.config.ValidatedConfiguration;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -52,12 +55,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.maxmind.geoip2.model.CityResponse;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
-import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
 import io.divolte.server.recordmapping.DslRecordMapper;
@@ -107,7 +107,7 @@ public class DslRecordMapperTest {
         assertEquals(true, record.get("sessionStart"));
         assertEquals(true, record.get("unreliable"));
         assertEquals(false, record.get("dupe"));
-        assertEquals(event.requestStartTime, record.get("ts"));
+        assertEquals(event.requestStartTime.toEpochMilli(), record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
 
@@ -122,8 +122,8 @@ public class DslRecordMapperTest {
         assertEquals("10.10.1", record.get("userAgentOsVersion"));
         assertEquals("Apple Computer, Inc.", record.get("userAgentOsVendor"));
 
-        assertEquals(event.partyCookie.value, record.get("client"));
-        assertEquals(event.sessionCookie.value, record.get("session"));
+        assertEquals(event.partyId.value, record.get("client"));
+        assertEquals(event.sessionId.value, record.get("session"));
         assertEquals(event.browserEventData.get().pageViewId, record.get("pageview"));
         assertEquals(event.eventId, record.get("event"));
         assertEquals(1018, record.get("viewportWidth"));
@@ -361,12 +361,12 @@ public class DslRecordMapperTest {
         copyResourceToFile("geo-mapping.groovy", geoMappingFile);
 
         final ImmutableMap<String, Object> mappingConfig = ImmutableMap.of(
-                "divolte.tracking.schema_mapping.mapping_script_file", geoMappingFile.getAbsolutePath(),
-                "divolte.tracking.schema_file", avroFile.getAbsolutePath()
-                );
+                "divolte.mappings.test.mapping_script_file", geoMappingFile.getAbsolutePath(),
+                "divolte.mappings.test.schema_file", avroFile.getAbsolutePath()
+        );
 
         final Config geoConfig = ConfigFactory.parseMap(mappingConfig)
-            .withFallback(ConfigFactory.parseResources("dsl-mapping-test.conf"))
+            .withFallback(ConfigFactory.parseResources("base-test-server.conf"))
             .withFallback(ConfigFactory.parseResources("reference-test.conf"));
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> geoConfig);
 
@@ -378,6 +378,7 @@ public class DslRecordMapperTest {
 
         final DslRecordMapper mapper = new DslRecordMapper(
                 vc,
+                geoMappingFile.getAbsolutePath(),
                 new Schema.Parser().parse(Resources.toString(Resources.getResource("TestRecord.avsc"), StandardCharsets.UTF_8)),
                 Optional.of(mockLookupService));
 
@@ -545,12 +546,11 @@ public class DslRecordMapperTest {
         copyResourceToFile("TestRecord.avsc", avroFile);
 
         final ImmutableMap<String, Object> mappingConfig = ImmutableMap.of(
-                "divolte.tracking.schema_mapping.mapping_script_file", mappingFile.getAbsolutePath(),
-                "divolte.tracking.schema_file", avroFile.getAbsolutePath()
+                "divolte.mappings.test.mapping_script_file", mappingFile.getAbsolutePath(),
+                "divolte.mappings.test.schema_file", avroFile.getAbsolutePath()
                 );
 
-        server = new TestServer("dsl-mapping-test.conf", mappingConfig);
-        server.server.run();
+        server = new TestServer("base-test-server.conf", mappingConfig);
     }
 
     private static void copyResourceToFile(final String resourceName, final File file) throws IOException {

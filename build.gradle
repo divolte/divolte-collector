@@ -26,8 +26,8 @@ buildscript {
 
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '1.2.3'
-    id 'pl.allegro.tech.build.axion-release' version '1.3.5'
+    id 'com.github.johnrengelman.shadow' version '1.2.4'
+    id 'pl.allegro.tech.build.axion-release' version '1.4.1'
 }
 
 apply plugin: 'java'
@@ -75,12 +75,18 @@ repositories {
 }
 
 dependencies {
-    compile group: 'io.divolte', name: 'divolte-schema', version: version
-    compile group: 'io.undertow', name: 'undertow-core', version: '1.4.0.Final'
-    compile group: 'com.typesafe', name: 'config', version: '1.3.0'
-    compile group: 'com.google.guava', name: 'guava', version: '19.0'
+    // Define some key versions for components that we use lots of artifacts from.
     // Note: we refer to the Avro documentation in our own documentation.
-    compile group: 'org.apache.avro', name: 'avro', version: '1.8.1'
+    def avroVersion = '1.8.1'
+    def hadoopVersion = '2.7.3'
+    def jacksonVersion = '2.8.5'
+    def slf4jVersion = '1.7.21'
+
+    compile group: 'io.divolte', name: 'divolte-schema', version: version
+    compile group: 'io.undertow', name: 'undertow-core', version: '1.4.6.Final'
+    compile group: 'com.typesafe', name: 'config', version: '1.3.1'
+    compile group: 'com.google.guava', name: 'guava', version: '20.0'
+    compile group: 'org.apache.avro', name: 'avro', version: avroVersion
 
     /*
      * We package the Avro Tools to provide an easy way to view Avro files
@@ -91,19 +97,19 @@ dependencies {
      * run and have a working tojson command. The other commands weren't fully
      * tested with these deps.
      */
-    compile group: 'org.apache.avro', name: 'avro-tools', version: '1.8.1', classifier: 'nodeps'
-    compile group: 'org.apache.avro', name: 'trevni-core', version: '1.8.1'
-    compile group: 'org.apache.avro', name: 'avro-mapred', version: '1.8.1'
+    compile group: 'org.apache.avro', name: 'avro-tools', version: avroVersion, classifier: 'nodeps'
+    compile group: 'org.apache.avro', name: 'trevni-core', version: avroVersion
+    compile group: 'org.apache.avro', name: 'avro-mapred', version: avroVersion
 
-    compile (group: 'org.apache.hadoop', name:'hadoop-common', version: '2.7.2') {
+    compile (group: 'org.apache.hadoop', name:'hadoop-common', version: hadoopVersion) {
         exclude group: 'jline', module: 'jline'
     }
-    compile group: 'org.apache.hadoop', name:'hadoop-hdfs', version: '2.7.2'
+    compile group: 'org.apache.hadoop', name:'hadoop-hdfs', version: hadoopVersion
     compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.22') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
     compile group: 'net.sf.uadetector', name: 'uadetector-resources', version: '2014.10'
-    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'2.7.0') {
+    compile (group: 'com.maxmind.geoip2', name: 'geoip2', version:'2.8.0') {
         // We only use DB mode, and Google's HTTP client pulls in Apache HTTP
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'
@@ -112,34 +118,32 @@ dependencies {
     // with 0.8.X servers: Horton and Cloudera both ship 0.8, and we want to support them.
     // Note: we refer to versioned producer documentation in our documentation.
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '0.8.2.0'
-    compile group: 'com.google.javascript', name:'closure-compiler', version:'v20160713'
+    compile group: 'com.google.javascript', name:'closure-compiler', version:'v20161201'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.7', classifier: 'indy'
-    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.2'
+    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.3'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.2.0'
-    compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.8.1'
-    compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.8.1'
-    compile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.8.1'
+    compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: jacksonVersion
+    compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: jacksonVersion
+    compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-guava', version: jacksonVersion
+    compile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: jacksonVersion
     compile group: 'com.jasonclawson', name: 'jackson-dataformat-hocon', version: '1.1.0'
 
     // Used for configuration validation
-    compile group: 'org.hibernate', name:'hibernate-validator', version: '5.2.4.Final'
+    compile group: 'org.hibernate', name:'hibernate-validator', version: '5.3.4.Final'
     compile group: 'org.glassfish', name: 'javax.el', version: '3.0.0'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
-    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: slf4jVersion
     runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.7'
-    runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '1.7.21'
+    runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: slf4jVersion
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
-    testCompile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: '2.6.3'
-    testCompile group: 'com.fasterxml.jackson.module', name:'jackson-module-parameter-names', version: '2.6.3'
-    testCompile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: '2.6.3'
-    testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.21'
+    testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.22'
 
-    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '2.53.1'
+    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '3.0.1'
     testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.3.0'
 }
 
@@ -197,14 +201,14 @@ findbugs() {
 }
 
 pmd {
-    toolVersion = "5.4.2"
+    toolVersion = "5.5.2"
     ruleSetFiles = files("config/pmd/ruleset.xml")
     // The default set includes 'basic', so empty it. (We include basic via our custom ruleset.)
     ruleSets = []
 }
 
 checkstyle {
-    toolVersion = "6.19"
+    toolVersion = "7.3"
 }
 
 jacoco {
@@ -221,7 +225,8 @@ findbugsTest.reports {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '2.14.1'
+    gradleVersion = '3.2.1'
+    distributionType = 'all'
 }
 
 /*
@@ -235,6 +240,14 @@ run {
     if (System.getenv().containsKey("YARN_CONF_DIR")) {
         classpath += files(System.getenv("YARN_CONF_DIR"))
     }
+}
+
+test {
+    /*
+     * Some tests do low-level manipulation with HttpUrlConnection. This
+     * property gives them more freedom.
+     */
+    systemProperty "sun.net.http.allowRestrictedHeaders", "true"
 }
 
 /*
@@ -287,29 +300,29 @@ task zip(dependsOn: build, type: Zip) {
 /*
  * Generate Sphinx documentation
  */
+import org.apache.tools.ant.filters.ReplaceTokens
 task processUserDoc {
     ext.source = file("docs")
     ext.sphinxDir = new File(buildDir, "sphinx")
     inputs.dir source
     outputs.dir sphinxDir
-}
 
-import org.apache.tools.ant.filters.ReplaceTokens
+    doLast {
 
-processUserDoc << {
-    // Copy/replace @version@
-    copy {
-        from(source) {
-            filter(ReplaceTokens, tokens: ["version": version])
+        // Copy/replace @version@
+        copy {
+            from(source) {
+                filter(ReplaceTokens, tokens: ["version": version])
+            }
+            into sphinxDir
+            exclude "**/*.png"
         }
-        into sphinxDir
-        exclude "**/*.png"
-    }
-    // Copy images (no replacement)
-    copy {
-        from(source)
-        into sphinxDir
-        include "**/*.png"
+        // Copy images (no replacement)
+        copy {
+            from(source)
+            into sphinxDir
+            include "**/*.png"
+        }
     }
 }
 

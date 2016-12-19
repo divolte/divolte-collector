@@ -16,32 +16,50 @@
 
 package io.divolte.server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.google.common.base.Strings;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
+import com.google.common.io.Resources;
+
+import io.divolte.server.DivolteEvent.BrowserEventData;
+import io.divolte.server.mincode.MincodeFactory;
+import io.divolte.server.processing.Item;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.divolte.server.HttpSource.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
-
-import io.divolte.server.mincode.MincodeFactory;
-import io.undertow.server.HttpServerExchange;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.*;
+import java.util.function.Supplier;
 
 @ParametersAreNonnullByDefault
-public final class ClientSideCookieEventHandler extends BaseEventHandler {
+public final class ClientSideCookieEventHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(ClientSideCookieEventHandler.class);
+
+    private final static ETag SENTINEL_ETAG = new ETag(false, "6b3edc43-20ec-4078-bc47-e965dd76b88a");
+    private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
+
+    private final ByteBuffer transparentImage;
+    private final IncomingRequestProcessingPool processingPool;
+    private final int sourceIndex;
+
     private static final String TRUE_STRING = "t";
 
     private static final String PARTY_ID_QUERY_PARAM = "p";
@@ -64,83 +82,124 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
 
     private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper(new MincodeFactory()).reader();
 
-    static final String EVENT_SOURCE_NAME = "browser";
+    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool, final int sourceIndex) {
+        this.sourceIndex = sourceIndex;
+        this.processingPool = Objects.requireNonNull(processingPool);
 
-    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool pool) {
-        super(pool);
-    }
-
-    @Override
-    protected void logEvent(final HttpServerExchange exchange) {
         try {
-            handleRequestIfComplete(exchange);
-        } catch (final IncompleteRequestException ire) {
-            // improper request, could be anything
-            logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
+            this.transparentImage = ByteBuffer.wrap(
+                Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
+            ).asReadOnlyBuffer();
+        } catch (final IOException e) {
+            // Should throw something more specific than this.
+            throw new RuntimeException("Could not load transparent image resource.", e);
         }
     }
 
-    private void handleRequestIfComplete(final HttpServerExchange exchange) throws IncompleteRequestException {
-        final boolean corrupt = !isRequestChecksumCorrect(exchange);
-        final DivolteIdentifier partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
-        final DivolteIdentifier sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
-        final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
-        final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
-        final boolean isNewPartyId = queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
-        final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
-        final long clientTimeStamp = queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new);
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) {
+        final InetSocketAddress sourceAddress = captureAndPersistSourceAddress(exchange);
 
-        final long requestTime = System.currentTimeMillis();
-        final DivolteEvent event = buildBrowserEventData(corrupt, partyId, sessionId, pageViewId, eventId,
-                                                             requestTime, clientTimeStamp - requestTime,
-                                                             isNewPartyId, isFirstInSession, exchange);
+        /*
+         * Set up the headers that we always send as a response, irrespective of what type it
+         * will be. Note that the client is responsible for ensuring that ensures that each request
+         * is unique.
+         * The cache-related headers are intended to prevent spurious reloads for an event.
+         * (Being a GET request, agents are free to re-issue the request at will. We don't want this.)
+         * As a last resort, we try to detect duplicates via the ETag header.
+         */
+        exchange.getResponseHeaders()
+                .put(Headers.CONTENT_TYPE, "image/gif")
+                .put(Headers.ETAG, SENTINEL_ETAG_VALUE)
+                .put(Headers.CACHE_CONTROL, "private, no-cache, proxy-revalidate")
+                .put(Headers.PRAGMA, "no-cache")
+                .put(Headers.EXPIRES, "Fri, 14 Apr 1995 11:30:00 GMT");
 
-        logger.debug("Enqueuing event (client generated cookies): {}/{}/{}/{}", partyId, sessionId, pageViewId, eventId);
-        processingPool.enqueueIncomingExchangeForProcessing(partyId, event);
+        // If an ETag is present, this is a duplicate event.
+        if (ETagUtils.handleIfNoneMatch(exchange, SENTINEL_ETAG, true)) {
+            // Default status code what we want: 200 OK.
+            // Sending the response before logging the event!
+            exchange.getResponseSender().send(transparentImage.slice());
+
+            try {
+                logEvent(exchange);
+            } catch (final IncompleteRequestException ire) {
+                // improper request, could be anything
+                logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
+            }
+        } else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Ignoring duplicate event from {}: {}", sourceAddress, getFullUrl(exchange));
+            }
+            exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
+            exchange.endExchange();
+        }
     }
 
-    static DivolteEvent buildBrowserEventData(final boolean corruptEvent,
-                                              final DivolteIdentifier partyCookie,
-                                              final DivolteIdentifier sessionCookie,
-                                              final String pageViewId,
-                                              final String eventId,
-                                              final long requestStartTime,
-                                              final long clientUtcOffset,
-                                              final boolean newPartyId,
-                                              final boolean firstInSession,
-                                              final HttpServerExchange exchange) {
-        return new DivolteEvent(exchange,
-                                corruptEvent,
-                                partyCookie,
-                                sessionCookie,
-                                eventId,
-                                EVENT_SOURCE_NAME,
-                                requestStartTime,
-                                clientUtcOffset,
-                                newPartyId,
-                                firstInSession,
-                                queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-                                () -> queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
-                                    .map(encodedParameters -> {
-                                        try {
-                                            return EVENT_PARAMETERS_READER.readTree(encodedParameters);
-                                        } catch (final IOException e) {
-                                            if (logger.isDebugEnabled()) {
-                                                logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
-                                            }
-                                            return null;
-                                        }
-                                    }),
-                                Optional.of(new DivolteEvent.BrowserEventData(pageViewId,
-                                                                          queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
-                                                                          queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
-                                                                          queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
-                                                                          queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int)
-                                                                          ))
-                                );
+    private static String getFullUrl(final HttpServerExchange exchange) {
+        final String queryString = exchange.getQueryString();
+        final String requestUrl = exchange.getRequestURL();
+        return Strings.isNullOrEmpty(queryString)
+                ? requestUrl
+                : requestUrl + '?' + queryString;
+    }
+
+    private void logEvent(final HttpServerExchange exchange) throws IncompleteRequestException {
+        final DivolteIdentifier partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
+        final UndertowEvent event = new BrowserUndertowEvent(Instant.now(), exchange, partyId);
+        processingPool.enqueue(Item.of(sourceIndex, partyId.value, event));
+    }
+
+    private static final class BrowserUndertowEvent extends UndertowEvent {
+        private BrowserUndertowEvent(final Instant requestTime, final HttpServerExchange exchange, final DivolteIdentifier partyId) {
+            super(requestTime, exchange, partyId);
+        }
+
+        @Override
+        public DivolteEvent parseRequest() throws IncompleteRequestException {
+            final boolean corrupt = !isRequestChecksumCorrect(exchange);
+            final DivolteIdentifier partyId = queryParamFromExchange(exchange, PARTY_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
+            final DivolteIdentifier sessionId = queryParamFromExchange(exchange, SESSION_ID_QUERY_PARAM).flatMap(DivolteIdentifier::tryParse).orElseThrow(IncompleteRequestException::new);
+            final String pageViewId = queryParamFromExchange(exchange, PAGE_VIEW_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
+            final String eventId = queryParamFromExchange(exchange, EVENT_ID_QUERY_PARAM).orElseThrow(IncompleteRequestException::new);
+            final boolean isNewPartyId = queryParamFromExchange(exchange, NEW_PARTY_ID_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
+            final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
+            final Instant clientTimeStamp = Instant.ofEpochMilli(queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new));
+
+            final DivolteEvent event = DivolteEvent.createBrowserEvent(exchange, corrupt, partyId, sessionId, eventId,
+                                                                       requestTime, clientTimeStamp,
+                                                                       isNewPartyId, isFirstInSession,
+                                                                       queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
+                                                                       eventParameterSupplier(exchange),
+                                                                       browserEventData(exchange, pageViewId));
+            return event;
+        }
+    }
+
+    private static Supplier<Optional<JsonNode>> eventParameterSupplier(final HttpServerExchange exchange) {
+        return () -> queryParamFromExchange(exchange, EVENT_PARAMETERS_QUERY_PARAM)
+                .map(encodedParameters -> {
+                    try {
+                        return EVENT_PARAMETERS_READER.readTree(encodedParameters);
+                    } catch (final IOException e) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Could not parse custom event parameters: " + encodedParameters, e);
+                        }
+                        return null;
+                    }
+                });
+    }
+
+    private static BrowserEventData browserEventData(final HttpServerExchange exchange, final String pageViewId) {
+        return new DivolteEvent.BrowserEventData(
+                pageViewId,
+                queryParamFromExchange(exchange, LOCATION_QUERY_PARAM),
+                queryParamFromExchange(exchange, REFERER_QUERY_PARAM),
+                queryParamFromExchange(exchange, VIEWPORT_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, VIEWPORT_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, SCREEN_PIXEL_WIDTH_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, SCREEN_PIXEL_HEIGHT_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int),
+                queryParamFromExchange(exchange, DEVICE_PIXEL_RATIO_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Int));
     }
 
     private static final HashFunction CHECKSUM_HASH = Hashing.murmur3_32();
@@ -172,7 +231,6 @@ public final class ClientSideCookieEventHandler extends BaseEventHandler {
                 .orElse(false);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static String buildNormalizedChecksumString(final Map<String,Deque<String>> queryParameters) {
         return buildNormalizedChecksumString(queryParameters instanceof SortedMap
                 ? (SortedMap)queryParameters

@@ -47,6 +47,10 @@ public class AllowedMethodsHandler implements HttpHandler {
         this(next, ImmutableSet.copyOf(allowedMethods));
     }
 
+    public AllowedMethodsHandler(final HttpHandler next, final HttpString allowed) {
+        this(next, ImmutableSet.of(allowed));
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final HttpString requestMethod = exchange.getRequestMethod();

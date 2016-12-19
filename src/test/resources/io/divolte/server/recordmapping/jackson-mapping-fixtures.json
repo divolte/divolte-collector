@@ -47,14 +47,12 @@
     "json": 10.1,
     "result": 10.1
   },
-// Temporary disabled; Jackson seems to currently lose precision while parsing this.
-//  See: https://github.com/FasterXML/jackson-databind/issues/1315
-//  {
-//    "title": "Test lossless numeric mapping",
-//    "schema": { "type": "string" },
-//    "json": 9999999.4999999999,
-//    "result": "9999999.4999999999"
-//  },
+  {
+    "title": "Test lossless numeric mapping",
+    "schema": { "type": "string" },
+    "json": 9999999.4999999999,
+    "result": "9999999.4999999999"
+  },
   {
     "title": "Test null mapping",
     "schema": { "type": "null" },

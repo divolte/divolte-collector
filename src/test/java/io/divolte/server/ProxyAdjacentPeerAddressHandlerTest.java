@@ -105,7 +105,6 @@ public class ProxyAdjacentPeerAddressHandlerTest {
     @Before
     public void setUp() {
         server = new TestServer("x-forwarded-for-test.conf");
-        server.server.run();
     }
 
     @After

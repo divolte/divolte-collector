@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2014 GoDataDriven B.V.
+# Copyright 2016 GoDataDriven B.V.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Divolte'
-copyright = u'2015, GoDataDriven'
+copyright = u'2016, GoDataDriven'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -103,6 +103,8 @@ pygments_style = 'sphinx'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
 
+# If true, Sphinx will warn about all references where the target cannot be found.
+#nitpicky = False
 
 # -- Options for HTML output ----------------------------------------------
 

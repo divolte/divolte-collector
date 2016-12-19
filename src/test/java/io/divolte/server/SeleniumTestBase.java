@@ -1,3 +1,18 @@
+/*
+ * Copyright 2016 GoDataDriven B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.divolte.server;
 
 import com.google.common.collect.ImmutableList;
@@ -111,6 +126,7 @@ public abstract class SeleniumTestBase {
             BASIC("test-basic-page"),
             BASIC_COPY("test-basic-page-copy"),
             PAGE_VIEW_SUPPLIED("test-basic-page-provided-pv-id"),
+            CUSTOM_JAVASCRIPT_NAME("test-custom-javascript-name"),
             CUSTOM_PAGE_VIEW("test-custom-page-view");
 
             private final String resourceName;
@@ -127,6 +143,14 @@ public abstract class SeleniumTestBase {
     }
 
     protected void doSetUp(final String configFileName) throws Exception {
+        doSetUp(Optional.of(configFileName));
+    }
+
+    protected void doSetUp() throws Exception {
+        doSetUp(Optional.empty());
+    }
+
+    private void doSetUp(final Optional<String> configFileName) throws Exception {
         final String driverName = System.getenv().getOrDefault(DRIVER_ENV_VAR, PHANTOMJS_DRIVER);
 
         switch (driverName) {
@@ -145,8 +169,7 @@ public abstract class SeleniumTestBase {
             break;
         }
 
-        server = new TestServer(configFileName);
-        server.server.run();
+        server = configFileName.map(TestServer::new).orElseGet(TestServer::new);
     }
 
     private void setupBrowserStack() throws MalformedURLException {

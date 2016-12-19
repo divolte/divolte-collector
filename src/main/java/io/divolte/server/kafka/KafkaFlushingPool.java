@@ -18,6 +18,8 @@ package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.SchemaRegistry;
+import io.divolte.server.config.KafkaSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -31,24 +33,27 @@ public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBu
 
     private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
 
-    public KafkaFlushingPool(final ValidatedConfiguration vc) {
+    public KafkaFlushingPool(final ValidatedConfiguration vc, final String name, final SchemaRegistry ignored) {
         this(
-                vc.configuration().kafkaFlusher.threads,
-                vc.configuration().kafkaFlusher.maxWriteQueue,
-                vc.configuration().kafkaFlusher.maxEnqueueDelay.toMillis(),
-                vc.configuration().kafkaFlusher.topic,
-                new KafkaProducer<>(vc.configuration().kafkaFlusher.producer,
+                name,
+                vc.configuration().global.kafka.threads,
+                vc.configuration().global.kafka.bufferSize,
+                vc.configuration().getSinkConfiguration(name, KafkaSinkConfiguration.class).topic,
+                new KafkaProducer<>(vc.configuration().global.kafka.producer,
                         new DivolteIdentifierSerializer(),
                         new AvroRecordBufferSerializer())
                 );
     }
 
-    public KafkaFlushingPool(final int numThreads,
+    public KafkaFlushingPool(final String name,
+                             final int numThreads,
                              final int maxWriteQueue,
-                             final long maxEnqueueDelay,
                              final String topic,
                              final Producer<DivolteIdentifier, AvroRecordBuffer> producer ) {
-        super(numThreads, maxWriteQueue, maxEnqueueDelay, "Kafka Flusher", () -> new KafkaFlusher(topic, producer));
+        super(numThreads,
+              maxWriteQueue,
+              String.format("Kafka Flusher [%s]", Objects.requireNonNull(name)),
+              () -> new KafkaFlusher(topic, producer));
         this.producer = Objects.requireNonNull(producer);
     }
 
