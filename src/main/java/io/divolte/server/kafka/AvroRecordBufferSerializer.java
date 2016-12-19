@@ -17,28 +17,27 @@
 package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.DivolteSchema;
-import io.divolte.server.config.KafkaSinkMode;
+import org.apache.kafka.common.serialization.Serializer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 @ParametersAreNonnullByDefault
-class AvroRecordBufferSerializer extends DivolteSerializer<AvroRecordBuffer> {
-
-    public AvroRecordBufferSerializer(KafkaSinkMode mode, DivolteSchema divolteSchema) {
-        super(mode, divolteSchema.valueId);
-    }
-
+class AvroRecordBufferSerializer implements Serializer<AvroRecordBuffer> {
     @Override
     public void configure(final Map<String, ?> configs, final boolean isKey) {
         // Nothing to do.
     }
 
     @Override
-    protected ByteBuffer serializeData(final AvroRecordBuffer data, KafkaSinkMode mode) {
-        return data.getByteBuffer();
+    public byte[] serialize(final String topic, final AvroRecordBuffer data) {
+        // Extract the AVRO record as a byte array.
+        // (There's no way to do this without copying the array.)
+        final ByteBuffer avroBuffer = data.getByteBuffer();
+        final byte[] avroBytes = new byte[avroBuffer.remaining()];
+        avroBuffer.get(avroBytes);
+        return avroBytes;
     }
 
     @Override

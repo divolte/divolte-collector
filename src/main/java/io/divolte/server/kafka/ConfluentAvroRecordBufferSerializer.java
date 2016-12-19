@@ -16,27 +16,31 @@
 
 package io.divolte.server.kafka;
 
-import io.divolte.server.DivolteIdentifier;
-import org.apache.kafka.common.serialization.Serializer;
+import io.divolte.server.AvroRecordBuffer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 @ParametersAreNonnullByDefault
-class DivolteIdentifierSerializer implements Serializer<DivolteIdentifier> {
-    @Override
-    public void configure(final Map<String, ?> configs, final boolean isKey) {
-        // Nothing needed here.
+class ConfluentAvroRecordBufferSerializer extends ConfluentDivolteSerializer<AvroRecordBuffer> {
+
+    public ConfluentAvroRecordBufferSerializer(int schemaId) {
+        super(schemaId);
     }
 
     @Override
-    public byte[] serialize(final String topic, final DivolteIdentifier data) {
-        return data.value.getBytes(StandardCharsets.UTF_8);
+    public void configure(final Map<String, ?> configs, final boolean isKey) {
+        // Nothing to do.
+    }
+
+    @Override
+    protected ByteBuffer serializeData(final AvroRecordBuffer data) {
+        return data.getByteBuffer();
     }
 
     @Override
     public void close() {
-        // Nothing needed here.
+        // Nothing to do.
     }
 }

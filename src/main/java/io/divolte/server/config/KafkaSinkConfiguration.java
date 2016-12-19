@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
-import io.divolte.server.kafka.KafkaFlushingPool;
+import io.divolte.server.kafka.KafkaFlushingPoolFactory;
 
 @ParametersAreNonnullByDefault
 public class KafkaSinkConfiguration extends SinkConfiguration {
@@ -34,6 +34,6 @@ public class KafkaSinkConfiguration extends SinkConfiguration {
 
     @Override
     public SinkFactory getFactory() {
-        return KafkaFlushingPool::createPool;
+        return new KafkaFlushingPoolFactory();
     }
 }

@@ -18,12 +18,7 @@ package io.divolte.server.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
-import io.divolte.server.SchemaRegistry;
-import io.divolte.server.config.KafkaConfiguration;
-import io.divolte.server.config.KafkaSinkConfiguration;
-import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -33,28 +28,6 @@ import java.util.Objects;
 public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBuffer> {
 
     private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
-
-    public static KafkaFlushingPool createPool(final ValidatedConfiguration vc,
-                                               final String name,
-                                               final SchemaRegistry schemaRegistry) {
-        KafkaSinkConfiguration sinkConfiguration = vc.configuration().getSinkConfiguration(name, KafkaSinkConfiguration.class);
-        KafkaConfiguration kafkaConfiguration = vc.configuration().global.kafka;
-        KafkaProducer<DivolteIdentifier, AvroRecordBuffer> producer = new KafkaProducer<>(kafkaConfiguration.producer,
-            new DivolteIdentifierSerializer(
-                sinkConfiguration.mode,
-                kafkaConfiguration.keySchemaId
-            ),
-            new AvroRecordBufferSerializer(
-                sinkConfiguration.mode,
-                schemaRegistry.getSchemaBySinkName(name)
-            ));
-        return new KafkaFlushingPool(name,
-            kafkaConfiguration.threads,
-            kafkaConfiguration.bufferSize,
-            sinkConfiguration.topic,
-            producer
-        );
-    }
 
     public KafkaFlushingPool(final String name,
                              final int numThreads,

@@ -21,13 +21,16 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class DivolteIdentifierSerializerTest {
+public class ConfluentDivolteIdentifierSerializerTest {
 
     @Test
-    public void serializerShouldPrependIdWithVersion() {
-        DivolteIdentifierSerializer serializer = new DivolteIdentifierSerializer();
+    public void serializerShouldWriteConfluentCompatible() {
+        final int schemaId = 123456789;
+        ConfluentDivolteIdentifierSerializer serializer = new ConfluentDivolteIdentifierSerializer(schemaId);
         DivolteIdentifier cv = DivolteIdentifier.generate(42);
         byte[] asBytes = serializer.serialize("topic", cv);
-        assertEquals('0', asBytes[0]);
+        assertEquals(0, asBytes[0]);
+        int readId = ((int) asBytes[1] & 0xff) << 24 | ((int) asBytes[2] & 0xff) << 16 | ((int) asBytes[3] & 0xff) << 8 | ((int) asBytes[4] & 0xff);
+        assertEquals(schemaId, readId);
     }
 }
