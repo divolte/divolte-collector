@@ -40,8 +40,8 @@ import java.util.Optional;
 class DivolteIdentifierSerializer extends DivolteSerializer<DivolteIdentifier> {
     private static final int INITIAL_BUFFER_SIZE = 100;
 
-    private static final char SCHEMA_VERSION = '0';
-    private static final Schema schema = Schema.createRecord(ImmutableList.of(
+    private static final char DIVOLTE_IDENTIFIER_SCHEMA_VERSION = '0';
+    static final Schema DIVOLTE_IDENTIFIER_SCHEMA = Schema.createRecord(ImmutableList.of(
             new Schema.Field("version", Schema.create(Schema.Type.STRING), "Divolte Identifier Version", (Object) null),
             new Schema.Field("timestamp", Schema.create(Schema.Type.LONG), "Timestamp", (Object) null),
             new Schema.Field("id", Schema.create(Schema.Type.STRING), "Message identifier", (Object) null)
@@ -60,12 +60,12 @@ class DivolteIdentifierSerializer extends DivolteSerializer<DivolteIdentifier> {
     protected ByteBuffer serializeData(final DivolteIdentifier identifier, final KafkaSinkMode mode) {
         switch (mode) {
             case CONFLUENT:
-                assert identifier.version == SCHEMA_VERSION;
+                assert identifier.version == DIVOLTE_IDENTIFIER_SCHEMA_VERSION;
 
                 final ByteBuffer byteBuffer = ByteBuffer.allocate(INITIAL_BUFFER_SIZE);
-                final DatumWriter<GenericRecord> writer = new GenericDatumWriter<>(schema);
+                final DatumWriter<GenericRecord> writer = new GenericDatumWriter<>(DIVOLTE_IDENTIFIER_SCHEMA);
                 final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
-                final GenericRecord record = new GenericData.Record(schema);
+                final GenericRecord record = new GenericData.Record(DIVOLTE_IDENTIFIER_SCHEMA);
                 record.put("version", "" + identifier.version);
                 record.put("timestamp", identifier.timestamp);
                 record.put("id", identifier.getId());

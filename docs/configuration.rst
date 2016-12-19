@@ -522,6 +522,20 @@ Property: ``divolte.global.kafka.producer``
       retries = 5
     }
 
+Property: ``divolte.global.kafka.key_schema_id``
+""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  This schema ID is used when writing out Divolte message identifiers to Kafka in ``confluent`` mode.  The same (built-in) schema is used for all mappings.
+:Default:
+    *Not specified*
+:Example:
+
+    .. code-block:: none
+
+    divolte.global.kafka {
+      key_schema_id = 12345
+    }
+
 Sources (``divolte.sources``)
 -----------------------------
 
@@ -1046,7 +1060,7 @@ Mapping property: ``schema_file``
 Mapping property: ``schema_id``
 """""""""""""""""""""""""""""""
 :Description:
-  The avro records written to Kafka are 'naked' by default.  Which schema was used to write them is therefore not clear from the message itself.  When the schema evolves over time, such metadata is necessary to be able to read the records.  The ``schema_id`` allows the avro serializer to prepend each record with this id.  This becomes effective when the kafka sink mode is ``confluent``, for example.
+  The avro records written to Kafka are 'naked' by default.  The schema is not included in the message.  When the schema evolves over time, such metadata is necessary to be able to read the records.  The ``schema_id`` allows the avro serializer to prepend each record with this id.  This becomes effective when the kafka sink mode is ``confluent``, for example.
 :Default:
     *Not specified*
 :Example:
