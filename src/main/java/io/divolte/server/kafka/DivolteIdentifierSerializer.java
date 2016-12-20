@@ -25,6 +25,7 @@ import java.util.Map;
 
 @ParametersAreNonnullByDefault
 class DivolteIdentifierSerializer implements Serializer<DivolteIdentifier> {
+
     @Override
     public void configure(final Map<String, ?> configs, final boolean isKey) {
         // Nothing needed here.

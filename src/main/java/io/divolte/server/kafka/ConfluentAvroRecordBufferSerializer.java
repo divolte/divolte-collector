@@ -16,17 +16,20 @@
 
 package io.divolte.server.kafka;
 
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import io.divolte.server.AvroRecordBuffer;
+import org.apache.kafka.common.serialization.Serializer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 @ParametersAreNonnullByDefault
-class ConfluentAvroRecordBufferSerializer extends ConfluentDivolteSerializer<AvroRecordBuffer> {
+class ConfluentAvroRecordBufferSerializer implements Serializer<AvroRecordBuffer> {
+
+    private final KafkaAvroSerializer kas;
 
     public ConfluentAvroRecordBufferSerializer(int schemaId) {
-        super(schemaId);
+        kas = new KafkaAvroSerializer(new SingleSchemaRegistryClient(schemaId));
     }
 
     @Override
@@ -35,8 +38,8 @@ class ConfluentAvroRecordBufferSerializer extends ConfluentDivolteSerializer<Avr
     }
 
     @Override
-    protected ByteBuffer serializeData(final AvroRecordBuffer data) {
-        return data.getByteBuffer();
+    public byte[] serialize(String topic, AvroRecordBuffer data) {
+        return kas.serialize(topic, data.getByteBuffer());
     }
 
     @Override
