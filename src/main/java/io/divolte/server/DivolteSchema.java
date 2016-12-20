@@ -24,11 +24,11 @@ import java.util.Optional;
 @ParametersAreNonnullByDefault
 public class DivolteSchema {
 
-    public final Optional<Integer> valueId;
+    public final Optional<Integer> confluentId;
     public final Schema schema;
 
-    public DivolteSchema(Optional<Integer> valueId, Schema schema) {
-        this.valueId = valueId;
+    public DivolteSchema(Optional<Integer> confluentId, Schema schema) {
+        this.confluentId = confluentId;
         this.schema = schema;
     }
 }

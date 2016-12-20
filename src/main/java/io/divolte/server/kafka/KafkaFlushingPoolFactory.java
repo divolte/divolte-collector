@@ -64,7 +64,7 @@ public class KafkaFlushingPoolFactory implements SinkConfiguration.SinkFactory {
         switch (sinkConfiguration.mode) {
             case CONFLUENT:
                 return new ConfluentAvroRecordBufferSerializer(
-                    schemaRegistry.getSchemaBySinkName(name).valueId.get()
+                    schemaRegistry.getSchemaBySinkName(name).confluentId.get()
                 );
             default:
                 return new AvroRecordBufferSerializer();
