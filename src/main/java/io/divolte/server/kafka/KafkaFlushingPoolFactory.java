@@ -53,7 +53,7 @@ public class KafkaFlushingPoolFactory implements SinkConfiguration.SinkFactory {
         switch (sinkConfiguration.mode) {
             case CONFLUENT:
                 return new ConfluentDivolteIdentifierSerializer(
-                    kafkaConfiguration.keySchemaId.get()
+                    kafkaConfiguration.confluentKeyId.get()
                 );
             default:
                 return new DivolteIdentifierSerializer();

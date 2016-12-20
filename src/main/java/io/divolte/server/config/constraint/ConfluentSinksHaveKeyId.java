@@ -15,22 +15,22 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 @Target({ TYPE })
 @Retention(RUNTIME)
-@Constraint(validatedBy=MappingToConfluentMustHaveSchemaId.Validator.class)
+@Constraint(validatedBy=ConfluentSinksHaveKeyId.Validator.class)
 @Documented
-public @interface MappingToConfluentMustHaveSchemaId {
-    String message() default "Any Confluent sink must have a schema id. The following mappings refer to a Confluent sink, but do not have a 'confluent_id': ${validatedValue.mappingsToConfluentSinksWithoutSchemaIds()}.";
+public @interface ConfluentSinksHaveKeyId {
+    String message() default "These sinks use mode 'confluent' but 'global.kafka.confluent_key_id' is not set: ${validatedValue.sinksMissingGlobalConfiguration()}.";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 
-    class Validator implements ConstraintValidator<MappingToConfluentMustHaveSchemaId, DivolteConfiguration> {
+    class Validator implements ConstraintValidator<ConfluentSinksHaveKeyId, DivolteConfiguration> {
         @Override
-        public void initialize(final MappingToConfluentMustHaveSchemaId constraintAnnotation) {
+        public void initialize(final ConfluentSinksHaveKeyId constraintAnnotation) {
             // Nothing needed here.
         }
 
         @Override
         public boolean isValid(final DivolteConfiguration value, final ConstraintValidatorContext context) {
-            return value.mappingsToConfluentSinksWithoutSchemaIds().isEmpty();
+            return value.sinksMissingGlobalConfiguration().isEmpty();
         }
     }
 }

@@ -114,7 +114,19 @@ public class ValidatedConfigurationTest {
         assertTrue(
             vc.errors()
             .get(0)
-            .startsWith("Property 'divolte.' Any Confluent sink must have a schema id. The following mappings refer to a Confluent sink, but do not have a schema ID: [test]..")
+            .startsWith("Property 'divolte.' Any Confluent sink must have a schema id. The following mappings refer to a Confluent sink, but do not have a 'confluent_id': [test]..")
+        );
+    }
+
+    @Test
+    public void confluentKeyIdMustBeDefinedWhenConfluentSinkExists() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-without-key.conf"));
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        assertTrue(
+            vc.errors()
+                .get(0)
+                .startsWith("Property 'divolte.' These sinks use mode 'confluent' but 'global.kafka.confluent_key_id' is not set: [kafka]..")
         );
     }
 

@@ -20,11 +20,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import io.divolte.server.config.constraint.MappingToConfluentMustHaveSchemaId;
-import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
-import io.divolte.server.config.constraint.OneSchemaPerSink;
-import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
+import io.divolte.server.config.constraint.*;
 
+@ConfluentSinksHaveKeyId
 @ParametersAreNonnullByDefault
 @MappingSourceSinkReferencesMustExist
 @SourceAndSinkNamesCannotCollide
@@ -215,18 +213,7 @@ public final class DivolteConfiguration {
     }
 
     public Set<String> mappingsToConfluentSinksWithoutSchemaIds() {
-        final Set<String> confluentSinks =
-            sinks.entrySet()
-                .stream()
-                .flatMap(entry -> {
-                    if (entry.getValue() instanceof KafkaSinkConfiguration) {
-                        final KafkaSinkConfiguration kafkaSinkConfiguration = (KafkaSinkConfiguration) entry.getValue();
-                        if (kafkaSinkConfiguration.mode == KafkaSinkMode.CONFLUENT) {
-                            return Stream.of(entry.getKey());
-                        }
-                    }
-                    return Stream.empty();
-                }).collect(Collectors.toSet());
+        final Set<String> confluentSinks = getConfluentSinks();
         return mappings.entrySet()
             .stream()
             .flatMap(config ->
@@ -236,12 +223,34 @@ public final class DivolteConfiguration {
                     .flatMap(sink -> {
                         MappingConfiguration mapping = config.getValue();
                         if (confluentSinks.contains(sink) &&
-                            (mapping.schemaId == null || !mapping.schemaId.isPresent())) {
+                            (mapping.confluentId == null || !mapping.confluentId.isPresent())) {
                             return Stream.of(config.getKey());
                         } else {
                             return Stream.empty();
                         }
                     })
             ).collect(Collectors.toSet());
+    }
+
+    public Set<String> sinksMissingGlobalConfiguration() {
+        if (global.kafka.confluentKeyId.isPresent()) {
+            return ImmutableSet.of();
+        } else {
+            return getConfluentSinks();
+        }
+    }
+
+    private Set<String> getConfluentSinks() {
+        return sinks.entrySet()
+            .stream()
+            .flatMap(entry -> {
+                if (entry.getValue() instanceof KafkaSinkConfiguration) {
+                    final KafkaSinkConfiguration kafkaSinkConfiguration = (KafkaSinkConfiguration) entry.getValue();
+                    if (kafkaSinkConfiguration.mode == KafkaSinkMode.CONFLUENT) {
+                        return Stream.of(entry.getKey());
+                    }
+                }
+                return Stream.empty();
+            }).collect(Collectors.toSet());
     }
 }

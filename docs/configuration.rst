@@ -522,8 +522,8 @@ Property: ``divolte.global.kafka.producer``
       retries = 5
     }
 
-Property: ``divolte.global.kafka.key_schema_id``
-""""""""""""""""""""""""""""""""""""""""""""""""
+Property: ``divolte.global.kafka.confluent_key_id``
+"""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   This schema ID is used when writing out Divolte message identifiers to Kafka in ``confluent`` mode.  The same (built-in) schema is used for all mappings.
 :Default:
@@ -533,7 +533,7 @@ Property: ``divolte.global.kafka.key_schema_id``
     .. code-block:: none
 
     divolte.global.kafka {
-      key_schema_id = 12345
+      confluent_key_id = 12345
     }
 
 Sources (``divolte.sources``)

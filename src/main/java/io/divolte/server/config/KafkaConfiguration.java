@@ -12,13 +12,13 @@ import com.google.common.base.MoreObjects;
 public class KafkaConfiguration extends SinkTypeConfiguration {
 
     public final Properties producer;
-    public final Optional<Integer> keySchemaId;
+    public final Optional<Integer> confluentKeyId;
 
     @JsonCreator
-    KafkaConfiguration(final int bufferSize, final int threads, final boolean enabled, final Properties producer, final Integer keySchemaId) {
+    KafkaConfiguration(final int bufferSize, final int threads, final boolean enabled, final Properties producer, final Integer confluentKeyId) {
         super(bufferSize, threads, enabled);
         this.producer = ImmutableProperties.fromSource(producer);
-        this.keySchemaId = Optional.ofNullable(keySchemaId);
+        this.confluentKeyId = Optional.ofNullable(confluentKeyId);
     }
 
     @Override
