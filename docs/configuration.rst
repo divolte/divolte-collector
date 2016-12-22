@@ -1057,10 +1057,10 @@ Mapping property: ``schema_file``
 .. |Built-in schema| replace:: *Built-in schema*
 .. _Built-in schema: https://github.com/divolte/divolte-schema
 
-Mapping property: ``schema_id``
-"""""""""""""""""""""""""""""""
+Mapping property: ``confluent_id``
+""""""""""""""""""""""""""""""""""
 :Description:
-  The avro records written to Kafka are 'naked' by default.  The schema is not included in the message.  When the schema evolves over time, such metadata is necessary to be able to read the records.  The ``schema_id`` allows the avro serializer to prepend each record with this id.  This becomes effective when the kafka sink mode is ``confluent``, for example.
+  The avro records written to Kafka are 'naked' by default.  The schema is not included in the message.  When the schema evolves over time, such metadata is necessary to be able to read the records.  The ``confluent_id`` allows the avro serializer to prepend each record with this id.  This becomes effective when the kafka sink mode is ``confluent``, for example.
 :Default:
     *Not specified*
 :Example:
@@ -1068,7 +1068,7 @@ Mapping property: ``schema_id``
     .. code-block:: none
 
     divolte.mappings.a_mapping {
-      schema_id = 1234
+      confluent_id = 1234
     }
 
 Mapping property: ``mapping_script_file``
