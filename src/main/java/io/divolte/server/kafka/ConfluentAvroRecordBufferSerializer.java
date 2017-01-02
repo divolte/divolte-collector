@@ -18,13 +18,11 @@ package io.divolte.server.kafka;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import io.divolte.server.AvroRecordBuffer;
-import org.apache.kafka.common.serialization.Serializer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Map;
 
 @ParametersAreNonnullByDefault
-class ConfluentAvroRecordBufferSerializer implements Serializer<AvroRecordBuffer> {
+class ConfluentAvroRecordBufferSerializer extends AvroRecordBufferSerializer {
 
     private final KafkaAvroSerializer kas;
 
@@ -33,17 +31,9 @@ class ConfluentAvroRecordBufferSerializer implements Serializer<AvroRecordBuffer
     }
 
     @Override
-    public void configure(final Map<String, ?> configs, final boolean isKey) {
-        // Nothing to do.
-    }
-
-    @Override
     public byte[] serialize(String topic, AvroRecordBuffer data) {
-        return kas.serialize(topic, data.getByteBuffer());
+        final byte[] avroBytes = super.serialize(topic, data);
+        return kas.serialize(topic, avroBytes);
     }
 
-    @Override
-    public void close() {
-        // Nothing to do.
-    }
 }
