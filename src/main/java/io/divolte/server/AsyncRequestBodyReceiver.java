@@ -66,6 +66,7 @@ public class AsyncRequestBodyReceiver {
         }
 
         if (exchange.isRequestComplete()) {
+            logger.debug("Request already completed; zero length content body.");
             callback.accept(EMPTY_INPUT_STREAM, 0);
             return;
         }
@@ -75,9 +76,14 @@ public class AsyncRequestBodyReceiver {
         final Optional<Integer> contentLength =
                 Optional.ofNullable(exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH))
                         .map(Ints::tryParse);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Content length claimed by request: {}", contentLength);
+        }
         final int provisionChunks = contentLength.map(AsyncRequestBodyReceiver::calculateChunks)
                                                  .orElseGet(preallocateChunks::get);
         if (provisionChunks > maximumChunks) {
+            logger.info("Rejecting request; anticipated content length ({}) will exceed exceed maximum allowed {})",
+                         contentLength, maximumChunks * ChunkyByteBuffer.CHUNK_SIZE);
             rejectLargeRequest(exchange);
             return;
         }
@@ -85,6 +91,7 @@ public class AsyncRequestBodyReceiver {
         // Some clients will pause before sending the body, waiting for a '100 Continue' response.
         // If we've reached this point we're always going to accept the body, so continuing is fine.
         if (HttpContinue.requiresContinueResponse(exchange)) {
+            logger.debug("Request requires permission to proceed; allowing to continue.");
             HttpContinue.sendContinueResponse(exchange, new IoCallback() {
                 @Override
                 public void onComplete(final HttpServerExchange exchange, final Sender sender) {
@@ -101,10 +108,17 @@ public class AsyncRequestBodyReceiver {
         }
     }
 
+    private static String getPeerHost(final HttpServerExchange exchange) {
+        return Optional.ofNullable(exchange.getSourceAddress())
+            .map(InetSocketAddress::getHostString)
+            .orElse("<UNKNOWN HOST>");
+    }
+
     private void receive(final BiConsumer<InputStream, Integer> callback,
                          final HttpServerExchange exchange,
                          final Optional<Integer> contentLength,
                          final int provisionChunks) {
+        logger.debug("Starting to receive request body.");
         final StreamSourceChannel channel = exchange.getRequestChannel();
         if (channel == null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
@@ -123,16 +137,15 @@ public class AsyncRequestBodyReceiver {
                               new ChunkyByteBuffer.CompletionHandler() {
             @Override
             public void overflow() {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Request body too large; rejecting request from {}", getPeerHost(exchange));
+                }
                 rejectLargeRequest(exchange);
             }
             @Override
             public void failed(final Throwable e) {
                 if (logger.isWarnEnabled()) {
-                    final String host = Optional.ofNullable(exchange.getSourceAddress())
-                            .map(InetSocketAddress::getHostString)
-                            .orElse("<UNKNOWN HOST>");
-
-                    logger.warn("Error while reading request body received from " + host, e);
+                    logger.warn("Error while reading request body received from " + getPeerHost(exchange), e);
                 }
                 Connectors.executeRootHandler(exchange -> exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR)
                                                                   .endExchange(),
@@ -143,6 +156,10 @@ public class AsyncRequestBodyReceiver {
                 // Sanity check that the body size matches the content-length header, if it
                 // was supplied.
                 if (contentLength.map(l -> l != bodyLength).orElse(false)) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Bad request from {}; content length ({}) didn't match actual body length ({}).",
+                                    getPeerHost(exchange), contentLength.orElse(-1), bodyLength);
+                    }
                     exchange.setStatusCode(StatusCodes.BAD_REQUEST)
                             .endExchange();
                     return;
