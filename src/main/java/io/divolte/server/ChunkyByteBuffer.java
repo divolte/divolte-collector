@@ -105,9 +105,9 @@ public class ChunkyByteBuffer {
                             // We allocate chunks on demand, as we advance.
                             chunks[++currentChunkIndex] = ByteBuffer.allocate(CHUNK_SIZE);
                         } else {
-                            // Buffers are full.
+                            // Buffers are full; detect if we're at EOF, waiting if necessary.
                             channel.getReadSetter().set(this::waitForEndOfStream);
-                            channel.resumeReads();
+                            waitForEndOfStream(channel);
                             return;
                         }
                     }
@@ -142,7 +142,8 @@ public class ChunkyByteBuffer {
                     endOfFile(channel);
                     break;
                 case 0:
-                    // Still not sure. Wait.
+                    // Not yet sure; keep waiting.
+                    channel.resumeReads();
                     break;
                 default:
                     // Overflow. Doh.
