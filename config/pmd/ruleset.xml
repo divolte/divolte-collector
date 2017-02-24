@@ -9,10 +9,6 @@
     </description>
 
     <!-- The default rule sets that we apply. -->
-    <rule ref="rulesets/java/basic.xml">
-        <!-- Some of our ternaries trigger false-positives with this rule. -->
-        <exclude name="SimplifiedTernary"/>
-    </rule>
     <rule ref="rulesets/java/braces.xml"/>
     <rule ref="rulesets/java/clone.xml"/>
     <rule ref="rulesets/java/empty.xml"/>
