@@ -201,7 +201,7 @@ findbugs() {
 }
 
 pmd {
-    toolVersion = "5.5.2"
+    toolVersion = "5.5.3"
     ruleSetFiles = files("config/pmd/ruleset.xml")
     // The default set includes 'basic', so empty it. (We include basic via our custom ruleset.)
     ruleSets = []
