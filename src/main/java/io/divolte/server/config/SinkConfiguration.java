@@ -14,6 +14,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, include=JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value=HdfsSinkConfiguration.class, name = "hdfs"),
+        @JsonSubTypes.Type(value=GoogleCloudStorageSinkConfiguration.class, name = "gcs"),
         @JsonSubTypes.Type(value=KafkaSinkConfiguration.class, name = "kafka"),
 })
 @ParametersAreNonnullByDefault
