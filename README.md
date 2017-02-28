@@ -82,6 +82,18 @@ Tests can then be executed:
 
     % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.27/bin/chromedriver ./gradlew cleanTest test
 
+### Safari Webdriver ###
+
+Safari (from version 10) has native Webdriver support. To set this up:
+
+1. Enable the developer menu: _Preferences_|_Advanced_|_Show Develop menu in menu bar_
+2. In the _Develop_ menu, enable _Allow Remote Automation_.
+3. First time only, execute `safaridriver -p 0` from the command-line and authorise the driver to connect to Safari.
+
+Tests can then be executed:
+
+    % SELENIUM_DRIVER=safari ./gradlew cleanTest test
+
 ### PhantomJS ###
 
 PhantomJS must be installed locally. Under OS X this can be installed via

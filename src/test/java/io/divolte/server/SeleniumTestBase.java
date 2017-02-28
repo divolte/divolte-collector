@@ -33,6 +33,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.safari.SafariDriver;
 
 import javax.annotation.Nullable;
 import java.net.MalformedURLException;
@@ -52,6 +53,7 @@ public abstract class SeleniumTestBase {
     public static final String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public static final String PHANTOMJS_DRIVER = "phantomjs";
     public static final String CHROME_DRIVER = "chrome";
+    public static final String SAFARI_DRIVER = "safari";
     public static final String SAUCE_DRIVER = "sauce";
     public static final String BS_DRIVER = "browserstack";
 
@@ -156,6 +158,9 @@ public abstract class SeleniumTestBase {
         switch (driverName) {
         case CHROME_DRIVER:
             setupLocalChrome();
+            break;
+        case SAFARI_DRIVER:
+            driver = new SafariDriver();
             break;
         case SAUCE_DRIVER:
             setupSauceLabs();
