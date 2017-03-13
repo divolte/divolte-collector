@@ -55,8 +55,8 @@ public abstract class SeleniumTestBase {
     public static final String SAUCE_DRIVER = "sauce";
     public static final String BS_DRIVER = "browserstack";
 
-    public static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USER_NAME";
-    public static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_API_KEY";
+    public static final String SAUCE_USER_NAME_ENV_VAR = "SAUCE_USERNAME";
+    public static final String SAUCE_API_KEY_ENV_VAR = "SAUCE_ACCESS_KEY";
     public static final String SAUCE_HOST_ENV_VAR = "SAUCE_HOST";
     public static final String SAUCE_PORT_ENV_VAR = "SAUCE_PORT";
 

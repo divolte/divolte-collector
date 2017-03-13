@@ -102,8 +102,8 @@ Once you have a username and API key and
 [Sauce Connect](https://docs.saucelabs.com/reference/sauce-connect/) running, tests
 can then be executed:
 
-    % export SAUCE_USER_NAME=<username>
-    % export SAUCE_API_KEY=<api key>
+    % export SAUCE_USERNAME=<username>
+    % export SAUCE_ACCESS_KEY=<api key>
     % SELENIUM_DRIVER=sauce ./gradlew cleanTest test
 
 These tests can take quite some time to execute. Not all succeed.
