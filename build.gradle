@@ -80,7 +80,7 @@ dependencies {
     def avroVersion = '1.8.1'
     def hadoopVersion = '2.7.3'
     def jacksonVersion = '2.8.7'
-    def slf4jVersion = '1.7.24'
+    def slf4jVersion = '1.7.25'
 
     compile group: 'io.divolte', name: 'divolte-schema', version: version
     compile group: 'io.undertow', name: 'undertow-core', version: '1.4.11.Final'
