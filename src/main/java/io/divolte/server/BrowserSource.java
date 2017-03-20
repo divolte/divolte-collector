@@ -49,6 +49,7 @@ public class BrowserSource extends HttpSource {
         this(sourceName,
              vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).prefix,
              vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).eventSuffix,
+             vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).useNoContent,
              loadTrackingJavaScript(vc, sourceName),
              processingPool,
              vc.configuration().sourceIndex(sourceName));
@@ -57,6 +58,7 @@ public class BrowserSource extends HttpSource {
     private BrowserSource(final String sourceName,
                           final String pathPrefix,
                           final String eventSuffix,
+                          final boolean useNoContent,
                           final TrackingJavaScriptResource trackingJavascript,
                           final IncomingRequestProcessingPool processingPool,
                           final int sourceIndex) {
@@ -65,7 +67,7 @@ public class BrowserSource extends HttpSource {
         this.eventSuffix = eventSuffix;
         javascriptName = trackingJavascript.getScriptName();
         javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavascript), Methods.GET);
-        final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPool, sourceIndex);
+        final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPool, useNoContent, sourceIndex);
         eventHandler = new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET);
     }
 

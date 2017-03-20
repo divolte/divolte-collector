@@ -22,6 +22,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     private static final String DEFAULT_PARTY_TIMEOUT = "730 days";
     private static final String DEFAULT_SESSION_COOKIE = "_dvs";
     private static final String DEFAULT_SESSION_TIMEOUT = "30 minutes";
+    private static final String DEFAULT_USE_NO_CONTENT = "false";
     private static final String DEFAULT_PREFIX = "/";
     private static final String DEFAULT_EVENT_SUFFIX = "csc-event";
 
@@ -33,6 +34,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
             DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT),
             DEFAULT_SESSION_COOKIE,
             DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT),
+            DEFAULT_USE_NO_CONTENT,
             JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
 
     public final String prefix;
@@ -42,6 +44,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     public final Duration partyTimeout;
     public final String sessionCookie;
     public final Duration sessionTimeout;
+    public final boolean useNoContent;
 
     @Valid
     public final JavascriptConfiguration javascript;
@@ -55,6 +58,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
                                @JsonProperty(defaultValue=DEFAULT_PARTY_TIMEOUT) final Duration partyTimeout,
                                @JsonProperty(defaultValue=DEFAULT_SESSION_COOKIE) final String sessionCookie,
                                @JsonProperty(defaultValue=DEFAULT_SESSION_TIMEOUT) final Duration sessionTimeout,
+                               @JsonProperty(defaultValue=DEFAULT_USE_NO_CONTENT) final String useNoContent,
                                final JavascriptConfiguration javascript) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
         this.prefix = Optional.ofNullable(prefix).map(BrowserSourceConfiguration::ensureTrailingSlash).orElse(DEFAULT_PREFIX);
@@ -64,6 +68,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
         this.partyTimeout = Optional.ofNullable(partyTimeout).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT));
         this.sessionCookie = Optional.ofNullable(sessionCookie).orElse(DEFAULT_SESSION_COOKIE);
         this.sessionTimeout = Optional.ofNullable(sessionTimeout).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT));
+        this.useNoContent = Boolean.valueOf(Optional.ofNullable(useNoContent).orElse(DEFAULT_USE_NO_CONTENT));
         this.javascript = Optional.ofNullable(javascript).orElse(JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
     }
 
@@ -81,6 +86,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
                 .add("partyTimeout", partyTimeout)
                 .add("sessionCookie", sessionCookie)
                 .add("sessionTimeout", sessionTimeout)
+                .add("useNoContent", useNoContent)
                 .add("javascript", javascript);
     }
 

@@ -38,6 +38,8 @@ var SCRIPT_NAME = 'divolte.js';
 var EVENT_SUFFIX = 'csc-event';
 /** @define {boolean} */
 var AUTO_PAGE_VIEW_EVENT = true;
+/** @define {boolean} */
+var IMAGE_EXPECT_NOCONTENT = false;
 
 (function (global, factory) {
   factory(global);
@@ -674,8 +676,10 @@ var AUTO_PAGE_VIEW_EVENT = true;
       signalQueue.onFirstPendingEventCompleted();
     };
     image.onload = completionHandler;
-    image.onerror = !LOGGING ? completionHandler : function(event) {
-      warn("Error delivering event", firstPendingEvent);
+    image.onerror = IMAGE_EXPECT_NOCONTENT || !LOGGING ? completionHandler : function(event) {
+      if (!IMAGE_EXPECT_NOCONTENT) {
+        error("Error delivering event", firstPendingEvent);
+      }
       completionHandler();
     };
     // TODO: Implement a timeout for when neither onload or onerror are invoked.
