@@ -18,6 +18,8 @@ import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
+
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.config.FileSinkConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
@@ -113,7 +115,15 @@ public class HdfsFileManager implements FileManager {
                 hdfs.delete(publishPath, false);
             }
         }
-
+        
+        @Override
+        public String toString() {
+            return MoreObjects
+                    .toStringHelper(getClass())
+                    .add("inflight file", inflightPath)
+                    .add("publish file", publishPath)
+                    .toString();
+        }
     }
 
     @ParametersAreNonnullByDefault
