@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.typesafe.config.ConfigFactory;
 
+import io.divolte.server.config.GoogleCloudStorageSinkConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
 import io.divolte.server.config.KafkaSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
@@ -90,6 +91,7 @@ public final class Server implements Runnable {
                   .stream()
                   .filter(sink -> referencedSinkNames.contains(sink.getKey()))
                   .filter(sink -> vc.configuration().global.hdfs.enabled || !(sink.getValue() instanceof HdfsSinkConfiguration))
+                  .filter(sink -> vc.configuration().global.gcs.enabled || !(sink.getValue() instanceof GoogleCloudStorageSinkConfiguration))
                   .filter(sink -> vc.configuration().global.kafka.enabled || !(sink.getValue() instanceof KafkaSinkConfiguration))
                   .<Map.Entry<String,ProcessingPool<?, AvroRecordBuffer>>>map(sink ->
                           Maps.immutableEntry(sink.getKey(),

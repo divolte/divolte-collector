@@ -1,13 +1,15 @@
 package io.divolte.server.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.MoreObjects;
-import io.divolte.server.kafka.KafkaFlushingPool;
+import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
-import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
+
+import io.divolte.server.kafka.KafkaFlushingPool;
 
 @ParametersAreNonnullByDefault
 public class KafkaSinkConfiguration extends SinkConfiguration {
