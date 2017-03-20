@@ -8,7 +8,10 @@ import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +24,7 @@ import io.divolte.server.filesinks.FileManager.DivolteFile;
 import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ItemProcessor;
 
+@ParametersAreNonnullByDefault
 public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     private static final Logger logger = LoggerFactory.getLogger(FileFlusher.class);
 
@@ -49,13 +53,10 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
         hostString = findLocalHostName();
 
-        this.manager = manager;
+        this.manager = Objects.requireNonNull(manager);
 
-        // open initial file
-        // on success or failure, update fs live flag
-        final String fileName = String.format("%s-divolte-tracking-%s-%d.avro", datePartFormat.format(new Date()), hostString, instanceNumber);
         try {
-            currentFile = new TrackedFile(manager.createFile(fileName));
+            currentFile = new TrackedFile(manager.createFile(newFileName()));
             fileSystemAlive = true;
         } catch(final IOException ioe) {
             fileSystemAlive = false;

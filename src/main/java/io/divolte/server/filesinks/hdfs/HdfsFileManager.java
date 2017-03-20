@@ -25,8 +25,6 @@ import io.divolte.server.config.FileSinkConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileManager;
-import io.divolte.server.filesinks.FileManager.DivolteFile;
-import io.divolte.server.filesinks.FileManager.FileManagerFactory;
 
 @ParametersAreNonnullByDefault
 public class HdfsFileManager implements FileManager {
@@ -115,7 +113,7 @@ public class HdfsFileManager implements FileManager {
                 hdfs.delete(publishPath, false);
             }
         }
-        
+
         @Override
         public String toString() {
             return MoreObjects

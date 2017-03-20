@@ -2,6 +2,8 @@ package io.divolte.server.filesinks;
 
 import java.util.Objects;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import org.apache.avro.Schema;
 
 import io.divolte.server.AvroRecordBuffer;
@@ -9,6 +11,7 @@ import io.divolte.server.config.FileSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
 
+@ParametersAreNonnullByDefault
 public class FileFlushingPool extends ProcessingPool<FileFlusher, AvroRecordBuffer> {
     public FileFlushingPool(
             final ValidatedConfiguration vc,
