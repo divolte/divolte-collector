@@ -49,12 +49,15 @@ import com.typesafe.config.ConfigFactory;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.config.FileSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.filesinks.FileFlusher;
+import io.divolte.server.filesinks.hdfs.HdfsFileManager;
 import io.divolte.server.processing.Item;
 
 @ParametersAreNonnullByDefault
-public class HdfsFlusherTest {
-    private static final Logger logger = LoggerFactory.getLogger(HdfsFlusherTest.class);
+public class FileFlusherLocalHdfsTest {
+    private static final Logger logger = LoggerFactory.getLogger(FileFlusherLocalHdfsTest.class);
 
     @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     private static final String ARBITRARY_IP = "8.8.8.8";
@@ -64,7 +67,7 @@ public class HdfsFlusherTest {
     private Path tempPublishDir;
 
     private List<Record> records;
-    private HdfsFlusher flusher;
+    private FileFlusher flusher;
 
     @Before
     public void setup() throws IOException {
@@ -91,7 +94,6 @@ public class HdfsFlusherTest {
 
         flusher = null;
         records = null;
-        flusher = null;
     }
 
     @Test
@@ -186,7 +188,11 @@ public class HdfsFlusherTest {
                                       .build())
                             .collect(Collectors.toList());
 
-        flusher = new HdfsFlusher(vc, "hdfs", schema);
+        flusher = new FileFlusher(
+                vc.configuration().getSinkConfiguration("hdfs", FileSinkConfiguration.class).fileStrategy,
+                "hdfs",
+                HdfsFileManager.newFactory(vc, "hdfs", schema).create()
+                );
     }
 
     private void processRecords() {
