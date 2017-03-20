@@ -669,16 +669,30 @@ var AUTO_PAGE_VIEW_EVENT = true;
   SignalQueue.prototype.deliverFirstPendingEvent = function() {
     var signalQueue = this;
     var image = new Image(1,1);
-    image.onload = function() {
-      // Delete this signal from the array.
-      var pendingEvents = signalQueue.queue;
-      pendingEvents.shift();
-      // If there are still pending events, schedule the next.
-      if (0 < pendingEvents.length) {
-        signalQueue.deliverFirstPendingEvent();
-      }
+    var firstPendingEvent = signalQueue.queue[0];
+    var completionHandler = function() {
+      signalQueue.onFirstPendingEventCompleted();
     };
-    image.src = divolteUrl + EVENT_SUFFIX + '?' + this.queue[0];
+    image.onload = completionHandler;
+    image.onerror = !LOGGING ? completionHandler : function(event) {
+      warn("Error delivering event", firstPendingEvent);
+      completionHandler();
+    };
+    // TODO: Implement a timeout for when neither onload or onerror are invoked.
+    image.src = divolteUrl + EVENT_SUFFIX + '?' + firstPendingEvent;
+  };
+  /**
+   * @private
+   * Handler for when the first event in the queue has been completed.
+   */
+  SignalQueue.prototype.onFirstPendingEventCompleted = function() {
+    // Delete the first event from the queue.
+    var pendingEvents = this.queue;
+    pendingEvents.shift();
+    // If there are still pending events, schedule the next.
+    if (0 < pendingEvents.length) {
+      this.deliverFirstPendingEvent();
+    }
   };
 
   /**
