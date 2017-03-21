@@ -20,6 +20,7 @@ import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResu
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Objects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -76,7 +77,7 @@ public final class HdfsFlusher implements ItemProcessor<AvroRecordBuffer> {
              * files. If that fails, we do startup and initiate the regular retry cycle.
              */
             logger.error("Could not initialize HDFS filesystem.", e);
-            throw new RuntimeException("Could not initialize HDFS filesystem", e);
+            throw new UncheckedIOException("Could not initialize HDFS filesystem", e);
         }
         final short hdfsReplication =
                 vc.configuration()

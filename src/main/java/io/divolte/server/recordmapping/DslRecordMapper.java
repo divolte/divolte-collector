@@ -18,6 +18,7 @@ package io.divolte.server.recordmapping;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
@@ -78,7 +79,7 @@ public class DslRecordMapper {
 
             actions = mapping.actions();
         } catch (final IOException e) {
-            throw new RuntimeException("Could not load mapping script file: " + groovyFile, e);
+            throw new UncheckedIOException("Could not load mapping script file: " + groovyFile, e);
         }
     }
 

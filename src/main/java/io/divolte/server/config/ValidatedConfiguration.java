@@ -17,6 +17,7 @@
 package io.divolte.server.config;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -111,7 +112,7 @@ public final class ValidatedConfiguration {
             divolteConfiguration = null;
         } catch (final IOException e) {
             logger.error("Error while reading configuration!", e);
-            throw new RuntimeException("Error while reading configuration.", e);
+            throw new UncheckedIOException("Error while reading configuration.", e);
         }
 
         this.configurationErrors = configurationErrors.build();
