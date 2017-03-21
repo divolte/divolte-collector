@@ -135,7 +135,6 @@ public final class ServerTestUtils {
 
         private static String getBindAddress(final Config config) {
             final String bindAddress;
-            System.err.println("Hmm: " + System.getProperty("io.divolte.test.bindExternal"));
             if (Boolean.getBoolean("io.divolte.test.bindExternal")) {
                 try {
                     bindAddress = InetAddress.getLocalHost().getHostAddress();
@@ -145,7 +144,6 @@ public final class ServerTestUtils {
             } else {
                 bindAddress = "127.0.0.1";
             }
-            System.err.println("Binding to IP address: " + bindAddress);
             return bindAddress;
         }
 
