@@ -39,6 +39,7 @@ import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
@@ -51,6 +52,7 @@ import java.util.stream.Collectors;
 import static io.divolte.server.BrowserLists.*;
 
 @RunWith(Parameterized.class)
+@ParametersAreNonnullByDefault
 public abstract class SeleniumTestBase {
     public static final String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public static final String PHANTOMJS_DRIVER = "phantomjs";
