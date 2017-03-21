@@ -19,10 +19,7 @@ package io.divolte.server;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -534,7 +531,7 @@ public class DslRecordMapperTest {
             return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
         } catch (final UnsupportedEncodingException e) {
             // This should never happen: all platforms must support UTF-8.
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
