@@ -1,6 +1,12 @@
 <FindBugsFilter>
     <Match>
         <!--
+          ~ Ignore Groovy code.
+          -->
+        <Source name="~.*\.groovy" />
+    </Match>
+    <Match>
+        <!--
           ~ This method creates an input stream that is managed by Jackson.
           ~ FindBugs doesn't realise this though, and thinks we should be
           ~ closing it ourselves. This is wrong.
