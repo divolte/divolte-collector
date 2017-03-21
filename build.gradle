@@ -193,13 +193,6 @@ tasks.withType(JavaCompile) {
     options.compilerArgs = ["-parameters"]
 }
 
-tasks.withType(FindBugs) {
-    classes = classes.filter {
-        !it.path.contains("io/divolte/groovyscript/")
-    }
-    dependsOn = [compileJava, compileTestJava]
-}
-
 findbugs() {
     toolVersion = "3.0.1"
     excludeFilter = file("config/findbugs/findbugs-excludes.xml")
