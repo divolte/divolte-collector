@@ -66,7 +66,7 @@ import io.divolte.server.recordmapping.SchemaMappingException;
 @ParametersAreNonnullByDefault
 public class DslRecordMapperTest {
     private static final String CLIENT_SIDE_TIME = "i0rjfnxd";
-    private static final String DIVOLTE_URL_STRING = "http://localhost:%d/csc-event";
+    private static final String DIVOLTE_URL_STRING = "http://%s:%d/csc-event";
     private static final String DIVOLTE_URL_QUERY_STRING = "?"
             + "p=0%3Ai0rjfnxc%3AJLOvH9Nda2c1uV8M~vmdhPGFEC3WxVNq&"
             + "s=0%3Ai0rjfnxc%3AFPpXFMdcEORvvaP_HbpDgABG3Iu5__4d&"
@@ -511,7 +511,7 @@ public class DslRecordMapperTest {
 
     private EventPayload request(final String location,
                                  final List<String> extraEncodedQueryParameters) throws IOException, InterruptedException {
-        final StringBuilder urlBuilder = new StringBuilder(String.format(DIVOLTE_URL_STRING, server.port));
+        final StringBuilder urlBuilder = new StringBuilder(String.format(DIVOLTE_URL_STRING, server.host, server.port));
         urlBuilder.append(DIVOLTE_URL_QUERY_STRING)
                   .append("&l=").append(encodeUrl(location));
         extraEncodedQueryParameters.forEach(s -> urlBuilder.append('&').append(s));

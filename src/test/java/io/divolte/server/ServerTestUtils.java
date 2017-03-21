@@ -25,7 +25,9 @@ import org.apache.avro.generic.GenericRecord;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -66,6 +68,7 @@ public final class ServerTestUtils {
     @ParametersAreNonnullByDefault
     public static final class TestServer {
         final Config config;
+        final String host;
         final int port;
         final Server server;
         final BlockingQueue<EventPayload> events;
@@ -89,7 +92,9 @@ public final class ServerTestUtils {
 
         private TestServer(final int port, final Config config) {
             this.port = port;
-            this.config = config.withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
+            this.host = getBindAddress(config);
+            this.config = config.withValue("divolte.global.server.host", ConfigValueFactory.fromAnyRef(host))
+                                .withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
 
             events = new ArrayBlockingQueue<>(100);
             final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);
@@ -97,6 +102,22 @@ public final class ServerTestUtils {
                                         "Invalid test server configuration: %s", vc.errors());
             server = new Server(vc, (event, buffer, record) -> events.add(new EventPayload(event, buffer, record)));
             server.run();
+        }
+
+        private static String getBindAddress(final Config config) {
+            final String bindAddress;
+            System.err.println("Hmm: " + System.getProperty("io.divolte.test.bindExternal"));
+            if (Boolean.getBoolean("io.divolte.test.bindExternal")) {
+                try {
+                    bindAddress = InetAddress.getLocalHost().getHostAddress();
+                } catch (final UnknownHostException e) {
+                    throw new RuntimeException("Unable to determine external IP address", e);
+                }
+            } else {
+                bindAddress = "127.0.0.1";
+            }
+            System.err.println("Binding to IP address: " + bindAddress);
+            return bindAddress;
         }
 
         static TestServer createTestServerWithDefaultNonTestConfiguration() {

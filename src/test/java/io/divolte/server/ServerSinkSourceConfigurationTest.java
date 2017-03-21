@@ -48,7 +48,7 @@ import static org.junit.Assert.assertFalse;
 public class ServerSinkSourceConfigurationTest {
 
     private static final String BROWSER_EVENT_URL_TEMPLATE =
-        "http://localhost:%d%s/csc-event?"
+        "http://%s:%d%s/csc-event?"
             + "p=0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG&"
             + "s=0%%3Ai1t84hgy%%3A95CbiPCYln_1e0a6rFvuRkDkeNnc6KC8&"
             + "v=0%%3A1fF6GFGjDOQiEx_OxnTm_tl4BH91eGLF&"
@@ -111,7 +111,7 @@ public class ServerSinkSourceConfigurationTest {
     }
 
     private void request(final String sourcePrefix, final int expectedResponseCode) throws IOException {
-        final URL url = new URL(String.format(BROWSER_EVENT_URL_TEMPLATE, testServer.get().port, sourcePrefix));
+        final URL url = new URL(String.format(BROWSER_EVENT_URL_TEMPLATE, testServer.get().host, testServer.get().port, sourcePrefix));
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         assertEquals(expectedResponseCode, conn.getResponseCode());
     }

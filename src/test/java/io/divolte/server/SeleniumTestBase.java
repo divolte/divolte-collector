@@ -138,8 +138,8 @@ public abstract class SeleniumTestBase {
 
     protected String urlOf(final TEST_PAGES page) {
         final String modeString = quirksMode ? "quirks" : "strict";
-        return String.format("http://127.0.0.1:%d/%s/%s.html",
-                             server.port, modeString, page.resourceName);
+        return String.format("http://%s:%d/%s/%s.html",
+                             server.host, server.port, modeString, page.resourceName);
     }
 
     protected void doSetUp(final String configFileName) throws Exception {

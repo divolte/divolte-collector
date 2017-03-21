@@ -43,7 +43,7 @@ public class ServerPingTest {
 
     @Test
     public void shouldRespondToPingWithPong() throws IOException {
-        final URL url = new URL(String.format("http://localhost:%d/ping", testServer.get().port));
+        final URL url = new URL(String.format("http://%s:%d/ping", testServer.get().host, testServer.get().port));
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         try {
             conn.setRequestMethod("GET");

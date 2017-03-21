@@ -45,7 +45,7 @@ import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class JsonSourceTest {
-    private static final String JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE = "http://localhost:%d/json-event";
+    private static final String JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE = "http://%s:%d/json-event";
     private static final String JSON_EVENT_URL_TEMPLATE = JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=0%%3Ai1t84hgy%%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG";
     private static final String JSON_EVENT_WITH_BROKEN_PARTYID_URL_TEMPLATE = JSON_EVENT_WITHOUT_PARTYID_URL_TEMPLATE + "?p=notavalidpartyid";
     private static final int JSON_MAXIMUM_BODY_SIZE = Integer.parseInt(JsonSourceConfiguration.DEFAULT_MAXIMUM_BODY_SIZE);
@@ -94,8 +94,9 @@ public class JsonSourceTest {
     }
 
     private HttpURLConnection startRequest() throws IOException {
+        final TestServer testServer = this.testServer.orElseThrow(() -> new IllegalStateException("No test server available"));
         final String url = String.format(urlTemplate.orElseThrow(() -> new IllegalStateException("No URL template available")),
-                                         testServer.orElseThrow(() -> new IllegalStateException("No test server available")).port);
+                                         testServer.host, testServer.port);
         return (HttpURLConnection) new URL(url).openConnection();
     }
 

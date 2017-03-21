@@ -246,7 +246,15 @@ run {
     }
 }
 
+// Project property for controlling how the server binds during tests.
+if (!hasProperty("bindTestServerExternal")) {
+    ext.bindTestServerExternal = false
+}
+
 test {
+    /* Test results depend on the value of this project property. */
+    systemProperty "io.divolte.test.bindExternal", bindTestServerExternal
+
     /*
      * Some tests do low-level manipulation with HttpUrlConnection. This
      * property gives them more freedom.

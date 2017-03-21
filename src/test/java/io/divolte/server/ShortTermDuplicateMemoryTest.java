@@ -30,7 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class ShortTermDuplicateMemoryTest {
-    private static final String URL_STRING = "http://localhost:%d/csc-event";
+    private static final String URL_STRING = "http://%s:%d/csc-event";
 
     /*
      * CAREFUL! The difference between the first and second query string are chosen,
@@ -129,7 +129,7 @@ public class ShortTermDuplicateMemoryTest {
     }
 
     private void request(final int which) throws IOException {
-        final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRINGS[which]);
+        final URL url = new URL(String.format(URL_STRING, server.host, server.port) + URL_QUERY_STRINGS[which]);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         assertEquals(200, conn.getResponseCode());
