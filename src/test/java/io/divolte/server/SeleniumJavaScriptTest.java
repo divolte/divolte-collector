@@ -22,12 +22,15 @@ import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.config.BrowserSourceConfiguration;
 import org.junit.Test;
 import org.openqa.selenium.By;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
@@ -37,6 +40,8 @@ import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest extends SeleniumTestBase {
+    private static final Logger logger = LoggerFactory.getLogger(SeleniumJavaScriptTest.class);
+
     @Test
     public void shouldRegenerateIDsOnExplicitNavigation() throws Exception {
         doSetUp();
@@ -117,14 +122,21 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     private int uniquePageViewIdsForSeriesOfActions(final Runnable[] actions) {
-        return Stream.of(actions)
-                .flatMap((action) -> {
-                    action.run();
-                    final EventPayload payload = unchecked(server::waitForEvent);
-                    final DivolteEvent event = payload.event;
-                    return event.browserEventData.map(b -> b.pageViewId).map(Stream::of).orElse(null);
-                })
-                .collect(Collectors.toSet()).size();
+        logger.info("Starting sequence of {} browser actions.", actions.length);
+        return IntStream.range(0, actions.length)
+               .mapToObj((index) -> {
+                   final Runnable action = actions[index];
+                   logger.info("Issuing browser action #{}.", index);
+                   action.run();
+                   logger.debug("Waiting for event from server.");
+                   final EventPayload payload = unchecked(server::waitForEvent);
+                   final DivolteEvent event = payload.event;
+                   final Optional<String> pageViewId = event.browserEventData.map(b -> b.pageViewId);
+                   logger.info("Browser action #{} yielded pageview/event: {}/{}", index, pageViewId, event.eventId);
+                   return pageViewId;
+               })
+               .flatMap((pageViewId) -> pageViewId.map(Stream::of).orElse(null))
+               .collect(Collectors.toSet()).size();
     }
 
     @FunctionalInterface
