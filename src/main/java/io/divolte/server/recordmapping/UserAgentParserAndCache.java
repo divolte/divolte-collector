@@ -53,7 +53,7 @@ public final class UserAgentParserAndCache {
             logger.info("Using non-updating (resource module based) user agent parser.");
             return UADetectorServiceFactory.getResourceModuleParser();
         default:
-            throw new RuntimeException("Invalid user agent parser type. Valid values are: caching_and_updating, online_updating, non_updating.");
+            throw new IllegalArgumentException("Invalid user agent parser type. Valid values are: caching_and_updating, online_updating, non_updating.");
         }
     }
 

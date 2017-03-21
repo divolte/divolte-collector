@@ -107,11 +107,11 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
 
             // In case the reader for some reason escapes its loop with an
             // exception, log any uncaught exceptions and reschedule
-                if (error != null && running) {
-                    logger.warn("Uncaught exception in incoming queue reader thread.", error);
-                    scheduleQueueReader(es, queue, processorSupplier.get());
-                }
-            });
+            if (error != null && running) {
+                logger.warn("Uncaught exception in incoming queue reader thread.", error);
+                scheduleQueueReader(es, queue, processorSupplier.get());
+            }
+        });
     }
 
     private Runnable microBatchingQueueDrainerWithHeartBeat(
@@ -130,11 +130,11 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
                         // If the batch was empty, block on the queue for some time
                         // until something is available.
                         directive = Optional.ofNullable(pollQuietly(queue, 1, TimeUnit.SECONDS))
-                        .map((p) -> {
-                            batch.add(p);
-                            return CONTINUE;
-                        })
-                        .orElseGet(processor::heartbeat);
+                                            .map((p) -> {
+                                                batch.add(p);
+                                                return CONTINUE;
+                                            })
+                                            .orElseGet(processor::heartbeat);
                     } else {
                         directive = processor.process(batch);
                     }

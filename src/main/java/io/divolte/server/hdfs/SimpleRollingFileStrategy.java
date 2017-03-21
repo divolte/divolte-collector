@@ -19,6 +19,7 @@ package io.divolte.server.hdfs;
 import static io.divolte.server.hdfs.FileCreateAndSyncStrategy.HdfsOperationResult.*;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.DateFormat;
@@ -105,7 +106,7 @@ public class SimpleRollingFileStrategy implements FileCreateAndSyncStrategy {
             if (!hdfs.isDirectory(new Path(hdfsPublishDir))) {
                 throw new IOException("Working directory for publishing AVRO records does not exist: " + hdfsPublishDir);
             }
-        }).ifPresent((e) -> { throw new RuntimeException("Configuration error", e); });
+        }).ifPresent((e) -> { throw new UncheckedIOException("Configuration error", e); });
     }
 
     private Path newFilePath() {

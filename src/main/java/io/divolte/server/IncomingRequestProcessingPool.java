@@ -17,6 +17,7 @@
 package io.divolte.server;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Paths;
 import java.util.Optional;
 
@@ -70,7 +71,7 @@ public final class IncomingRequestProcessingPool extends ProcessingPool<Incoming
                     return new ExternalDatabaseLookupService(Paths.get(path));
                 } catch (final IOException e) {
                     logger.error("Failed to configure GeoIP database: " + path, e);
-                    throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
+                    throw new UncheckedIOException("Failed to configure GeoIP lookup service.", e);
                 }
             });
     }

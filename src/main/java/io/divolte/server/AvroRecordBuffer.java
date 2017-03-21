@@ -18,6 +18,7 @@ package io.divolte.server;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
@@ -84,7 +85,7 @@ public final class AvroRecordBuffer {
                 int currentSize = BUFFER_SIZE.get();
                 BUFFER_SIZE.compareAndSet(currentSize, (int) (currentSize * 1.1));
             } catch (final IOException ioe) {
-                throw new RuntimeException("Serialization error.", ioe);
+                throw new UncheckedIOException("Serialization error.", ioe);
             }
         }
     }

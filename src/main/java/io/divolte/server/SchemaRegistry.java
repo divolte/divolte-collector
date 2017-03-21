@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
@@ -82,7 +83,7 @@ public class SchemaRegistry {
                         return parser.parse(new File(filename));
                     } catch(final IOException ioe) {
                         logger.error("Failed to load Avro schema file.");
-                        throw new RuntimeException("Failed to load Avro schema file.", ioe);
+                        throw new UncheckedIOException("Failed to load Avro schema file.", ioe);
                     }
                 })
                 .orElseGet(() -> {
