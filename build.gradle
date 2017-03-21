@@ -254,6 +254,13 @@ test {
      * property gives them more freedom.
      */
     systemProperty "sun.net.http.allowRestrictedHeaders", "true"
+    
+    // This is a hack to make gradle realise that the tests depend on the
+    // SELENIUM_DRIVER environment variable, and re-run tests if its value
+    // changes.
+    if (System.getenv().containsKey("SELENIUM_DRIVER")) {
+        systemProperty "io.divolte.test.selenium.driver", System.getenv("SELENIUM_DRIVER")
+    }
 }
 
 /*

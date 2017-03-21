@@ -80,7 +80,7 @@ HomeBrew:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=chrome CHROME_DRIVER=$(which chromedriver) ./gradlew cleanTest test
+    % SELENIUM_DRIVER=chrome CHROME_DRIVER=$(which chromedriver) ./gradlew test
 
 ### PhantomJS ###
 
@@ -91,7 +91,7 @@ HomeBrew:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=phantom ./gradlew cleanTest test
+    % SELENIUM_DRIVER=phantom ./gradlew test
 
 (Some tests currently fail.)
 
@@ -104,7 +104,7 @@ can then be executed:
 
     % export SAUCE_USERNAME=<username>
     % export SAUCE_ACCESS_KEY=<api key>
-    % SELENIUM_DRIVER=sauce ./gradlew cleanTest test
+    % SELENIUM_DRIVER=sauce ./gradlew test
 
 These tests can take quite some time to execute. Not all succeed.
 
