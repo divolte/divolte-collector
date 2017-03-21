@@ -25,7 +25,6 @@ import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.model.Statement;
@@ -53,7 +52,7 @@ import java.util.stream.Collectors;
 
 import static io.divolte.server.BrowserLists.*;
 
-@RunWith(Parameterized.class)
+@RunWith(ConcurrentParameterized.class)
 @ParametersAreNonnullByDefault
 public abstract class SeleniumTestBase {
     public static final String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
