@@ -39,11 +39,30 @@ public final class BrowserLists {
                 caps.setCapability("version", "30");
                 return caps;
             }, "Chrome 30 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.chrome();
+                caps.setCapability("platform", "Windows XP");
+                caps.setCapability("version", "49");
+                return caps;
+            }, "Chrome 49 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.firefox();
                 caps.setCapability("platform", "Windows XP");
                 caps.setCapability("version", "27");
                 return caps;
-            }, "FF27 on Windows XP" },
+            }, "FF27 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.firefox();
+                caps.setCapability("platform", "Windows XP");
+                caps.setCapability("version", "44.0");
+                // SauceLabs workaround: without this initializing the Firefox driver fails.
+                caps.setCapability("marionette", "false");
+                return caps;
+            }, "FF44 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.firefox();
+                caps.setCapability("platform", "Windows XP");
+                caps.setCapability("version", "45.0");
+                // SauceLabs workaround: without this initializing the Firefox driver fails.
+                caps.setCapability("marionette", "false");
+                return caps;
+            }, "FF45 on Windows XP" },
 
             // Windows 7
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
@@ -52,11 +71,13 @@ public final class BrowserLists {
                 caps.setCapability("version", "10");
                 return caps;
             }, "IE10 on Windows 7" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.operaBlink();
+                // We really want (ancient) Opera here, not blink.
+                @SuppressWarnings("deprecation")
+                final DesiredCapabilities caps = DesiredCapabilities.opera();
                 caps.setCapability("platform", "Windows 7");
-                caps.setCapability("version", "12");
+                caps.setCapability("version", "12.12");
                 return caps;
-            }, "Opera 12 on Windows 7" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+            }, "Opera 12.12 on Windows 7" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.chrome();
                 caps.setCapability("platform", "Windows 7");
                 caps.setCapability("version", "35");
@@ -94,42 +115,97 @@ public final class BrowserLists {
                 return caps;
             }, "IE11 on Windows 8.1" },
 
+            // Windows 10
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.edge();
+                caps.setCapability("platform", "Windows 10");
+                caps.setCapability("version", "13.10586");
+                return caps;
+            }, "Edge 13 on Windows 10" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.edge();
+                caps.setCapability("platform", "Windows 10");
+                caps.setCapability("version", "14.14393");
+                return caps;
+            }, "Edge 14 on Windows 10" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.chrome();
+                caps.setCapability("platform", "Windows 10");
+                caps.setCapability("version", "54.0");
+                return caps;
+            }, "Chrome 54 on Windows 10" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.firefox();
+                caps.setCapability("platform", "Windows 10");
+                caps.setCapability("version", "50.0");
+                return caps;
+            }, "FF 50 on Windows 10" },
+            new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
+                caps.setCapability("platform", "Windows 10");
+                caps.setCapability("version", "11.103");
+                return caps;
+            }, "IE 11 on Windows 10" },
+
             // OS X
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.safari();
-                caps.setCapability("platform", "OS X 10.6");
-                caps.setCapability("version", "5");
-                caps.setCapability("deviceName", "");
-                return caps;
-            }, "Safari 5 on OS X 10.6" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.safari();
                 caps.setCapability("platform", "OS X 10.8");
-                caps.setCapability("version", "6");
+                caps.setCapability("version", "6.0");
                 return caps;
             }, "Safari 6 on OS X 10.8" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.safari();
                 caps.setCapability("platform", "OS X 10.9");
-                caps.setCapability("version", "7");
+                caps.setCapability("version", "7.0");
                 return caps;
             }, "Safari 7 on OS X 10.9" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.safari();
+                caps.setCapability("platform", "OS X 10.10");
+                caps.setCapability("version", "8.0");
+                return caps;
+            }, "Safari 8 on OS X 10.10" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.safari();
+                caps.setCapability("platform", "OS X 10.11");
+                caps.setCapability("version", "9.0");
+                return caps;
+            }, "Safari 9 on OS X 10.11" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.safari();
+                caps.setCapability("platform", "OS X 10.11");
+                caps.setCapability("version", "10.0");
+                return caps;
+            }, "Safari 10 on OS X 10.11" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.safari();
+                caps.setCapability("platform", "macOS 10.12");
+                caps.setCapability("version", "10.0");
+                return caps;
+            }, "Safari 10 on macOS 10.12" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.chrome();
                 caps.setCapability("platform", "OS X 10.9");
                 caps.setCapability("version", "33");
                 return caps;
             }, "Chrome 33 on OS X 10.9" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                DesiredCapabilities caps = DesiredCapabilities.firefox();
+                final DesiredCapabilities caps = DesiredCapabilities.chrome();
+                caps.setCapability("platform", "macOS 10.12");
+                caps.setCapability("version", "54");
+                return caps;
+            }, "Chrome 54 on macOS 10.12" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                final DesiredCapabilities caps = DesiredCapabilities.firefox();
                 caps.setCapability("platform", "OS X 10.9");
                 caps.setCapability("version", "30");
                 return caps;
-            }, "FF30 on OS X 10.9" },
+            }, "FF30 on OS X 10.9" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+                DesiredCapabilities caps = DesiredCapabilities.firefox();
+                caps.setCapability("platform", "macOS 10.12");
+                caps.setCapability("version", "50");
+                return caps;
+            }, "FF50 on macOS 10.12" },
 
             // Linux
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.operaBlink();
+                // We really want (ancient) Opera here, not blink.
+                @SuppressWarnings("deprecation")
+                final DesiredCapabilities caps = DesiredCapabilities.opera();
                 caps.setCapability("platform", "Linux");
-                caps.setCapability("version", "12");
+                caps.setCapability("version", "12.15");
                 return caps;
-            }, "Opera 12 on Linux" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
+            }, "Opera 12.15 on Linux" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.chrome();
                 caps.setCapability("platform", "Linux");
                 caps.setCapability("version", "35");
@@ -139,22 +215,8 @@ public final class BrowserLists {
                 caps.setCapability("platform", "Linux");
                 caps.setCapability("version", "30");
                 return caps;
-            }, "FF30 on Linux" },
-
-            // iOS
-            new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.iphone();
-                caps.setCapability("platform", "OS X 10.9");
-                caps.setCapability("version", "7.1");
-                caps.setCapability("device-orientation", "portrait");
-                return caps;
-            }, "iOS 7.1 on iPhone" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.iphone();
-                caps.setCapability("platform", "OS X 10.8");
-                caps.setCapability("version", "6.1");
-                caps.setCapability("device-orientation", "portrait");
-                return caps;
-            }, "iOS 6.1 on iPhone" });
+            }, "FF30 on Linux" }
+    );
 
     public static final Collection<Object[]> BS_BROWSER_LIST = ImmutableList.of(
             // Windows XP
