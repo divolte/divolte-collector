@@ -34,20 +34,47 @@ import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ServerTestUtils {
     /*
-     * Theoretically, this is prone to race conditions,
-     * but in practice, it should be fine due to the way
-     * TCP stacks allocate port numbers (i.e. increment
-     * for the next one).
+     * List of ports to cycle through.
+     *
+     * We use this list instead of a random OS-assigned port because
+     * some environments (e.g. Sauce Labs) only support specific ports
+     * when connecting to 'localhost'.
+     * See: https://wiki.saucelabs.com/display/DOCS/Sauce+Connect+Proxy+FAQS#SauceConnectProxyFAQS-CanIAccessApplicationsonlocalhost?
+     *
+     * Note: Browsers often block ports on localhost.
+     * https://fetch.spec.whatwg.org/#port-blocking
+     * (Safari and Firefox use this list; not sure about the rest.)
+     * Note: Android can't use 5555 or 8080 with Sauce Connect.
      */
-    public static int findFreePort() {
-        try (final ServerSocket socket = new ServerSocket(0)) {
-            return socket.getLocalPort();
-        } catch (final IOException e) {
-            return -1;
+    private static int[] SAFE_PORTS = {
+        2000, 2001, 2020, 2109, 2222, 2310,
+        3000, 3001, 3030, 3210, 3333,
+        4000, 4001, 4040, 4321, 4502, 4503, 4567,
+        5000, 5001, 5050, 5432,
+        6001, 6060, 6543,
+        7000, 7070, 7774, 7777,
+        8000, 8001, 8003, 8031, 8081, 8765, 8777, 8888,
+        9000, 9001, 9080, 9090, 9876, 9877, 9999,
+        49221,
+        55001,
+    };
+    private static AtomicInteger nextSafePortIndex = new AtomicInteger(0);
+    @SuppressWarnings("PMD.EmptyCatchBlock")
+    private static int findFreePort() {
+        for(int attempt = 0; attempt < SAFE_PORTS.length * 2; ++attempt) {
+            final int candidatePortIndex = nextSafePortIndex.getAndUpdate((lastPort) -> (lastPort + 1) % SAFE_PORTS.length);
+            try (final ServerSocket socket = new ServerSocket(SAFE_PORTS[candidatePortIndex])) {
+                return socket.getLocalPort();
+            } catch (final IOException e) {
+                // Assume port already in use. Proceed to next one...
+            }
         }
+        // Give up if we go through the list twice.
+        throw new RuntimeException("Could not find unused safe port.");
     }
 
     private static Config REFERENCE_TEST_CONFIG = ConfigFactory.parseResources("reference-test.conf");
