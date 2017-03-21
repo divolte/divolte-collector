@@ -52,7 +52,6 @@ import static io.divolte.server.BrowserLists.*;
 
 @RunWith(Parameterized.class)
 public abstract class SeleniumTestBase {
-
     public static final String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public static final String PHANTOMJS_DRIVER = "phantomjs";
     public static final String CHROME_DRIVER = "chrome";
@@ -202,16 +201,16 @@ public abstract class SeleniumTestBase {
                 .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
                                                       + "in the " + BS_USER_NAME_ENV_VAR + " env var."));
 
-            final String bsApiKey = Optional
-                    .ofNullable(System.getenv(BS_API_KEY_ENV_VAR))
-                    .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
-                                                          + "in the " + BS_API_KEY_ENV_VAR + " env var."));
+        final String bsApiKey = Optional
+                .ofNullable(System.getenv(BS_API_KEY_ENV_VAR))
+                .orElseThrow(() -> new RuntimeException("When using 'browserstack' as Selenium driver, please set the BrowserStack username "
+                                                      + "in the " + BS_API_KEY_ENV_VAR + " env var."));
 
-            final DesiredCapabilities caps = capabilities.get();
-            caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
-            driver = new RemoteWebDriver(
-                    new URL(String.format("http://%s:%s@hub.browserstack.com/wd/hub", bsUserName, bsApiKey)),
-                    caps);
+        final DesiredCapabilities caps = capabilities.get();
+        caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
+        driver = new RemoteWebDriver(new URL(String.format("http://%s:%s@hub.browserstack.com/wd/hub",
+                                                           bsUserName, bsApiKey)),
+                                     caps);
 
     }
 
