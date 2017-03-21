@@ -15,6 +15,7 @@
  */
 package io.divolte.server;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 import io.divolte.server.ServerTestUtils.TestServer;
@@ -27,12 +28,15 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.model.Statement;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import javax.annotation.Nullable;
 import java.net.MalformedURLException;
@@ -70,6 +74,10 @@ public abstract class SeleniumTestBase {
         LOCAL_RUN_CAPABILITIES = new DesiredCapabilities();
         LOCAL_RUN_CAPABILITIES.setBrowserName("Local Selenium instructed browser");
     }
+
+    private static final ExpectedCondition<Boolean> DIVOLTE_LOADED =
+        driver -> null != driver
+            && "object".equals(((JavascriptExecutor) driver).executeScript("return typeof divolte"));
 
     @Rule
     public final TestRule suppressWebDriverNavigationExceptions = (base, description) -> new Statement() {
@@ -136,10 +144,20 @@ public abstract class SeleniumTestBase {
             }
         }
 
-    protected String urlOf(final TEST_PAGES page) {
+    private String urlOf(final TEST_PAGES page) {
+        Preconditions.checkState(null != server);
         final String modeString = quirksMode ? "quirks" : "strict";
         return String.format("http://%s:%d/%s/%s.html",
                              server.host, server.port, modeString, page.resourceName);
+    }
+
+    protected String gotoPage(final TEST_PAGES page) {
+        Preconditions.checkState(null != driver);
+        String url = urlOf(page);
+        driver.navigate().to(url);
+        // All test pages load Divolte.
+        waitDivolteLoaded();
+        return url;
     }
 
     protected void doSetUp(final String configFileName) throws Exception {
@@ -148,6 +166,12 @@ public abstract class SeleniumTestBase {
 
     protected void doSetUp() throws Exception {
         doSetUp(Optional.empty());
+    }
+
+    private void waitDivolteLoaded() {
+        Preconditions.checkState(null != driver);
+        final WebDriverWait wait = new WebDriverWait(driver, 30);
+        wait.until(DIVOLTE_LOADED);
     }
 
     private void doSetUp(final Optional<String> configFileName) throws Exception {

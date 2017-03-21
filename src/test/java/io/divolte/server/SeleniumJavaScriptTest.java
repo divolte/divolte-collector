@@ -45,14 +45,14 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
     public void shouldRegenerateIDsOnExplicitNavigation() throws Exception {
         doSetUp();
-        Preconditions.checkState(null != driver && null != server);
+        Preconditions.checkState(null != server);
 
         // do a sequence of explicit navigation by setting the browser location
         // and then check that all requests generated a unique pageview ID
         final Runnable[] actions = {
-                () -> driver.navigate().to(urlOf(BASIC)),
-                () -> driver.navigate().to(urlOf(BASIC_COPY)),
-                () -> driver.navigate().to(urlOf(BASIC))
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
+                () -> gotoPage(BASIC),
                 };
 
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
@@ -66,7 +66,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(urlOf(BASIC)),
+                () -> gotoPage(BASIC),
                 driver.navigate()::refresh
                 };
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
@@ -80,9 +80,9 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(urlOf(BASIC)),
-                () -> driver.get(urlOf(BASIC_COPY)),
-                () -> driver.get(urlOf(BASIC)),
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
+                () -> gotoPage(BASIC),
                 driver.navigate()::back,
                 driver.navigate()::back,
                 driver.navigate()::forward,
@@ -101,18 +101,18 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(urlOf(BASIC)),
-                () -> driver.get(urlOf(BASIC_COPY)),
-                () -> driver.get(urlOf(BASIC)),
-                () -> driver.get(urlOf(BASIC_COPY)),
-                () -> driver.get(urlOf(BASIC)),
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
+                () -> gotoPage(BASIC),
                 driver.navigate()::back,
                 driver.navigate()::back,
                 () -> driver.findElement(By.id("custom")).click(),
                 driver.navigate()::forward,
                 driver.navigate()::refresh,
                 driver.navigate()::back,
-                () -> driver.get(urlOf(PAGE_VIEW_SUPPLIED)),
+                () -> gotoPage(PAGE_VIEW_SUPPLIED),
                 driver.navigate()::back
                 };
 
@@ -158,10 +158,9 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
     public void shouldSignalWhenOpeningPage() throws Exception {
         doSetUp();
-        Preconditions.checkState(null != driver && null != server);
+        Preconditions.checkState(null != server);
 
-        final String location = urlOf(BASIC);
-        driver.get(location);
+        final String location = gotoPage(BASIC);
 
         final EventPayload payload = server.waitForEvent();
 
@@ -224,7 +223,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     public void shouldSendCustomEvent() throws Exception {
         doSetUp();
         Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
+        gotoPage(BASIC);
         server.waitForEvent();
 
         driver.findElement(By.id("custom")).click();
@@ -245,7 +244,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     public void shouldSetAppropriateCookies() throws Exception {
         doSetUp();
         Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
+        gotoPage(BASIC);
         server.waitForEvent();
 
         final Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(BrowserSourceConfiguration.DEFAULT_BROWSER_SOURCE_CONFIGURATION.partyCookie).getValue());
@@ -264,8 +263,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
     public void shouldPickupProvidedPageViewIdFromHash() throws Exception {
         doSetUp();
-        Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(PAGE_VIEW_SUPPLIED));
+        Preconditions.checkState(null != server);
+        gotoPage(PAGE_VIEW_SUPPLIED);
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
@@ -276,9 +275,9 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
     public void shouldSupportCustomJavascriptName() throws Exception {
         doSetUp("selenium-test-custom-javascript-name.conf");
-        Preconditions.checkState(null != driver && null != server);
+        Preconditions.checkState(null != server);
 
-        driver.get(urlOf(CUSTOM_JAVASCRIPT_NAME));
+        gotoPage(CUSTOM_JAVASCRIPT_NAME);
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
@@ -288,8 +287,8 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
     public void shouldUseConfiguredEventSuffix() throws Exception {
         doSetUp("selenium-test-custom-event-suffix.conf");
-        Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
+        Preconditions.checkState(null != server);
+        gotoPage(BASIC);
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
