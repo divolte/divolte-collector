@@ -50,6 +50,8 @@ public final class ServerTestUtils {
         }
     }
 
+    private static Config REFERENCE_TEST_CONFIG = ConfigFactory.parseResources("reference-test.conf");
+
     @ParametersAreNonnullByDefault
     public static final class EventPayload {
         final DivolteEvent event;
@@ -74,20 +76,20 @@ public final class ServerTestUtils {
         final BlockingQueue<EventPayload> events;
 
         public TestServer() {
-            this(findFreePort(), ConfigFactory.parseResources("reference-test.conf"));
+            this(findFreePort(), REFERENCE_TEST_CONFIG);
         }
 
         public TestServer(final String configResource) {
             this(findFreePort(),
                  ConfigFactory.parseResources(configResource)
-                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
+                              .withFallback(REFERENCE_TEST_CONFIG));
         }
 
         public TestServer(final String configResource, final Map<String,Object> extraConfig) {
             this(findFreePort(),
                  ConfigFactory.parseMap(extraConfig, "Test-specific overrides")
                               .withFallback(ConfigFactory.parseResources(configResource))
-                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
+                              .withFallback(REFERENCE_TEST_CONFIG));
         }
 
         private TestServer(final int port, final Config config) {
