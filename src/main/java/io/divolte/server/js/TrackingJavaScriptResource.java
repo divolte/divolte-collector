@@ -53,6 +53,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
         builder.put(SCRIPT_CONSTANT_NAME, browserSourceConfiguration.javascript.name);
         builder.put("EVENT_SUFFIX", browserSourceConfiguration.eventSuffix);
         builder.put("AUTO_PAGE_VIEW_EVENT", browserSourceConfiguration.javascript.autoPageViewEvent);
+        builder.put("IMAGE_EXPECT_NOCONTENT", browserSourceConfiguration.useNoContent);
         return builder.build();
     }
 

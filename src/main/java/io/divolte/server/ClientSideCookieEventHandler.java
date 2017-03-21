@@ -56,7 +56,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
     private final static ETag SENTINEL_ETAG = new ETag(false, "6b3edc43-20ec-4078-bc47-e965dd76b88a");
     private final static String SENTINEL_ETAG_VALUE = SENTINEL_ETAG.toString();
 
-    private final ByteBuffer transparentImage;
+    private final Optional<ByteBuffer> transparentImage;
     private final IncomingRequestProcessingPool processingPool;
     private final int sourceIndex;
 
@@ -82,17 +82,23 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
     private static final ObjectReader EVENT_PARAMETERS_READER = new ObjectMapper(new MincodeFactory()).reader();
 
-    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool, final int sourceIndex) {
+    public ClientSideCookieEventHandler(final IncomingRequestProcessingPool processingPool,
+                                        final boolean sendEmptyResponse,
+                                        final int sourceIndex) {
         this.sourceIndex = sourceIndex;
         this.processingPool = Objects.requireNonNull(processingPool);
 
-        try {
-            this.transparentImage = ByteBuffer.wrap(
-                Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
-            ).asReadOnlyBuffer();
-        } catch (final IOException e) {
-            // Should throw something more specific than this.
-            throw new RuntimeException("Could not load transparent image resource.", e);
+        if (sendEmptyResponse) {
+            this.transparentImage = Optional.empty();
+        } else {
+            try {
+                this.transparentImage = Optional.of(ByteBuffer.wrap(
+                    Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
+                ).asReadOnlyBuffer());
+            } catch (final IOException e) {
+                // Should throw something more specific than this.
+                throw new RuntimeException("Could not load transparent image resource.", e);
+            }
         }
     }
 
@@ -109,7 +115,6 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
          * As a last resort, we try to detect duplicates via the ETag header.
          */
         exchange.getResponseHeaders()
-                .put(Headers.CONTENT_TYPE, "image/gif")
                 .put(Headers.ETAG, SENTINEL_ETAG_VALUE)
                 .put(Headers.CACHE_CONTROL, "private, no-cache, proxy-revalidate")
                 .put(Headers.PRAGMA, "no-cache")
@@ -117,9 +122,14 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
 
         // If an ETag is present, this is a duplicate event.
         if (ETagUtils.handleIfNoneMatch(exchange, SENTINEL_ETAG, true)) {
-            // Default status code what we want: 200 OK.
             // Sending the response before logging the event!
-            exchange.getResponseSender().send(transparentImage.slice());
+            // We send either 200 OK or 204 No Content, depending on whether we have the image to send.
+            if (transparentImage.isPresent()) {
+                exchange.getResponseSender().send(transparentImage.get().slice());
+            } else {
+                exchange.setStatusCode(StatusCodes.NO_CONTENT)
+                        .endExchange();
+            }
 
             try {
                 logEvent(exchange);
@@ -131,8 +141,8 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
             if (logger.isDebugEnabled()) {
                 logger.debug("Ignoring duplicate event from {}: {}", sourceAddress, getFullUrl(exchange));
             }
-            exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
-            exchange.endExchange();
+            exchange.setStatusCode(StatusCodes.NOT_MODIFIED)
+                    .endExchange();
         }
     }
 
@@ -166,13 +176,12 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
             final boolean isFirstInSession = queryParamFromExchange(exchange, FIRST_IN_SESSION_QUERY_PARAM).map(TRUE_STRING::equals).orElseThrow(IncompleteRequestException::new);
             final Instant clientTimeStamp = Instant.ofEpochMilli(queryParamFromExchange(exchange, CLIENT_TIMESTAMP_QUERY_PARAM).map(ClientSideCookieEventHandler::tryParseBase36Long).orElseThrow(IncompleteRequestException::new));
 
-            final DivolteEvent event = DivolteEvent.createBrowserEvent(exchange, corrupt, partyId, sessionId, eventId,
-                                                                       requestTime, clientTimeStamp,
-                                                                       isNewPartyId, isFirstInSession,
-                                                                       queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
-                                                                       eventParameterSupplier(exchange),
-                                                                       browserEventData(exchange, pageViewId));
-            return event;
+            return DivolteEvent.createBrowserEvent(exchange, corrupt, partyId, sessionId, eventId,
+                                                   requestTime, clientTimeStamp, isNewPartyId,
+                                                   isFirstInSession,
+                                                   queryParamFromExchange(exchange, EVENT_TYPE_QUERY_PARAM),
+                                                   eventParameterSupplier(exchange),
+                                                   browserEventData(exchange, pageViewId));
         }
     }
 

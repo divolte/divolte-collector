@@ -179,6 +179,13 @@ public class ServerSinkSourceConfigurationTest {
     }
 
     @Test
+    public void shouldSupportNoContentResponsesFromBrowserSources() throws IOException {
+        // Test that the browser source returns 204 No Content when configured so.
+        startServer("browser-source-no-content-response.conf");
+        request("", 204);
+    }
+
+    @Test
     public void shouldSupportMultipleBrowserSources() throws IOException, InterruptedException {
         // Test that multiple browser sources are supported.
         startServer("browser-source-multiple.conf");

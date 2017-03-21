@@ -283,4 +283,23 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         assertEquals("pageView", eventData.eventType.get());
     }
+
+    @Test
+    public void shouldSupportNoContentResponsesForEventDelivery() throws Exception {
+        doSetUp("selenium-test-use-no-content-response.conf");
+        Preconditions.checkState(null != driver && null != server);
+        driver.get(urlOf(BASIC));
+
+        final EventPayload firstPayload = server.waitForEvent();
+        final DivolteEvent firstEventData = firstPayload.event;
+        assertEquals("pageView", firstEventData.eventType.get());
+
+        driver.findElement(By.id("custom")).click();
+        final EventPayload secondPayload = server.waitForEvent();
+        final DivolteEvent secondEventData = secondPayload.event;
+
+        assertTrue(secondEventData.eventType.isPresent());
+        assertEquals("custom", secondEventData.eventType.get());
+        // No need to check the parameters; we're only concerned that the event arrives.
+    }
 }
