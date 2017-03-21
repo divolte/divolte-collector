@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static io.divolte.server.SeleniumTestBase.TestPages.*;
 import static org.junit.Assert.*;
 
 import java.util.Optional;
