@@ -121,7 +121,7 @@ public final class ServerTestUtils {
 
         private TestServer(final int port, final Config config) {
             this.port = port;
-            this.host = getBindAddress(config);
+            this.host = getBindAddress();
             this.config = config.withValue("divolte.global.server.host", ConfigValueFactory.fromAnyRef(host))
                                 .withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
 
@@ -133,7 +133,7 @@ public final class ServerTestUtils {
             server.run();
         }
 
-        private static String getBindAddress(final Config config) {
+        private static String getBindAddress() {
             final String bindAddress;
             if (Boolean.getBoolean("io.divolte.test.bindExternal")) {
                 try {
