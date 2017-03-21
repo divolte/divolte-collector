@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 
 public final class BrowserLists {
     public static final Collection<Object[]> SAUCE_BROWSER_LIST = ImmutableList.of(
-    // Windows XP
+            // Windows XP
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
                 caps.setCapability("platform", "Windows XP");
@@ -175,7 +175,7 @@ public final class BrowserLists {
             }, "iOS 6.1 on iPhone" });
 
     public static final Collection<Object[]> BS_BROWSER_LIST = ImmutableList.of(
-    // Windows XP
+            // Windows XP
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = new DesiredCapabilities();
                 caps.setCapability("browser", "IE");
