@@ -92,7 +92,7 @@ public class DslRecordMapperTest {
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 
-    public TestServer server;
+    private TestServer server;
     private File mappingFile;
     private File avroFile;
 
