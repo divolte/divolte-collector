@@ -78,6 +78,9 @@ public abstract class SeleniumTestBase {
         driver -> null != driver
             && "object".equals(((JavascriptExecutor) driver).executeScript("return typeof divolte"));
 
+    private static final ExpectedCondition<Boolean> WINDOW_AVAILABLE =
+        driver -> null != driver && !driver.getWindowHandles().isEmpty();
+
     @Rule
     public final TestRule suppressWebDriverNavigationExceptions = (base, description) -> new Statement() {
         @Override
@@ -191,6 +194,8 @@ public abstract class SeleniumTestBase {
             driver = new PhantomJSDriver();
             break;
         }
+        final WebDriverWait wait = new WebDriverWait(driver, 30);
+        wait.until(WINDOW_AVAILABLE);
 
         server = configFileName.map(TestServer::new).orElseGet(TestServer::new);
     }
