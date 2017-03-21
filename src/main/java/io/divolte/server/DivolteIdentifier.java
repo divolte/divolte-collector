@@ -89,11 +89,7 @@ public final class DivolteIdentifier {
     }
 
     // Some sources mention it's a good idea to avoid contention on SecureRandom instances...
-    private final static ThreadLocal<SecureRandom> localRandom = new ThreadLocal<SecureRandom> () {
-        protected SecureRandom initialValue() {
-            return new SecureRandom();
-        }
-    };
+    private final static ThreadLocal<SecureRandom> localRandom = ThreadLocal.withInitial(SecureRandom::new);
 
     public static DivolteIdentifier generate(final long ts) {
         final SecureRandom random = localRandom.get();
