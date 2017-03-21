@@ -34,7 +34,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static io.divolte.server.SeleniumTestBase.TestPages.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 

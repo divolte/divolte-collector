@@ -167,7 +167,7 @@ public abstract class SeleniumTestBase {
                 .collect(Collectors.toList());
     }
 
-    public enum TEST_PAGES {
+    public enum TestPages {
             BASIC("test-basic-page"),
             BASIC_COPY("test-basic-page-copy"),
             PAGE_VIEW_SUPPLIED("test-basic-page-provided-pv-id"),
@@ -176,19 +176,19 @@ public abstract class SeleniumTestBase {
 
             private final String resourceName;
 
-            TEST_PAGES(final String resourceName) {
+            TestPages(final String resourceName) {
                 this.resourceName = Objects.requireNonNull(resourceName);
             }
         }
 
-    private String urlOf(final TEST_PAGES page) {
+    private String urlOf(final TestPages page) {
         Preconditions.checkState(null != server);
         final String modeString = quirksMode ? "quirks" : "strict";
         return String.format("http://%s:%d/%s/%s.html",
                              server.host, server.port, modeString, page.resourceName);
     }
 
-    protected String gotoPage(final TEST_PAGES page) {
+    protected String gotoPage(final TestPages page) {
         Preconditions.checkState(null != driver);
         String url = urlOf(page);
         driver.navigate().to(url);
