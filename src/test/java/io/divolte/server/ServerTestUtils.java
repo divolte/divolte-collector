@@ -25,6 +25,7 @@ import org.apache.avro.generic.GenericRecord;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
@@ -139,7 +140,7 @@ public final class ServerTestUtils {
                 try {
                     bindAddress = InetAddress.getLocalHost().getHostAddress();
                 } catch (final UnknownHostException e) {
-                    throw new RuntimeException("Unable to determine external IP address", e);
+                    throw new UncheckedIOException("Unable to determine external IP address", e);
                 }
             } else {
                 bindAddress = "127.0.0.1";
