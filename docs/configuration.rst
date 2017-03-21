@@ -1078,7 +1078,6 @@ File Based Sink Property: ``file_strategy.working_dir``
 :Description:
   Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
 
-  This directory has to exist when Divolte Collector starts; it will not be automatically created. The available privileges to Divolte Collector need to allow for writing in this directory.
 :Default:
   :file:`/tmp`
 :Example:
@@ -1095,7 +1094,6 @@ File Based Sink Property: ``file_strategy.publish_dir``
 :Description:
   Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
 
-  This directory has to exist when Divolte Collector starts; it will not be automatically created. The available privileges to Divolte Collector need to allow for writing in this directory.
 :Default:
   :file:`/tmp`
 :Example:
@@ -1161,6 +1159,8 @@ The HDFS client used to write files is configured according to the global HDFS s
 - Native HDFS in a Hadoop cluster.
 - A local filesystem.
 - S3 in Amazon Web Services (AWS). (See `here <https://wiki.apache.org/hadoop/AmazonS3>`_ for details.)
+
+*When writing to HDFS, the configured directories for inflight and published files have to exist when Divolte Collector starts; they will not be automatically created. The available privileges to Divolte Collector need to allow for writing in this directory.*
 
 A HDFS sink uses multiple threads to write the records as they are produced. Each thread writes to its own Avro file, flushing regularly. Periodically the Avro files are closed and new ones started. Files are initially created in the configured working directory and have an extension of ``.avro.partial`` while open and being written to. When closed, they are renamed to have an extension of ``.avro`` and moved to the publish directory. This happens in a single (atomic) move operation, so long as the underlying storage supports this.
 
