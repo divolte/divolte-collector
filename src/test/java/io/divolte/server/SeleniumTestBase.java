@@ -18,11 +18,12 @@ package io.divolte.server;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
+import com.saucelabs.saucerest.SauceREST;
 import io.divolte.server.ServerTestUtils.TestServer;
-import org.junit.After;
 import org.junit.AssumptionViolatedException;
 import org.junit.Rule;
-import org.junit.rules.TestRule;
+import org.junit.rules.*;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -46,6 +47,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -98,6 +100,36 @@ public abstract class SeleniumTestBase {
         }
     };
 
+    @Rule
+    public final TestName testName = new TestName();
+
+    @Rule
+    public final TestRule chain = RuleChain
+        .outerRule(new ExternalResource() {
+            @Override
+            protected void after() {
+                if (null != driver) {
+                    driver.quit();
+                    driver = null;
+                }
+                if (null != server) {
+                    server.server.shutdown();
+                    server = null;
+                }
+                testResultHook = Optional.empty();
+            }
+        })
+        .around(new TestWatcher() {
+            @Override
+            protected void succeeded(final Description description) {
+                testResultHook.ifPresent(callback -> callback.accept(true));
+            }
+            @Override
+            protected void failed(final Throwable e, final Description description) {
+                testResultHook.ifPresent(callback -> callback.accept(false));
+            }
+        });
+
     @Nullable
     protected WebDriver driver;
     @Nullable
@@ -108,6 +140,8 @@ public abstract class SeleniumTestBase {
     public String capabilityDescription;
     @Parameter(2)
     public boolean quirksMode;
+
+    private Optional<Consumer<Boolean>> testResultHook = Optional.empty();
 
     @Parameters(name = "Selenium JS test: {1} (quirks-mode={2})")
     public static Iterable<Object[]> sauceLabBrowsersToTest() {
@@ -214,7 +248,8 @@ public abstract class SeleniumTestBase {
                                                       + "in the " + BS_API_KEY_ENV_VAR + " env var."));
 
         final DesiredCapabilities caps = capabilities.get();
-        caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
+        // Note: getMethodName() is misleading. It's really the formatted name from the @Parameters annotation.
+        caps.setCapability("job-name", String.format("%s: %s", getClass().getSimpleName(), testName.getMethodName()));
         driver = new RemoteWebDriver(new URL(String.format("http://%s:%s@hub.browserstack.com/wd/hub",
                                                            bsUserName, bsApiKey)),
                                      caps);
@@ -240,10 +275,28 @@ public abstract class SeleniumTestBase {
                 .orElse(4445);
 
         final DesiredCapabilities caps = capabilities.get();
-        caps.setCapability("job-name", "Selenium JS test: " + capabilityDescription);
-        driver = new RemoteWebDriver(
-                new URL(String.format("http://%s:%s@%s:%d/wd/hub", sauceUserName, sauceApiKey, sauceHost, saucePort)),
-                caps);
+
+        // Note: getMethodName() is misleading. It's really the formatted name from the @Parameters annotation.
+        caps.setCapability("name", String.format("%s: %s", getClass().getSimpleName(), testName.getMethodName()));
+        caps.setCapability("public", "team");
+        caps.setCapability("videoUploadOnPass", false);
+
+        final RemoteWebDriver remoteDriver =
+            new RemoteWebDriver(new URL(String.format("http://%s:%s@%s:%d/wd/hub",
+                                        sauceUserName, sauceApiKey, sauceHost, saucePort)),
+                                caps);
+        final String sauceJobId = remoteDriver.getSessionId().toString();
+        final SauceREST sauce = new SauceREST(sauceUserName, sauceApiKey);
+        driver = remoteDriver;
+        testResultHook = Optional.of(result -> {
+            // Note: getMethodName() is misleading. It's really the formatted name from the @Parameters annotation.
+            System.out.println("Test completed (result=" + result + "): " + String.format("%s: %s", getClass().getSimpleName(), testName.getMethodName()));
+            if (result) {
+                sauce.jobPassed(sauceJobId);
+            } else {
+                sauce.jobFailed(sauceJobId);
+            }
+        });
     }
 
     private void setupLocalChrome() {
@@ -253,17 +306,5 @@ public abstract class SeleniumTestBase {
                         () -> new RuntimeException("When using 'chrome' as Selenium driver, please set the location of the "
                                 + "Chrome driver manager server thingie in the env var: " + CHROME_DRIVER_LOCATION_ENV_VAR)));
         driver = new ChromeDriver();
-    }
-
-    @After
-    public void tearDown() {
-        if (null != driver) {
-            driver.quit();
-            driver = null;
-        }
-        if (null != server) {
-            server.server.shutdown();
-            server = null;
-        }
     }
 }
