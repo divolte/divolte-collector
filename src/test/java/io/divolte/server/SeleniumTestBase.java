@@ -121,11 +121,12 @@ public abstract class SeleniumTestBase {
         .around(new TestWatcher() {
             @Override
             protected void succeeded(final Description description) {
-                testResultHook.ifPresent(callback -> callback.accept(true));
+                testResultHook.ifPresent(callback -> callback.accept(TestResult.Passed));
             }
             @Override
             protected void failed(final Throwable e, final Description description) {
-                testResultHook.ifPresent(callback -> callback.accept(false));
+                final TestResult failureType = e instanceof AssumptionViolatedException ? TestResult.Skipped : TestResult.Failed;
+                testResultHook.ifPresent(callback -> callback.accept(failureType));
             }
         });
 
@@ -140,7 +141,13 @@ public abstract class SeleniumTestBase {
     @Parameter(2)
     public boolean quirksMode;
 
-    private Optional<Consumer<Boolean>> testResultHook = Optional.empty();
+    private enum TestResult {
+        Passed,
+        Failed,
+        Skipped
+    }
+
+    private Optional<Consumer<TestResult>> testResultHook = Optional.empty();
 
     @Parameters(name = "Selenium JS test: {1} (quirks-mode={2})")
     public static Iterable<Object[]> sauceLabBrowsersToTest() {
@@ -288,12 +295,15 @@ public abstract class SeleniumTestBase {
         final SauceREST sauce = new SauceREST(sauceUserName, sauceApiKey);
         driver = remoteDriver;
         testResultHook = Optional.of(result -> {
-            // Note: getMethodName() is misleading. It's really the formatted name from the @Parameters annotation.
-            System.out.println("Test completed (result=" + result + "): " + String.format("%s: %s", getClass().getSimpleName(), testName.getMethodName()));
-            if (result) {
-                sauce.jobPassed(sauceJobId);
-            } else {
-                sauce.jobFailed(sauceJobId);
+            switch (result) {
+                case Passed:
+                    sauce.jobPassed(sauceJobId);
+                    break;
+                case Skipped:
+                    sauce.deleteJob(sauceJobId);
+                    break;
+                case Failed:
+                    sauce.jobFailed(sauceJobId);
             }
         });
     }
