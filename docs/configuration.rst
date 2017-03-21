@@ -369,6 +369,52 @@ Property: ``divolte.global.hdfs.client``
       fs.defaultFS = "file:///var/log/divolte/"
     }
 
+Global Google Cloud Storage Settings (``divolte.global.gcs``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section controls global Google Cloud Storage settings shared by all Google Cloud Storage sinks.
+
+Property: ``divolte.global.gcs.enabled``
+""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Whether or not Google Cloud Storage support is enabled. When set to `false` all Google Cloud Storage sinks are ignored.
+:Default:
+  :code:`false`
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcs {
+      enabled = true
+    }
+
+Property: ``divolte.global.gcs.threads``
+""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Number of threads to use per Google Cloud Storage sink for writing events. Each thread creates its own files on Google Cloud Storage.
+:Default:
+  1
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcs {
+      threads = 2
+    }
+
+Property: ``divolte.global.gcs.buffer_size``
+""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum number of mapped events to queue internally *per sink thread* for Google Cloud Storage before starting to drop them. This value will be rounded up to the nearest power of 2.
+:Default:
+  1048576
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcs.buffer_size {
+      max_write_queue = 10M
+    }
+
 Global Kafka Settings (``divolte.global.kafka``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section controls global Kafka settings shared by all Kafka sinks. At present Divolte Collector only supports connecting to a single Kafka cluster.
@@ -976,8 +1022,11 @@ Sinks are used to write Avro records that have been mapped from received events.
 
 Each sink has a type configured via a mandatory ``type`` property. The supported types are:
 
-- ``hdfs``
-- ``kafka``
+- File based sinks:
+-XX- ``hdfs``
+-XX- ``gcs``
+- Streaming sinks:
+-XX- ``kafka``
 
 For example:
 
@@ -1011,11 +1060,101 @@ If no sinks are specified two implicit sinks are created that are equivalent to:
 
 If *any* sinks are configured these implicit sinks are not present and all sinks must be explicitly specified.
 
+File Based Sinks
+^^^^^^^^^^^^^^^^
+
+A file based sink writes `Avro files <http://avro.apache.org/docs/1.8.1/spec.html#Object+Container+Files>`_ containing records produced by mapping to a remote file system. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
+
+File based sinks use multiple threads to write the records as they are produced. Each thread writes to its own Avro file, flushing regularly. Periodically the Avro files are closed and new ones started. Files are initially created in the configured working directory and have an extension of ``.avro.partial`` while open and being written to. When closed, they are renamed to have an extension of ``.avro`` and moved to the publish directory. This happens in a single (atomic) move operation, so long as the underlying storage supports this.
+
+Records produced from events with the same party identifier are always written to the same Avro file, and in the order they were received by the originating source. (The relative ordering of records produced from events with the same party identifier is undefined if they originated from different sources, although they will still be written to the same Avro file.)
+
+The currently supported types of file based sinks are HDFS sinks and Google Cloud Storage sinks.
+
+The following properties are common to all file based sinks:
+
+File Based Sink Property: ``file_strategy.working_dir``
+"""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
+
+  This directory has to exist when Divolte Collector starts; it will not be automatically created. The available privileges to Divolte Collector need to allow for writing in this directory.
+:Default:
+  :file:`/tmp`
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.working_dir = /webdata/inflight
+    }
+
+File Based Sink Property: ``file_strategy.publish_dir``
+"""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
+
+  This directory has to exist when Divolte Collector starts; it will not be automatically created. The available privileges to Divolte Collector need to allow for writing in this directory.
+:Default:
+  :file:`/tmp`
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.publish_dir = /webdata/published
+    }
+
+File Based Sink Property: ``file_strategy.roll_every``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Roll over files on the remote file system after this amount of time. If the working file doesn't contain any records it will be discarded.
+:Default:
+  1 hour
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.roll_every = 15 minutes
+    }
+
+File Based Sink Property: ``file_strategy.sync_file_after_records``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum number of records that should be written to the working file since the last flush before flushing to the remote file system again. If the remote file system permits, flushing will also attempt to fsync the file to the file system (e.g. by issuing a :code:`hsync()` call in case of HDFS data).
+:Default:
+  1000
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.sync_file_after_records = 100
+    }
+
+File Based Sink Property: ``file_strategy.sync_file_after_duration``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum time that may elapse after a record is written to the working file before it is flushed to the remote file system. If the remote file system permits, flushing will also attempt to fsync the file to the file system (e.g. by issuing a :code:`hsync()` call in case of HDFS data).
+:Default:
+  30 seconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = hdfs
+      file_strategy.sync_file_after_duration = 10 seconds
+    }
+
 
 HDFS Sinks
 ^^^^^^^^^^
-
-A HDFS sink uses a HDFS client to write `Avro files <http://avro.apache.org/docs/1.8.1/spec.html#Object+Container+Files>`_ containing records produced by mapping. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
 
 The HDFS client used to write files is configured according to the global HDFS settings. Depending on the HDFS client version in use, HDFS sinks can write to various locations:
 
@@ -1044,83 +1183,24 @@ HDFS Sink Property: ``replication``
       replication = 1
     }
 
-HDFS Sink Property: ``file_strategy.working_dir``
-"""""""""""""""""""""""""""""""""""""""""""""""""
-:Description:
-  Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
+Google Cloud Storage Sinks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  This directory has to exist when Divolte Collector starts; it will not be automatically created. The user that Divolte Collector is running as needs to have write permissions for this directory.
+A built in HTTP client is used to write files to Google Cloud Storage.
+
+Google Cloud Storage Sink Property: ``bucket``
+""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The Google Cloud Storage bucket name to write the files to. The configured directories in the file strategy for this sink will be relative to the root of this bucket.
 :Default:
-  :file:`/tmp`
+  <none>
 :Example:
 
   .. code-block:: none
 
     divolte.sinks.a_sink {
-      type = hdfs
-      file_strategy.working_dir = /webdata/inflight
-    }
-
-HDFS Sink Property: ``file_strategy.publish_dir``
-"""""""""""""""""""""""""""""""""""""""""""""""""
-:Description:
-  Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
-
-  This directory has to exist when Divolte Collector starts; it will not be automatically created. The user that Divolte Collector is running as needs to have write permissions for this directory.
-:Default:
-  :file:`/tmp`
-:Example:
-
-  .. code-block:: none
-
-    divolte.sinks.a_sink {
-      type = hdfs
-      file_strategy.publish_dir = /webdata/published
-    }
-
-HDFS Sink Property: ``file_strategy.roll_every``
-""""""""""""""""""""""""""""""""""""""""""""""""
-:Description:
-  Roll over files on HDFS after this amount of time. (If the working file doesn't contain any records it will be discarded.)
-:Default:
-  1 hour
-:Example:
-
-  .. code-block:: none
-
-    divolte.sinks.a_sink {
-      type = hdfs
-      file_strategy.roll_every = 15 minutes
-    }
-
-HDFS Sink Property: ``file_strategy.sync_file_after_records``
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-:Description:
-  The maximum number of records that should be written to the working file since the last flush before flushing again. Flushing is performed by issuing a :code:`hsync()` call to flush HDFS data.
-:Default:
-  1000
-:Example:
-
-  .. code-block:: none
-
-    divolte.sinks.a_sink {
-      type = hdfs
-      file_strategy.sync_file_after_records = 100
-    }
-
-HDFS Sink Property: ``file_strategy.sync_file_after_duration``
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-:Description:
-  The maximum time that may elapse after a record is written to the working file before it is flushed. Flushing is performed by issuing a :code:`hsync()` call to flush HDFS data.
-:Default:
-  30 seconds
-:Example:
-
-  .. code-block:: none
-
-    divolte.sinks.a_sink {
-      type = hdfs
-      file_strategy.sync_file_after_duration = 10 seconds
+      type = gcs
+      bucket = my_organisation_web_data
     }
 
 Kafka Sinks

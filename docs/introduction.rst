@@ -120,4 +120,4 @@ Divolte Collector is written in pure Java and runs on any OS that supports the l
 
 .. note::
 
-  Divolte Collector can be configured to send data to either HDFS or Kafka or both. It's not required to use both. When running locally for testing, it can also write to the local file system.
+  Divolte Collector can be configured to send data to either HDFS, Google Cloud Storage or Kafka (or any combination of these). When running locally for testing, it can also write to the local file system.
