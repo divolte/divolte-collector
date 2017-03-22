@@ -23,7 +23,7 @@ public @interface SourceAndSinkNamesCannotCollide {
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 
-    public static class Validator implements ConstraintValidator<SourceAndSinkNamesCannotCollide, DivolteConfiguration> {
+    class Validator implements ConstraintValidator<SourceAndSinkNamesCannotCollide, DivolteConfiguration> {
         @Override
         public void initialize(final SourceAndSinkNamesCannotCollide constraintAnnotation) {
         }

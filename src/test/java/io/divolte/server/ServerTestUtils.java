@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ServerTestUtils {
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
+    private static final String LOOPBACK = "127.0.0.1";
     /*
      * List of ports to cycle through.
      *
@@ -143,7 +145,7 @@ public final class ServerTestUtils {
                     throw new UncheckedIOException("Unable to determine external IP address", e);
                 }
             } else {
-                bindAddress = "127.0.0.1";
+                bindAddress = LOOPBACK;
             }
             return bindAddress;
         }
