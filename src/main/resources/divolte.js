@@ -28,6 +28,8 @@ var PARTY_ID_TIMEOUT_SECONDS = 2 * 365 * 24 * 60 * 60;
 var SESSION_COOKIE_NAME = '_dvs';
 /** @define {number} */
 var SESSION_ID_TIMEOUT_SECONDS = 30 * 60;
+/** @define {number} */
+var EVENT_TIMEOUT_SECONDS = 1.0;
 /** @define {string} */
 var COOKIE_DOMAIN = '';
 /** @define {boolean} */
@@ -633,6 +635,33 @@ var AUTO_PAGE_VIEW_EVENT = true;
   }();
 
   /**
+   * Utility function for invoking a callback after a specific timeout if it
+   * hasn't already been invoked.
+   *
+   * @param {!function(): undefined} callback
+   *        the function to invoke after the timout if it hasn't already been.
+   * @return {!function(): undefined}
+   *         a function to be used as callback instead of the wrapped function.
+   */
+  var withTimeout = function(callback) {
+    var calledAlready = false;
+    var timerHandle = setTimeout(function() {
+      if (!calledAlready) {
+        calledAlready = true;
+        log("Timeout waiting for event callback; invoking anyway.", this, arguments);
+        callback.apply(this, arguments);
+      }
+    }, EVENT_TIMEOUT_SECONDS * 1000);
+    return function() {
+      if (!calledAlready) {
+        calledAlready = true;
+        clearTimeout(timerHandle);
+        callback.apply(this, arguments);
+      }
+    };
+  };
+
+  /**
    * A signal queue.
    * This can hold a list of the signal events that are pending.
    * If a signal event is currently underway, it is always the
@@ -670,9 +699,11 @@ var AUTO_PAGE_VIEW_EVENT = true;
     var signalQueue = this;
     var image = new Image(1,1);
     var firstPendingEvent = signalQueue.queue[0];
-    var completionHandler = function() {
+    var completionHandler = withTimeout(function() {
+      // We can't use onFirstPendingEventCompleted directly because 'this' isn't bound correctly.
+      // (And sadly, function.bind() isn't available universally.)
       signalQueue.onFirstPendingEventCompleted();
-    };
+    });
     image.onload = completionHandler;
     image.onerror = !LOGGING ? completionHandler : function(event) {
       warn("Error delivering event", firstPendingEvent);
