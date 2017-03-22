@@ -66,7 +66,8 @@ public class MincodeParserSamplesTest {
 
     private MincodeFactory factory;
 
-    public MincodeParserSamplesTest(final String sampleTitle,
+    public MincodeParserSamplesTest(@SuppressWarnings("unused")
+                                    final String sampleTitle,
                                     final JsonNode sampleJson,
                                     final String sampleMincode) {
         this.sampleJson = Objects.requireNonNull(sampleJson);

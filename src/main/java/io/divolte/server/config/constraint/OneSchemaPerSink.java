@@ -23,7 +23,7 @@ public @interface OneSchemaPerSink {
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 
-    public static class Validator implements ConstraintValidator<OneSchemaPerSink, DivolteConfiguration> {
+    class Validator implements ConstraintValidator<OneSchemaPerSink, DivolteConfiguration> {
         @Override
         public void initialize(final OneSchemaPerSink constraintAnnotation) {
             // Nothing needed here.

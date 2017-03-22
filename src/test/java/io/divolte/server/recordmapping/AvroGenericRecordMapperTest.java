@@ -105,7 +105,8 @@ public class AvroGenericRecordMapperTest {
 
     private AvroGenericRecordMapper reader;
 
-    public AvroGenericRecordMapperTest(final String sampleTitle,
+    public AvroGenericRecordMapperTest(@SuppressWarnings("unused")
+                                       final String sampleTitle,
                                        final Fixture testFixture) {
         this.testFixture = Objects.requireNonNull(testFixture);
     }
