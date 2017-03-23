@@ -697,7 +697,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    */
   SignalQueue.prototype.enqueue = function(item) {
     var pendingEvents = this.queue;
-    log("Queueing item for processing; " + pendingEvents.length + " already pending.", item);
+    log("Queueing item for processing; " + pendingEvents.length + " currently pending.", item);
     pendingEvents.push(item);
     if (1 === pendingEvents.length) {
       this.processNextItem();
