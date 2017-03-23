@@ -795,7 +795,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * This function can serialize anything that JSON.stringify() can,
    * and honours toJSON() semantics. It does not, however, use the JSON
    * encoding to serialize the value.
-   * @param {!*} value The value to serialize.
+   * @param {*} value The value to serialize.
    * @return {String} a string that represents the serialized value.
    */
   var mincode = function() {
@@ -857,6 +857,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @private
      */
     Mincoder.prototype.endObject = function() {
+      this.pendingFieldName = null;
       this.addRecord(')');
     };
     /**
@@ -943,7 +944,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
           this.addRecord('j', (jEncoding1.length < jEncoding2.length ? jEncoding1 : jEncoding2) + '!');
         }
       } else {
-        this.encode(null);
+        this.encode(null, false);
       }
     };
     /**
@@ -969,7 +970,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     Mincoder.prototype.encodeArray = function(a) {
       this.startArray();
       for (var i = 0; i < a.length; ++i) {
-        this.encode(a[i]);
+        this.encode(a[i], true);
       }
       this.endArray();
     };
@@ -1003,7 +1004,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
                   pad(2,d.getUTCSeconds()) + '.' +
                   pad(3,d.getUTCMilliseconds()) + 'Z'
                 : null;
-        this.encode(rendered);
+        this.encode(rendered, false);
       }
     }();
     /**
@@ -1016,7 +1017,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
       for (var k in o) {
         if (Object.prototype.hasOwnProperty.call(o, k)) {
           this.setNextFieldName(k);
-          this.encode(o[k]);
+          this.encode(o[k], false);
         }
       }
       this.endObject();
@@ -1024,13 +1025,15 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode an object.
      * Note that arrays, dates and null are all objects.
-     * @param {!Object} o the object to encode as a series of records.
+     * @param {Object} o the object to encode as a series of records.
+     * @param {boolean} replaceUndefinedWithNull
+     *                  true if undefined values should be replaced with null, or false if they should be elided.
      */
-    Mincoder.prototype.encodeObject = function(o) {
+    Mincoder.prototype.encodeObject = function(o, replaceUndefinedWithNull) {
       if (o === null) {
         this.encodeNull();
       } else if (typeof o.toJSON === 'function') {
-        this.encode(o.toJSON())
+        this.encode(o.toJSON(), replaceUndefinedWithNull)
       } else {
         switch (Object.prototype.toString.call(o)) {
           case '[object Array]':
@@ -1046,9 +1049,11 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
     /**
      * Encode a value as a series of records.
-     * @param {!*} value the value to encode.
+     * @param {*} value the value to encode.
+     * @param {boolean} replaceUndefinedWithNull
+     *                  true if undefined values should be replaced with null, or false if they should be elided.
      */
-    Mincoder.prototype.encode = function(value) {
+    Mincoder.prototype.encode = function(value,replaceUndefinedWithNull) {
       switch (typeof value) {
         case 'string':
           this.encodeString(value);
@@ -1060,7 +1065,12 @@ var AUTO_PAGE_VIEW_EVENT = true;
           this.encodeBoolean(value);
           break;
         case 'object':
-          this.encodeObject(/**@type !Object*/(value));
+          this.encodeObject(/**@type !Object*/(value), replaceUndefinedWithNull);
+          break;
+        case 'undefined':
+          if (replaceUndefinedWithNull) {
+            this.encode(null, false);
+          }
           break;
         default:
           throw "Cannot encode of type: " + typeof value;
@@ -1068,8 +1078,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
     Mincoder.mincode = function(value) {
       var mincoder = new Mincoder();
-      mincoder.encode(value);
-      return mincoder.buffer;
+      mincoder.encode(value, false);
+      var result = mincoder.buffer;
+      return result !== '' ? result : undefined;
     };
     return Mincoder.mincode;
   }();
