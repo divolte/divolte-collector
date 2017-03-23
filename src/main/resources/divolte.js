@@ -96,7 +96,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
         var scriptElement = scriptElements.item(i);
         var scriptUrl = scriptElement.src;
         if (scriptPattern.test(scriptUrl)) {
-          if ('undefined' == typeof url) {
+          if ('undefined' === typeof url) {
             url = scriptUrl;
           } else {
             couldNotInitialize('multiple script elements found with src="…/' + SCRIPT_NAME + '"');
@@ -687,7 +687,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
   SignalQueue.prototype.enqueue = function(event) {
     var pendingEvents = this.queue;
     pendingEvents.push(event);
-    if (1 == pendingEvents.length) {
+    if (1 === pendingEvents.length) {
       this.deliverFirstPendingEvent();
     }
   };
@@ -935,7 +935,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
             jEncoding2 = String(n);
         // We prefer a 'd' record to 'j' even if equal length because they're
         // more efficient to process on the server.
-        if (null != dEncoding &&
+        if (null !== dEncoding &&
             dEncoding.length <= jEncoding1.length &&
             dEncoding.length <= jEncoding2.length) {
           this.addRecord('d', dEncoding + '!');
