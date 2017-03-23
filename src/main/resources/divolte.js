@@ -700,7 +700,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     log("Queueing item for processing; " + pendingEvents.length + " already pending.", item);
     pendingEvents.push(item);
     if (1 === pendingEvents.length) {
-      this.deliverFirstPendingEvent(item);
+      this.processNextItem();
     }
   };
   /**
