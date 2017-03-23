@@ -283,7 +283,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
-        assertEquals("supercalifragilisticexpialidocious", eventData.browserEventData.get().pageViewId);
+        assertEquals(Optional.of("supercalifragilisticexpialidocious"), eventData.browserEventData.map(bed -> bed.pageViewId));
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
     }
 
@@ -296,7 +296,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
-        assertEquals("pageView", eventData.eventType.get());
+        assertEquals(Optional.of("pageView"), eventData.eventType);
     }
 
     @Test
@@ -307,6 +307,6 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
-        assertEquals("pageView", eventData.eventType.get());
+        assertEquals(Optional.of("pageView"), eventData.eventType);
     }
 }

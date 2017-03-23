@@ -121,7 +121,7 @@ public class DslRecordMapperTest {
 
         assertEquals(event.partyId.value, record.get("client"));
         assertEquals(event.sessionId.value, record.get("session"));
-        assertEquals(event.browserEventData.get().pageViewId, record.get("pageview"));
+        assertEquals(event.browserEventData.map(bed -> bed.pageViewId), Optional.of(record.get("pageview")));
         assertEquals(event.eventId, record.get("event"));
         assertEquals(1018, record.get("viewportWidth"));
         assertEquals(1018, record.get("viewportHeight"));

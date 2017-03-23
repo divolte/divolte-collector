@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 
@@ -140,7 +141,7 @@ public class RequestChecksumTest {
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
         assertFalse(eventData.corruptEvent);
-        assertEquals("ụñ⚕©ºḌℨ", eventData.eventType.get());
+        assertEquals(Optional.of("ụñ⚕©ºḌℨ"), eventData.eventType);
     }
 
     @Test
@@ -151,8 +152,7 @@ public class RequestChecksumTest {
         Preconditions.checkState(null != server);
         final EventPayload payload = server.waitForEvent();
         // The first request should be missing, and we should now have the sentinel event.
-        final String eventType = payload.event.eventType.get();
-        assertEquals("sentinelEvent", eventType);
+        assertEquals(Optional.of("sentinelEvent"), payload.event.eventType);
     }
 
     private void request(final String queryString) throws IOException {

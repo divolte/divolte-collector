@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,6 +30,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -66,7 +68,8 @@ public class ServerSinkSourceConfigurationTest {
             + "x=si9804";
 
     private final Set<Path> tempDirectories = new HashSet<>();
-    private Optional<TestServer> testServer = Optional.empty();
+    @Nullable
+    private TestServer testServer;
 
     private void startServer(final String configResource,
                              final ImmutableMap<String,Object> extraProperties) {
@@ -83,12 +86,14 @@ public class ServerSinkSourceConfigurationTest {
 
     private void startServer(final Supplier<TestServer> supplier) {
         stopServer();
-        testServer = Optional.of(supplier.get());
+        testServer = supplier.get();
     }
 
     public void stopServer() {
-        testServer.ifPresent(testServer -> testServer.server.shutdown());
-        testServer = Optional.empty();
+        if (null != testServer) {
+            testServer.server.shutdown();
+            testServer = null;
+        }
     }
 
     public Path createTempDirectory() throws IOException {
@@ -111,7 +116,8 @@ public class ServerSinkSourceConfigurationTest {
     }
 
     private void request(final String sourcePrefix, final int expectedResponseCode) throws IOException {
-        final URL url = new URL(String.format(BROWSER_EVENT_URL_TEMPLATE, testServer.get().host, testServer.get().port, sourcePrefix));
+        Preconditions.checkState(null != testServer);
+        final URL url = new URL(String.format(BROWSER_EVENT_URL_TEMPLATE, testServer.host, testServer.port, sourcePrefix));
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         assertEquals(expectedResponseCode, conn.getResponseCode());
     }
@@ -157,16 +163,18 @@ public class ServerSinkSourceConfigurationTest {
     public void shouldRegisterDefaultBrowserSource() throws IOException, InterruptedException {
         // Test the default browser source that should be present by default.
         startServer();
+        Preconditions.checkState(null != testServer);
         request();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
     }
 
     @Test
     public void shouldRegisterExplicitSourceOnly() throws IOException, InterruptedException {
         // Test that if an explicit source is supplied, the builtin defaults are not present.
         startServer("browser-source-explicit.conf");
+        Preconditions.checkState(null != testServer);
         request("/a-prefix");
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
         request("", 404);
     }
 
@@ -174,24 +182,27 @@ public class ServerSinkSourceConfigurationTest {
     public void shouldSupportLongSourcePaths() throws IOException, InterruptedException {
         // Test that the browser sources work with different types of path.
         startServer("browser-source-long-prefix.conf");
+        Preconditions.checkState(null != testServer);
         request("/a/multi/component/prefix");
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
     }
 
     @Test
     public void shouldSupportMultipleBrowserSources() throws IOException, InterruptedException {
         // Test that multiple browser sources are supported.
         startServer("browser-source-multiple.conf");
+        Preconditions.checkState(null != testServer);
         request("/path1");
         request("/path2");
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
     }
 
     @Test
     public void shouldSupportUnusedSource() throws IOException {
         // Test that an unused source is still reachable.
         startServer("browser-source-unused.conf");
+        Preconditions.checkState(null != testServer);
         request("/unused");
     }
 
@@ -199,9 +210,10 @@ public class ServerSinkSourceConfigurationTest {
     public void shouldSupportDefaultSourceMappingSink() throws IOException, InterruptedException {
         // Test that with an out-of-the-box default configuration the default source, mapping and sink are present.
         startServer(TestServer::createTestServerWithDefaultNonTestConfiguration);
+        Preconditions.checkState(null != testServer);
         final AvroFileLocator avroFileLocator = new AvroFileLocator(Paths.get("/tmp"));
         request();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
         // Stopping the server flushes the HDFS files.
         stopServer();
         // Now we can check the number of events that turned up in new files in /tmp.
@@ -218,9 +230,10 @@ public class ServerSinkSourceConfigurationTest {
                 "divolte.sinks.test-hdfs-sink.file_strategy.working_dir", avroDirectory.toString(),
                 "divolte.sinks.test-hdfs-sink.file_strategy.publish_dir", avroDirectory.toString()
         ));
+        Preconditions.checkState(null != testServer);
         final AvroFileLocator explicitAvroFileLocator = new AvroFileLocator(avroDirectory);
         request();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
         stopServer();
         // Now we can check:
@@ -244,10 +257,11 @@ public class ServerSinkSourceConfigurationTest {
                 "divolte.sinks.test-hdfs-sink-2.file_strategy.working_dir", avroDirectory2.toString(),
                 "divolte.sinks.test-hdfs-sink-2.file_strategy.publish_dir", avroDirectory2.toString()
         ));
+        Preconditions.checkState(null != testServer);
         final AvroFileLocator explicitAvroFileLocator1 = new AvroFileLocator(avroDirectory1);
         final AvroFileLocator explicitAvroFileLocator2 = new AvroFileLocator(avroDirectory2);
         request();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
         stopServer();
         // Now we can check:
@@ -272,14 +286,15 @@ public class ServerSinkSourceConfigurationTest {
                 "divolte.sinks.sink-2.file_strategy.working_dir", avroDirectory2.toString(),
                 "divolte.sinks.sink-2.file_strategy.publish_dir", avroDirectory2.toString()
         ));
+        Preconditions.checkState(null != testServer);
         final AvroFileLocator explicitAvroFileLocator1 = new AvroFileLocator(avroDirectory1);
         final AvroFileLocator explicitAvroFileLocator2 = new AvroFileLocator(avroDirectory2);
         request("/source-1");
         request("/source-2");
         request("/source-2");
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
         stopServer();
         // Now we can check:
@@ -302,11 +317,12 @@ public class ServerSinkSourceConfigurationTest {
                 "divolte.sinks.sink-2.file_strategy.working_dir", avroDirectory2.toString(),
                 "divolte.sinks.sink-2.file_strategy.publish_dir", avroDirectory2.toString()
         ));
+        Preconditions.checkState(null != testServer);
         final AvroFileLocator explicitAvroFileLocator1 = new AvroFileLocator(avroDirectory1);
         final AvroFileLocator explicitAvroFileLocator2 = new AvroFileLocator(avroDirectory2);
         request();
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
         stopServer();
         // Now we can check:
@@ -325,11 +341,12 @@ public class ServerSinkSourceConfigurationTest {
                 "divolte.sinks.only-sink.file_strategy.working_dir", avroDirectory.toString(),
                 "divolte.sinks.only-sink.file_strategy.publish_dir", avroDirectory.toString()
         ));
+        Preconditions.checkState(null != testServer);
         final AvroFileLocator explicitAvroFileLocator = new AvroFileLocator(avroDirectory);
         request("/source-1");
         request("/source-2");
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
         stopServer();
         // Now we can check:
@@ -358,21 +375,22 @@ public class ServerSinkSourceConfigurationTest {
                 .put("divolte.sinks.sink-4.file_strategy.publish_dir", avroDirectory4.toString())
                 .build()
         );
+        Preconditions.checkState(null != testServer);
         final AvroFileLocator explicitAvroFileLocator1 = new AvroFileLocator(avroDirectory1);
         final AvroFileLocator explicitAvroFileLocator2 = new AvroFileLocator(avroDirectory2);
         final AvroFileLocator explicitAvroFileLocator3 = new AvroFileLocator(avroDirectory3);
         final AvroFileLocator explicitAvroFileLocator4 = new AvroFileLocator(avroDirectory4);
         request("/source-1");
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
         request("/source-2");
-        testServer.get().waitForEvent();
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
+        testServer.waitForEvent();
         request("/source-3");
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
         request("/source-4");
-        testServer.get().waitForEvent();
+        testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
         stopServer();
         // Now we can check:
