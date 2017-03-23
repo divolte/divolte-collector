@@ -114,9 +114,7 @@ public class HdfsFlusherTest {
         processRecords();
 
         assertTrue(Files.walk(tempInflightDir)
-             .filter((p) -> p.toString().endsWith(".avro.partial"))
-             .findFirst()
-             .isPresent());
+             .anyMatch(p -> p.toString().endsWith(".avro.partial")));
     }
 
     @Test
