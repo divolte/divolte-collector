@@ -236,7 +236,22 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final Optional<String> customEventParameters =
                 eventData.eventParametersProducer.get().map(Object::toString);
         assertTrue(customEventParameters.isPresent());
-        assertEquals("{\"a\":{},\"b\":\"c\",\"d\":{\"a\":[],\"b\":\"g\"},\"e\":[\"1\",\"2\"],\"f\":42,\"g\":53.2,\"h\":-37,\"i\":-7.83E-9,\"j\":true,\"k\":false,\"l\":null,\"m\":\"2015-06-13T15:49:33.002Z\",\"n\":{},\"o\":[{},{\"a\":\"b\"},{\"c\":\"d\"}],\"p\":{}}",
+        assertEquals("{\"a\":{}," +
+                     "\"b\":\"c\"," +
+                     "\"d\":{\"a\":[],\"b\":\"g\"}," +
+                     "\"e\":[\"1\",\"2\"]," +
+                     "\"f\":42," +
+                     "\"g\":53.2," +
+                     "\"h\":-37," +
+                     "\"i\":-7.83E-9," +
+                     "\"j\":true," +
+                     "\"k\":false," +
+                     "\"l\":null," +
+                     "\"m\":\"2015-06-13T15:49:33.002Z\"," +
+                     "\"n\":{}," +
+                     "\"o\":[{},{\"a\":\"b\"},{\"c\":\"d\"}]," +
+                     "\"p\":[null,null,{\"a\":\"b\"},\"custom\",null,{}]," +
+                     "\"q\":{}}",
                      customEventParameters.get());
     }
 
