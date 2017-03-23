@@ -709,7 +709,6 @@ var AUTO_PAGE_VIEW_EVENT = true;
       warn("Error delivering event", firstPendingEvent);
       completionHandler();
     };
-    // TODO: Implement a timeout for when neither onload or onerror are invoked.
     image.src = divolteUrl + EVENT_SUFFIX + '?' + firstPendingEvent;
   };
   /**
