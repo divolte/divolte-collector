@@ -122,6 +122,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     private int uniquePageViewIdsForSeriesOfActions(final Runnable[] actions) {
+        Preconditions.checkState(null != server);
         logger.info("Starting sequence of {} browser actions.", actions.length);
         return IntStream.range(0, actions.length)
                .mapToObj((index) -> {
