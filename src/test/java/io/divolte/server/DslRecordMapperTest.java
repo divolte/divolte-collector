@@ -557,7 +557,7 @@ public class DslRecordMapperTest {
     @After
     public void shutdown() throws IOException {
         if (server != null) {
-            server.server.shutdown();
+            server.shutdown();
         }
         if (mappingFile != null) {
             Files.delete(mappingFile.toPath());

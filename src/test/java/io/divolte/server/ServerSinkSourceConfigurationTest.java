@@ -85,13 +85,13 @@ public class ServerSinkSourceConfigurationTest {
     }
 
     private void startServer(final Supplier<TestServer> supplier) {
-        stopServer();
+        stopServer(false);
         testServer = supplier.get();
     }
 
-    public void stopServer() {
+    public void stopServer(final boolean waitForShutdown) {
         if (null != testServer) {
-            testServer.server.shutdown();
+            testServer.shutdown(waitForShutdown);
             testServer = null;
         }
     }
@@ -215,7 +215,7 @@ public class ServerSinkSourceConfigurationTest {
         request();
         testServer.waitForEvent();
         // Stopping the server flushes the HDFS files.
-        stopServer();
+        stopServer(true);
         // Now we can check the number of events that turned up in new files in /tmp.
         assertEquals("Wrong number of new events logged to /tmp",
                      1, avroFileLocator.listNewRecords().count());
@@ -235,7 +235,7 @@ public class ServerSinkSourceConfigurationTest {
         request();
         testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
-        stopServer();
+        stopServer(true);
         // Now we can check:
         //   - The default location (/tmp) shouldn't have anything new.
         //   - Our explicit location should have a single record.
@@ -263,7 +263,7 @@ public class ServerSinkSourceConfigurationTest {
         request();
         testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
-        stopServer();
+        stopServer(true);
         // Now we can check:
         //   - The default location (/tmp) shouldn't have anything new.
         //   - Our locations should both have a single record.
@@ -296,7 +296,7 @@ public class ServerSinkSourceConfigurationTest {
         testServer.waitForEvent();
         testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
-        stopServer();
+        stopServer(true);
         // Now we can check:
         //   - One source should have a single event.
         //   - The other should have a two events.
@@ -324,7 +324,7 @@ public class ServerSinkSourceConfigurationTest {
         testServer.waitForEvent();
         testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
-        stopServer();
+        stopServer(true);
         // Now we can check:
         //   - Both sinks should have a single event.
         assertEquals("Wrong number of new events logged in first location",
@@ -348,7 +348,7 @@ public class ServerSinkSourceConfigurationTest {
         testServer.waitForEvent();
         testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
-        stopServer();
+        stopServer(true);
         // Now we can check:
         //   - The single location should have received both events.
         assertEquals("Wrong number of new events logged",
@@ -392,7 +392,7 @@ public class ServerSinkSourceConfigurationTest {
         request("/source-4");
         testServer.waitForEvent();
         // Stopping the server flushes any HDFS files.
-        stopServer();
+        stopServer(true);
         // Now we can check:
         //   - Each sink should have a specific number of events in it.
         assertEquals("Wrong number of new events logged in first location",
@@ -407,7 +407,7 @@ public class ServerSinkSourceConfigurationTest {
 
     @After
     public void tearDown() throws IOException {
-        stopServer();
+        stopServer(false);
         cleanupTempDirectories();
     }
 

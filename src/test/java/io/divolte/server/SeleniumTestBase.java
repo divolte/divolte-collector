@@ -112,7 +112,7 @@ public abstract class SeleniumTestBase {
                     driver = null;
                 }
                 if (null != server) {
-                    server.server.shutdown();
+                    server.shutdown();
                     server = null;
                 }
                 testResultHook = Optional.empty();

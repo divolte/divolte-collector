@@ -102,7 +102,7 @@ public final class ServerTestUtils {
         final Config config;
         final String host;
         final int port;
-        final Server server;
+        private final Server server;
         final BlockingQueue<EventPayload> events;
 
         public TestServer() {
@@ -161,6 +161,20 @@ public final class ServerTestUtils {
 
         public boolean eventsRemaining() {
             return !events.isEmpty();
+        }
+
+        public void shutdown() {
+            shutdown(false);
+        }
+
+        public void shutdown(final boolean waitForShutdown) {
+            // The server can take a little while to shut down, so we do this asynchronously if possible.
+            // (This is harmless: new servers will listen on a different port.)
+            if (waitForShutdown) {
+                server.shutdown();
+            } else {
+                new Thread(server::shutdown).start();
+            }
         }
     }
 }
