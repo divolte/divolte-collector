@@ -89,20 +89,20 @@ public class ServerSinkSourceConfigurationTest {
         testServer = supplier.get();
     }
 
-    public void stopServer(final boolean waitForShutdown) {
+    private void stopServer(final boolean waitForShutdown) {
         if (null != testServer) {
             testServer.shutdown(waitForShutdown);
             testServer = null;
         }
     }
 
-    public Path createTempDirectory() throws IOException {
+    private Path createTempDirectory() throws IOException {
         final Path newTempDirectory = Files.createTempDirectory("divolte-test");
         tempDirectories.add(newTempDirectory);
         return newTempDirectory;
     }
 
-    public void cleanupTempDirectories() {
+    private void cleanupTempDirectories() {
         tempDirectories.forEach(ServerSinkSourceConfigurationTest::deleteRecursively);
         tempDirectories.clear();
     }
