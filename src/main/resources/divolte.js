@@ -638,9 +638,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * Utility function for invoking a callback after a specific timeout if it
    * hasn't already been invoked.
    *
-   * @param {!function(): undefined} callback
+   * @param {function(): undefined} callback
    *        the function to invoke after the timout if it hasn't already been.
-   * @return {!function(): undefined}
+   * @return {function(): undefined}
    *         a function to be used as callback instead of the wrapped function.
    */
   var withTimeout = function(callback) {
@@ -884,7 +884,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * Set the name of the property that the next record will be assigned
      * to.
      * @private
-     * @param {!string} fieldName the property name.
+     * @param {string} fieldName the property name.
      */
     Mincoder.prototype.setNextFieldName = function(fieldName) {
       this.pendingFieldName = fieldName;
@@ -892,7 +892,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Add a record to the buffer.
      * @private
-     * @param {!string} recordType the type of the record.
+     * @param {string} recordType the type of the record.
      * @param {string=} payload    the (optional) payload for this record.
      */
     Mincoder.prototype.addRecord = function(recordType, payload) {
@@ -908,7 +908,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
     /**
      * Encode a variable-length string value.
-     * @param {!string} s the string to encode.
+     * @param {string} s the string to encode.
      */
     Mincoder.escapeString = function() {
       /**
@@ -924,7 +924,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a string.
      * @private
-     * @param {!string} s the string to encode as a record.
+     * @param {string} s the string to encode as a record.
      */
     Mincoder.prototype.encodeString = function(s) {
       this.addRecord('s', Mincoder.escapeString(s) + '!');
@@ -932,7 +932,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a number.
      * @private
-     * @param {!number} n the number to encode as a record.
+     * @param {number} n the number to encode as a record.
      */
     Mincoder.prototype.encodeNumber = function(n) {
       if (isFinite(n)) {
@@ -956,7 +956,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a boolean.
      * @private
-     * @param b {!boolean} b the boolean to encode as a record.
+     * @param b {boolean} b the boolean to encode as a record.
      */
     Mincoder.prototype.encodeBoolean = function(b) {
       this.addRecord(b ? 't' : 'f');
@@ -989,9 +989,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
     Mincoder.prototype.encodeDate = function() {
       /**
        * Zero-pad a number.
-       * @param {!number} len the length to pad to.
-       * @param {!number} n   the number to
-       * @returns {!string} the number, zero-padded to the required length
+       * @param {number} len the length to pad to.
+       * @param {number} n   the number to
+       * @returns {string} the number, zero-padded to the required length
        */
       var pad = function(len, n) {
             var result = n.toString();
@@ -1098,11 +1098,11 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * server. This function returns immediately, the event itself is logged
    * asynchronously.
    *
-   * @param {!string} type The type of event to log.
+   * @param {string} type The type of event to log.
    * @param {Object=} [customParameters]
    *    Optional object containing custom parameters to log alongside the event.
    *
-   * @return {string} the unique event identifier for this event.
+   * @return {?string} the unique event identifier for this event.
    */
   var signal = function(type, customParameters) {
     // Only proceed if we have an event type.
@@ -1204,7 +1204,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
       signalQueue.enqueue(queryString);
     } else {
       warn("Ignoring event with no type.");
-      eventId = undefined;
+      eventId = null;
     }
     return eventId;
   };
@@ -1214,11 +1214,11 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * @const
    * @type {{partyId: string,
    *         sessionId: string,
-   *         pageViewId: string,
+   *         pageViewId: ?string,
    *         isNewPartyId: boolean,
    *         isFirstInSession: boolean,
    *         isServerPageView: boolean,
-   *         signal: function(!string,Object=): string}}
+   *         signal: function(string,Object=): ?string}}
    */
   var divolte = {
     'partyId':          partyId,
