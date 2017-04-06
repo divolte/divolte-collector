@@ -611,7 +611,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     sessionId = generateId(true);
   }
   if (isServerPageView) {
-    log("Using server-provided pageview identifier.")
+    log("Using server-provided pageview identifier.", pageViewId);
   } else {
     pageViewId = generateId(false)
   }
@@ -688,6 +688,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     var pendingEvents = this.queue;
     pendingEvents.push(event);
     if (1 === pendingEvents.length) {
+      log("No pending events; delivering immediately.", event);
       this.deliverFirstPendingEvent();
     }
   };
@@ -699,6 +700,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     var signalQueue = this;
     var image = new Image(1,1);
     var firstPendingEvent = signalQueue.queue[0];
+    log("Delivering pending event.", firstPendingEvent);
     var completionHandler = withTimeout(function() {
       // We can't use onFirstPendingEventCompleted directly because 'this' isn't bound correctly.
       // (And sadly, function.bind() isn't available universally.)
@@ -716,12 +718,17 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * Handler for when the first event in the queue has been completed.
    */
   SignalQueue.prototype.onFirstPendingEventCompleted = function() {
+    log("Marking pending event as complete.");
     // Delete the first event from the queue.
     var pendingEvents = this.queue;
     pendingEvents.shift();
     // If there are still pending events, schedule the next.
-    if (0 < pendingEvents.length) {
+    var remainingEvents = pendingEvents.length;
+    if (0 < remainingEvents) {
+      log("Processing next event; remaining count:", remainingEvents);
       this.deliverFirstPendingEvent();
+    } else {
+      log("All pending events have been delivered.");
     }
   };
 
