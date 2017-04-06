@@ -32,20 +32,21 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.logging.Logs;
 import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Optional;
+import java.time.Instant;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -55,6 +56,8 @@ import static io.divolte.server.BrowserLists.*;
 @RunWith(ConcurrentParameterized.class)
 @ParametersAreNonnullByDefault
 public abstract class SeleniumTestBase {
+    private static final Logger logger = LoggerFactory.getLogger(SeleniumTestBase.class);
+
     public static final String DRIVER_ENV_VAR = "SELENIUM_DRIVER";
     public static final String PHANTOMJS_DRIVER = "phantomjs";
     public static final String CHROME_DRIVER = "chrome";
@@ -127,6 +130,28 @@ public abstract class SeleniumTestBase {
             protected void failed(final Throwable e, final Description description) {
                 final TestResult failureType = e instanceof AssumptionViolatedException ? TestResult.Skipped : TestResult.Failed;
                 testResultHook.ifPresent(callback -> callback.accept(failureType));
+                fetchSeleniumLogs();
+            }
+            private void fetchSeleniumLogs() {
+                if (null != driver) {
+                    final Logs logs = driver.manage().logs();
+                    try {
+                        final Set<String> availableLogTypes = logs.getAvailableLogTypes();
+                        logger.info("Available log types from web driver: {}",  availableLogTypes);
+                        availableLogTypes.forEach(logType -> {
+                            logger.debug("Querying selenium {} logs...", logType);
+                            logs.get(logType).getAll()
+                                .forEach(logEntry ->
+                                    logger.info("{}: [{}] {}",
+                                                Instant.ofEpochMilli(logEntry.getTimestamp() * 1000),
+                                                logEntry.getLevel(),
+                                                logEntry.getMessage()));
+                        });
+                    } catch (final WebDriverException ignoredException) {
+                        // Not all browsers support this. Ignore the error.
+                        logger.warn("Selenium doesn't support fetching browser logs for this browser. Sorry.");
+                    }
+                }
             }
         });
 
@@ -156,10 +181,12 @@ public abstract class SeleniumTestBase {
             browserList = Collections.emptyList();
         } else if (SAUCE_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
             browserList = SAUCE_BROWSER_LIST;
-            System.out.println("Selenium test running on SauceLabs with these browsers:\n" + browserNameList(SAUCE_BROWSER_LIST));
+            logger.info("Selenium test running on SauceLabs with these browsers:\n{}",
+                        browserNameList(SAUCE_BROWSER_LIST));
         } else if (BS_DRIVER.equals(System.getenv().get(DRIVER_ENV_VAR))) {
             browserList = BS_BROWSER_LIST;
-            System.out.println("Selenium test running on BrowserStack with these browsers:\n" + browserNameList(BS_BROWSER_LIST));
+            logger.info("Selenium test running on BrowserStack with these browsers:\n{}",
+                        browserNameList(BS_BROWSER_LIST));
         } else {
             // Parameters are not used for non-sauce tests
             browserList = ImmutableList.of(new Object[] {

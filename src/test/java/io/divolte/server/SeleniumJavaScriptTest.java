@@ -75,7 +75,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldRegenerateIDsOnForwardBackNavigation() throws Exception {
+    public void shouldRegenerateIDsOnBackNavigation() throws Exception {
         doSetUp();
         Preconditions.checkState(null != driver && null != server);
 
@@ -83,14 +83,24 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final Runnable[] actions = {
                 () -> gotoPage(BASIC),
                 () -> gotoPage(BASIC_COPY),
+                driver.navigate()::back,
+        };
+        final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
+        assertEquals(actions.length, numberOfUniquePageViewIDs);
+    }
+
+    @Test
+    public void shouldRegenerateIDsOnForwardNavigation() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != driver && null != server);
+
+        // Navigate to the same page twice
+        final Runnable[] actions = {
                 () -> gotoPage(BASIC),
-                driver.navigate()::back,
-                driver.navigate()::back,
-                driver.navigate()::forward,
+                () -> gotoPage(BASIC_COPY),
                 driver.navigate()::back,
                 driver.navigate()::forward,
-                driver.navigate()::forward
-                };
+        };
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
         assertEquals(actions.length, numberOfUniquePageViewIDs);
     }

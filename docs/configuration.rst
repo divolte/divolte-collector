@@ -207,6 +207,22 @@ Property: ``divolte.global.server.serve_static_resources``
       serve_static_resources = false
     }
 
+Property: ``divolte.global.server.debug_requests``
+""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  When true Divolte Collector logs (with great verbosity) all HTTP requests and responses.
+  This is intended purely for development or debugging and should never be enabled on a
+  production system.
+:Default:
+  :code:`false`
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.server {
+      debug_requests = true
+    }
+
 Global Mapper Settings (``divolte.global.mapper``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section controls global settings related to the processing of incoming requests after they have been received by the server. Incoming requests for Divolte Collector are responded to as quickly as possible, with mapping and flushing occurring in the background.

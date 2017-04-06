@@ -611,13 +611,18 @@ var AUTO_PAGE_VIEW_EVENT = true;
     sessionId = generateId(true);
   }
   if (isServerPageView) {
-    log("Using server-provided pageview identifier.")
-  } else {
-    pageViewId = generateId(false)
+    log("Using server-provided pageview identifier.", pageViewId);
   }
 
-  info("Divolte party/session/pageview identifiers", [partyId, sessionId, pageViewId]);
+  info("Divolte party/session identifiers", partyId, sessionId);
 
+  /**
+   * A counter of the number of events that have been issued for this
+   * page view.
+   *
+   * @type {number}
+   */
+  var eventCounter = 0;
   /**
    * Generate an event identifier.
    * Note that the implementation requires that pageview identifiers also be unique.
@@ -627,20 +632,17 @@ var AUTO_PAGE_VIEW_EVENT = true;
   var generateEventId = function() {
     // These don't have to be globally unique. So we can leverage the pageview
     // id with a simple counter.
-    var counter = 0;
-    return function() {
-      var thisEventCounter = counter++;
-      return pageViewId + thisEventCounter.toString(16);
-    }
-  }();
+    var thisEventCounter = eventCounter++;
+    return pageViewId + thisEventCounter.toString(16);
+  };
 
   /**
    * Utility function for invoking a callback after a specific timeout if it
    * hasn't already been invoked.
    *
-   * @param {!function(): undefined} callback
+   * @param {function(): undefined} callback
    *        the function to invoke after the timout if it hasn't already been.
-   * @return {!function(): undefined}
+   * @return {function(): undefined}
    *         a function to be used as callback instead of the wrapped function.
    */
   var withTimeout = function(callback) {
@@ -667,7 +669,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * If a signal event is currently underway, it is always the
    * first element in the queue.
    *
-   * Functions can interspersed with events in the queue. When
+   * Functions can be interspersed with events in the queue. When
    * a function is encountered it is invoked, and then removed
    * from the queue when the function returns.
    *
@@ -700,6 +702,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     log("Queueing item for processing; " + pendingEvents.length + " currently pending.", item);
     pendingEvents.push(item);
     if (1 === pendingEvents.length) {
+      log("No pending items; processing immediately.", item);
       this.processNextItem();
     }
   };
@@ -732,6 +735,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
   SignalQueue.prototype.deliverFirstPendingEvent = function(firstPendingEvent) {
     var signalQueue = this;
     var image = new Image(1,1);
+    log("Delivering pending event.", firstPendingEvent);
     var completionHandler = withTimeout(function() {
       // We can't use onFirstPendingItemCompleted directly because 'this' isn't bound correctly.
       // (And sadly, function.bind() isn't available universally.)
@@ -759,12 +763,17 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * Handler for when the first item in the queue has been completed.
    */
   SignalQueue.prototype.onFirstPendingItemCompleted = function() {
+    log("Marking pending item as complete.");
     // Delete the first event from the queue.
     var pendingEvents = this.queue;
     pendingEvents.shift();
     // If there are still pending events, schedule the next.
-    if (0 < pendingEvents.length) {
+    var remainingEvents = pendingEvents.length;
+    if (0 < remainingEvents) {
+      log("Processing next item; remaining count:", remainingEvents);
       this.processNextItem();
+    } else {
+      log("All pending items have been delivered.");
     }
   };
 
@@ -920,7 +929,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * Set the name of the property that the next record will be assigned
      * to.
      * @private
-     * @param {!string} fieldName the property name.
+     * @param {string} fieldName the property name.
      */
     Mincoder.prototype.setNextFieldName = function(fieldName) {
       this.pendingFieldName = fieldName;
@@ -928,7 +937,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Add a record to the buffer.
      * @private
-     * @param {!string} recordType the type of the record.
+     * @param {string} recordType the type of the record.
      * @param {string=} payload    the (optional) payload for this record.
      */
     Mincoder.prototype.addRecord = function(recordType, payload) {
@@ -944,7 +953,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
     /**
      * Encode a variable-length string value.
-     * @param {!string} s the string to encode.
+     * @param {string} s the string to encode.
      */
     Mincoder.escapeString = function() {
       /**
@@ -960,7 +969,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a string.
      * @private
-     * @param {!string} s the string to encode as a record.
+     * @param {string} s the string to encode as a record.
      */
     Mincoder.prototype.encodeString = function(s) {
       this.addRecord('s', Mincoder.escapeString(s) + '!');
@@ -968,7 +977,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a number.
      * @private
-     * @param {!number} n the number to encode as a record.
+     * @param {number} n the number to encode as a record.
      */
     Mincoder.prototype.encodeNumber = function(n) {
       if (isFinite(n)) {
@@ -992,7 +1001,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a boolean.
      * @private
-     * @param b {!boolean} b the boolean to encode as a record.
+     * @param b {boolean} b the boolean to encode as a record.
      */
     Mincoder.prototype.encodeBoolean = function(b) {
       this.addRecord(b ? 't' : 'f');
@@ -1025,9 +1034,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
     Mincoder.prototype.encodeDate = function() {
       /**
        * Zero-pad a number.
-       * @param {!number} len the length to pad to.
-       * @param {!number} n   the number to
-       * @returns {!string} the number, zero-padded to the required length
+       * @param {number} len the length to pad to.
+       * @param {number} n   the number to
+       * @returns {string} the number, zero-padded to the required length
        */
       var pad = function(len, n) {
             var result = n.toString();
@@ -1143,11 +1152,11 @@ var AUTO_PAGE_VIEW_EVENT = true;
    *  - It takes too long (1 second by default) for the prior event to be
    *    flushed.
    *
-   * @param {!string} type The type of event to log.
+   * @param {string} type The type of event to log.
    * @param {Object=} [customParameters]
    *    Optional object containing custom parameters to log alongside the event.
    *
-   * @return {string} the unique event identifier for this event.
+   * @return {?string} the unique event identifier for this event.
    */
   var signal = function(type, customParameters) {
     // Only proceed if we have an event type.
@@ -1249,7 +1258,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
       signalQueue.enqueue(queryString);
     } else {
       warn("Ignoring event with no type.");
-      eventId = undefined;
+      eventId = null;
     }
     return eventId;
   };
@@ -1277,11 +1286,11 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * @const
    * @type {{partyId: string,
    *         sessionId: string,
-   *         pageViewId: string,
+   *         pageViewId: ?string,
    *         isNewPartyId: boolean,
    *         isFirstInSession: boolean,
    *         isServerPageView: boolean,
-   *         signal: function(!string,Object=): string}}
+   *         signal: function(string,Object=): ?string}}
    */
   var divolte = {
     'partyId':          partyId,
@@ -1307,44 +1316,95 @@ var AUTO_PAGE_VIEW_EVENT = true;
     }
     log("Module initialized.", divolte);
 
-    /* On load we always signal the 'pageView' event.
-     * Depending on browser support we either signal right away, or
-     * use the Page Visibility API to only fire the initial pageView
-     * event as soon as the page is first visible.
+    /*
+     * A new 'pageView' starts when:
+     *  - The page is loaded.
+     *  - The page is returned to via the next/back navigation stack.
+     *
+     * Note that some browsers don't reload the javascript when returning to a
+     * page via navigation, and some do. These rules ensure consistency across
+     * all browsers.
      */
-    var hiddenProperty;
-    var visibilityEventName = "none"; // requires a string value; otherwise the closure compiler complains
-    if (typeof document['hidden'] !== "undefined") { // Opera 12.10 and Firefox 18 and later support
-      hiddenProperty = "hidden";
-      visibilityEventName = "visibilitychange";
-    } else if (typeof document['mozHidden'] !== "undefined") {
-      hiddenProperty = "mozHidden";
-      visibilityEventName = "mozvisibilitychange";
-    } else if (typeof document['msHidden'] !== "undefined") {
-      hiddenProperty = "msHidden";
-      visibilityEventName = "msvisibilitychange";
-    } else if (typeof document['webkitHidden'] !== "undefined") {
-      hiddenProperty = "webkitHidden";
-      visibilityEventName = "webkitvisibilitychange";
-    }
 
-    var signalPageView = AUTO_PAGE_VIEW_EVENT ? function() {
-      signal('pageView');
-    } : function() {};
+    /**
+     * Start a page view.
+     *
+     * This triggers generation of the page view identifier, which happens here
+     * due to script re-use on forward/backward browser navigation. Because events
+     * identifiers are also tied to page-view via the event counter, we also handle
+     * its initialization here.
+     */
+    var startPageView = function() {
+      if (!isServerPageView) {
+        pageViewId = generateId(false);
+        divolte['pageViewId'] = pageViewId;
+        eventCounter = 0;
+      }
+      info("Starting page view", pageViewId);
+      if (AUTO_PAGE_VIEW_EVENT) {
+        signal('pageView');
+      }
+    };
 
-    if (typeof hiddenProperty !== 'undefined' && document[hiddenProperty]) {
-      // The {add|remove}EventListener functions are not available in <= IE8;
-      // but this branch shouldn't execute in that case, since the hidden
-      // property is also undefined.
-      document.addEventListener(visibilityEventName, function visibilityListener() {
-        if (document[hiddenProperty] === false) {
-          signalPageView();
-          document.removeEventListener(visibilityEventName, visibilityListener);
-        }
-      })
+    // The best thing we can hook into is the 'pageshow' event, if it's supported.
+    if ('onpageshow' in window && window['addEventListener']) {
+      log("Detected 'pageshow' event support; linking page-view to event.");
+      window['addEventListener']('pageshow', function(event) {
+        startPageView();
+        // We leave the handler registered so that bfcache navigation triggers new pageviews.
+      });
     } else {
-      // TODO: Possibly defer until the DOM is ready?
-      signalPageView();
+      // Old Opera doesn't have a mechanism for detected bfcache'd back/forward navigation,
+      // but we can disable its bfcache using this property.
+      /** @type {Object} */
+      var history = window['history'];
+      if (history && typeof(history['navigationMode'] !== 'undefined')) {
+        info("Changing navigation mode from " + history['navigationMode'] + " to 'compatible'.");
+        history['navigationMode'] = 'compatible';
+      }
+      /*
+       * If there's no support for pageshow, fall back on the Page Visibility
+       * API instead. We use this if it's available to avoid firing the initial
+       * pageView event until the page is actually visible.
+       * On load we always signal the 'pageView' event.
+       * Depending on browser support we either signal right away, or
+       * use the Page Visibility API to only fire the initial pageView
+       * event as soon as the page is first visible.
+       */
+      /** @type {string} */
+      var hiddenProperty;
+      /** @type {string} */
+      var visibilityEventName;
+      if (typeof document['hidden'] !== "undefined") { // Opera 12.10 and Firefox 18 and later support
+        hiddenProperty = "hidden";
+        visibilityEventName = "visibilitychange";
+      } else if (typeof document['mozHidden'] !== "undefined") {
+        hiddenProperty = "mozHidden";
+        visibilityEventName = "mozvisibilitychange";
+      } else if (typeof document['msHidden'] !== "undefined") {
+        hiddenProperty = "msHidden";
+        visibilityEventName = "msvisibilitychange";
+      } else if (typeof document['webkitHidden'] !== "undefined") {
+        hiddenProperty = "webkitHidden";
+        visibilityEventName = "webkitvisibilitychange";
+      } else {
+        warn("Could not detect property for document visibility.")
+      }
+      if (!document[hiddenProperty]) {
+        log("Page already visible; starting page view immediately.");
+        startPageView();
+      } else if (document['addEventListener'] && document['removeEventListener']) {
+        log("Page currently hidden; deferring start of page view.");
+        document['addEventListener'](visibilityEventName, function visibilityListener() {
+          if (document[hiddenProperty] === false) {
+            startPageView();
+            document['removeEventListener'](visibilityEventName, visibilityListener);
+          }
+        });
+      } else {
+        warn("Page currently hidden, but don't know how to defer start of page view; starting page view immediately.");
+        startPageView();
+      }
     }
   } else {
     warn("Divolte module already initialized; existing module left intact.");
