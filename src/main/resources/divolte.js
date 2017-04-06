@@ -612,12 +612,17 @@ var AUTO_PAGE_VIEW_EVENT = true;
   }
   if (isServerPageView) {
     log("Using server-provided pageview identifier.", pageViewId);
-  } else {
-    pageViewId = generateId(false)
   }
 
-  info("Divolte party/session/pageview identifiers", [partyId, sessionId, pageViewId]);
+  info("Divolte party/session identifiers", partyId, sessionId);
 
+  /**
+   * A counter of the number of events that have been issued for this
+   * page view.
+   *
+   * @type {number}
+   */
+  var eventCounter = 0;
   /**
    * Generate an event identifier.
    * Note that the implementation requires that pageview identifiers also be unique.
@@ -627,12 +632,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
   var generateEventId = function() {
     // These don't have to be globally unique. So we can leverage the pageview
     // id with a simple counter.
-    var counter = 0;
-    return function() {
-      var thisEventCounter = counter++;
-      return pageViewId + thisEventCounter.toString(16);
-    }
-  }();
+    var thisEventCounter = eventCounter++;
+    return pageViewId + thisEventCounter.toString(16);
+  };
 
   /**
    * Utility function for invoking a callback after a specific timeout if it
@@ -1243,44 +1245,95 @@ var AUTO_PAGE_VIEW_EVENT = true;
     }
     log("Module initialized.", divolte);
 
-    /* On load we always signal the 'pageView' event.
-     * Depending on browser support we either signal right away, or
-     * use the Page Visibility API to only fire the initial pageView
-     * event as soon as the page is first visible.
+    /*
+     * A new 'pageView' starts when:
+     *  - The page is loaded.
+     *  - The page is returned to via the next/back navigation stack.
+     *
+     * Note that some browsers don't reload the javascript when returning to a
+     * page via navigation, and some do. These rules ensure consistency across
+     * all browsers.
      */
-    var hiddenProperty;
-    var visibilityEventName = "none"; // requires a string value; otherwise the closure compiler complains
-    if (typeof document['hidden'] !== "undefined") { // Opera 12.10 and Firefox 18 and later support
-      hiddenProperty = "hidden";
-      visibilityEventName = "visibilitychange";
-    } else if (typeof document['mozHidden'] !== "undefined") {
-      hiddenProperty = "mozHidden";
-      visibilityEventName = "mozvisibilitychange";
-    } else if (typeof document['msHidden'] !== "undefined") {
-      hiddenProperty = "msHidden";
-      visibilityEventName = "msvisibilitychange";
-    } else if (typeof document['webkitHidden'] !== "undefined") {
-      hiddenProperty = "webkitHidden";
-      visibilityEventName = "webkitvisibilitychange";
-    }
 
-    var signalPageView = AUTO_PAGE_VIEW_EVENT ? function() {
-      signal('pageView');
-    } : function() {};
+    /**
+     * Start a page view.
+     *
+     * This triggers generation of the page view identifier, which happens here
+     * due to script re-use on forward/backward browser navigation. Because events
+     * identifiers are also tied to page-view via the event counter, we also handle
+     * its initialization here.
+     */
+    var startPageView = function() {
+      if (!isServerPageView) {
+        pageViewId = generateId(false);
+        divolte['pageViewId'] = pageViewId;
+        eventCounter = 0;
+      }
+      info("Starting page view", pageViewId);
+      if (AUTO_PAGE_VIEW_EVENT) {
+        signal('pageView');
+      }
+    };
 
-    if (typeof hiddenProperty !== 'undefined' && document[hiddenProperty]) {
-      // The {add|remove}EventListener functions are not available in <= IE8;
-      // but this branch shouldn't execute in that case, since the hidden
-      // property is also undefined.
-      document.addEventListener(visibilityEventName, function visibilityListener() {
-        if (document[hiddenProperty] === false) {
-          signalPageView();
-          document.removeEventListener(visibilityEventName, visibilityListener);
-        }
-      })
+    // The best thing we can hook into is the 'pageshow' event, if it's supported.
+    if ('onpageshow' in window && window['addEventListener']) {
+      log("Detected 'pageshow' event support; linking page-view to event.");
+      window['addEventListener']('pageshow', function(event) {
+        startPageView();
+        // We leave the handler registered so that bfcache navigation triggers new pageviews.
+      });
     } else {
-      // TODO: Possibly defer until the DOM is ready?
-      signalPageView();
+      // Old Opera doesn't have a mechanism for detected bfcache'd back/forward navigation,
+      // but we can disable its bfcache using this property.
+      /** @type {Object} */
+      var history = window['history'];
+      if (history && typeof(history['navigationMode'] !== 'undefined')) {
+        info("Changing navigation mode from " + history['navigationMode'] + " to 'compatible'.");
+        history['navigationMode'] = 'compatible';
+      }
+      /*
+       * If there's no support for pageshow, fall back on the Page Visibility
+       * API instead. We use this if it's available to avoid firing the initial
+       * pageView event until the page is actually visible.
+       * On load we always signal the 'pageView' event.
+       * Depending on browser support we either signal right away, or
+       * use the Page Visibility API to only fire the initial pageView
+       * event as soon as the page is first visible.
+       */
+      /** @type {string} */
+      var hiddenProperty;
+      /** @type {string} */
+      var visibilityEventName;
+      if (typeof document['hidden'] !== "undefined") { // Opera 12.10 and Firefox 18 and later support
+        hiddenProperty = "hidden";
+        visibilityEventName = "visibilitychange";
+      } else if (typeof document['mozHidden'] !== "undefined") {
+        hiddenProperty = "mozHidden";
+        visibilityEventName = "mozvisibilitychange";
+      } else if (typeof document['msHidden'] !== "undefined") {
+        hiddenProperty = "msHidden";
+        visibilityEventName = "msvisibilitychange";
+      } else if (typeof document['webkitHidden'] !== "undefined") {
+        hiddenProperty = "webkitHidden";
+        visibilityEventName = "webkitvisibilitychange";
+      } else {
+        warn("Could not detect property for document visibility.")
+      }
+      if (!document[hiddenProperty]) {
+        log("Page already visible; starting page view immediately.");
+        startPageView();
+      } else if (document['addEventListener'] && document['removeEventListener']) {
+        log("Page currently hidden; deferring start of page view.");
+        document['addEventListener'](visibilityEventName, function visibilityListener() {
+          if (document[hiddenProperty] === false) {
+            startPageView();
+            document['removeEventListener'](visibilityEventName, visibilityListener);
+          }
+        });
+      } else {
+        warn("Page currently hidden, but don't know how to defer start of page view; starting page view immediately.");
+        startPageView();
+      }
     }
   } else {
     warn("Divolte module already initialized; existing module left intact.");
