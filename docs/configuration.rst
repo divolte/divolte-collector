@@ -731,6 +731,23 @@ Browser source property: ``javascript.auto_page_view_event``
       javascript.auto_page_view_event = false
     }
 
+Browser source property: ``javascript.event_timeout``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The JavaScript tag delivers events in the order they are generated, waiting for the previous event to be delivered before
+  sending the next. This property specifies a timeout after which the tag proceeds with the next event even if the previous
+  has not been delivered yet.
+:Default:
+  :code:`500 milliseconds`
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      javascript.event_timeout = 1 second
+    }
+
 JSON Sources
 ^^^^^^^^^^^^
 

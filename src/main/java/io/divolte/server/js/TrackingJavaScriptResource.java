@@ -25,10 +25,13 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.TimeUnit;
 
 @ParametersAreNonnullByDefault
 public class TrackingJavaScriptResource extends JavaScriptResource {
     private static final Logger logger = LoggerFactory.getLogger(TrackingJavaScriptResource.class);
+
+    private static final int NANOS_PER_SECOND = (int) TimeUnit.SECONDS.toNanos(1);
 
     private static final String SCRIPT_CONSTANT_NAME = "SCRIPT_NAME";
 
@@ -53,6 +56,8 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
         builder.put(SCRIPT_CONSTANT_NAME, browserSourceConfiguration.javascript.name);
         builder.put("EVENT_SUFFIX", browserSourceConfiguration.eventSuffix);
         builder.put("AUTO_PAGE_VIEW_EVENT", browserSourceConfiguration.javascript.autoPageViewEvent);
+        builder.put("EVENT_TIMEOUT_SECONDS", browserSourceConfiguration.javascript.eventTimeout.getSeconds() +
+                                             browserSourceConfiguration.javascript.eventTimeout.getNano() / (double)NANOS_PER_SECOND);
         return builder.build();
     }
 

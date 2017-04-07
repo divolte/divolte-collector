@@ -1149,8 +1149,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    *
    *  - A prior event is successfully flushed.
    *  - An error occurs flushed the prior event. (No retry is attempted.)
-   *  - It takes too long (1 second by default) for the prior event to be
-   *    flushed.
+   *  - It takes too long for the prior event to be flushed.
    *
    * @param {string} type The type of event to log.
    * @param {Object=} [customParameters]
