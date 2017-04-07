@@ -363,8 +363,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         // At this point 10 events should arrive, after which the browser navigates
         // to the basic page.
         for (int i = 0; i < 10; ++i) {
-            final EventPayload payload = server.waitForEvent();
-            final DivolteEvent eventData = payload.event;
+            final DivolteEvent eventData = server.waitForEvent().event;
             assertEquals("Unexpected event type for event #" + i,
                          Optional.of("clickOutEvent"),
                          eventData.eventType);
