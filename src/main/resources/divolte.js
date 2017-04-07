@@ -642,10 +642,12 @@ var AUTO_PAGE_VIEW_EVENT = true;
    *
    * @param {function(): undefined} callback
    *        the function to invoke after the timout if it hasn't already been.
+   * @param {number} timeoutMilliseconds
+   *        the timeout after which the method should be invoked if it hasn't already.
    * @return {function(): undefined}
    *         a function to be used as callback instead of the wrapped function.
    */
-  var withTimeout = function(callback) {
+  var withTimeout = function(callback, timeoutMilliseconds) {
     var calledAlready = false;
     var timerHandle = setTimeout(function() {
       if (!calledAlready) {
@@ -653,7 +655,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
         log("Timeout waiting for event callback; invoking anyway.", this, arguments);
         callback.apply(this, arguments);
       }
-    }, EVENT_TIMEOUT_SECONDS * 1000);
+    }, timeoutMilliseconds);
     return function() {
       if (!calledAlready) {
         calledAlready = true;
@@ -740,7 +742,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
       // We can't use onFirstPendingItemCompleted directly because 'this' isn't bound correctly.
       // (And sadly, function.bind() isn't available universally.)
       signalQueue.onFirstPendingItemCompleted();
-    });
+    }, EVENT_TIMEOUT_SECONDS * 1000);
     image.onload = completionHandler;
     image.onerror = !LOGGING ? completionHandler : function(event) {
       warn("Error delivering event", firstPendingEvent);
@@ -1273,10 +1275,18 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * (Any events placed on the queue after this callback is registered will
    * not be considered.)
    *
-   * @param {function()}  callback  The callback to invoke.
+   * @param {function()} callback
+   *        The callback to invoke.
+   * @param {number=} timeoutMilliseconds
+   *        If supplied, the number of milliseconds after which the callback
+   *        should be invoked even if the pending events have not been flushed.
    */
-  var whenCommitted = function(callback) {
+  var whenCommitted = function(callback, timeoutMilliseconds) {
     info("Registering callback for when events have been flushed to server.");
+    if ('undefined' !== typeof timeoutMilliseconds) {
+      log("Callback will time out after " + timeoutMilliseconds + "ms.");
+      callback = withTimeout(callback, timeoutMilliseconds);
+    }
     signalQueue.enqueue(callback);
   };
 

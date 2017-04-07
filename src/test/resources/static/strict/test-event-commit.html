@@ -29,10 +29,9 @@
     <!-- Not deferred, as we need the module right away. -->
     <script src="/divolte.js" defer async></script>
     <script>
-      var signalThenNavigate = function(link) {
+      var signalThenClick = function(link, eventCount, optionalTimeoutMilliseconds) {
           // Fire off some events.
-          // (10 is enough to create a backlog.)
-          for (var i = 0; i < 10; ++i) {
+          for (var i = 0; i < eventCount; ++i) {
               divolte.signal('clickOutEvent', { i: i });
           }
           // Block until they're flushed, then proceed to the link destination.
@@ -45,7 +44,7 @@
                   window.location = linkDestination;
               }
               navigationSentinel = true;
-          });
+          }, optionalTimeoutMilliseconds);
           var proceedWithClick = navigationSentinel;
           navigationSentinel = true;
           return proceedWithClick;
@@ -62,7 +61,9 @@
           callbackWasImmediate = false;
       }
     </script>
-    <a id="clickout" href="test-basic-page.html" onclick="return signalThenNavigate(this);">This link goes to a new page.</a>
+    <a id="clickout" href="test-basic-page.html" onclick="return signalThenClick(this, 10);">This link goes to a new page.</a>
+    <!-- These numbers are tuned to allow all our automated test clients to get some events started before the timeout, but not all. -->
+    <a id="quickout" href="test-basic-page.html" onclick="return signalThenClick(this, 1000, 500);">This link also goes to a new page.</a>
     <div id="flushdirect" onclick="return signalTestingDirectCallback();">This isn't a link, but clicking does stuff.</div>
   </body>
 </html>

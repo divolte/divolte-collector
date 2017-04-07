@@ -394,4 +394,38 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         assertEquals(Optional.of(true),
                      event.eventParametersProducer.get().map(jsonNode -> jsonNode.get("callbackWasImmediate").asBoolean()));
     }
+
+    @Test
+    public void shouldTimeoutIfRequiredOnFlushBeforeClickOut() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Record the current page URL, so that later we can check we navigated away.
+        final String initialPageUrl = driver.getCurrentUrl();
+
+        // Locate the link to click on, and click it.
+        logger.info("Clicking link that will trigger events");
+        driver.findElement(By.id("quickout")).click();
+
+        // At this point lots of events should arrive, but before we reach 100000 the
+        // flush should have timed-out and navigated to the new page.
+        int count = 0;
+        DivolteEvent lastEventData;
+        do {
+            lastEventData = server.waitForEvent().event;
+            if (!Optional.of("clickOutEvent").equals(lastEventData.eventType)) {
+                break;
+            }
+            ++count;
+        } while (count < 1000);
+        assertThat(count, is(both(greaterThan(0)).and(lessThan(1000))));
+        logger.info("Triggered events have all arrived: {}", count);
+
+        // Check that the browser did navigate to a new page. It will have generated a new page-view.
+        final WebDriverWait wait = new WebDriverWait(driver, 10);
+        wait.until(driver -> !driver.getCurrentUrl().equals(initialPageUrl));
+        assertEquals(Optional.of("pageView"), lastEventData.eventType);
+    }
 }
