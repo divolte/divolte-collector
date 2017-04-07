@@ -156,7 +156,12 @@ public final class ServerTestUtils {
 
         public EventPayload waitForEvent() throws InterruptedException {
             // SauceLabs can take quite a while to fire up everything.
-            return Optional.ofNullable(events.poll(10, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
+            return waitForEvent(10, TimeUnit.SECONDS);
+        }
+
+        public EventPayload waitForEvent(final long timeout, final TimeUnit unit) throws InterruptedException {
+            return Optional.ofNullable(events.poll(timeout, unit))
+                           .orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
         }
 
         public boolean eventsRemaining() {

@@ -632,6 +632,24 @@ Browser source property: ``session_timeout``
       session_timeout = 1 hour
     }
 
+Browser source property: ``http_response_delay``
+""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  This property can be used to introduce an artificial delay when an event is received
+  before sending the HTTP response. This is intended only for for testing purposes, and
+  should never be changed from the default in production. (Note that only the HTTP
+  response is delayed; the event is processed internally without delay.)
+:Default:
+  0 seconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      http_response_delay = 2 seconds
+    }
+
 Browser source property: ``cookie_domain``
 """"""""""""""""""""""""""""""""""""""""""
 :Description:

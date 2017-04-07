@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.config.BrowserSourceConfiguration;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -320,6 +321,29 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final DivolteEvent eventData = payload.event;
 
         assertEquals(Optional.of("pageView"), eventData.eventType);
+    }
+
+    @Test
+    public void shouldAdvanceToNextEventOnTimeout() throws Exception {
+        doSetUp("selenium-test-slow-server.conf");
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(BASIC);
+        // No page-view events.
+
+        // Emit two events.
+        logger.info("Clicking link that will trigger 2 slow events");
+        driver.findElement(By.id("deliver2events")).click();
+        /*
+         * The server has been configured to delay responses by 15 seconds.
+         * The JavaScript should time them out quickly.
+         * This means both events should arrive within the time here,
+         * instead of waiting for the delayed responses.
+         */
+        logger.info("Waiting for first event");
+        server.waitForEvent();
+        logger.info("First event received; waiting for second event.");
+        server.waitForEvent();
+        logger.info("Second event received.");
     }
 
     @Test
