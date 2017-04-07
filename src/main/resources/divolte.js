@@ -1289,7 +1289,8 @@ var AUTO_PAGE_VIEW_EVENT = true;
    *         isNewPartyId: boolean,
    *         isFirstInSession: boolean,
    *         isServerPageView: boolean,
-   *         signal: function(string,Object=): ?string}}
+   *         signal: function(string,Object=): ?string,
+   *         whenCommitted: function(function()): undefined}};
    */
   var divolte = {
     'partyId':          partyId,
