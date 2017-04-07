@@ -135,7 +135,7 @@ dependencies {
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
     compile group: 'org.slf4j', name: 'slf4j-api', version: slf4jVersion
-    runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.2'
+    runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
     runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: slf4jVersion
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
