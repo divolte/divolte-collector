@@ -328,7 +328,7 @@ This allows for click-through events to be signalled using something like:
     == Once the event has been flushed, the browser navigates to the intended
     == destination.
     -->
-  <a href="?foobar"
+  <a href="next-page.html"
      onclick="return clickThrough(this);">Go to next page…</a>
 
 .. note::
