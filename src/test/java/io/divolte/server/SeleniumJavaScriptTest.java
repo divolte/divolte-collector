@@ -378,4 +378,21 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         wait.until(driver -> !driver.getCurrentUrl().equals(initialPageUrl));
         assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
     }
+
+    @Test
+    public void shouldInvokeFlushCallbackImmediatelyIfNoEventsPending() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Hit the 'flush' link, and wait for the event.
+        driver.findElement(By.id("flushdirect")).click();
+
+        // The event contains information about whether the callback was invoked immediately or not.
+        final DivolteEvent event = server.waitForEvent().event;
+        assertEquals(Optional.of("firstFlush"), event.eventType);
+        assertEquals(Optional.of(true),
+                     event.eventParametersProducer.get().map(jsonNode -> jsonNode.get("callbackWasImmediate").asBoolean()));
+    }
 }

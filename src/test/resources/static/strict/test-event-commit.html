@@ -50,7 +50,19 @@
           navigationSentinel = true;
           return proceedWithClick;
       };
+      var signalTestingDirectCallback = function() {
+          // There aren't any events pending.
+          var callbackWasImmediate = true;
+          divolte.whenCommitted(function () {
+              // If invoked directly, the parameter will be true.
+              // If deferred, it will be false.
+              // (Javascript doesn't allow preemption.)
+              divolte.signal("firstFlush", { callbackWasImmediate: callbackWasImmediate });
+          });
+          callbackWasImmediate = false;
+      }
     </script>
     <a id="clickout" href="test-basic-page.html" onclick="return signalThenNavigate(this);">This link goes to a new page.</a>
+    <div id="flushdirect" onclick="return signalTestingDirectCallback();">This isn't a link, but clicking does stuff.</div>
   </body>
 </html>
