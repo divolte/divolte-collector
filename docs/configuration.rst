@@ -750,7 +750,7 @@ Browser source property: ``javascript.event_timeout``
   sending the next. This property specifies a timeout after which the tag proceeds with the next event even if the previous
   has not been delivered yet.
 :Default:
-  :code:`500 milliseconds`
+  :code:`750 milliseconds`
 :Example:
 
   .. code-block:: none

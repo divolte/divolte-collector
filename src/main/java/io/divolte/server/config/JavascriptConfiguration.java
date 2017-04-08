@@ -20,7 +20,7 @@ public final class JavascriptConfiguration {
     private static final String DEFAULT_LOGGING = "false";
     private static final String DEFAULT_DEBUG = "false";
     private static final String DEFAULT_AUTO_PAGE_VIEW_EVENT = "true";
-    private static final String DEFAULT_EVENT_TIMEOUT = "500 milliseconds";
+    private static final String DEFAULT_EVENT_TIMEOUT = "750 milliseconds";
 
     static final JavascriptConfiguration DEFAULT_JAVASCRIPT_CONFIGURATION =
             new JavascriptConfiguration(DEFAULT_NAME,
