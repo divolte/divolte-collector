@@ -530,17 +530,17 @@ events:
 
 The first argument to the :samp:`divolte.signal({...})` function is the type of event, while the second argument is an arbitrary object containing custom parameters associated with the event. Storing the event and its parameters into the configured Avro schema is controlled via mapping; see the :doc:`mapping_reference` chapter for details.
 
-In addition to signalling events the tag provides an API for waiting until all previously signalled events have been delivered:
+Signalled events are delivered to the browser source by the page in the background in the order they were signalled. Any pending events not yet delivered may be discarded if the page is closed or the user navigates to a new page. The tag provides an API for the page to detect when it is safe to leave the page:
 
 .. code-block:: html
 
   <script>
     divolte.whenCommitted(function() {
-      // Invoked when previously signalled events have been delivered.
+      // Invoked when previously signalled events are no longer in danger of being discarded.
     }, 1000);
   </script>
 
-The first argument is a callback that will be invoked and the second argument is an optional timeout (specified in milliseconds) after which the callback should be invoked anyway. This is useful for temporarily delaying click-throughs or other user interactions that would normally lead to the page being unloaded and aborting the delivery of recently signalled events.
+The first argument is a callback that will be invoked when it is safe to leave the page without losing previously signalled events. The second argument is an optional timeout (specified in milliseconds) after which the callback will be invoked even if previously signalled events may be dropped. A timeout can occur, for example, if it is taking too long to deliver events to the browser source.
 
 Browser sources are able to detect some cases of corruption in the event data. The most common source of this is due to URLs being truncated, but there are also other sources of corruption between the client and the server. Corrupted events are flagged as such but still made available for mapping. (Mappings may choose to discard corrupted events, but by default they are processed normally.)
 
