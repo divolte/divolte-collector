@@ -16,7 +16,8 @@
 
 package io.divolte.server.hdfs;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -158,6 +159,9 @@ public class FileFlusherLocalHdfsTest {
         processRecords();
 
         flusher.cleanup();
+        // For some reason, it takes time for the file published as part of cleanup to
+        // become visible to the code below. Not sure if this is a MacOS issue.
+        Thread.sleep(5000);
 
         final MutableInt count = new MutableInt(0);
         Files.walk(tempPublishDir)
@@ -189,7 +193,6 @@ public class FileFlusherLocalHdfsTest {
 
         flusher = new FileFlusher(
                 vc.configuration().getSinkConfiguration("hdfs", FileSinkConfiguration.class).fileStrategy,
-                "hdfs",
                 HdfsFileManager.newFactory(vc, "hdfs", schema).create()
                 );
     }
