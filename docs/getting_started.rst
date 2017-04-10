@@ -333,7 +333,7 @@ This allows for click-through events to be signalled using something like:
 
 .. note::
 
-  Instrumenting click-through links is complexer than this example implies. A production example would detect
+  Instrumenting click-through links is more complex than this example implies. A production example would detect
   whether the user is opening a link in a new tab or window and react accordingly.
 
 Writing to HDFS
