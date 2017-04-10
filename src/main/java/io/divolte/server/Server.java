@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import io.undertow.server.handlers.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,10 +40,6 @@ import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.CanonicalPathHandler;
-import io.undertow.server.handlers.GracefulShutdownHandler;
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
@@ -144,7 +141,9 @@ public final class Server implements Runnable {
         shutdownHandler = rootHandler;
         undertow = Undertow.builder()
                            .addHttpListener(port, host.orElse(null))
-                           .setHandler(rootHandler)
+                           .setHandler(vc.configuration().global.server.debugRequests
+                               ? new RequestDumpingHandler(rootHandler)
+                               : rootHandler)
                            .build();
     }
 

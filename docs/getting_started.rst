@@ -297,6 +297,45 @@ In order to use the custom events in your mapping, map values onto fields like t
    */
   map { parse eventParameter('foo') to int32 } onto 'intField'
 
+Custom events are delivered in the background in the order they are signalled. If the user navigates away from the current page, normally the queue is discarded because the Javascript is unloaded and stops running. This can pose problems when instrumenting links that lead to a new page: navigation to the new page can occur before the event has been delivered. So help with this it's possible to register a callback that will be invoked when all pending events have been delivered:
+
+.. code-block:: javascript
+
+  // The first argument is a callback; the second (optional) argument
+  // is a timeout (specified in milliseconds) after which the callback
+  // should be invoked even if all events prior to the callback being
+  // registered have not been delivered.
+  divolte.whenCommitted(function () {
+    window.alert("Pending events have been flushed, or took longer than we're willing to wait.");
+  }, 1000);
+
+This allows for click-through events to be signalled using something like:
+
+.. code-block:: html
+
+  <script>
+    var clickThrough = function(link) {
+      var linkDestination = link.getAttribute("href");
+      divolte.signal("clickThrough", {"destination": linkDestination});
+      divolte.whenCommitted(function () {
+        window.location = linkDestination;
+      }, 1000);
+      return false;
+    };
+  </script>
+  <!--
+    == In this example, the 'click' event triggers an event and is cancelled.
+    == Once the event has been flushed, the browser navigates to the intended
+    == destination.
+    -->
+  <a href="next-page.html"
+     onclick="return clickThrough(this);">Go to next page…</a>
+
+.. note::
+
+  Instrumenting click-through links is more complex than this example implies. A production example would detect
+  whether the user is opening a link in a new tab or window and react accordingly.
+
 Writing to HDFS
 ===============
 So far, we've been writing our data to the local filesystem in :file:`/tmp`. Although this works it not the intended use of Divolte Collector. The aim is to write the clickstream data to HDFS, such that it is safely and redundantly stored and available for processing using any tool available that knows how to process Avro files (e.g. Apache Hive or Apache Spark). It is trivial to configure Divolte Collector to write to HDFS, assuming you have a working HDFS instance setup. (Setting this up is out of the scope of this getting started guide. There are many great resources to be found on the internet about getting started with and running Hadoop and HDFS.)

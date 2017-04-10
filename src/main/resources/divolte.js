@@ -28,6 +28,8 @@ var PARTY_ID_TIMEOUT_SECONDS = 2 * 365 * 24 * 60 * 60;
 var SESSION_COOKIE_NAME = '_dvs';
 /** @define {number} */
 var SESSION_ID_TIMEOUT_SECONDS = 30 * 60;
+/** @define {number} */
+var EVENT_TIMEOUT_SECONDS = 1.0;
 /** @define {string} */
 var COOKIE_DOMAIN = '';
 /** @define {boolean} */
@@ -94,7 +96,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
         var scriptElement = scriptElements.item(i);
         var scriptUrl = scriptElement.src;
         if (scriptPattern.test(scriptUrl)) {
-          if ('undefined' == typeof url) {
+          if ('undefined' === typeof url) {
             url = scriptUrl;
           } else {
             couldNotInitialize('multiple script elements found with src="…/' + SCRIPT_NAME + '"');
@@ -609,13 +611,18 @@ var AUTO_PAGE_VIEW_EVENT = true;
     sessionId = generateId(true);
   }
   if (isServerPageView) {
-    log("Using server-provided pageview identifier.")
-  } else {
-    pageViewId = generateId(false)
+    log("Using server-provided pageview identifier.", pageViewId);
   }
 
-  info("Divolte party/session/pageview identifiers", [partyId, sessionId, pageViewId]);
+  info("Divolte party/session identifiers", partyId, sessionId);
 
+  /**
+   * A counter of the number of events that have been issued for this
+   * page view.
+   *
+   * @type {number}
+   */
+  var eventCounter = 0;
   /**
    * Generate an event identifier.
    * Note that the implementation requires that pageview identifiers also be unique.
@@ -625,18 +632,48 @@ var AUTO_PAGE_VIEW_EVENT = true;
   var generateEventId = function() {
     // These don't have to be globally unique. So we can leverage the pageview
     // id with a simple counter.
-    var counter = 0;
+    var thisEventCounter = eventCounter++;
+    return pageViewId + thisEventCounter.toString(16);
+  };
+
+  /**
+   * Utility function for invoking a callback after a specific timeout if it
+   * hasn't already been invoked.
+   *
+   * @param {function(): undefined} callback
+   *        the function to invoke after the timout if it hasn't already been.
+   * @param {number} timeoutMilliseconds
+   *        the timeout after which the method should be invoked if it hasn't already.
+   * @return {function(): undefined}
+   *         a function to be used as callback instead of the wrapped function.
+   */
+  var withTimeout = function(callback, timeoutMilliseconds) {
+    var calledAlready = false;
+    var timerHandle = setTimeout(function() {
+      if (!calledAlready) {
+        calledAlready = true;
+        log("Timeout waiting for event callback; invoking anyway.", this, arguments);
+        callback.apply(this, arguments);
+      }
+    }, timeoutMilliseconds);
     return function() {
-      var thisEventCounter = counter++;
-      return pageViewId + thisEventCounter.toString(16);
-    }
-  }();
+      if (!calledAlready) {
+        calledAlready = true;
+        clearTimeout(timerHandle);
+        callback.apply(this, arguments);
+      }
+    };
+  };
 
   /**
    * A signal queue.
    * This can hold a list of the signal events that are pending.
    * If a signal event is currently underway, it is always the
    * first element in the queue.
+   *
+   * Functions can be interspersed with events in the queue. When
+   * a function is encountered it is invoked, and then removed
+   * from the queue when the function returns.
    *
    * @constructor
    * @final
@@ -646,39 +683,100 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * The internal queue of signal events.
      * @private
      * @const
-     * @type {!Array.<string>}
+     * @type {!Array.<string|function()>}
      */
     this.queue = [];
   };
   /**
-   * Enqueue a signal event.
-   * If none are underway, this will commence. Otherwise it will be queued.
-   * @param event {string} the pre-calculated (and rendered) event to queue.
+   * Enqueue a signal event or a callback to be invoked when
+   * all prior events have been delivered.
+   *
+   * If delivery of a prior event or callback invocation is not
+   * still underway, processing of this item will commence immediately.
+   * Otherwise it will be queued.
+   *
+   * @param item {string|function()}
+   *        the pre-calculated (and rendered) event to queue, or a
+   *        callback to invoke when the queue drains to this point.
    */
-  SignalQueue.prototype.enqueue = function(event) {
+  SignalQueue.prototype.enqueue = function(item) {
     var pendingEvents = this.queue;
-    pendingEvents.push(event);
-    if (1 == pendingEvents.length) {
-      this.deliverFirstPendingEvent();
+    log("Queueing item for processing; " + pendingEvents.length + " currently pending.", item);
+    pendingEvents.push(item);
+    if (1 === pendingEvents.length) {
+      log("No pending items; processing immediately.", item);
+      this.processNextItem();
+    }
+  };
+  /**
+   * @private
+   * Process the next pending event.
+   */
+  SignalQueue.prototype.processNextItem = function() {
+    var firstPendingItem = this.queue[0];
+    // Would normally use double-dispatch for this sort of thing, but
+    // this is simpler and sufficient for now.
+    switch (typeof firstPendingItem) {
+      case 'string':
+        this.deliverFirstPendingEvent(firstPendingItem);
+        break;
+      case 'function':
+        this.invokeFirstPendingCallback(firstPendingItem);
+        break;
+      default:
+        error("Dropping unknown type of item in signal queue.", firstPendingItem);
+        this.onFirstPendingItemCompleted();
     }
   };
   /**
    * @private
    * Start the next signal event.
+   *
+   * @param firstPendingEvent {string} the event to start delivering.
    */
-  SignalQueue.prototype.deliverFirstPendingEvent = function() {
+  SignalQueue.prototype.deliverFirstPendingEvent = function(firstPendingEvent) {
     var signalQueue = this;
     var image = new Image(1,1);
-    image.onload = function() {
-      // Delete this signal from the array.
-      var pendingEvents = signalQueue.queue;
-      pendingEvents.shift();
-      // If there are still pending events, schedule the next.
-      if (0 < pendingEvents.length) {
-        signalQueue.deliverFirstPendingEvent();
-      }
+    log("Delivering pending event.", firstPendingEvent);
+    var completionHandler = withTimeout(function() {
+      // We can't use onFirstPendingItemCompleted directly because 'this' isn't bound correctly.
+      // (And sadly, function.bind() isn't available universally.)
+      signalQueue.onFirstPendingItemCompleted();
+    }, EVENT_TIMEOUT_SECONDS * 1000);
+    image.onload = completionHandler;
+    image.onerror = !LOGGING ? completionHandler : function(event) {
+      warn("Error delivering event", firstPendingEvent);
+      completionHandler();
     };
-    image.src = divolteUrl + EVENT_SUFFIX + '?' + this.queue[0];
+    image.src = divolteUrl + EVENT_SUFFIX + '?' + firstPendingEvent;
+  };
+  /**
+   * @private
+   * Invoke the callback that is now at the front of the queue.
+   *
+   * @param firstPendingCallback {function()} the callback to invoke.
+   */
+  SignalQueue.prototype.invokeFirstPendingCallback = function(firstPendingCallback) {
+    firstPendingCallback();
+    this.onFirstPendingItemCompleted();
+  };
+  /**
+   * @private
+   * Handler for when the first item in the queue has been completed.
+   */
+  SignalQueue.prototype.onFirstPendingItemCompleted = function() {
+    log("Marking pending item as complete.");
+    // Delete the first event from the queue.
+    var pendingEvents = this.queue;
+    pendingEvents.shift();
+    // If there are still pending events, schedule the next.
+    var remainingEvents = pendingEvents.length;
+    if (0 < remainingEvents) {
+      log("Processing next item; remaining count:", remainingEvents);
+      this.processNextItem();
+    } else {
+      log("All pending items have been delivered.");
+    }
   };
 
   /**
@@ -750,7 +848,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * This function can serialize anything that JSON.stringify() can,
    * and honours toJSON() semantics. It does not, however, use the JSON
    * encoding to serialize the value.
-   * @param {!*} value The value to serialize.
+   * @param {*} value The value to serialize.
    * @return {String} a string that represents the serialized value.
    */
   var mincode = function() {
@@ -812,6 +910,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * @private
      */
     Mincoder.prototype.endObject = function() {
+      this.pendingFieldName = null;
       this.addRecord(')');
     };
     /**
@@ -832,7 +931,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * Set the name of the property that the next record will be assigned
      * to.
      * @private
-     * @param {!string} fieldName the property name.
+     * @param {string} fieldName the property name.
      */
     Mincoder.prototype.setNextFieldName = function(fieldName) {
       this.pendingFieldName = fieldName;
@@ -840,7 +939,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Add a record to the buffer.
      * @private
-     * @param {!string} recordType the type of the record.
+     * @param {string} recordType the type of the record.
      * @param {string=} payload    the (optional) payload for this record.
      */
     Mincoder.prototype.addRecord = function(recordType, payload) {
@@ -856,7 +955,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
     /**
      * Encode a variable-length string value.
-     * @param {!string} s the string to encode.
+     * @param {string} s the string to encode.
      */
     Mincoder.escapeString = function() {
       /**
@@ -872,7 +971,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a string.
      * @private
-     * @param {!string} s the string to encode as a record.
+     * @param {string} s the string to encode as a record.
      */
     Mincoder.prototype.encodeString = function(s) {
       this.addRecord('s', Mincoder.escapeString(s) + '!');
@@ -880,7 +979,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode a number.
      * @private
-     * @param {!number} n the number to encode as a record.
+     * @param {number} n the number to encode as a record.
      */
     Mincoder.prototype.encodeNumber = function(n) {
       if (isFinite(n)) {
@@ -890,7 +989,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
             jEncoding2 = String(n);
         // We prefer a 'd' record to 'j' even if equal length because they're
         // more efficient to process on the server.
-        if (null != dEncoding &&
+        if (null !== dEncoding &&
             dEncoding.length <= jEncoding1.length &&
             dEncoding.length <= jEncoding2.length) {
           this.addRecord('d', dEncoding + '!');
@@ -898,13 +997,13 @@ var AUTO_PAGE_VIEW_EVENT = true;
           this.addRecord('j', (jEncoding1.length < jEncoding2.length ? jEncoding1 : jEncoding2) + '!');
         }
       } else {
-        this.encode(null);
+        this.encode(null, false);
       }
     };
     /**
      * Encode a boolean.
      * @private
-     * @param b {!boolean} b the boolean to encode as a record.
+     * @param b {boolean} b the boolean to encode as a record.
      */
     Mincoder.prototype.encodeBoolean = function(b) {
       this.addRecord(b ? 't' : 'f');
@@ -924,7 +1023,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
     Mincoder.prototype.encodeArray = function(a) {
       this.startArray();
       for (var i = 0; i < a.length; ++i) {
-        this.encode(a[i]);
+        this.encode(a[i], true);
       }
       this.endArray();
     };
@@ -937,9 +1036,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
     Mincoder.prototype.encodeDate = function() {
       /**
        * Zero-pad a number.
-       * @param {!number} len the length to pad to.
-       * @param {!number} n   the number to
-       * @returns {!string} the number, zero-padded to the required length
+       * @param {number} len the length to pad to.
+       * @param {number} n   the number to
+       * @returns {string} the number, zero-padded to the required length
        */
       var pad = function(len, n) {
             var result = n.toString();
@@ -958,7 +1057,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
                   pad(2,d.getUTCSeconds()) + '.' +
                   pad(3,d.getUTCMilliseconds()) + 'Z'
                 : null;
-        this.encode(rendered);
+        this.encode(rendered, false);
       }
     }();
     /**
@@ -971,7 +1070,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
       for (var k in o) {
         if (Object.prototype.hasOwnProperty.call(o, k)) {
           this.setNextFieldName(k);
-          this.encode(o[k]);
+          this.encode(o[k], false);
         }
       }
       this.endObject();
@@ -979,13 +1078,15 @@ var AUTO_PAGE_VIEW_EVENT = true;
     /**
      * Encode an object.
      * Note that arrays, dates and null are all objects.
-     * @param {!Object} o the object to encode as a series of records.
+     * @param {Object} o the object to encode as a series of records.
+     * @param {boolean} replaceUndefinedWithNull
+     *                  true if undefined values should be replaced with null, or false if they should be elided.
      */
-    Mincoder.prototype.encodeObject = function(o) {
+    Mincoder.prototype.encodeObject = function(o, replaceUndefinedWithNull) {
       if (o === null) {
         this.encodeNull();
       } else if (typeof o.toJSON === 'function') {
-        this.encode(o.toJSON())
+        this.encode(o.toJSON(), replaceUndefinedWithNull)
       } else {
         switch (Object.prototype.toString.call(o)) {
           case '[object Array]':
@@ -1001,9 +1102,11 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
     /**
      * Encode a value as a series of records.
-     * @param {!*} value the value to encode.
+     * @param {*} value the value to encode.
+     * @param {boolean} replaceUndefinedWithNull
+     *                  true if undefined values should be replaced with null, or false if they should be elided.
      */
-    Mincoder.prototype.encode = function(value) {
+    Mincoder.prototype.encode = function(value,replaceUndefinedWithNull) {
       switch (typeof value) {
         case 'string':
           this.encodeString(value);
@@ -1015,7 +1118,12 @@ var AUTO_PAGE_VIEW_EVENT = true;
           this.encodeBoolean(value);
           break;
         case 'object':
-          this.encodeObject(/**@type !Object*/(value));
+          this.encodeObject(/**@type !Object*/(value), replaceUndefinedWithNull);
+          break;
+        case 'undefined':
+          if (replaceUndefinedWithNull) {
+            this.encode(null, false);
+          }
           break;
         default:
           throw "Cannot encode of type: " + typeof value;
@@ -1023,8 +1131,9 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
     Mincoder.mincode = function(value) {
       var mincoder = new Mincoder();
-      mincoder.encode(value);
-      return mincoder.buffer;
+      mincoder.encode(value, false);
+      var result = mincoder.buffer;
+      return result !== '' ? result : undefined;
     };
     return Mincoder.mincode;
   }();
@@ -1036,11 +1145,19 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * server. This function returns immediately, the event itself is logged
    * asynchronously.
    *
-   * @param {!string} type The type of event to log.
+   * Events are normally delivered to the server serially in the order they
+   * are signalled. A queued event will be delivered when any of the following
+   * occurs:
+   *
+   *  - A prior event is successfully flushed.
+   *  - An error occurs flushed the prior event. (No retry is attempted.)
+   *  - It takes too long for the prior event to be flushed.
+   *
+   * @param {string} type The type of event to log.
    * @param {Object=} [customParameters]
    *    Optional object containing custom parameters to log alongside the event.
    *
-   * @return {string} the unique event identifier for this event.
+   * @return {?string} the unique event identifier for this event.
    */
   var signal = function(type, customParameters) {
     // Only proceed if we have an event type.
@@ -1142,9 +1259,35 @@ var AUTO_PAGE_VIEW_EVENT = true;
       signalQueue.enqueue(queryString);
     } else {
       warn("Ignoring event with no type.");
-      eventId = undefined;
+      eventId = null;
     }
     return eventId;
+  };
+
+  /**
+   * Register a callback to be invoked when all currently pending events
+   * have been flushed to the server.
+   *
+   * Signalled events are queued for asynchronous delivery to the Divolte
+   * Collector. This method can be used to register a one-off callback that
+   * will be invoked when all pending events on the queue have been flushed.
+   *
+   * (Any events placed on the queue after this callback is registered will
+   * not be considered.)
+   *
+   * @param {function()} callback
+   *        The callback to invoke.
+   * @param {number=} timeoutMilliseconds
+   *        If supplied, the number of milliseconds after which the callback
+   *        should be invoked even if the pending events have not been flushed.
+   */
+  var whenCommitted = function(callback, timeoutMilliseconds) {
+    info("Registering callback for when events have been flushed to server.");
+    if ('undefined' !== typeof timeoutMilliseconds) {
+      log("Callback will time out after " + timeoutMilliseconds + "ms.");
+      callback = withTimeout(callback, timeoutMilliseconds);
+    }
+    signalQueue.enqueue(callback);
   };
 
   /**
@@ -1152,11 +1295,12 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * @const
    * @type {{partyId: string,
    *         sessionId: string,
-   *         pageViewId: string,
+   *         pageViewId: ?string,
    *         isNewPartyId: boolean,
    *         isFirstInSession: boolean,
    *         isServerPageView: boolean,
-   *         signal: function(!string,Object=): string}}
+   *         signal: function(string,Object=): ?string,
+   *         whenCommitted: function(function()): undefined}};
    */
   var divolte = {
     'partyId':          partyId,
@@ -1165,7 +1309,8 @@ var AUTO_PAGE_VIEW_EVENT = true;
     'isNewPartyId':     isNewParty,
     'isFirstInSession': isFirstInSession,
     'isServerPageView': isServerPageView,
-    'signal':           signal
+    'signal':           signal,
+    'whenCommitted':    whenCommitted
   };
 
   if ("object" !== typeof window['divolte']) {
@@ -1181,44 +1326,95 @@ var AUTO_PAGE_VIEW_EVENT = true;
     }
     log("Module initialized.", divolte);
 
-    /* On load we always signal the 'pageView' event.
-     * Depending on browser support we either signal right away, or
-     * use the Page Visibility API to only fire the initial pageView
-     * event as soon as the page is first visible.
+    /*
+     * A new 'pageView' starts when:
+     *  - The page is loaded.
+     *  - The page is returned to via the next/back navigation stack.
+     *
+     * Note that some browsers don't reload the javascript when returning to a
+     * page via navigation, and some do. These rules ensure consistency across
+     * all browsers.
      */
-    var hiddenProperty;
-    var visibilityEventName = "none"; // requires a string value; otherwise the closure compiler complains
-    if (typeof document['hidden'] !== "undefined") { // Opera 12.10 and Firefox 18 and later support
-      hiddenProperty = "hidden";
-      visibilityEventName = "visibilitychange";
-    } else if (typeof document['mozHidden'] !== "undefined") {
-      hiddenProperty = "mozHidden";
-      visibilityEventName = "mozvisibilitychange";
-    } else if (typeof document['msHidden'] !== "undefined") {
-      hiddenProperty = "msHidden";
-      visibilityEventName = "msvisibilitychange";
-    } else if (typeof document['webkitHidden'] !== "undefined") {
-      hiddenProperty = "webkitHidden";
-      visibilityEventName = "webkitvisibilitychange";
-    }
 
-    var signalPageView = AUTO_PAGE_VIEW_EVENT ? function() {
-      signal('pageView');
-    } : function() {};
+    /**
+     * Start a page view.
+     *
+     * This triggers generation of the page view identifier, which happens here
+     * due to script re-use on forward/backward browser navigation. Because events
+     * identifiers are also tied to page-view via the event counter, we also handle
+     * its initialization here.
+     */
+    var startPageView = function() {
+      if (!isServerPageView) {
+        pageViewId = generateId(false);
+        divolte['pageViewId'] = pageViewId;
+        eventCounter = 0;
+      }
+      info("Starting page view", pageViewId);
+      if (AUTO_PAGE_VIEW_EVENT) {
+        signal('pageView');
+      }
+    };
 
-    if (typeof hiddenProperty !== 'undefined' && document[hiddenProperty]) {
-      // The {add|remove}EventListener functions are not available in <= IE8;
-      // but this branch shouldn't execute in that case, since the hidden
-      // property is also undefined.
-      document.addEventListener(visibilityEventName, function visibilityListener() {
-        if (document[hiddenProperty] === false) {
-          signalPageView();
-          document.removeEventListener(visibilityEventName, visibilityListener);
-        }
-      })
+    // The best thing we can hook into is the 'pageshow' event, if it's supported.
+    if ('onpageshow' in window && window['addEventListener']) {
+      log("Detected 'pageshow' event support; linking page-view to event.");
+      window['addEventListener']('pageshow', function(event) {
+        startPageView();
+        // We leave the handler registered so that bfcache navigation triggers new pageviews.
+      });
     } else {
-      // TODO: Possibly defer until the DOM is ready?
-      signalPageView();
+      // Old Opera doesn't have a mechanism for detected bfcache'd back/forward navigation,
+      // but we can disable its bfcache using this property.
+      /** @type {Object} */
+      var history = window['history'];
+      if (history && typeof(history['navigationMode'] !== 'undefined')) {
+        info("Changing navigation mode from " + history['navigationMode'] + " to 'compatible'.");
+        history['navigationMode'] = 'compatible';
+      }
+      /*
+       * If there's no support for pageshow, fall back on the Page Visibility
+       * API instead. We use this if it's available to avoid firing the initial
+       * pageView event until the page is actually visible.
+       * On load we always signal the 'pageView' event.
+       * Depending on browser support we either signal right away, or
+       * use the Page Visibility API to only fire the initial pageView
+       * event as soon as the page is first visible.
+       */
+      /** @type {string} */
+      var hiddenProperty;
+      /** @type {string} */
+      var visibilityEventName;
+      if (typeof document['hidden'] !== "undefined") { // Opera 12.10 and Firefox 18 and later support
+        hiddenProperty = "hidden";
+        visibilityEventName = "visibilitychange";
+      } else if (typeof document['mozHidden'] !== "undefined") {
+        hiddenProperty = "mozHidden";
+        visibilityEventName = "mozvisibilitychange";
+      } else if (typeof document['msHidden'] !== "undefined") {
+        hiddenProperty = "msHidden";
+        visibilityEventName = "msvisibilitychange";
+      } else if (typeof document['webkitHidden'] !== "undefined") {
+        hiddenProperty = "webkitHidden";
+        visibilityEventName = "webkitvisibilitychange";
+      } else {
+        warn("Could not detect property for document visibility.")
+      }
+      if (!document[hiddenProperty]) {
+        log("Page already visible; starting page view immediately.");
+        startPageView();
+      } else if (document['addEventListener'] && document['removeEventListener']) {
+        log("Page currently hidden; deferring start of page view.");
+        document['addEventListener'](visibilityEventName, function visibilityListener() {
+          if (document[hiddenProperty] === false) {
+            startPageView();
+            document['removeEventListener'](visibilityEventName, visibilityListener);
+          }
+        });
+      } else {
+        warn("Page currently hidden, but don't know how to defer start of page view; starting page view immediately.");
+        startPageView();
+      }
     }
   } else {
     warn("Divolte module already initialized; existing module left intact.");

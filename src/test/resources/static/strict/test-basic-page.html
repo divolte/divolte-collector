@@ -27,6 +27,18 @@
   </head>
   <body>
     <script src="/divolte.js" defer async></script>
+    <script>
+        var customToJson1 = {
+            toJSON: function() {
+                return "custom"
+            }
+        };
+        var customToJson2 = {
+            toJSON: function() {
+                return undefined;
+            }
+        }
+    </script>
     <div id="custom"
          onclick="divolte.signal('custom', {
                                    a: {},
@@ -43,8 +55,11 @@
                                    m: new Date(Date.UTC(2015,5,13,15,49,33,2)),
                                    n: {},
                                    o: [ {}, { a: 'b' }, { c: 'd' } ],
-                                   p: {}
+                                   p: [ null, undefined, { a: 'b', b: undefined }, customToJson1, customToJson2, { a: customToJson2 }],
+                                   q: {}
                                  }
                                  )">Click me to fire an event!</div>
+    <div id="deliver2events"
+         onclick="divolte.signal('firstEvent'); divolte.signal('secondEvent')">Click me to fire two events!</div>
   </body>
 </html>

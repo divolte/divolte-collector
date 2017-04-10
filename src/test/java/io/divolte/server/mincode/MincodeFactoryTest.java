@@ -57,7 +57,7 @@ public class MincodeFactoryTest {
             try {
                 Files.deleteIfExists(path);
             } catch (final IOException e) {
-                throw new RuntimeException("Error cleaning up temporary file", e);
+                throw new UncheckedIOException("Error cleaning up temporary file", e);
             }
             cleanupFile = Optional.empty();
         });

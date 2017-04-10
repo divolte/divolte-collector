@@ -9,6 +9,7 @@
     </description>
 
     <!-- The default rule sets that we apply. -->
+    <rule ref="rulesets/java/basic.xml"/>
     <rule ref="rulesets/java/braces.xml"/>
     <rule ref="rulesets/java/clone.xml"/>
     <rule ref="rulesets/java/empty.xml"/>
@@ -16,4 +17,5 @@
     <rule ref="rulesets/java/sunsecure.xml"/>
     <rule ref="rulesets/java/imports.xml"/>
     <rule ref="rulesets/java/unnecessary.xml"/>
+    <rule ref="rulesets/java/unusedcode.xml"/>
 </ruleset>

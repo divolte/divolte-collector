@@ -18,6 +18,8 @@ package io.divolte.server;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -49,6 +51,7 @@ public class BrowserSource extends HttpSource {
         this(sourceName,
              vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).prefix,
              vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).eventSuffix,
+             vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class).httpResponseDelay,
              loadTrackingJavaScript(vc, sourceName),
              processingPool,
              vc.configuration().sourceIndex(sourceName));
@@ -57,6 +60,7 @@ public class BrowserSource extends HttpSource {
     private BrowserSource(final String sourceName,
                           final String pathPrefix,
                           final String eventSuffix,
+                          final Duration httpResponseDelay,
                           final TrackingJavaScriptResource trackingJavascript,
                           final IncomingRequestProcessingPool processingPool,
                           final int sourceIndex) {
@@ -66,7 +70,10 @@ public class BrowserSource extends HttpSource {
         javascriptName = trackingJavascript.getScriptName();
         javascriptHandler = new AllowedMethodsHandler(new JavaScriptHandler(trackingJavascript), Methods.GET);
         final ClientSideCookieEventHandler clientSideCookieEventHandler = new ClientSideCookieEventHandler(processingPool, sourceIndex);
-        eventHandler = new AllowedMethodsHandler(clientSideCookieEventHandler, Methods.GET);
+        final HttpHandler delayedHandler = httpResponseDelay.isZero()
+            ? clientSideCookieEventHandler
+            : new ResponseDelayingHandler(clientSideCookieEventHandler, httpResponseDelay.toNanos(), TimeUnit.NANOSECONDS);
+        eventHandler = new AllowedMethodsHandler(delayedHandler, Methods.GET);
     }
 
     @Override

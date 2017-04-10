@@ -33,7 +33,10 @@ public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBu
 
     private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
 
-    public KafkaFlushingPool(final ValidatedConfiguration vc, final String name, final SchemaRegistry ignored) {
+    public KafkaFlushingPool(final ValidatedConfiguration vc,
+                             final String name,
+                             @SuppressWarnings("unused")
+                             final SchemaRegistry ignored) {
         this(
                 name,
                 vc.configuration().global.kafka.threads,

@@ -16,34 +16,37 @@
 
 package io.divolte.server;
 
+import com.google.common.base.Preconditions;
 import com.google.common.io.ByteStreams;
 import io.divolte.server.ServerTestUtils.TestServer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 
 @ParametersAreNonnullByDefault
 public class ServerPingTest {
 
-    private Optional<TestServer> testServer = Optional.empty();
+    @Nullable
+    private TestServer testServer;
 
     @Before
     public void setup() {
-        testServer = Optional.of(new TestServer());
+        testServer = new TestServer();
     }
 
     @Test
     public void shouldRespondToPingWithPong() throws IOException {
-        final URL url = new URL(String.format("http://localhost:%d/ping", testServer.get().port));
+        Preconditions.checkState(null != testServer);
+        final URL url = new URL(String.format("http://%s:%d/ping", testServer.host, testServer.port));
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         try {
             conn.setRequestMethod("GET");
@@ -58,7 +61,9 @@ public class ServerPingTest {
 
     @After
     public void tearDown() {
-        testServer.ifPresent(testServer -> testServer.server.shutdown());
-        testServer = Optional.empty();
+        if (null != testServer) {
+            testServer.shutdown();
+            testServer = null;
+        }
     }
 }

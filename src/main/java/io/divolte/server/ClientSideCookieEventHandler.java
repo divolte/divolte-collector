@@ -42,6 +42,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import static io.divolte.server.HttpSource.*;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -91,8 +92,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                 Resources.toByteArray(Resources.getResource("transparent1x1.gif"))
             ).asReadOnlyBuffer();
         } catch (final IOException e) {
-            // Should throw something more specific than this.
-            throw new RuntimeException("Could not load transparent image resource.", e);
+            throw new UncheckedIOException("Could not load transparent image resource.", e);
         }
     }
 

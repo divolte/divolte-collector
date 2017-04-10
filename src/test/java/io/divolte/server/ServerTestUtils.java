@@ -25,28 +25,62 @@ import org.apache.avro.generic.GenericRecord;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ServerTestUtils {
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
+    private static final String LOOPBACK = "127.0.0.1";
     /*
-     * Theoretically, this is prone to race conditions,
-     * but in practice, it should be fine due to the way
-     * TCP stacks allocate port numbers (i.e. increment
-     * for the next one).
+     * List of ports to cycle through.
+     *
+     * We use this list instead of a random OS-assigned port because
+     * some environments (e.g. Sauce Labs) only support specific ports
+     * when connecting to 'localhost'.
+     * See: https://wiki.saucelabs.com/display/DOCS/Sauce+Connect+Proxy+FAQS#SauceConnectProxyFAQS-CanIAccessApplicationsonlocalhost?
+     *
+     * Note: Browsers often block ports on localhost.
+     * https://fetch.spec.whatwg.org/#port-blocking
+     * (Safari and Firefox use this list; not sure about the rest.)
+     * Note: Android can't use 5555 or 8080 with Sauce Connect.
      */
-    public static int findFreePort() {
-        try (final ServerSocket socket = new ServerSocket(0)) {
-            return socket.getLocalPort();
-        } catch (final IOException e) {
-            return -1;
+    private static int[] SAFE_PORTS = {
+        2000, 2001, 2020, 2109, 2222, 2310,
+        3000, 3001, 3030, 3210, 3333,
+        4000, 4001, 4040, 4321, 4502, 4503, 4567,
+        5000, 5001, 5050, 5432,
+        6001, 6060, 6543,
+        7000, 7070, 7774, 7777,
+        8000, 8001, 8003, 8031, 8081, 8765, 8777, 8888,
+        9000, 9001, 9080, 9090, 9876, 9877, 9999,
+        49221,
+        55001,
+    };
+    private static AtomicInteger nextSafePortIndex = new AtomicInteger(0);
+    @SuppressWarnings("PMD.EmptyCatchBlock")
+    private static int findFreePort() {
+        for(int attempt = 0; attempt < SAFE_PORTS.length * 2; ++attempt) {
+            final int candidatePortIndex = nextSafePortIndex.getAndUpdate((lastPort) -> (lastPort + 1) % SAFE_PORTS.length);
+            try (final ServerSocket socket = new ServerSocket(SAFE_PORTS[candidatePortIndex])) {
+                return socket.getLocalPort();
+            } catch (final IOException e) {
+                // Assume port already in use. Proceed to next one...
+            }
         }
+        // Give up if we go through the list twice.
+        throw new RuntimeException("Could not find unused safe port.");
     }
+
+    private static Config REFERENCE_TEST_CONFIG = ConfigFactory.parseResources("reference-test.conf");
 
     @ParametersAreNonnullByDefault
     public static final class EventPayload {
@@ -66,30 +100,33 @@ public final class ServerTestUtils {
     @ParametersAreNonnullByDefault
     public static final class TestServer {
         final Config config;
+        final String host;
         final int port;
-        final Server server;
+        private final Server server;
         final BlockingQueue<EventPayload> events;
 
         public TestServer() {
-            this(findFreePort(), ConfigFactory.parseResources("reference-test.conf"));
+            this(findFreePort(), REFERENCE_TEST_CONFIG);
         }
 
         public TestServer(final String configResource) {
             this(findFreePort(),
                  ConfigFactory.parseResources(configResource)
-                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
+                              .withFallback(REFERENCE_TEST_CONFIG));
         }
 
         public TestServer(final String configResource, final Map<String,Object> extraConfig) {
             this(findFreePort(),
                  ConfigFactory.parseMap(extraConfig, "Test-specific overrides")
                               .withFallback(ConfigFactory.parseResources(configResource))
-                              .withFallback(ConfigFactory.parseResources("reference-test.conf")));
+                              .withFallback(REFERENCE_TEST_CONFIG));
         }
 
         private TestServer(final int port, final Config config) {
             this.port = port;
-            this.config = config.withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
+            this.host = getBindAddress();
+            this.config = config.withValue("divolte.global.server.host", ConfigValueFactory.fromAnyRef(host))
+                                .withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
 
             events = new ArrayBlockingQueue<>(100);
             final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);
@@ -99,17 +136,50 @@ public final class ServerTestUtils {
             server.run();
         }
 
+        private static String getBindAddress() {
+            final String bindAddress;
+            if (Boolean.getBoolean("io.divolte.test.bindExternal")) {
+                try {
+                    bindAddress = InetAddress.getLocalHost().getHostAddress();
+                } catch (final UnknownHostException e) {
+                    throw new UncheckedIOException("Unable to determine external IP address", e);
+                }
+            } else {
+                bindAddress = LOOPBACK;
+            }
+            return bindAddress;
+        }
+
         static TestServer createTestServerWithDefaultNonTestConfiguration() {
             return new TestServer(findFreePort(), ConfigFactory.defaultReference());
         }
 
         public EventPayload waitForEvent() throws InterruptedException {
             // SauceLabs can take quite a while to fire up everything.
-            return Optional.ofNullable(events.poll(5, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
+            return waitForEvent(10, TimeUnit.SECONDS);
+        }
+
+        public EventPayload waitForEvent(final long timeout, final TimeUnit unit) throws InterruptedException {
+            return Optional.ofNullable(events.poll(timeout, unit))
+                           .orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
         }
 
         public boolean eventsRemaining() {
             return !events.isEmpty();
+        }
+
+        public void shutdown() {
+            shutdown(false);
+        }
+
+        public void shutdown(final boolean waitForShutdown) {
+            // The server can take a little while to shut down, so we do this asynchronously if possible.
+            // (This is harmless: new servers will listen on a different port.)
+            if (waitForShutdown) {
+                server.shutdown();
+            } else {
+                new Thread(server::shutdown).start();
+            }
         }
     }
 }

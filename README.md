@@ -80,7 +80,19 @@ HomeBrew:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=chrome CHROME_DRIVER=/usr/local/Cellar/chromedriver/2.27/bin/chromedriver ./gradlew cleanTest test
+    % SELENIUM_DRIVER=chrome CHROME_DRIVER=$(which chromedriver) ./gradlew test
+
+### Safari Webdriver ###
+
+Safari (from version 10) has native Webdriver support. To set this up:
+
+1. Enable the developer menu: _Preferences_|_Advanced_|_Show Develop menu in menu bar_
+2. In the _Develop_ menu, enable _Allow Remote Automation_.
+3. First time only, execute `safaridriver -p 0` from the command-line and authorise the driver to connect to Safari.
+
+Tests can then be executed:
+
+    % SELENIUM_DRIVER=safari ./gradlew cleanTest test
 
 ### PhantomJS ###
 
@@ -91,7 +103,7 @@ HomeBrew:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=phantom ./gradlew cleanTest test
+    % SELENIUM_DRIVER=phantom ./gradlew test
 
 (Some tests currently fail.)
 
@@ -102,9 +114,9 @@ Once you have a username and API key and
 [Sauce Connect](https://docs.saucelabs.com/reference/sauce-connect/) running, tests
 can then be executed:
 
-    % export SAUCE_USER_NAME=<username>
-    % export SAUCE_API_KEY=<api key>
-    % SELENIUM_DRIVER=sauce ./gradlew cleanTest test
+    % export SAUCE_USERNAME=<username>
+    % export SAUCE_ACCESS_KEY=<api key>
+    % SELENIUM_DRIVER=sauce ./gradlew test
 
 These tests can take quite some time to execute. Not all succeed.
 

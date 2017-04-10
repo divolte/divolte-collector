@@ -57,7 +57,9 @@ public class TrackingJavaScriptResourceTest {
 
     private TrackingJavaScriptResource trackingJavaScript;
 
-    public TrackingJavaScriptResourceTest(final String name, final Config config) {
+    public TrackingJavaScriptResourceTest(@SuppressWarnings("unused")
+                                          final String name,
+                                          final Config config) {
         this.config = Objects.requireNonNull(config);
     }
 

@@ -22,32 +22,38 @@ import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.config.BrowserSourceConfiguration;
 import org.junit.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static io.divolte.server.SeleniumTestBase.TestPages.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class SeleniumJavaScriptTest extends SeleniumTestBase {
+    private static final Logger logger = LoggerFactory.getLogger(SeleniumJavaScriptTest.class);
+
     @Test
     public void shouldRegenerateIDsOnExplicitNavigation() throws Exception {
         doSetUp();
-        Preconditions.checkState(null != driver && null != server);
+        Preconditions.checkState(null != server);
 
         // do a sequence of explicit navigation by setting the browser location
         // and then check that all requests generated a unique pageview ID
         final Runnable[] actions = {
-                () -> driver.navigate().to(urlOf(BASIC)),
-                () -> driver.navigate().to(urlOf(BASIC_COPY)),
-                () -> driver.navigate().to(urlOf(BASIC))
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
+                () -> gotoPage(BASIC),
                 };
 
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
@@ -61,7 +67,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(urlOf(BASIC)),
+                () -> gotoPage(BASIC),
                 driver.navigate()::refresh
                 };
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
@@ -69,22 +75,32 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     @Test
-    public void shouldRegenerateIDsOnForwardBackNavigation() throws Exception {
+    public void shouldRegenerateIDsOnBackNavigation() throws Exception {
         doSetUp();
         Preconditions.checkState(null != driver && null != server);
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(urlOf(BASIC)),
-                () -> driver.get(urlOf(BASIC_COPY)),
-                () -> driver.get(urlOf(BASIC)),
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
                 driver.navigate()::back,
+        };
+        final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
+        assertEquals(actions.length, numberOfUniquePageViewIDs);
+    }
+
+    @Test
+    public void shouldRegenerateIDsOnForwardNavigation() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != driver && null != server);
+
+        // Navigate to the same page twice
+        final Runnable[] actions = {
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
                 driver.navigate()::back,
                 driver.navigate()::forward,
-                driver.navigate()::back,
-                driver.navigate()::forward,
-                driver.navigate()::forward
-                };
+        };
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
         assertEquals(actions.length, numberOfUniquePageViewIDs);
     }
@@ -96,18 +112,18 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
 
         // Navigate to the same page twice
         final Runnable[] actions = {
-                () -> driver.get(urlOf(BASIC)),
-                () -> driver.get(urlOf(BASIC_COPY)),
-                () -> driver.get(urlOf(BASIC)),
-                () -> driver.get(urlOf(BASIC_COPY)),
-                () -> driver.get(urlOf(BASIC)),
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
+                () -> gotoPage(BASIC),
+                () -> gotoPage(BASIC_COPY),
+                () -> gotoPage(BASIC),
                 driver.navigate()::back,
                 driver.navigate()::back,
                 () -> driver.findElement(By.id("custom")).click(),
                 driver.navigate()::forward,
                 driver.navigate()::refresh,
                 driver.navigate()::back,
-                () -> driver.get(urlOf(PAGE_VIEW_SUPPLIED)),
+                () -> gotoPage(PAGE_VIEW_SUPPLIED),
                 driver.navigate()::back
                 };
 
@@ -117,14 +133,22 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     }
 
     private int uniquePageViewIdsForSeriesOfActions(final Runnable[] actions) {
-        return Stream.of(actions)
-                .flatMap((action) -> {
-                    action.run();
-                    final EventPayload payload = unchecked(server::waitForEvent);
-                    final DivolteEvent event = payload.event;
-                    return event.browserEventData.map(b -> b.pageViewId).map(Stream::of).orElse(null);
-                })
-                .collect(Collectors.toSet()).size();
+        Preconditions.checkState(null != server);
+        logger.info("Starting sequence of {} browser actions.", actions.length);
+        return IntStream.range(0, actions.length)
+               .mapToObj((index) -> {
+                   final Runnable action = actions[index];
+                   logger.info("Issuing browser action #{}.", index);
+                   action.run();
+                   logger.debug("Waiting for event from server.");
+                   final EventPayload payload = unchecked(server::waitForEvent);
+                   final DivolteEvent event = payload.event;
+                   final Optional<String> pageViewId = event.browserEventData.map(b -> b.pageViewId);
+                   logger.info("Browser action #{} yielded pageview/event: {}/{}", index, pageViewId, event.eventId);
+                   return pageViewId;
+               })
+               .flatMap((pageViewId) -> pageViewId.map(Stream::of).orElse(null))
+               .collect(Collectors.toSet()).size();
     }
 
     @FunctionalInterface
@@ -146,10 +170,9 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
     public void shouldSignalWhenOpeningPage() throws Exception {
         doSetUp();
-        Preconditions.checkState(null != driver && null != server);
+        Preconditions.checkState(null != server);
 
-        final String location = urlOf(BASIC);
-        driver.get(location);
+        final String location = gotoPage(BASIC);
 
         final EventPayload payload = server.waitForEvent();
 
@@ -212,7 +235,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     public void shouldSendCustomEvent() throws Exception {
         doSetUp();
         Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
+        gotoPage(BASIC);
         server.waitForEvent();
 
         driver.findElement(By.id("custom")).click();
@@ -225,7 +248,22 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final Optional<String> customEventParameters =
                 eventData.eventParametersProducer.get().map(Object::toString);
         assertTrue(customEventParameters.isPresent());
-        assertEquals("{\"a\":{},\"b\":\"c\",\"d\":{\"a\":[],\"b\":\"g\"},\"e\":[\"1\",\"2\"],\"f\":42,\"g\":53.2,\"h\":-37,\"i\":-7.83E-9,\"j\":true,\"k\":false,\"l\":null,\"m\":\"2015-06-13T15:49:33.002Z\",\"n\":{},\"o\":[{},{\"a\":\"b\"},{\"c\":\"d\"}],\"p\":{}}",
+        assertEquals("{\"a\":{}," +
+                     "\"b\":\"c\"," +
+                     "\"d\":{\"a\":[],\"b\":\"g\"}," +
+                     "\"e\":[\"1\",\"2\"]," +
+                     "\"f\":42," +
+                     "\"g\":53.2," +
+                     "\"h\":-37," +
+                     "\"i\":-7.83E-9," +
+                     "\"j\":true," +
+                     "\"k\":false," +
+                     "\"l\":null," +
+                     "\"m\":\"2015-06-13T15:49:33.002Z\"," +
+                     "\"n\":{}," +
+                     "\"o\":[{},{\"a\":\"b\"},{\"c\":\"d\"}]," +
+                     "\"p\":[null,null,{\"a\":\"b\"},\"custom\",null,{}]," +
+                     "\"q\":{}}",
                      customEventParameters.get());
     }
 
@@ -233,7 +271,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     public void shouldSetAppropriateCookies() throws Exception {
         doSetUp();
         Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
+        gotoPage(BASIC);
         server.waitForEvent();
 
         final Optional<DivolteIdentifier> parsedPartyCookieOption = DivolteIdentifier.tryParse(driver.manage().getCookieNamed(BrowserSourceConfiguration.DEFAULT_BROWSER_SOURCE_CONFIGURATION.partyCookie).getValue());
@@ -252,35 +290,142 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
     @Test
     public void shouldPickupProvidedPageViewIdFromHash() throws Exception {
         doSetUp();
-        Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(PAGE_VIEW_SUPPLIED));
+        Preconditions.checkState(null != server);
+        gotoPage(PAGE_VIEW_SUPPLIED);
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
-        assertEquals("supercalifragilisticexpialidocious", eventData.browserEventData.get().pageViewId);
+        assertEquals(Optional.of("supercalifragilisticexpialidocious"), eventData.browserEventData.map(bed -> bed.pageViewId));
         assertEquals("supercalifragilisticexpialidocious0", eventData.eventId);
     }
 
     @Test
     public void shouldSupportCustomJavascriptName() throws Exception {
         doSetUp("selenium-test-custom-javascript-name.conf");
-        Preconditions.checkState(null != driver && null != server);
+        Preconditions.checkState(null != server);
 
-        driver.get(urlOf(CUSTOM_JAVASCRIPT_NAME));
+        gotoPage(CUSTOM_JAVASCRIPT_NAME);
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
-        assertEquals("pageView", eventData.eventType.get());
+        assertEquals(Optional.of("pageView"), eventData.eventType);
     }
 
     @Test
     public void shouldUseConfiguredEventSuffix() throws Exception {
         doSetUp("selenium-test-custom-event-suffix.conf");
-        Preconditions.checkState(null != driver && null != server);
-        driver.get(urlOf(BASIC));
+        Preconditions.checkState(null != server);
+        gotoPage(BASIC);
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
 
-        assertEquals("pageView", eventData.eventType.get());
+        assertEquals(Optional.of("pageView"), eventData.eventType);
+    }
+
+    @Test
+    public void shouldAdvanceToNextEventOnTimeout() throws Exception {
+        doSetUp("selenium-test-slow-server.conf");
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(BASIC);
+        // No page-view events.
+
+        // Emit two events.
+        logger.info("Clicking link that will trigger 2 slow events");
+        driver.findElement(By.id("deliver2events")).click();
+        /*
+         * The server has been configured to delay responses by 15 seconds.
+         * The JavaScript should time them out quickly.
+         * This means both events should arrive within the time here,
+         * instead of waiting for the delayed responses.
+         */
+        logger.info("Waiting for first event");
+        server.waitForEvent();
+        logger.info("First event received; waiting for second event.");
+        server.waitForEvent();
+        logger.info("Second event received.");
+    }
+
+    @Test
+    public void shouldFlushEventsBeforeClickOut() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Record the current page URL, so that later we can check we navigated away.
+        final String initialPageUrl = driver.getCurrentUrl();
+
+        // Locate the link to click on, and click it.
+        logger.info("Clicking link that will trigger events");
+        driver.findElement(By.id("clickout")).click();
+
+        // At this point 10 events should arrive, after which the browser navigates
+        // to the basic page.
+        for (int i = 0; i < 10; ++i) {
+            final DivolteEvent eventData = server.waitForEvent().event;
+            assertEquals("Unexpected event type for event #" + i,
+                         Optional.of("clickOutEvent"),
+                         eventData.eventType);
+            assertEquals("Event index parameter incorrect for event #" + i,
+                         Optional.of(i),
+                         eventData.eventParametersProducer.get().map(jsonNode -> jsonNode.get("i").asInt()));
+        }
+        logger.info("Triggered events have all arrived.");
+
+        // Check that the browser did navigate to a new page. (It will also generate a page-view.)
+        final WebDriverWait wait = new WebDriverWait(driver, 30);
+        wait.until(driver -> !driver.getCurrentUrl().equals(initialPageUrl));
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+    }
+
+    @Test
+    public void shouldInvokeFlushCallbackImmediatelyIfNoEventsPending() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Hit the 'flush' link, and wait for the event.
+        driver.findElement(By.id("flushdirect")).click();
+
+        // The event contains information about whether the callback was invoked immediately or not.
+        final DivolteEvent event = server.waitForEvent().event;
+        assertEquals(Optional.of("firstFlush"), event.eventType);
+        assertEquals(Optional.of(true),
+                     event.eventParametersProducer.get().map(jsonNode -> jsonNode.get("callbackWasImmediate").asBoolean()));
+    }
+
+    @Test
+    public void shouldTimeoutIfRequiredOnFlushBeforeClickOut() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Record the current page URL, so that later we can check we navigated away.
+        final String initialPageUrl = driver.getCurrentUrl();
+
+        // Locate the link to click on, and click it.
+        logger.info("Clicking link that will trigger events");
+        driver.findElement(By.id("quickout")).click();
+
+        // At this point lots of events should arrive, but before we reach 100000 the
+        // flush should have timed-out and navigated to the new page.
+        int count = 0;
+        DivolteEvent lastEventData;
+        do {
+            lastEventData = server.waitForEvent().event;
+            if (!Optional.of("clickOutEvent").equals(lastEventData.eventType)) {
+                break;
+            }
+            ++count;
+        } while (count < 1000);
+        assertThat(count, is(both(greaterThan(0)).and(lessThan(1000))));
+        logger.info("Triggered events have all arrived: {}", count);
+
+        // Check that the browser did navigate to a new page. It will have generated a new page-view.
+        final WebDriverWait wait = new WebDriverWait(driver, 10);
+        wait.until(driver -> !driver.getCurrentUrl().equals(initialPageUrl));
+        assertEquals(Optional.of("pageView"), lastEventData.eventType);
     }
 }

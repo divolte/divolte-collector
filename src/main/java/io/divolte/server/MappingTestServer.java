@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -96,7 +97,7 @@ public class MappingTestServer {
                     try {
                         return new ExternalDatabaseLookupService(Paths.get(path));
                     } catch (final IOException e) {
-                        throw new RuntimeException("Failed to configure GeoIP lookup service.", e);
+                        throw new UncheckedIOException("Failed to configure GeoIP lookup service.", e);
                     }
                 }).orElse(null);
     }

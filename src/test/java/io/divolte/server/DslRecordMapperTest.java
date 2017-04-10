@@ -19,10 +19,7 @@ package io.divolte.server;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -66,7 +63,7 @@ import io.divolte.server.recordmapping.SchemaMappingException;
 @ParametersAreNonnullByDefault
 public class DslRecordMapperTest {
     private static final String CLIENT_SIDE_TIME = "i0rjfnxd";
-    private static final String DIVOLTE_URL_STRING = "http://localhost:%d/csc-event";
+    private static final String DIVOLTE_URL_STRING = "http://%s:%d/csc-event";
     private static final String DIVOLTE_URL_QUERY_STRING = "?"
             + "p=0%3Ai0rjfnxc%3AJLOvH9Nda2c1uV8M~vmdhPGFEC3WxVNq&"
             + "s=0%3Ai0rjfnxc%3AFPpXFMdcEORvvaP_HbpDgABG3Iu5__4d&"
@@ -92,7 +89,7 @@ public class DslRecordMapperTest {
 
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.122 Safari/537.36";
 
-    public TestServer server;
+    private TestServer server;
     private File mappingFile;
     private File avroFile;
 
@@ -124,7 +121,7 @@ public class DslRecordMapperTest {
 
         assertEquals(event.partyId.value, record.get("client"));
         assertEquals(event.sessionId.value, record.get("session"));
-        assertEquals(event.browserEventData.get().pageViewId, record.get("pageview"));
+        assertEquals(event.browserEventData.map(bed -> bed.pageViewId), Optional.of(record.get("pageview")));
         assertEquals(event.eventId, record.get("event"));
         assertEquals(1018, record.get("viewportWidth"));
         assertEquals(1018, record.get("viewportHeight"));
@@ -511,7 +508,7 @@ public class DslRecordMapperTest {
 
     private EventPayload request(final String location,
                                  final List<String> extraEncodedQueryParameters) throws IOException, InterruptedException {
-        final StringBuilder urlBuilder = new StringBuilder(String.format(DIVOLTE_URL_STRING, server.port));
+        final StringBuilder urlBuilder = new StringBuilder(String.format(DIVOLTE_URL_STRING, server.host, server.port));
         urlBuilder.append(DIVOLTE_URL_QUERY_STRING)
                   .append("&l=").append(encodeUrl(location));
         extraEncodedQueryParameters.forEach(s -> urlBuilder.append('&').append(s));
@@ -534,7 +531,7 @@ public class DslRecordMapperTest {
             return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
         } catch (final UnsupportedEncodingException e) {
             // This should never happen: all platforms must support UTF-8.
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -560,7 +557,7 @@ public class DslRecordMapperTest {
     @After
     public void shutdown() throws IOException {
         if (server != null) {
-            server.server.shutdown();
+            server.shutdown();
         }
         if (mappingFile != null) {
             Files.delete(mappingFile.toPath());

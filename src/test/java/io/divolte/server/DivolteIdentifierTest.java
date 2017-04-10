@@ -19,6 +19,7 @@ package io.divolte.server;
 import static org.junit.Assert.*;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.Test;
@@ -38,16 +39,16 @@ public class DivolteIdentifierTest {
     @Test
     public void divolteIdentifiersShouldEncodeTimestamp() {
         DivolteIdentifier cv = DivolteIdentifier.generate(42);
-        assertEquals(42, DivolteIdentifier.tryParse(cv.value).get().timestamp);
+        assertEquals(Optional.of(42L), DivolteIdentifier.tryParse(cv.value).map(di -> di.timestamp));
     }
 
     @Test
     public void equalCookieValuesShouldBeConsistentWithHashcodeAndEquals() {
         DivolteIdentifier left = DivolteIdentifier.generate();
-        DivolteIdentifier right = DivolteIdentifier.tryParse(left.value).get();
+        Optional<DivolteIdentifier> right = DivolteIdentifier.tryParse(left.value);
 
-        assertTrue(left.equals(right));
-        assertEquals(left.hashCode(), right.hashCode());
+        assertEquals(Optional.of(left), right);
+        assertEquals(Optional.of(left.hashCode()), right.map(DivolteIdentifier::hashCode));
 
         assertNotEquals(DivolteIdentifier.generate(42), DivolteIdentifier.generate(42));
     }
@@ -55,9 +56,9 @@ public class DivolteIdentifierTest {
     @Test
     public void divolteIdentifiersShouldParseVersionAndTimestamp() {
         String stringValue = "0:16:5mRCeUO4p2_6R7u1m9ZoxXG2AfBeJeHD";
-        DivolteIdentifier value = DivolteIdentifier.tryParse(stringValue).get();
-        assertEquals(42, value.timestamp);
-        assertEquals('0', value.version);
-        assertEquals(stringValue, value.value);
+        Optional<DivolteIdentifier> value = DivolteIdentifier.tryParse(stringValue);
+        assertEquals(Optional.of(42L), value.map(v -> v.timestamp));
+        assertEquals(Optional.of('0'), value.map(v -> v.version));
+        assertEquals(Optional.of(stringValue), value.map(v -> v.value));
     }
 }

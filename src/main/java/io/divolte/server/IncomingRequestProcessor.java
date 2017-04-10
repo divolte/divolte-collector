@@ -159,12 +159,14 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
         event.exchange.putAttachment(DUPLICATE_EVENT_KEY, duplicate);
 
         mappingsBySourceIndex.get(item.sourceId)
-                             .stream()                                                          // For each mapping that applies to this source
+                             .stream()
+                             // For each mapping that applies to this source
                              .map(mapping -> mapping.map(item, event, duplicate))
-                             .filter(Optional::isPresent)                                       // Filter discarded for duplication or corruption
+                             .filter(Optional::isPresent)
+                             // Filter discarded for duplication or corruption
                              .map(Optional::get)
                              .forEach(bufferItem -> sinksByMappingIndex.get(bufferItem.sourceId)
-                                                                       .stream()                // For each sink that applies to this mapping
+                                                                       // For each sink that applies to this mapping
                                                                        .forEach(sink -> sink.enqueue(bufferItem)));
         return CONTINUE;
     }

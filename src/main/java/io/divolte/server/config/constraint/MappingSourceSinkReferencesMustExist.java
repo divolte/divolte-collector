@@ -23,7 +23,7 @@ public @interface MappingSourceSinkReferencesMustExist {
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 
-    public static final class Validator implements ConstraintValidator<MappingSourceSinkReferencesMustExist, DivolteConfiguration>{
+    final class Validator implements ConstraintValidator<MappingSourceSinkReferencesMustExist, DivolteConfiguration>{
         @Override
         public void initialize(final MappingSourceSinkReferencesMustExist constraintAnnotation) {
         }

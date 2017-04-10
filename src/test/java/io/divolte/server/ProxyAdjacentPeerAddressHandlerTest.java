@@ -30,7 +30,7 @@ import org.junit.Test;
 
 @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
 public class ProxyAdjacentPeerAddressHandlerTest {
-    private static final String URL_STRING = "http://localhost:%d/csc-event";
+    private static final String URL_STRING = "http://%s:%d/csc-event";
     private static final String URL_QUERY_STRING = "?"
             + "p=0%3Ai0rjfnxc%3AJLOvH9Nda2c1uV8M~vmdhPGFEC3WxVNq&"
             + "s=0%3Ai0rjfnxc%3AFPpXFMdcEORvvaP_HbpDgABG3Iu5__4d&"
@@ -51,7 +51,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
 
     @Test
     public void shouldObtainRightMostAddressFromChain() throws IOException, InterruptedException {
-        final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
+        final URL url = new URL(String.format(URL_STRING, server.host, server.port) + URL_QUERY_STRING);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1,192.168.13.23");
         conn.setRequestMethod("GET");
@@ -64,7 +64,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
 
     @Test
     public void shouldObtainSingleValueWithoutCommas() throws IOException, InterruptedException {
-        final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
+        final URL url = new URL(String.format(URL_STRING, server.host, server.port) + URL_QUERY_STRING);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1");
         conn.setRequestMethod("GET");
@@ -77,7 +77,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
 
     @Test
     public void shouldAllowWhitespaceAfterComma() throws IOException, InterruptedException {
-        final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
+        final URL url = new URL(String.format(URL_STRING, server.host, server.port) + URL_QUERY_STRING);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 192.168.13.23");
         conn.setRequestMethod("GET");
@@ -90,7 +90,7 @@ public class ProxyAdjacentPeerAddressHandlerTest {
 
     @Test
     public void shouldAllowMultipleXffHeaders() throws IOException, InterruptedException {
-        final URL url = new URL(String.format(URL_STRING, server.port) + URL_QUERY_STRING);
+        final URL url = new URL(String.format(URL_STRING, server.host, server.port) + URL_QUERY_STRING);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("X-Forwarded-For", "127.0.0.1, 8.8.8.8");
         conn.addRequestProperty("X-Forwarded-For", "192.168.13.23");
@@ -109,6 +109,6 @@ public class ProxyAdjacentPeerAddressHandlerTest {
 
     @After
     public void tearDown() {
-        server.server.shutdown();
+        server.shutdown();
     }
 }

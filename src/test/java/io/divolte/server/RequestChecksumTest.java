@@ -30,12 +30,13 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 public class RequestChecksumTest {
-    private static final String URL_STRING = "http://localhost:%d/csc-event";
+    private static final String URL_STRING = "http://%s:%d/csc-event";
 
     private static final String URL_QUERY_CHECKSUM_MISSING = '?'
             + "p=0%3Ai1t84hgy%3A5AF359Zjq5kUy98u4wQjlIZzWGhN~GlG&"
@@ -140,7 +141,7 @@ public class RequestChecksumTest {
         final EventPayload payload = server.waitForEvent();
         final DivolteEvent eventData = payload.event;
         assertFalse(eventData.corruptEvent);
-        assertEquals("ụñ⚕©ºḌℨ", eventData.eventType.get());
+        assertEquals(Optional.of("ụñ⚕©ºḌℨ"), eventData.eventType);
     }
 
     @Test
@@ -151,14 +152,13 @@ public class RequestChecksumTest {
         Preconditions.checkState(null != server);
         final EventPayload payload = server.waitForEvent();
         // The first request should be missing, and we should now have the sentinel event.
-        final String eventType = payload.event.eventType.get();
-        assertEquals("sentinelEvent", eventType);
+        assertEquals(Optional.of("sentinelEvent"), payload.event.eventType);
     }
 
     private void request(final String queryString) throws IOException {
         setServerConf(ImmutableMap.of("divolte.mappings.test.discard_corrupted", discardCorruptEvents));
         Preconditions.checkState(null != server);
-        final URL url = new URL(String.format(URL_STRING, server.port) + queryString);
+        final URL url = new URL(String.format(URL_STRING, server.host, server.port) + queryString);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         assertEquals(200, conn.getResponseCode());
     }
@@ -184,7 +184,7 @@ public class RequestChecksumTest {
         final TestServer oldServer = this.server;
         if (oldServer != newServer) {
             if (null != oldServer) {
-                oldServer.server.shutdown();
+                oldServer.shutdown();
             }
             this.server = newServer;
         }

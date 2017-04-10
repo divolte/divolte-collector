@@ -1,6 +1,6 @@
 package io.divolte.server;
 
-import static io.divolte.server.SeleniumTestBase.TEST_PAGES.*;
+import static io.divolte.server.SeleniumTestBase.TestPages.*;
 import static org.junit.Assert.*;
 
 import java.util.Optional;
@@ -23,10 +23,9 @@ public class SeleniumDisabledAutoPageViewEventTest extends SeleniumTestBase {
 
     @Test
     public void shouldFireOnlyCustomPageViewEvent() throws InterruptedException {
-        Preconditions.checkState(null != driver && null != server);
+        Preconditions.checkState(null != server);
 
-        final String location = urlOf(CUSTOM_PAGE_VIEW);
-        driver.get(location);
+        gotoPage(CUSTOM_PAGE_VIEW);
 
         final EventPayload payload = server.waitForEvent();
 
