@@ -109,6 +109,6 @@ public class ProxyAdjacentPeerAddressHandlerTest {
 
     @After
     public void tearDown() {
-        server.server.shutdown();
+        server.shutdown();
     }
 }

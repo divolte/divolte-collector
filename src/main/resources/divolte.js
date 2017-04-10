@@ -642,10 +642,12 @@ var AUTO_PAGE_VIEW_EVENT = true;
    *
    * @param {function(): undefined} callback
    *        the function to invoke after the timout if it hasn't already been.
+   * @param {number} timeoutMilliseconds
+   *        the timeout after which the method should be invoked if it hasn't already.
    * @return {function(): undefined}
    *         a function to be used as callback instead of the wrapped function.
    */
-  var withTimeout = function(callback) {
+  var withTimeout = function(callback, timeoutMilliseconds) {
     var calledAlready = false;
     var timerHandle = setTimeout(function() {
       if (!calledAlready) {
@@ -653,7 +655,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
         log("Timeout waiting for event callback; invoking anyway.", this, arguments);
         callback.apply(this, arguments);
       }
-    }, EVENT_TIMEOUT_SECONDS * 1000);
+    }, timeoutMilliseconds);
     return function() {
       if (!calledAlready) {
         calledAlready = true;
@@ -669,6 +671,10 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * If a signal event is currently underway, it is always the
    * first element in the queue.
    *
+   * Functions can be interspersed with events in the queue. When
+   * a function is encountered it is invoked, and then removed
+   * from the queue when the function returns.
+   *
    * @constructor
    * @final
    */
@@ -677,37 +683,66 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * The internal queue of signal events.
      * @private
      * @const
-     * @type {!Array.<string>}
+     * @type {!Array.<string|function()>}
      */
     this.queue = [];
   };
   /**
-   * Enqueue a signal event.
-   * If none are underway, this will commence. Otherwise it will be queued.
-   * @param event {string} the pre-calculated (and rendered) event to queue.
+   * Enqueue a signal event or a callback to be invoked when
+   * all prior events have been delivered.
+   *
+   * If delivery of a prior event or callback invocation is not
+   * still underway, processing of this item will commence immediately.
+   * Otherwise it will be queued.
+   *
+   * @param item {string|function()}
+   *        the pre-calculated (and rendered) event to queue, or a
+   *        callback to invoke when the queue drains to this point.
    */
-  SignalQueue.prototype.enqueue = function(event) {
+  SignalQueue.prototype.enqueue = function(item) {
     var pendingEvents = this.queue;
-    pendingEvents.push(event);
+    log("Queueing item for processing; " + pendingEvents.length + " currently pending.", item);
+    pendingEvents.push(item);
     if (1 === pendingEvents.length) {
-      log("No pending events; delivering immediately.", event);
-      this.deliverFirstPendingEvent();
+      log("No pending items; processing immediately.", item);
+      this.processNextItem();
+    }
+  };
+  /**
+   * @private
+   * Process the next pending event.
+   */
+  SignalQueue.prototype.processNextItem = function() {
+    var firstPendingItem = this.queue[0];
+    // Would normally use double-dispatch for this sort of thing, but
+    // this is simpler and sufficient for now.
+    switch (typeof firstPendingItem) {
+      case 'string':
+        this.deliverFirstPendingEvent(firstPendingItem);
+        break;
+      case 'function':
+        this.invokeFirstPendingCallback(firstPendingItem);
+        break;
+      default:
+        error("Dropping unknown type of item in signal queue.", firstPendingItem);
+        this.onFirstPendingItemCompleted();
     }
   };
   /**
    * @private
    * Start the next signal event.
+   *
+   * @param firstPendingEvent {string} the event to start delivering.
    */
-  SignalQueue.prototype.deliverFirstPendingEvent = function() {
+  SignalQueue.prototype.deliverFirstPendingEvent = function(firstPendingEvent) {
     var signalQueue = this;
     var image = new Image(1,1);
-    var firstPendingEvent = signalQueue.queue[0];
     log("Delivering pending event.", firstPendingEvent);
     var completionHandler = withTimeout(function() {
-      // We can't use onFirstPendingEventCompleted directly because 'this' isn't bound correctly.
+      // We can't use onFirstPendingItemCompleted directly because 'this' isn't bound correctly.
       // (And sadly, function.bind() isn't available universally.)
-      signalQueue.onFirstPendingEventCompleted();
-    });
+      signalQueue.onFirstPendingItemCompleted();
+    }, EVENT_TIMEOUT_SECONDS * 1000);
     image.onload = completionHandler;
     image.onerror = !LOGGING ? completionHandler : function(event) {
       warn("Error delivering event", firstPendingEvent);
@@ -717,20 +752,30 @@ var AUTO_PAGE_VIEW_EVENT = true;
   };
   /**
    * @private
-   * Handler for when the first event in the queue has been completed.
+   * Invoke the callback that is now at the front of the queue.
+   *
+   * @param firstPendingCallback {function()} the callback to invoke.
    */
-  SignalQueue.prototype.onFirstPendingEventCompleted = function() {
-    log("Marking pending event as complete.");
+  SignalQueue.prototype.invokeFirstPendingCallback = function(firstPendingCallback) {
+    firstPendingCallback();
+    this.onFirstPendingItemCompleted();
+  };
+  /**
+   * @private
+   * Handler for when the first item in the queue has been completed.
+   */
+  SignalQueue.prototype.onFirstPendingItemCompleted = function() {
+    log("Marking pending item as complete.");
     // Delete the first event from the queue.
     var pendingEvents = this.queue;
     pendingEvents.shift();
     // If there are still pending events, schedule the next.
     var remainingEvents = pendingEvents.length;
     if (0 < remainingEvents) {
-      log("Processing next event; remaining count:", remainingEvents);
-      this.deliverFirstPendingEvent();
+      log("Processing next item; remaining count:", remainingEvents);
+      this.processNextItem();
     } else {
-      log("All pending events have been delivered.");
+      log("All pending items have been delivered.");
     }
   };
 
@@ -1100,6 +1145,14 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * server. This function returns immediately, the event itself is logged
    * asynchronously.
    *
+   * Events are normally delivered to the server serially in the order they
+   * are signalled. A queued event will be delivered when any of the following
+   * occurs:
+   *
+   *  - A prior event is successfully flushed.
+   *  - An error occurs flushed the prior event. (No retry is attempted.)
+   *  - It takes too long for the prior event to be flushed.
+   *
    * @param {string} type The type of event to log.
    * @param {Object=} [customParameters]
    *    Optional object containing custom parameters to log alongside the event.
@@ -1212,6 +1265,32 @@ var AUTO_PAGE_VIEW_EVENT = true;
   };
 
   /**
+   * Register a callback to be invoked when all currently pending events
+   * have been flushed to the server.
+   *
+   * Signalled events are queued for asynchronous delivery to the Divolte
+   * Collector. This method can be used to register a one-off callback that
+   * will be invoked when all pending events on the queue have been flushed.
+   *
+   * (Any events placed on the queue after this callback is registered will
+   * not be considered.)
+   *
+   * @param {function()} callback
+   *        The callback to invoke.
+   * @param {number=} timeoutMilliseconds
+   *        If supplied, the number of milliseconds after which the callback
+   *        should be invoked even if the pending events have not been flushed.
+   */
+  var whenCommitted = function(callback, timeoutMilliseconds) {
+    info("Registering callback for when events have been flushed to server.");
+    if ('undefined' !== typeof timeoutMilliseconds) {
+      log("Callback will time out after " + timeoutMilliseconds + "ms.");
+      callback = withTimeout(callback, timeoutMilliseconds);
+    }
+    signalQueue.enqueue(callback);
+  };
+
+  /**
    * The namespace that we export.
    * @const
    * @type {{partyId: string,
@@ -1220,7 +1299,8 @@ var AUTO_PAGE_VIEW_EVENT = true;
    *         isNewPartyId: boolean,
    *         isFirstInSession: boolean,
    *         isServerPageView: boolean,
-   *         signal: function(string,Object=): ?string}}
+   *         signal: function(string,Object=): ?string,
+   *         whenCommitted: function(function()): undefined}};
    */
   var divolte = {
     'partyId':          partyId,
@@ -1229,7 +1309,8 @@ var AUTO_PAGE_VIEW_EVENT = true;
     'isNewPartyId':     isNewParty,
     'isFirstInSession': isFirstInSession,
     'isServerPageView': isServerPageView,
-    'signal':           signal
+    'signal':           signal,
+    'whenCommitted':    whenCommitted
   };
 
   if ("object" !== typeof window['divolte']) {

@@ -115,7 +115,7 @@ public abstract class SeleniumTestBase {
                     driver = null;
                 }
                 if (null != server) {
-                    server.server.shutdown();
+                    server.shutdown();
                     server = null;
                 }
                 testResultHook = Optional.empty();
@@ -206,7 +206,8 @@ public abstract class SeleniumTestBase {
             BASIC_COPY("test-basic-page-copy"),
             PAGE_VIEW_SUPPLIED("test-basic-page-provided-pv-id"),
             CUSTOM_JAVASCRIPT_NAME("test-custom-javascript-name"),
-            CUSTOM_PAGE_VIEW("test-custom-page-view");
+            CUSTOM_PAGE_VIEW("test-custom-page-view"),
+            EVENT_COMMIT("test-event-commit");
 
             private final String resourceName;
 

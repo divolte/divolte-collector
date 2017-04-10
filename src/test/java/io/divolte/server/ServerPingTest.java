@@ -62,7 +62,7 @@ public class ServerPingTest {
     @After
     public void tearDown() {
         if (null != testServer) {
-            testServer.server.shutdown();
+            testServer.shutdown();
             testServer = null;
         }
     }

@@ -184,7 +184,7 @@ public class RequestChecksumTest {
         final TestServer oldServer = this.server;
         if (oldServer != newServer) {
             if (null != oldServer) {
-                oldServer.server.shutdown();
+                oldServer.shutdown();
             }
             this.server = newServer;
         }

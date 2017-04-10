@@ -142,6 +142,6 @@ public class ShortTermDuplicateMemoryTest {
 
     @After
     public void tearDown() {
-        server.server.shutdown();
+        server.shutdown();
     }
 }

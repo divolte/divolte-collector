@@ -22,6 +22,7 @@ import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.config.BrowserSourceConfiguration;
 import org.junit.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -319,5 +320,112 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         final DivolteEvent eventData = payload.event;
 
         assertEquals(Optional.of("pageView"), eventData.eventType);
+    }
+
+    @Test
+    public void shouldAdvanceToNextEventOnTimeout() throws Exception {
+        doSetUp("selenium-test-slow-server.conf");
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(BASIC);
+        // No page-view events.
+
+        // Emit two events.
+        logger.info("Clicking link that will trigger 2 slow events");
+        driver.findElement(By.id("deliver2events")).click();
+        /*
+         * The server has been configured to delay responses by 15 seconds.
+         * The JavaScript should time them out quickly.
+         * This means both events should arrive within the time here,
+         * instead of waiting for the delayed responses.
+         */
+        logger.info("Waiting for first event");
+        server.waitForEvent();
+        logger.info("First event received; waiting for second event.");
+        server.waitForEvent();
+        logger.info("Second event received.");
+    }
+
+    @Test
+    public void shouldFlushEventsBeforeClickOut() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Record the current page URL, so that later we can check we navigated away.
+        final String initialPageUrl = driver.getCurrentUrl();
+
+        // Locate the link to click on, and click it.
+        logger.info("Clicking link that will trigger events");
+        driver.findElement(By.id("clickout")).click();
+
+        // At this point 10 events should arrive, after which the browser navigates
+        // to the basic page.
+        for (int i = 0; i < 10; ++i) {
+            final DivolteEvent eventData = server.waitForEvent().event;
+            assertEquals("Unexpected event type for event #" + i,
+                         Optional.of("clickOutEvent"),
+                         eventData.eventType);
+            assertEquals("Event index parameter incorrect for event #" + i,
+                         Optional.of(i),
+                         eventData.eventParametersProducer.get().map(jsonNode -> jsonNode.get("i").asInt()));
+        }
+        logger.info("Triggered events have all arrived.");
+
+        // Check that the browser did navigate to a new page. (It will also generate a page-view.)
+        final WebDriverWait wait = new WebDriverWait(driver, 30);
+        wait.until(driver -> !driver.getCurrentUrl().equals(initialPageUrl));
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+    }
+
+    @Test
+    public void shouldInvokeFlushCallbackImmediatelyIfNoEventsPending() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Hit the 'flush' link, and wait for the event.
+        driver.findElement(By.id("flushdirect")).click();
+
+        // The event contains information about whether the callback was invoked immediately or not.
+        final DivolteEvent event = server.waitForEvent().event;
+        assertEquals(Optional.of("firstFlush"), event.eventType);
+        assertEquals(Optional.of(true),
+                     event.eventParametersProducer.get().map(jsonNode -> jsonNode.get("callbackWasImmediate").asBoolean()));
+    }
+
+    @Test
+    public void shouldTimeoutIfRequiredOnFlushBeforeClickOut() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != server && null != driver);
+        gotoPage(EVENT_COMMIT);
+        assertEquals(Optional.of("pageView"), server.waitForEvent().event.eventType);
+
+        // Record the current page URL, so that later we can check we navigated away.
+        final String initialPageUrl = driver.getCurrentUrl();
+
+        // Locate the link to click on, and click it.
+        logger.info("Clicking link that will trigger events");
+        driver.findElement(By.id("quickout")).click();
+
+        // At this point lots of events should arrive, but before we reach 100000 the
+        // flush should have timed-out and navigated to the new page.
+        int count = 0;
+        DivolteEvent lastEventData;
+        do {
+            lastEventData = server.waitForEvent().event;
+            if (!Optional.of("clickOutEvent").equals(lastEventData.eventType)) {
+                break;
+            }
+            ++count;
+        } while (count < 1000);
+        assertThat(count, is(both(greaterThan(0)).and(lessThan(1000))));
+        logger.info("Triggered events have all arrived: {}", count);
+
+        // Check that the browser did navigate to a new page. It will have generated a new page-view.
+        final WebDriverWait wait = new WebDriverWait(driver, 10);
+        wait.until(driver -> !driver.getCurrentUrl().equals(initialPageUrl));
+        assertEquals(Optional.of("pageView"), lastEventData.eventType);
     }
 }

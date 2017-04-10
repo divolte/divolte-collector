@@ -102,7 +102,7 @@ public final class ServerTestUtils {
         final Config config;
         final String host;
         final int port;
-        final Server server;
+        private final Server server;
         final BlockingQueue<EventPayload> events;
 
         public TestServer() {
@@ -156,11 +156,30 @@ public final class ServerTestUtils {
 
         public EventPayload waitForEvent() throws InterruptedException {
             // SauceLabs can take quite a while to fire up everything.
-            return Optional.ofNullable(events.poll(10, TimeUnit.SECONDS)).orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
+            return waitForEvent(10, TimeUnit.SECONDS);
+        }
+
+        public EventPayload waitForEvent(final long timeout, final TimeUnit unit) throws InterruptedException {
+            return Optional.ofNullable(events.poll(timeout, unit))
+                           .orElseThrow(() -> new RuntimeException("Timed out while waiting for server side event to occur."));
         }
 
         public boolean eventsRemaining() {
             return !events.isEmpty();
+        }
+
+        public void shutdown() {
+            shutdown(false);
+        }
+
+        public void shutdown(final boolean waitForShutdown) {
+            // The server can take a little while to shut down, so we do this asynchronously if possible.
+            // (This is harmless: new servers will listen on a different port.)
+            if (waitForShutdown) {
+                server.shutdown();
+            } else {
+                new Thread(server::shutdown).start();
+            }
         }
     }
 }

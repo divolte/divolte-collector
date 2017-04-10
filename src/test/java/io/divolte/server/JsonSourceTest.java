@@ -67,7 +67,7 @@ public class JsonSourceTest {
     }
 
     private void stopServer() {
-        testServer.ifPresent(testServer -> testServer.server.shutdown());
+        testServer.ifPresent(TestServer::shutdown);
         testServer = Optional.empty();
         urlTemplate = Optional.empty();
     }
