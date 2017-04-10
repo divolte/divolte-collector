@@ -5,8 +5,6 @@ import java.util.Optional;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
 
-import org.apache.avro.Schema;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
@@ -42,8 +40,7 @@ public class HdfsSinkConfiguration extends FileSinkConfiguration {
         return (config, name, registry) -> {
             final FileManagerFactory fileManagerFactory = HdfsFileManager.newFactory(config, name, registry.getSchemaBySinkName(name));
             fileManagerFactory.verifyFileSystemConfiguration();
-            final Schema schema = registry.getSchemaBySinkName(name);
-            return new FileFlushingPool(config, name, schema, fileManagerFactory);
+            return new FileFlushingPool(config, name, fileManagerFactory);
         };
     }
 

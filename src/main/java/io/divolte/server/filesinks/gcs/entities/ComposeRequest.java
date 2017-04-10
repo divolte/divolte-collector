@@ -4,9 +4,10 @@ import com.google.common.collect.ImmutableList;
 
 public class ComposeRequest {
     public final ImmutableList<SourceObject> sourceObjects;
+    public final DestinationObject destination;
 
-    public ComposeRequest(final ImmutableList<SourceObject> sourceObjects) {
-        super();
+    public ComposeRequest(final DestinationObject destination, final ImmutableList<SourceObject> sourceObjects) {
+        this.destination = destination;
         this.sourceObjects = sourceObjects;
     }
 
@@ -15,6 +16,15 @@ public class ComposeRequest {
 
         public SourceObject(final String name) {
             this.name = name;
+        }
+    }
+
+    public static class DestinationObject {
+        public final String contentType;
+
+        public DestinationObject(final String contentType) {
+            super();
+            this.contentType = contentType;
         }
     }
 }

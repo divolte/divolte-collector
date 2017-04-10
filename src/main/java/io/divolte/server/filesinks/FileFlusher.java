@@ -46,7 +46,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     private boolean fileSystemAlive;
     private long lastFixAttempt;
 
-    public FileFlusher(final FileStrategyConfiguration configuration, final String sinkName, final FileManager manager) {
+    public FileFlusher(final FileStrategyConfiguration configuration, final FileManager manager) {
         syncEveryMillis = configuration.syncFileAfterDuration.toMillis();
         syncEveryRecords = configuration.syncFileAfterRecords;
         newFileEveryMillis = configuration.rollEvery.toMillis();
@@ -89,26 +89,48 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     @Override
     public ProcessingDirective heartbeat() {
-        try {
-            final long timeMillis = System.currentTimeMillis();
-            if (fileSystemAlive) {
+        final long timeMillis = System.currentTimeMillis();
+        if (fileSystemAlive) {
+            try {
                 possiblySyncAndOrRoll(timeMillis);
-            } else {
-                possiblyReconnectFileSystem(timeMillis);
-                fileSystemAlive = true;
+            } catch (final IOException e) {
+                logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
+                        + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
+                fileSystemAlive = false;
+                discardQuietly(currentFile);
             }
+        } else {
+            attemptRecovery(timeMillis);
+        }
+
+        return fileSystemAlive ? CONTINUE : PAUSE;
+    }
+
+    private void attemptRecovery(final long timeMillis) {
+        try {
+            possiblyReconnectFileSystem(timeMillis);
+            fileSystemAlive = true;
         } catch (final IOException e) {
-            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
+            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
+                    + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
             fileSystemAlive = false;
             discardQuietly(currentFile);
         }
-        return fileSystemAlive ? CONTINUE : PAUSE;
     }
 
     @Override
     public void cleanup() {
+        logger.debug("FileFlusher cleanup, {}", currentFile);
         try {
-            currentFile.file.closeAndPublish();
+            if (currentFile.recordsSinceLastSync > 0) {
+                sync(System.currentTimeMillis());
+            }
+
+            if (currentFile.totalRecords > 0) {
+                currentFile.file.closeAndPublish();
+            } else {
+                currentFile.file.discard();
+            }
         } catch (final IOException ioe) {
             logger.error("Failed to close and publish file " + currentFile + " during cleanup.", ioe);
         }
@@ -119,17 +141,20 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
                 currentFile.recordsSinceLastSync >= syncEveryRecords ||
                 time - currentFile.lastSyncTime >= syncEveryMillis && currentFile.recordsSinceLastSync > 0) {
             logger.debug("Syncing file: {}", currentFile);
-
-            currentFile.file.sync();
-            currentFile.totalRecords += currentFile.recordsSinceLastSync;
-            currentFile.recordsSinceLastSync = 0;
-            currentFile.lastSyncTime = time;
+            sync(time);
 
             possiblyRoll(time);
         } else if (currentFile.recordsSinceLastSync == 0) {
             currentFile.lastSyncTime = time;
             possiblyRoll(time);
         }
+    }
+
+    private void sync(final long time) throws IOException {
+        currentFile.file.sync();
+        currentFile.totalRecords += currentFile.recordsSinceLastSync;
+        currentFile.recordsSinceLastSync = 0;
+        currentFile.lastSyncTime = time;
     }
 
     private void possiblyRoll(final long time) throws IOException {
