@@ -1,6 +1,7 @@
 package io.divolte.server.filesinks;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -45,7 +46,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     private boolean fileSystemAlive;
     private long lastFixAttempt;
 
-	public FileFlusher(final FileStrategyConfiguration configuration, final String sinkName, final FileManager manager) {
+    public FileFlusher(final FileStrategyConfiguration configuration, final String sinkName, final FileManager manager) {
         syncEveryMillis = configuration.syncFileAfterDuration.toMillis();
         syncEveryRecords = configuration.syncFileAfterRecords;
         newFileEveryMillis = configuration.rollEvery.toMillis();
@@ -60,13 +61,15 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             fileSystemAlive = true;
         } catch(final IOException ioe) {
             fileSystemAlive = false;
-            // Hack to force going into heartbeat / recover cycle. Potentially drops a record too many, but avoids a additional branch in process(...).
+            // Postpone throwing the exception to force going into heartbeat / recover
+            // cycle. Potentially drops a record too many, but avoids a additional branch in
+            // process(...).
             currentFile = brokenTrackedFile(ioe);
         }
     }
 
     @Override
-	public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
+    public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
         final long time = System.currentTimeMillis();
         try {
             currentFile.file.append(item.payload);
@@ -82,7 +85,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             return PAUSE;
         }
         return CONTINUE;
-	}
+    }
 
     @Override
     public ProcessingDirective heartbeat() {
@@ -91,7 +94,6 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             if (fileSystemAlive) {
                 possiblySyncAndOrRoll(timeMillis);
             } else {
-                logger.info("Attempting file system reconnect after.");
                 possiblyReconnectFileSystem(timeMillis);
                 fileSystemAlive = true;
             }
@@ -147,6 +149,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     private void possiblyReconnectFileSystem(final long time) throws IOException {
         if (time - lastFixAttempt > FILE_SYSTEM_RECONNECT_DELAY) {
+            logger.info("Attempting file system reconnect.");
             lastFixAttempt = time;
             currentFile = new TrackedFile(manager.createFile(newFileName()));
             logger.info("Recovered file system connection when creating file: {}", currentFile);
