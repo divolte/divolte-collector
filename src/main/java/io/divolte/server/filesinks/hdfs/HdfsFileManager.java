@@ -86,6 +86,7 @@ public class HdfsFileManager implements FileManager {
 
         @Override
         public void closeAndPublish() throws IOException {
+            sync();
             writer.close(); // closes underlying stream as well
             if (!hdfs.rename(inflightPath, publishPath)) {
                 logger.warn("Failed to publish HDFS file {} to {}.", inflightPath, publishPath);
@@ -108,9 +109,6 @@ public class HdfsFileManager implements FileManager {
 
             if (hdfs.exists(inflightPath)) {
                 hdfs.delete(inflightPath, false);
-            }
-            if (hdfs.exists(publishPath)) {
-                hdfs.delete(publishPath, false);
             }
         }
 

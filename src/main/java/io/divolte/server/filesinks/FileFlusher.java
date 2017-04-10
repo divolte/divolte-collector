@@ -122,11 +122,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     public void cleanup() {
         logger.debug("FileFlusher cleanup, {}", currentFile);
         try {
-            if (currentFile.recordsSinceLastSync > 0) {
-                sync(System.currentTimeMillis());
-            }
-
-            if (currentFile.totalRecords > 0) {
+            if (currentFile.totalRecords + currentFile.recordsSinceLastSync > 0) {
                 currentFile.file.closeAndPublish();
             } else {
                 currentFile.file.discard();
