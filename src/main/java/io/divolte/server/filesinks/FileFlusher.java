@@ -99,7 +99,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
                 fileSystemAlive = false;
                 discardQuietly(currentFile);
             }
-        } else {
+        } else if (timeMillis - lastFixAttempt > FILE_SYSTEM_RECONNECT_DELAY){
             attemptRecovery(timeMillis);
         }
 
@@ -110,6 +110,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         try {
             possiblyReconnectFileSystem(timeMillis);
             fileSystemAlive = true;
+            logger.info("Recovered file system connection.");
         } catch (final IOException e) {
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
                     + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
