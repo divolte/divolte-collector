@@ -159,9 +159,6 @@ public class FileFlusherLocalHdfsTest {
         processRecords();
 
         flusher.cleanup();
-        // For some reason, it takes time for the file published as part of cleanup to
-        // become visible to the code below. Not sure if this is a MacOS issue.
-        Thread.sleep(5000);
 
         final MutableInt count = new MutableInt(0);
         Files.walk(tempPublishDir)
