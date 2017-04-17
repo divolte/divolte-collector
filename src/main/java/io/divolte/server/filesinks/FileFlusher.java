@@ -78,9 +78,10 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             possiblySyncAndOrRoll(time);
         } catch(final IOException ioe) {
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + FILE_SYSTEM_RECONNECT_DELAY + " ms.", ioe);
+            discardQuietly(currentFile);
+
             lastFixAttempt = time;
             fileSystemAlive = false;
-            discardQuietly(currentFile);
 
             return PAUSE;
         }
@@ -94,10 +95,10 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             try {
                 possiblySyncAndOrRoll(timeMillis);
             } catch (final IOException e) {
+                markFileSystemUnavailable();
+
                 logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
                         + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
-                fileSystemAlive = false;
-                discardQuietly(currentFile);
             }
         } else if (timeMillis - lastFixAttempt > FILE_SYSTEM_RECONNECT_DELAY){
             attemptRecovery(timeMillis);
@@ -107,15 +108,17 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     private void attemptRecovery(final long timeMillis) {
+        lastFixAttempt = timeMillis;
+        logger.info("Attempting file system reconnect.");
         try {
-            possiblyReconnectFileSystem(timeMillis);
+            currentFile = new TrackedFile(manager.createFile(newFileName()));
             fileSystemAlive = true;
-            logger.info("Recovered file system connection.");
+
+            logger.info("Recovered file system connection when creating file: {}", currentFile);
         } catch (final IOException e) {
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
                     + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
-            fileSystemAlive = false;
-            discardQuietly(currentFile);
+            markFileSystemUnavailable();
         }
     }
 
@@ -131,6 +134,12 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         } catch (final IOException ioe) {
             logger.error("Failed to close and publish file " + currentFile + " during cleanup.", ioe);
         }
+    }
+
+    private void markFileSystemUnavailable() {
+        fileSystemAlive = false;
+        discardQuietly(currentFile);
+        currentFile = null;
     }
 
     private void possiblySyncAndOrRoll(final long time) throws IOException {
@@ -166,15 +175,6 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
             currentFile = new TrackedFile(manager.createFile(newFileName()));
             logger.debug("Created new file: {}", currentFile);
-        }
-    }
-
-    private void possiblyReconnectFileSystem(final long time) throws IOException {
-        if (time - lastFixAttempt > FILE_SYSTEM_RECONNECT_DELAY) {
-            logger.info("Attempting file system reconnect.");
-            lastFixAttempt = time;
-            currentFile = new TrackedFile(manager.createFile(newFileName()));
-            logger.info("Recovered file system connection when creating file: {}", currentFile);
         }
     }
 
