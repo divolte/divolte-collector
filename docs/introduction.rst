@@ -2,14 +2,19 @@
 Introduction
 ************
 
-Divolte Collector is a solution for collecting `clickstream data <https://en.wikipedia.org/wiki/Clickstream>`_ from website users and subsequently store that data into `Hadoop <http://hadoop.apache.org/>`_ as `Avro <http://avro.apache.org/>`_ files and push individual click events as messages onto a `Kafka <http://kafka.apache.org/>`_ topic. This is useful in scenarios where you need to perform offline and/or near real-time processing and analysis on user behavior in the form of click event data, such as when building recommender systems, personalization of websites or plain analytics on user behavior on a website.
+Divolte Collector is a solution for collecting `clickstream data <https://en.wikipedia.org/wiki/Clickstream>`_ from website users and subsequently store that data into a file based storage system as `Avro <http://avro.apache.org/>`_ files and push individual click events as messages onto a message queue. This is useful in scenarios where you need to perform offline and/or near real-time processing and analysis on user behavior in the form of click event data, such as when building recommender systems, personalization of websites or plain analytics on user behavior on a website.
+
+At present there is support for the following data sinks:
+* `Hadoop <http://hadoop.apache.org/>`_
+* `Google Cloud Storage <https://cloud.google.com/storage/>`_
+* `Kafka <http://kafka.apache.org/>`_
 
 Several solutions exist already to this problem (hosted solution like Google Analytics, Omniture, or open source systems such as Piwik). Here's what makes Divolte Collector different:
 
-* Built from the ground up for Hadoop and Kafka (Divolte Collector writes directly to HDFS and Kafka; no plugins or integrations).
+* Built from the ground up with built-in support for file based storage and streaming (Divolte Collector writes directly to HDFS, Google Cloud Storage and Kafka; no plugins or integrations).
 * The collected data has a user defined schema, with domain specific fields in Apache Avro records; Divolte Collector allows for schema evolution as well.
 * The above means that click event URLs are parsed and transformed on the fly; this is done based on rich configuration, so no custom coding required.
-* Because Divolte Collector is built for Hadoop and Kafka, it comes with several working examples for using your data in `Apache Spark <https://github.com/divolte/divolte-examples/tree/master/spark>`_, `Apache Hive <https://github.com/divolte/divolte-examples/tree/master/hdfs-hive>`_, `iPython notebook with PySpark <https://github.com/divolte/divolte-examples/tree/master/pyspark>`_ and using a `Kafka Consumer <https://github.com/divolte/divolte-examples/tree/master/tcp-kafka-consumer>`_. Because Avro records are used, these use cases are supported without requiring log file parsing or complex integration.
+* Divolte Collector is built for data collection and does only that. It does not impose any restrictions on the tools you use for analytics on, processing or enrichment of your data. The open source Avro format provides complete freedom in tools and solutions.
 
 The remainder of this chapter introduces the concept of clickstream collection and the way Divolte Collector solves this problem. If you'd rather get hands-on immediately, why not jump to the :doc:`getting_started` guide.
 

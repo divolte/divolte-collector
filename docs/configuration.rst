@@ -367,8 +367,8 @@ Property: ``divolte.global.hdfs.buffer_size``
 
   .. code-block:: none
 
-    divolte.global.hdfs.buffer_size {
-      max_write_queue = 10M
+    divolte.global.hdfs {
+      buffer_size = 1048576
     }
 
 Property: ``divolte.global.hdfs.client``
@@ -427,8 +427,8 @@ Property: ``divolte.global.gcs.buffer_size``
 
   .. code-block:: none
 
-    divolte.global.gcs.buffer_size {
-      max_write_queue = 10M
+    divolte.global.gcs {
+      buffer_size = 1048576
     }
 
 Global Kafka Settings (``divolte.global.kafka``)
@@ -473,8 +473,8 @@ Property: ``divolte.global.kafka.buffer_size``
 
   .. code-block:: none
 
-    divolte.global.kafka.buffer_size {
-      max_write_queue = 10M
+    divolte.global.kafka {
+      buffer_size = 1048576
     }
 
 Property: ``divolte.global.kafka.producer``
@@ -1137,7 +1137,7 @@ The currently supported types of file based sinks are HDFS sinks and Google Clou
 The following properties are common to all file based sinks:
 
 File Based Sink Property: ``file_strategy.working_dir``
-"""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   Directory where files are created and kept while being written to. Files being written have a ``.avro.partial`` extension.
 
@@ -1153,7 +1153,7 @@ File Based Sink Property: ``file_strategy.working_dir``
     }
 
 File Based Sink Property: ``file_strategy.publish_dir``
-"""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   Directory where files are moved to after they are closed. Files when closed have a ``.avro`` extension.
 
@@ -1250,6 +1250,31 @@ Google Cloud Storage Sinks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A built in HTTP client is used to write files to Google Cloud Storage.
+
+*When writing to Google Cloud Storage, the configured bucket must exist when Divolte Collector starts; no attempt is made to create a bucket. The available privileges to Divolte Collector need to allow for writing in this bucket.*
+
+For authentication against Google Cloud services, Divolte Collector expects `Application Default Credentials <https://developers.google.com/identity/protocols/application-default-credentials>`_ to be configured on the host running Divolte Collector. No other mechanism for authenticating against Google is currently supported. When running on Google Cloud infrastructure, application default credentials are usually setup correctly. To setup application default credentials in other environments, consider the `relevant documentation from Google <https://developers.google.com/identity/protocols/application-default-credentials#howtheywork>`_.
+
+Divolte Collector has configurable settings for when to flush/sync data to a file and when to roll the file and start a new one. On many filesystems, there is direct lower level support for these operations (e.g. HDFS). On Google Clous Storage, these concepts don't map directly onto operations supported by the storage mechanism. As a result, Divolte Collector translates file creation, syncing and rolling into the following operations on Google Cloud Storage:
+
++---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| action        | GCS operations                                                                                                                                                                                        |
++===============+=======================================================================================================================================================================================================+
+| open new file | Create a new file on GCS that only contains the Avro file header (but no data) using the `simple upload <https://cloud.google.com/storage/docs/json_api/v1/how-tos/simple-upload>`_ mechanism on GCS. |
++---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| sync file     | 1. Create a new file on GCS that contains only the encoded flushed records using the `simple upload <https://cloud.google.com/storage/docs/json_api/v1/how-tos/simple-upload>`_ mechanism on GCS.     |
+|               | 2. Merge the existing file with the new one written as part of this sync operation into one file using GCS' `compose API <https://cloud.google.com/storage/docs/json_api/v1/objects/compose>`_.       |
++---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| roll file     | 1. Write any remaining buffered data as above during a sync operation.                                                                                                                                |
+|               | 2. Use the `compose API <https://cloud.google.com/storage/docs/json_api/v1/objects/compose>`_ to merge the existing file with the final part, but set the destination to the publish dir.             |
+|               | 3. Delete the remaining file in the working dir.                                                                                                                                                      |
++---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+To enable this behaviour, Divolte Collector performs in-memory buffering up to a number of records before sending the data to Google Cloud Storage. The maximum number of records that the sink will buffer is equal to the sink's configuration setting ``file_strategy.sync_file_after_records``. When the buffer fills up or earlier when the time configured in the sink's ``file_strategy.sync_file_after_duration`` expires, Divolte Collector will write a partial file
+
+*Given the behaviour described above, it is advised to set the sync duration and maximum number of un-synced records to larger than default values when writing to Google Cloud Storage in production settings. When using defaults in a high traffic environment, you are likely to make too many API calls to Google and hit rate limits.* When configuring Divolte Collector for Google Cloud Storage, pay attention to the `Best Practices for Google Cloud Storage <https://cloud.google.com/storage/docs/best-practices>`_ with your expected traffic volume in mind.
+
+A Google Cloud Storage sink can use multiple threads to write the records as they are produced. Each thread writes to its own Avro files. Records produced from events with the same party identifier are always written to the same Avro file, and in the order they were received by the originating source. (The relative ordering of records produced from events with the same party identifier is undefined if they originated from different sources, although they will still be written to the same Avro file.)
 
 Google Cloud Storage Sink Property: ``bucket``
 """"""""""""""""""""""""""""""""""""""""""""""
