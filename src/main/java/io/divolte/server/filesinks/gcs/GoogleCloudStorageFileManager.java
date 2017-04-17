@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 GoDataDriven B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.divolte.server.filesinks.gcs;
 
 import java.io.IOException;
@@ -160,7 +176,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
             os.close();
 
             final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
-            logger.debug("Written empty Avro file with response {}", response);
+            logger.debug("Google Cloud Storage upload response {}", response);
 
             partWritten = false;
         }
@@ -190,13 +206,12 @@ public class GoogleCloudStorageFileManager implements FileManager {
         public void closeAndPublish() throws IOException {
             // write final part and compose all parts into published file
             writeBufferAndComposeParts(publishNameEncoded);
-            logger.debug("Published Avro file {}", publishNameEncoded);
 
+            // delete inflight partial
             googleDelete(deleteUrlFor(bucketEncoded, inflightPartialNameEncoded));
-            logger.debug("Deleted partial Avro file {}", inflightPartialName);
 
+            // delete inflight composed
             googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded));
-            logger.debug("Deleted partial Avro file {}", inflightName);
         }
 
         @Override
@@ -224,7 +239,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
             });
             partWritten = true;
 
-            logger.debug("Wrote partial Avro file with response: {}", uploadResponse);
+            logger.debug("Google Cloud Storage upload response {}", uploadResponse);
 
             final ComposeRequest composeRequest = new ComposeRequest(
                     new ComposeRequest.DestinationObject(AVRO_CONTENT_TYPE),
@@ -236,7 +251,8 @@ public class GoogleCloudStorageFileManager implements FileManager {
             final GcsObjectResponse composeResponse = googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER, os -> {
                MAPPER.writeValue(os, composeRequest);
             });
-            logger.debug("Wrote composed Avro file with response: {}", composeResponse);
+
+            logger.debug("Google Cloud Storage compose response {}", composeResponse);
         }
     }
 
@@ -329,6 +345,10 @@ public class GoogleCloudStorageFileManager implements FileManager {
             throw new IOException("Received unexpected response from Google Cloud Storage.");
         } else {
             final InputStream stream = connection.getInputStream();
+            /*
+             * As per the docs, Google sends a empty response with a 200. We need to get and
+             * drain the stream for the HTTP client to consider the connection for reuse.
+             */
             while (stream.read() != -1) {}
         }
     }

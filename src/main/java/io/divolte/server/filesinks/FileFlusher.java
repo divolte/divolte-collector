@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 GoDataDriven B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.divolte.server.filesinks;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
@@ -10,6 +26,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -42,8 +59,20 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     private final FileManager manager;
 
-    private TrackedFile currentFile;
-    private boolean fileSystemAlive;
+    /*
+     * We use a single non-final field to keep track of the currently writable file.
+     * The file system is considered unhealthy / unwritable when equal to
+     * Optional.empty() and healthy otherwise. The file system is marked unhealthy
+     * on any IOException that is thrown by the used file manager for this sink.
+     * File system recovery is attempted on heart beats of the processor. Processing
+     * is paused as soon as the file system goes into unhealthy state. As a result,
+     * process(...) can assume the Optional to be populated; all other methods need
+     * to check for file system health by inspecting the state of the optional
+     * before performing any operation. The lastFixAttempt field is used to keep
+     * track of the time of the recent most reconnect attempt in order to implement
+     * a back off larger than the heart beat frequency.
+     */
+    private Optional<TrackedFile> currentTrackedFile;
     private long lastFixAttempt;
 
     public FileFlusher(final FileStrategyConfiguration configuration, final FileManager manager) {
@@ -57,14 +86,12 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         this.manager = Objects.requireNonNull(manager);
 
         try {
-            currentFile = new TrackedFile(manager.createFile(newFileName()));
-            fileSystemAlive = true;
+            currentTrackedFile = Optional.of(new TrackedFile(manager.createFile(newFileName())));
         } catch(final IOException ioe) {
-            fileSystemAlive = false;
             // Postpone throwing the exception to force going into heartbeat / recover
             // cycle. Potentially drops a record too many, but avoids a additional branch in
             // process(...).
-            currentFile = brokenTrackedFile(ioe);
+            currentTrackedFile = Optional.of(brokenTrackedFile(ioe));
         }
     }
 
@@ -72,109 +99,115 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
         final long time = System.currentTimeMillis();
         try {
-            currentFile.file.append(item.payload);
-            currentFile.recordsSinceLastSync += 1;
+            final TrackedFile trackedFile = currentTrackedFile.get();
+            trackedFile.divolteFile.append(item.payload);
+            trackedFile.recordsSinceLastSync += 1;
 
             possiblySyncAndOrRoll(time);
-        } catch(final IOException ioe) {
-            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + FILE_SYSTEM_RECONNECT_DELAY + " ms.", ioe);
-            discardQuietly(currentFile);
 
-            lastFixAttempt = time;
-            fileSystemAlive = false;
+            return CONTINUE;
+        } catch(final IOException ioe) {
+            markFileSystemUnavailable(time);
+            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + FILE_SYSTEM_RECONNECT_DELAY + " ms.", ioe);
 
             return PAUSE;
         }
-        return CONTINUE;
     }
 
     @Override
     public ProcessingDirective heartbeat() {
         final long timeMillis = System.currentTimeMillis();
-        if (fileSystemAlive) {
-            try {
-                possiblySyncAndOrRoll(timeMillis);
-            } catch (final IOException e) {
-                markFileSystemUnavailable();
 
-                logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
-                        + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
-            }
-        } else if (timeMillis - lastFixAttempt > FILE_SYSTEM_RECONNECT_DELAY){
+        return currentTrackedFile.map(trackedFile -> {
+            handleHeartbeatWithHealthyFileSystem(timeMillis);
+            return CONTINUE;
+        }).orElseGet(() -> {
+            handleHeartbeatWithDeadFileSystem(timeMillis);
+            return PAUSE;
+        });
+    }
+
+    private void handleHeartbeatWithHealthyFileSystem(final long timeMillis) {
+        try {
+            possiblySyncAndOrRoll(timeMillis);
+        } catch (final IOException e) {
+            markFileSystemUnavailable(timeMillis);
+            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
+                    + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
+        }
+    }
+
+    private void handleHeartbeatWithDeadFileSystem(final long timeMillis) {
+        if (timeMillis - lastFixAttempt > FILE_SYSTEM_RECONNECT_DELAY) {
             attemptRecovery(timeMillis);
         }
-
-        return fileSystemAlive ? CONTINUE : PAUSE;
     }
 
     private void attemptRecovery(final long timeMillis) {
-        lastFixAttempt = timeMillis;
         logger.info("Attempting file system reconnect.");
         try {
-            currentFile = new TrackedFile(manager.createFile(newFileName()));
-            fileSystemAlive = true;
-
-            logger.info("Recovered file system connection when creating file: {}", currentFile);
+            final TrackedFile trackedFile = new TrackedFile(manager.createFile(newFileName()));
+            currentTrackedFile = Optional.of(trackedFile);
+            logger.info("Recovered file system connection when creating file: {}", trackedFile);
         } catch (final IOException e) {
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
                     + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
-            markFileSystemUnavailable();
+            markFileSystemUnavailable(timeMillis);
         }
     }
 
     @Override
     public void cleanup() {
-        logger.debug("FileFlusher cleanup, {}", currentFile);
-        try {
-            if (currentFile.totalRecords + currentFile.recordsSinceLastSync > 0) {
-                currentFile.file.closeAndPublish();
-            } else {
-                currentFile.file.discard();
+        currentTrackedFile.ifPresent(trackedFile -> {
+            try {
+                if (trackedFile.totalRecords + trackedFile.recordsSinceLastSync > 0) {
+                    trackedFile.divolteFile.closeAndPublish();
+                } else {
+                    trackedFile.divolteFile.discard();
+                }
+            } catch (final IOException ioe) {
+                logger.error("Failed to close and publish file " + trackedFile + " during cleanup.", ioe);
             }
-        } catch (final IOException ioe) {
-            logger.error("Failed to close and publish file " + currentFile + " during cleanup.", ioe);
-        }
+        });
     }
 
-    private void markFileSystemUnavailable() {
-        fileSystemAlive = false;
-        discardQuietly(currentFile);
-        currentFile = null;
+    private void markFileSystemUnavailable(final long time) {
+        lastFixAttempt = time;
+        discardCurrentTrackedFileQuietly();
+        currentTrackedFile = Optional.empty();
     }
 
     private void possiblySyncAndOrRoll(final long time) throws IOException {
+        final TrackedFile trackedFile = currentTrackedFile.get();
         if (
-                currentFile.recordsSinceLastSync >= syncEveryRecords ||
-                time - currentFile.lastSyncTime >= syncEveryMillis && currentFile.recordsSinceLastSync > 0) {
-            logger.debug("Syncing file: {}", currentFile);
-            sync(time);
+                trackedFile.recordsSinceLastSync >= syncEveryRecords ||
+                time - trackedFile.lastSyncTime >= syncEveryMillis && trackedFile.recordsSinceLastSync > 0) {
+            sync(time, trackedFile);
 
             possiblyRoll(time);
-        } else if (currentFile.recordsSinceLastSync == 0) {
-            currentFile.lastSyncTime = time;
+        } else if (trackedFile.recordsSinceLastSync == 0) {
+            trackedFile.lastSyncTime = time;
             possiblyRoll(time);
         }
     }
 
-    private void sync(final long time) throws IOException {
-        currentFile.file.sync();
-        currentFile.totalRecords += currentFile.recordsSinceLastSync;
-        currentFile.recordsSinceLastSync = 0;
-        currentFile.lastSyncTime = time;
+    private void sync(final long time, final TrackedFile trackedFile) throws IOException {
+        trackedFile.divolteFile.sync();
+        trackedFile.totalRecords += trackedFile.recordsSinceLastSync;
+        trackedFile.recordsSinceLastSync = 0;
+        trackedFile.lastSyncTime = time;
     }
 
     private void possiblyRoll(final long time) throws IOException {
-        if (time > currentFile.projectedCloseTime) {
-            if (currentFile.totalRecords > 0) {
-                logger.debug("Rolling file: {}", currentFile);
-                currentFile.file.closeAndPublish();
+        final TrackedFile trackedFile = currentTrackedFile.get();
+        if (time > trackedFile.projectedCloseTime) {
+            if (trackedFile.totalRecords > 0) {
+                trackedFile.divolteFile.closeAndPublish();
             } else {
-                logger.debug("Discarding empty file: {}", currentFile);
-                currentFile.file.discard();
+                trackedFile.divolteFile.discard();
             }
 
-            currentFile = new TrackedFile(manager.createFile(newFileName()));
-            logger.debug("Created new file: {}", currentFile);
+            currentTrackedFile = Optional.of(new TrackedFile(manager.createFile(newFileName())));
         }
     }
 
@@ -182,7 +215,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         final long openTime;
         final long projectedCloseTime;
 
-        final DivolteFile file;
+        final DivolteFile divolteFile;
 
         long lastSyncTime;
         int recordsSinceLastSync;
@@ -190,7 +223,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
 
         public TrackedFile(final DivolteFile file) {
-            this.file = file;
+            this.divolteFile = file;
 
             this.openTime = this.lastSyncTime = System.currentTimeMillis();
             this.recordsSinceLastSync = 0;
@@ -202,7 +235,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         public String toString() {
             return MoreObjects
                 .toStringHelper(getClass())
-                .add("file", file.toString())
+                .add("file", divolteFile.toString())
                 .add("open time", openTime)
                 .add("last sync time", lastSyncTime)
                 .add("records since last sync", recordsSinceLastSync)
@@ -211,12 +244,14 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         }
     }
 
-    private void discardQuietly(final TrackedFile file) {
-        try {
-            file.file.discard();
-        } catch (final IOException e) {
-            logger.warn("Failed to discard / delete file: " + file);
-        }
+    private void discardCurrentTrackedFileQuietly() {
+        currentTrackedFile.ifPresent(trackedFile -> {
+            try {
+                trackedFile.divolteFile.discard();
+            } catch (final IOException e) {
+                logger.warn("Failed to discard / delete file: " + trackedFile);
+            }
+        });
     }
 
     private String newFileName() {
