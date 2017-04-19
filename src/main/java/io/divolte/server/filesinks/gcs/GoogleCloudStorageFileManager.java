@@ -193,13 +193,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
 
         @Override
         public void sync() throws IOException {
-            try {
-                if (position > 0) {
-                    writeBufferAndComposeParts(inflightNameEncoded);
-                }
-            } finally {
-                position = 0;
-            }
+            writeBufferAndComposeParts(inflightNameEncoded);
         }
 
         @Override
@@ -224,35 +218,38 @@ public class GoogleCloudStorageFileManager implements FileManager {
         }
 
         private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws MalformedURLException, IOException {
-            final URL partUploadUrl = uploadUrlFor(bucketEncoded, inflightPartialNameEncoded);
-            final GcsObjectResponse uploadResponse = googlePost(partUploadUrl, GcsObjectResponse.class, AVRO_CONTENT_TYPE_HEADER, os -> {
-                avroTargetStream.attachDelegate(os);
-                for (int c = 0; c < position; c++) {
-                    // Write Avro record buffer to file
-                    writer.appendEncoded(buffer[c].getByteBuffer());
+            if (position > 0) {
+                final URL partUploadUrl = uploadUrlFor(bucketEncoded, inflightPartialNameEncoded);
+                final GcsObjectResponse uploadResponse = googlePost(partUploadUrl, GcsObjectResponse.class, AVRO_CONTENT_TYPE_HEADER, os -> {
+                    avroTargetStream.attachDelegate(os);
+                    for (int c = 0; c < position; c++) {
+                        // Write Avro record buffer to file
+                        writer.appendEncoded(buffer[c].getByteBuffer());
 
-                    // Clear (our) reference to flushed buffer
-                    buffer[c] = null;
-                }
-                writer.flush();
-                avroTargetStream.detachDelegate();
-            });
-            partWritten = true;
+                        // Clear (our) reference to flushed buffer
+                        buffer[c] = null;
+                    }
+                    writer.flush();
+                    avroTargetStream.detachDelegate();
+                });
+                partWritten = true;
+                position = 0;
 
-            logger.debug("Google Cloud Storage upload response {}", uploadResponse);
+                logger.debug("Google Cloud Storage upload response {}", uploadResponse);
 
-            final ComposeRequest composeRequest = new ComposeRequest(
-                    new ComposeRequest.DestinationObject(AVRO_CONTENT_TYPE),
-                    ImmutableList.of(
-                            new SourceObject(inflightName),
-                            new SourceObject(inflightPartialName)));
+                final ComposeRequest composeRequest = new ComposeRequest(
+                        new ComposeRequest.DestinationObject(AVRO_CONTENT_TYPE),
+                        ImmutableList.of(
+                                new SourceObject(inflightName),
+                                new SourceObject(inflightPartialName)));
 
-            final URL composeUrl = composeUrlFor(bucketEncoded, composeDestinationObjectEncoded);
-            final GcsObjectResponse composeResponse = googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER, os -> {
-               MAPPER.writeValue(os, composeRequest);
-            });
+                final URL composeUrl = composeUrlFor(bucketEncoded, composeDestinationObjectEncoded);
+                final GcsObjectResponse composeResponse = googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER, os -> {
+                    MAPPER.writeValue(os, composeRequest);
+                });
 
-            logger.debug("Google Cloud Storage compose response {}", composeResponse);
+                logger.debug("Google Cloud Storage compose response {}", composeResponse);
+            }
         }
     }
 
