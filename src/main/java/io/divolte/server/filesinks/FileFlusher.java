@@ -46,7 +46,8 @@ import io.divolte.server.processing.ItemProcessor;
 public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     private static final Logger logger = LoggerFactory.getLogger(FileFlusher.class);
 
-    private final static long FILE_SYSTEM_RECONNECT_DELAY = 15000;
+    private final static long DEFAULT_FILE_SYSTEM_RECONNECT_DELAY = 15000;
+    private final long reconnectDelay;
 
     private final static AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
     private final int instanceNumber;
@@ -76,6 +77,15 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     private long lastFixAttempt;
 
     public FileFlusher(final FileStrategyConfiguration configuration, final FileManager manager) {
+        this(configuration, manager, DEFAULT_FILE_SYSTEM_RECONNECT_DELAY);
+    }
+
+    public FileFlusher(final FileStrategyConfiguration configuration, final FileManager manager, final long reconnectDelay) {
+        /*
+         * Constructor with configurable reconnect delay for testability.
+         */
+        this.reconnectDelay = reconnectDelay;
+
         syncEveryMillis = configuration.syncFileAfterDuration.toMillis();
         syncEveryRecords = configuration.syncFileAfterRecords;
         newFileEveryMillis = configuration.rollEvery.toMillis();
@@ -108,7 +118,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             return CONTINUE;
         } catch(final IOException ioe) {
             markFileSystemUnavailable(time);
-            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + FILE_SYSTEM_RECONNECT_DELAY + " ms.", ioe);
+            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + reconnectDelay + " ms.", ioe);
 
             return PAUSE;
         }
@@ -133,12 +143,12 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         } catch (final IOException e) {
             markFileSystemUnavailable(timeMillis);
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
-                    + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
+                    + reconnectDelay + " ms.", e);
         }
     }
 
     private void handleHeartbeatWithDeadFileSystem(final long timeMillis) {
-        if (timeMillis - lastFixAttempt > FILE_SYSTEM_RECONNECT_DELAY) {
+        if (timeMillis - lastFixAttempt > reconnectDelay) {
             attemptRecovery(timeMillis);
         }
     }
@@ -151,7 +161,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             logger.info("Recovered file system connection when creating file: {}", trackedFile);
         } catch (final IOException e) {
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
-                    + FILE_SYSTEM_RECONNECT_DELAY + " ms.", e);
+                    + reconnectDelay + " ms.", e);
             markFileSystemUnavailable(timeMillis);
         }
     }
