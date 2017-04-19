@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.divolte.server.hdfs;
+package io.divolte.server.filesinks.hdfs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
