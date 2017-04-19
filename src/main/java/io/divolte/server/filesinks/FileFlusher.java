@@ -16,8 +16,7 @@
 
 package io.divolte.server.filesinks;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -129,40 +128,36 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         final long timeMillis = System.currentTimeMillis();
 
         return currentTrackedFile.map(trackedFile -> {
-            handleHeartbeatWithHealthyFileSystem(timeMillis);
-            return CONTINUE;
+            return handleHeartbeatWithHealthyFileSystem(timeMillis);
         }).orElseGet(() -> {
-            handleHeartbeatWithDeadFileSystem(timeMillis);
-            return PAUSE;
+            return timeMillis - lastFixAttempt > reconnectDelay ? attemptRecovery(timeMillis) : PAUSE;
         });
     }
 
-    private void handleHeartbeatWithHealthyFileSystem(final long timeMillis) {
+    private ProcessingDirective handleHeartbeatWithHealthyFileSystem(final long timeMillis) {
         try {
             possiblySyncAndOrRoll(timeMillis);
+            return CONTINUE;
         } catch (final IOException e) {
             markFileSystemUnavailable(timeMillis);
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
                     + reconnectDelay + " ms.", e);
+            return PAUSE;
         }
     }
 
-    private void handleHeartbeatWithDeadFileSystem(final long timeMillis) {
-        if (timeMillis - lastFixAttempt > reconnectDelay) {
-            attemptRecovery(timeMillis);
-        }
-    }
-
-    private void attemptRecovery(final long timeMillis) {
+    private ProcessingDirective attemptRecovery(final long timeMillis) {
         logger.info("Attempting file system reconnect.");
         try {
             final TrackedFile trackedFile = new TrackedFile(manager.createFile(newFileName()));
             currentTrackedFile = Optional.of(trackedFile);
             logger.info("Recovered file system connection when creating file: {}", trackedFile);
+            return CONTINUE;
         } catch (final IOException e) {
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
                     + reconnectDelay + " ms.", e);
             markFileSystemUnavailable(timeMillis);
+            return PAUSE;
         }
     }
 
@@ -189,15 +184,26 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     private void possiblySyncAndOrRoll(final long time) throws IOException {
         final TrackedFile trackedFile = currentTrackedFile.get();
-        if (
-                trackedFile.recordsSinceLastSync >= syncEveryRecords ||
-                time - trackedFile.lastSyncTime >= syncEveryMillis && trackedFile.recordsSinceLastSync > 0) {
-            sync(time, trackedFile);
+        if (time > trackedFile.projectedCloseTime) {
+            // roll file
+            if (trackedFile.totalRecords > 0) {
+                // Assumes closeAndPublish performs an implicit sync / flush of any remaining
+                // internal buffers. There no additional sync call here, as file manager
+                // implementations may have more optimal ways of performing a sync + close +
+                // move on the file in one go.
+                trackedFile.divolteFile.closeAndPublish();
+            } else {
+                trackedFile.divolteFile.discard();
+            }
 
-            possiblyRoll(time);
+            currentTrackedFile = Optional.of(new TrackedFile(manager.createFile(newFileName())));
+        } else if (trackedFile.recordsSinceLastSync >= syncEveryRecords ||
+                time - trackedFile.lastSyncTime >= syncEveryMillis && trackedFile.recordsSinceLastSync > 0) {
+            // sync
+            sync(time, trackedFile);
         } else if (trackedFile.recordsSinceLastSync == 0) {
+            // if nothing was written and we didn't roll, reset sync timing
             trackedFile.lastSyncTime = time;
-            possiblyRoll(time);
         }
     }
 
@@ -206,19 +212,6 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         trackedFile.totalRecords += trackedFile.recordsSinceLastSync;
         trackedFile.recordsSinceLastSync = 0;
         trackedFile.lastSyncTime = time;
-    }
-
-    private void possiblyRoll(final long time) throws IOException {
-        final TrackedFile trackedFile = currentTrackedFile.get();
-        if (time > trackedFile.projectedCloseTime) {
-            if (trackedFile.totalRecords > 0) {
-                trackedFile.divolteFile.closeAndPublish();
-            } else {
-                trackedFile.divolteFile.discard();
-            }
-
-            currentTrackedFile = Optional.of(new TrackedFile(manager.createFile(newFileName())));
-        }
     }
 
     private final class TrackedFile {
