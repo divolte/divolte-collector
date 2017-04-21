@@ -145,7 +145,7 @@ dependencies {
 
     testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '3.3.1'
     testCompile group: 'com.saucelabs', name:'saucerest', version: '1.0.35'
-    testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.4.1'
+    testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.4.2'
 }
 
 configurations {
