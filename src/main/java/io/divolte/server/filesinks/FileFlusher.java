@@ -228,7 +228,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         public TrackedFile(final DivolteFile file) {
             this.divolteFile = file;
 
-            this.openNanoTime = this.lastSyncNanoTime = System.currentTimeMillis();
+            this.openNanoTime = this.lastSyncNanoTime = System.nanoTime();
             this.recordsSinceLastSync = 0;
             this.totalRecords = 0;
             this.projectedCloseNanoTime = openNanoTime + newFileEveryNanos;
