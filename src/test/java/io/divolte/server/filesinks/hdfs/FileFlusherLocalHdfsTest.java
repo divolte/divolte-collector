@@ -16,8 +16,7 @@
 
 package io.divolte.server.filesinks.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,7 +53,6 @@ import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.config.FileSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileFlusher;
-import io.divolte.server.filesinks.hdfs.HdfsFileManager;
 import io.divolte.server.processing.Item;
 
 @ParametersAreNonnullByDefault
