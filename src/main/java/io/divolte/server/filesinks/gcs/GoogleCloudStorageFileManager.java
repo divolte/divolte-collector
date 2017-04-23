@@ -222,6 +222,8 @@ public class GoogleCloudStorageFileManager implements FileManager {
         }
 
         private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws MalformedURLException, IOException {
+            final ImmutableList<SourceObject> sourcesToCompose;
+
             if (position > 0) {
                 final URL partUploadUrl = uploadUrlFor(bucketEncoded, inflightPartialNameEncoded);
                 final GcsObjectResponse uploadResponse = googlePost(partUploadUrl, GcsObjectResponse.class, AVRO_CONTENT_TYPE_HEADER, os -> {
@@ -244,19 +246,26 @@ public class GoogleCloudStorageFileManager implements FileManager {
 
                 logger.debug("Google Cloud Storage upload response {}", uploadResponse);
 
-                final ComposeRequest composeRequest = new ComposeRequest(
-                        new ComposeRequest.DestinationObject(AVRO_CONTENT_TYPE),
-                        ImmutableList.of(
-                                new SourceObject(inflightName),
-                                new SourceObject(inflightPartialName)));
-
-                final URL composeUrl = composeUrlFor(bucketEncoded, composeDestinationObjectEncoded);
-                final GcsObjectResponse composeResponse = googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER, os -> {
-                    MAPPER.writeValue(os, composeRequest);
-                });
-
-                logger.debug("Google Cloud Storage compose response {}", composeResponse);
+                // New part was written; compose two parts.
+                sourcesToCompose = ImmutableList.of(
+                        new SourceObject(inflightName),
+                        new SourceObject(inflightPartialName));
+            } else {
+                // Nothing was written; compose with itself, potentially to a new destination.
+                sourcesToCompose = ImmutableList.of(
+                        new SourceObject(inflightName));
             }
+
+            final ComposeRequest composeRequest = new ComposeRequest(
+                    new ComposeRequest.DestinationObject(AVRO_CONTENT_TYPE),
+                    sourcesToCompose);
+
+            final URL composeUrl = composeUrlFor(bucketEncoded, composeDestinationObjectEncoded);
+            final GcsObjectResponse composeResponse = googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER, os -> {
+                MAPPER.writeValue(os, composeRequest);
+            });
+
+            logger.debug("Google Cloud Storage compose response {}", composeResponse);
         }
     }
 
