@@ -31,8 +31,7 @@ public class HdfsSinkConfiguration extends FileSinkConfiguration {
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
-                .add("replication", replication)
-                .add("fileStrategy", fileStrategy);
+                .add("replication", replication);
     }
 
     @Override

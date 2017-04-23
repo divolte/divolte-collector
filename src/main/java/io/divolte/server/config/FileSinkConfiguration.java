@@ -18,6 +18,8 @@ package io.divolte.server.config;
 
 import java.util.Optional;
 
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 public abstract class FileSinkConfiguration extends SinkConfiguration {
     public final FileStrategyConfiguration fileStrategy;
 
@@ -27,4 +29,9 @@ public abstract class FileSinkConfiguration extends SinkConfiguration {
     }
 
     public abstract String getReadableType();
+
+    @Override
+    protected ToStringHelper toStringHelper() {
+        return super.toStringHelper().add("file strategy", fileStrategy);
+    }
 }

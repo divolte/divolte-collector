@@ -43,8 +43,7 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
-            .add("bucket", bucket)
-            .add("fileStrategy", fileStrategy);
+            .add("bucket", bucket);
     }
 
     @Override
