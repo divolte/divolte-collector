@@ -189,8 +189,10 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
                 // internal buffers. There no additional sync call here, as file manager
                 // implementations may have more optimal ways of performing a sync + close +
                 // move on the file in one go.
+                logger.debug("Rolling file: {}", trackedFile);
                 trackedFile.divolteFile.closeAndPublish();
             } else {
+                logger.debug("Discarding empty file: {}", trackedFile);
                 trackedFile.divolteFile.discard();
             }
 
@@ -206,6 +208,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     private void sync(final long time, final TrackedFile trackedFile) throws IOException {
+        logger.debug("Syncing file: {}", trackedFile.divolteFile);
         trackedFile.divolteFile.sync();
         trackedFile.totalRecords += trackedFile.recordsSinceLastSync;
         trackedFile.recordsSinceLastSync = 0;
