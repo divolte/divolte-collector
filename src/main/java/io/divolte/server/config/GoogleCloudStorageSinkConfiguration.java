@@ -19,7 +19,6 @@ package io.divolte.server.config;
 import java.util.Objects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.ParametersAreNullableByDefault;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,7 +33,6 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
     public final String bucket;
 
     @JsonCreator
-    @ParametersAreNullableByDefault
     GoogleCloudStorageSinkConfiguration(final FileStrategyConfiguration fileStrategy, @JsonProperty(required = true) final String bucket) {
         super(fileStrategy);
         this.bucket = Objects.requireNonNull(bucket);
