@@ -79,7 +79,7 @@ public interface FileManager {
          * Attempt to use the loaded configuration to make a file system connection. Implementations
          * should verify that the configuration holds all necessary information to successfully
          * connect to the file system and can additionally verify matters like appropriate
-         * credentials and existence of configured directories. This methods SHOULD NOT fail in the
+         * credentials and existence of configured directories. This method SHOULD NOT fail in the
          * case that a remote file system is temporarily unavailable, as such situations are
          * expected to recover over time.
          */
