@@ -127,11 +127,9 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     public ProcessingDirective heartbeat() {
         final long nanoTime = System.nanoTime();
 
-        return currentTrackedFile.map(trackedFile -> {
-            return handleHeartbeatWithHealthyFileSystem(nanoTime);
-        }).orElseGet(() -> {
-            return nanoTime - lastFixAttemptNanoTime > reconnectDelayNanos ? attemptRecovery(nanoTime) : PAUSE;
-        });
+        return currentTrackedFile
+                .map(trackedFile -> handleHeartbeatWithHealthyFileSystem(nanoTime))
+                .orElseGet(() -> nanoTime - lastFixAttemptNanoTime > reconnectDelayNanos ? attemptRecovery(nanoTime) : PAUSE);
     }
 
     private ProcessingDirective handleHeartbeatWithHealthyFileSystem(final long nanoTime) {
