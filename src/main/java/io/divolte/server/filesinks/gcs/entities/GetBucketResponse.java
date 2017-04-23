@@ -32,7 +32,6 @@ public final class GetBucketResponse {
 
     @JsonCreator
     public GetBucketResponse(final String id, final String location, final String name, final String storageClass, final String timeCreated) {
-        super();
         this.id = id;
         this.location = location;
         this.name = name;

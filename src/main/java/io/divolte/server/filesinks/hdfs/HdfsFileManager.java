@@ -18,6 +18,7 @@ package io.divolte.server.filesinks.hdfs;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Objects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -172,7 +173,7 @@ public class HdfsFileManager implements FileManager {
                  * files. If that fails, we do startup and initiate the regular retry cycle.
                  */
                 logger.error("Could not initialize HDFS filesystem or failed to check for existence of publish and / or working directories..", ioe);
-                throw new RuntimeException("Could not initialize HDFS filesystem.", ioe);
+                throw new UncheckedIOException("Could not initialize HDFS filesystem.", ioe);
             }
         }
 
@@ -188,7 +189,7 @@ public class HdfsFileManager implements FileManager {
                 return new HdfsFileManager(getFileSystemInstance(), hdfsReplication, hdfsWorkingDir, hdfsPublishDir, schema);
             } catch (final IOException e) {
                 logger.error("Failed to construct HDFS file system instance from verified configuration.");
-                throw new RuntimeException(e);
+                throw new UncheckedIOException(e);
             }
         }
 

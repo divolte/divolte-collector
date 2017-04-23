@@ -19,6 +19,7 @@ package io.divolte.server.filesinks.gcs.entities;
 import javax.annotation.ParametersAreNullableByDefault;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.base.MoreObjects;
 
 @ParametersAreNullableByDefault
 public class GcsObjectResponse {
@@ -56,8 +57,20 @@ public class GcsObjectResponse {
 
     @Override
     public String toString() {
-        return "GCS File [content type=" + contentType + ", crc32c=" + crc32c + ", etag=" + etag + ", generation=" + generation + ", id=" + id
-                + ", kind=" + kind + ", md5 hash=" + md5Hash + ", name=" + name + ", self link=" + selfLink + ", size=" + size + ", storage class="
-                + storageClass + ", time created=" + timeCreated + ", time storage class updated=" + timeStorageClassUpdated + "]";
+        return MoreObjects.toStringHelper(this)
+        .add("content type", contentType)
+        .add("crc32", crc32c)
+        .add("etag", etag)
+        .add("generation", generation)
+        .add("id", id)
+        .add("kind", kind)
+        .add("md5 hash", md5Hash)
+        .add("name", name)
+        .add("self link", selfLink)
+        .add("size", size)
+        .add("storage class", storageClass)
+        .add("time created", timeCreated)
+        .add("time storage class updated", timeStorageClassUpdated)
+        .toString();
     }
 }
