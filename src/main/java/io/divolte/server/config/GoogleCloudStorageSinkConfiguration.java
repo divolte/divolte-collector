@@ -16,6 +16,8 @@
 
 package io.divolte.server.config;
 
+import java.util.Objects;
+
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
 
@@ -35,7 +37,7 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
     @ParametersAreNullableByDefault
     GoogleCloudStorageSinkConfiguration(final FileStrategyConfiguration fileStrategy, @JsonProperty(required = true) final String bucket) {
         super(fileStrategy);
-        this.bucket = bucket;
+        this.bucket = Objects.requireNonNull(bucket);
     }
 
     @Override
