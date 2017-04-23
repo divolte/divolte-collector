@@ -16,8 +16,11 @@
 
 package io.divolte.server.filesinks.gcs.entities;
 
+import javax.annotation.ParametersAreNullableByDefault;
+
 import com.google.common.collect.ImmutableList;
 
+@ParametersAreNullableByDefault
 public class ComposeRequest {
     public final ImmutableList<SourceObject> sourceObjects;
     public final DestinationObject destination;

@@ -16,8 +16,11 @@
 
 package io.divolte.server.filesinks.gcs.entities;
 
+import javax.annotation.ParametersAreNullableByDefault;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+@ParametersAreNullableByDefault
 public class GcsObjectResponse {
     public final String contentType;
     public final String crc32c;
