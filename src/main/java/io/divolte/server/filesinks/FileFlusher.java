@@ -68,9 +68,9 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
      * is paused as soon as the file system goes into unhealthy state. As a result,
      * process(...) can assume the Optional to be populated; all other methods need
      * to check for file system health by inspecting the state of the optional
-     * before performing any operation. The lastFixAttempt field is used to keep
-     * track of the time of the recent most reconnect attempt in order to implement
-     * a back off larger than the heart beat frequency.
+     * before performing any operation. The lastFixAttemptNanoTime field is used to
+     * keep track of the time of the recent most reconnect attempt in order to
+     * implement a back off larger than the heart beat frequency.
      */
     private Optional<TrackedFile> currentTrackedFile;
     private long lastFixAttemptNanoTime;
