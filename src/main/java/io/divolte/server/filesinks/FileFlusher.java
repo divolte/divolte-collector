@@ -45,17 +45,17 @@ import io.divolte.server.processing.ItemProcessor;
 public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     private static final Logger logger = LoggerFactory.getLogger(FileFlusher.class);
 
-    private final static long DEFAULT_FILE_SYSTEM_RECONNECT_DELAY = 15000;
-    private final long reconnectDelay;
+    private final static long DEFAULT_FILE_SYSTEM_RECONNECT_DELAY_NANOS = 15000 * 1000000L;
+    private final long reconnectDelayNanos;
 
     private final static AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
     private final int instanceNumber;
     private final String hostString;
     private final DateFormat datePartFormat = new SimpleDateFormat("yyyyLLddHHmmss");
 
-    private final long syncEveryMillis;
+    private final long syncEveryNanos;
     private final int syncEveryRecords;
-    private final long newFileEveryMillis;
+    private final long newFileEveryNanos;
 
     private final FileManager manager;
 
@@ -73,21 +73,21 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
      * a back off larger than the heart beat frequency.
      */
     private Optional<TrackedFile> currentTrackedFile;
-    private long lastFixAttempt;
+    private long lastFixAttemptNanoTime;
 
     public FileFlusher(final FileStrategyConfiguration configuration, final FileManager manager) {
-        this(configuration, manager, DEFAULT_FILE_SYSTEM_RECONNECT_DELAY);
+        this(configuration, manager, DEFAULT_FILE_SYSTEM_RECONNECT_DELAY_NANOS);
     }
 
-    public FileFlusher(final FileStrategyConfiguration configuration, final FileManager manager, final long reconnectDelay) {
+    public FileFlusher(final FileStrategyConfiguration configuration, final FileManager manager, final long reconnectDelayNanos) {
         /*
          * Constructor with configurable reconnect delay for testability.
          */
-        this.reconnectDelay = reconnectDelay;
+        this.reconnectDelayNanos = reconnectDelayNanos;
 
-        syncEveryMillis = configuration.syncFileAfterDuration.toMillis();
+        syncEveryNanos = configuration.syncFileAfterDuration.toNanos();
         syncEveryRecords = configuration.syncFileAfterRecords;
-        newFileEveryMillis = configuration.rollEvery.toMillis();
+        newFileEveryNanos = configuration.rollEvery.toNanos();
 
         instanceNumber = INSTANCE_COUNTER.incrementAndGet();
         hostString = findLocalHostName();
@@ -106,18 +106,19 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     @Override
     public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
-        final long time = System.currentTimeMillis();
+        final long nanoTime = System.nanoTime();
         try {
-            final TrackedFile trackedFile = currentTrackedFile.get();
+            final TrackedFile trackedFile = currentTrackedFile
+                .orElseThrow(() -> new IllegalStateException("FileFlusher#process called while file system unhealthy."));
             trackedFile.divolteFile.append(item.payload);
             trackedFile.recordsSinceLastSync += 1;
 
-            possiblySyncAndOrRoll(time);
+            possiblySyncAndOrRoll(nanoTime);
 
             return CONTINUE;
         } catch(final IOException ioe) {
-            markFileSystemUnavailable(time);
-            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + reconnectDelay + " ms.", ioe);
+            markFileSystemUnavailable(nanoTime);
+            logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after " + reconnectDelayNanos + " ns.", ioe);
 
             return PAUSE;
         }
@@ -125,28 +126,28 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
     @Override
     public ProcessingDirective heartbeat() {
-        final long timeMillis = System.currentTimeMillis();
+        final long nanoTime = System.nanoTime();
 
         return currentTrackedFile.map(trackedFile -> {
-            return handleHeartbeatWithHealthyFileSystem(timeMillis);
+            return handleHeartbeatWithHealthyFileSystem(nanoTime);
         }).orElseGet(() -> {
-            return timeMillis - lastFixAttempt > reconnectDelay ? attemptRecovery(timeMillis) : PAUSE;
+            return nanoTime - lastFixAttemptNanoTime > reconnectDelayNanos ? attemptRecovery(nanoTime) : PAUSE;
         });
     }
 
-    private ProcessingDirective handleHeartbeatWithHealthyFileSystem(final long timeMillis) {
+    private ProcessingDirective handleHeartbeatWithHealthyFileSystem(final long nanoTime) {
         try {
-            possiblySyncAndOrRoll(timeMillis);
+            possiblySyncAndOrRoll(nanoTime);
             return CONTINUE;
         } catch (final IOException e) {
-            markFileSystemUnavailable(timeMillis);
+            markFileSystemUnavailable(nanoTime);
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
-                    + reconnectDelay + " ms.", e);
+                    + reconnectDelayNanos + " ns.", e);
             return PAUSE;
         }
     }
 
-    private ProcessingDirective attemptRecovery(final long timeMillis) {
+    private ProcessingDirective attemptRecovery(final long nanoTime) {
         logger.info("Attempting file system reconnect.");
         try {
             final TrackedFile trackedFile = new TrackedFile(manager.createFile(newFileName()));
@@ -155,8 +156,8 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             return CONTINUE;
         } catch (final IOException e) {
             logger.error("File system connection error. Marking file system as unavailable. Attempting reconnect after "
-                    + reconnectDelay + " ms.", e);
-            markFileSystemUnavailable(timeMillis);
+                    + reconnectDelayNanos + " ns.", e);
+            markFileSystemUnavailable(nanoTime);
             return PAUSE;
         }
     }
@@ -176,15 +177,15 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         });
     }
 
-    private void markFileSystemUnavailable(final long time) {
-        lastFixAttempt = time;
+    private void markFileSystemUnavailable(final long nanoTime) {
+        lastFixAttemptNanoTime = nanoTime;
         discardCurrentTrackedFileQuietly();
         currentTrackedFile = Optional.empty();
     }
 
-    private void possiblySyncAndOrRoll(final long time) throws IOException {
+    private void possiblySyncAndOrRoll(final long nanoTime) throws IOException {
         final TrackedFile trackedFile = currentTrackedFile.get();
-        if (time > trackedFile.projectedCloseTime) {
+        if (nanoTime > trackedFile.projectedCloseNanoTime) {
             // roll file
             if (trackedFile.totalRecords > 0) {
                 // Assumes closeAndPublish performs an implicit sync / flush of any remaining
@@ -198,12 +199,12 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
 
             currentTrackedFile = Optional.of(new TrackedFile(manager.createFile(newFileName())));
         } else if (trackedFile.recordsSinceLastSync >= syncEveryRecords ||
-                time - trackedFile.lastSyncTime >= syncEveryMillis && trackedFile.recordsSinceLastSync > 0) {
+                nanoTime - trackedFile.lastSyncNanoTime >= syncEveryNanos && trackedFile.recordsSinceLastSync > 0) {
             // sync
-            sync(time, trackedFile);
+            sync(nanoTime, trackedFile);
         } else if (trackedFile.recordsSinceLastSync == 0) {
             // if nothing was written and we didn't roll, reset sync timing
-            trackedFile.lastSyncTime = time;
+            trackedFile.lastSyncNanoTime = nanoTime;
         }
     }
 
@@ -211,16 +212,16 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         trackedFile.divolteFile.sync();
         trackedFile.totalRecords += trackedFile.recordsSinceLastSync;
         trackedFile.recordsSinceLastSync = 0;
-        trackedFile.lastSyncTime = time;
+        trackedFile.lastSyncNanoTime = time;
     }
 
     private final class TrackedFile {
-        final long openTime;
-        final long projectedCloseTime;
+        final long openNanoTime;
+        final long projectedCloseNanoTime;
 
         final DivolteFile divolteFile;
 
-        long lastSyncTime;
+        long lastSyncNanoTime;
         int recordsSinceLastSync;
         long totalRecords;
 
@@ -228,10 +229,10 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         public TrackedFile(final DivolteFile file) {
             this.divolteFile = file;
 
-            this.openTime = this.lastSyncTime = System.currentTimeMillis();
+            this.openNanoTime = this.lastSyncNanoTime = System.currentTimeMillis();
             this.recordsSinceLastSync = 0;
             this.totalRecords = 0;
-            this.projectedCloseTime = openTime + newFileEveryMillis;
+            this.projectedCloseNanoTime = openNanoTime + newFileEveryNanos;
         }
 
         @Override
@@ -239,8 +240,8 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
             return MoreObjects
                 .toStringHelper(getClass())
                 .add("file", divolteFile.toString())
-                .add("open time", openTime)
-                .add("last sync time", lastSyncTime)
+                .add("open nanotime", openNanoTime)
+                .add("last sync nanotime", lastSyncNanoTime)
                 .add("records since last sync", recordsSinceLastSync)
                 .add("total records", totalRecords)
                 .toString();
