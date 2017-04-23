@@ -108,8 +108,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
         final long nanoTime = System.nanoTime();
         try {
-            final TrackedFile trackedFile = currentTrackedFile
-                .orElseThrow(() -> new IllegalStateException("FileFlusher#process called while file system unhealthy."));
+            final TrackedFile trackedFile = currentTrackedFile.orElseThrow(IllegalStateException::new);
             trackedFile.divolteFile.append(item.payload);
             trackedFile.recordsSinceLastSync += 1;
 
@@ -184,7 +183,7 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
     }
 
     private void possiblySyncAndOrRoll(final long nanoTime) throws IOException {
-        final TrackedFile trackedFile = currentTrackedFile.get();
+        final TrackedFile trackedFile = currentTrackedFile.orElseThrow(IllegalStateException::new);
         if (nanoTime > trackedFile.projectedCloseNanoTime) {
             // roll file
             if (trackedFile.totalRecords > 0) {
