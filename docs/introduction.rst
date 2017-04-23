@@ -5,7 +5,7 @@ Introduction
 Divolte Collector is a solution for collecting `clickstream data <https://en.wikipedia.org/wiki/Clickstream>`_ from website users and subsequently store that data into a file based storage system as `Avro <http://avro.apache.org/>`_ files and push individual click events as messages onto a message queue. This is useful in scenarios where you need to perform offline and/or near real-time processing and analysis on user behavior in the form of click event data, such as when building recommender systems, personalization of websites or plain analytics on user behavior on a website.
 
 At present there is support for the following data sinks:
-* `Hadoop <http://hadoop.apache.org/>`_
+* `Hadoop Distributed File System (HDFS) <http://hadoop.apache.org/>`_
 * `Google Cloud Storage <https://cloud.google.com/storage/>`_
 * `Kafka <http://kafka.apache.org/>`_
 
@@ -125,4 +125,4 @@ Divolte Collector is written in pure Java and runs on any OS that supports the l
 
 .. note::
 
-  Divolte Collector can be configured to send data to either HDFS, Google Cloud Storage or Kafka (or any combination of these). When running locally for testing, it can also write to the local file system.
+  Divolte Collector can be configured to send data to HDFS, Google Cloud Storage and Kafka or any combination thereof. When running locally for testing it can also write to the local file system.
