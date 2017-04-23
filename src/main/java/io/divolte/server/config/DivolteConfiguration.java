@@ -136,7 +136,7 @@ public final class DivolteConfiguration {
     public <T> T getSinkConfiguration(final String sinkName, final Class <? extends T> sinkClass) {
         final SinkConfiguration sinkConfiguration = sinks.get(sinkName);
         Preconditions.checkArgument(null != sinkConfiguration, "No sink configuration with name: %s", sinkName);
-        Preconditions.checkArgument(sinkClass.isAssignableFrom(sinkConfiguration.getClass()),
+        Preconditions.checkArgument(sinkClass.isInstance(sinkConfiguration),
                                     "Sink configuration '%s' is not a %s sink", sinkName, sinkClass.getSimpleName());
         return sinkClass.cast(sinkConfiguration);
     }
