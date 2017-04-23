@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -45,6 +46,7 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
 
 import io.divolte.server.AvroRecordBuffer;
@@ -168,12 +170,14 @@ public class GoogleCloudStorageFileManager implements FileManager {
              */
             avroTargetStream = new DynamicDelegatingOutputStream();
             avroTargetStream.attachDelegate(os);
-            writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, avroTargetStream);
-            writer.flush();
-            avroTargetStream.detachDelegate();
-
-            os.flush();
+            try {
+                writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, avroTargetStream);
+                writer.flush();
+            } finally {
+                avroTargetStream.detachDelegate();
+            }
             os.close();
+
 
             final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
             logger.debug("Google Cloud Storage upload response {}", response);
@@ -222,15 +226,18 @@ public class GoogleCloudStorageFileManager implements FileManager {
                 final URL partUploadUrl = uploadUrlFor(bucketEncoded, inflightPartialNameEncoded);
                 final GcsObjectResponse uploadResponse = googlePost(partUploadUrl, GcsObjectResponse.class, AVRO_CONTENT_TYPE_HEADER, os -> {
                     avroTargetStream.attachDelegate(os);
-                    for (int c = 0; c < position; c++) {
-                        // Write Avro record buffer to file
-                        writer.appendEncoded(buffer[c].getByteBuffer());
+                    try {
+                        for (int c = 0; c < position; c++) {
+                            // Write Avro record buffer to file
+                            writer.appendEncoded(buffer[c].getByteBuffer());
 
-                        // Clear (our) reference to flushed buffer
-                        buffer[c] = null;
+                            // Clear (our) reference to flushed buffer
+                            buffer[c] = null;
+                        }
+                        writer.flush();
+                    } finally {
+                        avroTargetStream.detachDelegate();
                     }
-                    writer.flush();
-                    avroTargetStream.detachDelegate();
                 });
                 partWritten = true;
                 position = 0;
@@ -276,7 +283,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
                 getGoogleCredentials();
             } catch (final IOException ioe) {
                 logger.error("Failed to obtain application default credentials for Google Cloud Storage for OAuth scope '" + GoogleCloudStorageFileManager.GCS_OAUTH_SCOPE + "'", ioe);
-                throw new RuntimeException("Could not obtain application default credentials for Google Cloud Storage", ioe);
+                throw new UncheckedIOException("Could not obtain application default credentials for Google Cloud Storage", ioe);
             }
 
             final GoogleCloudStorageSinkConfiguration sinkConfiguration = configuration.configuration().getSinkConfiguration(name, GoogleCloudStorageSinkConfiguration.class);
@@ -292,7 +299,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
                 URLEncoder.encode(sinkConfiguration.fileStrategy.publishDir, URL_ENCODING);
             } catch (final IOException ioe) {
                 logger.error("Failed to fetch bucket information for Google Cloud Storage sink {} using bucket {}. Assuming destination unwritable.", name, sinkConfiguration.bucket);
-                throw new RuntimeException(ioe);
+                throw new UncheckedIOException(ioe);
             }
         }
 
@@ -328,29 +335,29 @@ public class GoogleCloudStorageFileManager implements FileManager {
         return parseResponse(resultType, setupUrlConnection(GET, url, false, Collections.emptyMap()));
     }
 
-    @SuppressWarnings("PMD.EmptyWhileStmt")
     private static void googleDelete(final URL url) throws IOException {
         final HttpURLConnection connection = setupUrlConnection(DELETE, url, false, Collections.emptyMap());
-        final int responseCode = connection.getResponseCode();
-        if (responseCode < 200 || responseCode > 299) {
-            final InputStream stream = connection.getErrorStream();
-            // Read the error response as String; GCS sometimes sends a JSON error response
-            // and sometimes text/plain (e.g. "Not found.")
-            final String response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
-            stream.close();
-            logger.error("Received unexpected response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
-            throw new IOException("Received unexpected response from Google Cloud Storage.");
-        } else {
-            final InputStream stream = connection.getInputStream();
-            /*
-             * As per the docs, Google sends a empty response with a 200. We need to get and
-             * drain the stream for the HTTP client to consider the connection for reuse.
-             */
-            while (stream.read() != -1) {}
-        }
+
+        throwIOExceptionOnErrorResponse(connection);
+
+        final InputStream stream = connection.getInputStream();
+        /*
+         * As per the docs, Google sends a empty response with a 200. We need to get and
+         * drain the stream for the HTTP client to consider the connection for reuse.
+         */
+        ByteStreams.exhaust(stream);
     }
 
     private static <T> T parseResponse(final Class<T> resultType, final HttpURLConnection connection) throws IOException, JsonParseException, JsonMappingException {
+        throwIOExceptionOnErrorResponse(connection);
+
+        final InputStream stream = connection.getInputStream();
+        final T response = MAPPER.readValue(stream, resultType);
+        stream.close();
+        return response;
+    }
+
+    private static void throwIOExceptionOnErrorResponse(final HttpURLConnection connection) throws IOException {
         final int responseCode = connection.getResponseCode();
         // Note: the docs are specific about closing the streams after reading in order
         // to trigger proper Keep-Alive usage
@@ -362,11 +369,6 @@ public class GoogleCloudStorageFileManager implements FileManager {
             stream.close();
             logger.error("Received unexpected response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
             throw new IOException("Received unexpected response from Google Cloud Storage.");
-        } else {
-            final InputStream stream = connection.getInputStream();
-            final T response = MAPPER.readValue(stream, resultType);
-            stream.close();
-            return response;
         }
     }
 
@@ -376,12 +378,11 @@ public class GoogleCloudStorageFileManager implements FileManager {
 
         getGoogleCredentials()
             .getRequestMetadata()
-            .entrySet()
             .forEach(
-                    entry -> entry
-                        .getValue()
+                    (headerName, headerValues) -> headerValues
                         .forEach(
-                                value -> connection.addRequestProperty(entry.getKey(), value)));
+                                value -> connection.addRequestProperty(headerName, value))
+                        );
 
         additionalHeaders.forEach(connection::addRequestProperty);
 

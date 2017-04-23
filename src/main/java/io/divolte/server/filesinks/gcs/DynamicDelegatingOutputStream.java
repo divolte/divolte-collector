@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Objects;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import com.google.common.base.Preconditions;
@@ -29,18 +30,20 @@ import com.google.common.base.Preconditions;
  */
 @ParametersAreNonnullByDefault
 public class DynamicDelegatingOutputStream extends OutputStream {
-    private OutputStream wrapped;
+    @Nullable private OutputStream wrapped;
 
     public DynamicDelegatingOutputStream() {
         wrapped = null;
     }
 
     public void detachDelegate() throws IOException {
+        Preconditions.checkState(wrapped != null);
         wrapped.flush();
         wrapped = null;
     }
 
     public void attachDelegate(final OutputStream newDelegate) {
+        Preconditions.checkState(wrapped == null);
         wrapped = Objects.requireNonNull(newDelegate);
     }
 
