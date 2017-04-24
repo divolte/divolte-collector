@@ -261,9 +261,9 @@ public class GoogleCloudStorageFileManager implements FileManager {
                     sourcesToCompose);
 
             final URL composeUrl = composeUrlFor(bucketEncoded, composeDestinationObjectEncoded);
-            final GcsObjectResponse composeResponse = googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER, os -> {
-                MAPPER.writeValue(os, composeRequest);
-            });
+            final GcsObjectResponse composeResponse =
+                googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER,
+                           os -> MAPPER.writeValue(os, composeRequest));
 
             logger.debug("Google Cloud Storage compose response {}", composeResponse);
         }
