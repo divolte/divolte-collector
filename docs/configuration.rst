@@ -1086,10 +1086,13 @@ Sinks are used to write Avro records that have been mapped from received events.
 Each sink has a type configured via a mandatory ``type`` property. The supported types are:
 
 - File based sinks:
--XX- ``hdfs``
--XX- ``gcs``
+
+  - ``hdfs``
+  - ``gcs``
+
 - Streaming sinks:
--XX- ``kafka``
+
+  - ``kafka``
 
 For example:
 
