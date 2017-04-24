@@ -42,7 +42,6 @@ public class ComposeRequest {
         public final String contentType;
 
         public DestinationObject(final String contentType) {
-            super();
             this.contentType = contentType;
         }
     }

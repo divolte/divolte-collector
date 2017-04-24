@@ -24,7 +24,6 @@ public abstract class FileSinkConfiguration extends SinkConfiguration {
     public final FileStrategyConfiguration fileStrategy;
 
     public FileSinkConfiguration(final FileStrategyConfiguration fileStrategy) {
-        super();
         this.fileStrategy = Optional.ofNullable(fileStrategy).orElse(FileStrategyConfiguration.DEFAULT_FILE_STRATEGY_CONFIGURATION);
     }
 
