@@ -52,6 +52,17 @@ This shell script is run by the startup script prior to starting the Divolte Col
 
     DIVOLTE_JAVA_OPTS="-XX:+UseG1GC -Djava.awt.headless=true -XX:+HeapDumpOnOutOfMemoryError"
 
+.. envvar:: GOOGLE_APPLICATION_CREDENTIALS
+
+:Description:
+  If using sinks that write to Google Cloud Storage, this environment variable is checked for the location of the file containing credentials for writing to your buckets. For more information about this environment variable please refer to Google's documentation on `How Application Default Credentials work <https://developers.google.com/identity/protocols/application-default-credentials>`_.
+
+:Example:
+
+  .. code-block:: bash
+
+    GOOGLE_APPLICATION_CREDENTIALS='/etc/divolte/gcs-credentials.json'
+
 logback.xml
 -----------
 Divolte Collector uses the `Logback Project <http://logback.qos.ch>`_ as its logging provider. This provider is configured through the :file:`logback.xml` file in the configuration directory. For more information about the settings in this file, review the `Configuration chapter in the Logback Manual <http://logback.qos.ch/manual/configuration.html>`_.
