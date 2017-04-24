@@ -159,10 +159,10 @@ public class GoogleCloudStorageFileManager implements FileManager {
             /*
              * We create a single Avro writer, but write parts of the Avro stream to
              * multiple files, which are composed into a single file after flushing files.
-             * We use a DynamicDelegatingOutputStream for this, which is a output stream
+             * We use a DynamicDelegatingOutputStream for this, which is an output stream
              * wrapper that supports changing the wrapped stream on the fly.
              *
-             * When creating a Avro writer, it immediately writes the Avro header to the
+             * When creating an Avro writer, it immediately writes the Avro header to the
              * underlying stream. As such, we need to open the HTTP connection before
              * creating the writer. As the writer is final, we cannot use the
              * googlePost(...) helper in the constructor, because we cannot set a final from
