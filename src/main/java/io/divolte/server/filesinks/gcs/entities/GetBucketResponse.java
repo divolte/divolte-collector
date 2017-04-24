@@ -19,10 +19,13 @@ package io.divolte.server.filesinks.gcs.entities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.MoreObjects;
 
+import javax.annotation.ParametersAreNullableByDefault;
+
 /*
  * Note that these fields are not exhaustive for the get bucket response.
  * Just enough to display a nice enough log message.
  */
+@ParametersAreNullableByDefault
 public final class GetBucketResponse {
     public final String id;
     public final String location;
