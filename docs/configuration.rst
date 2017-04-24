@@ -1135,7 +1135,10 @@ File based sinks use multiple threads to write the records as they are produced.
 
 Records produced from events with the same party identifier are always written to the same Avro file, and in the order they were received by the originating source. (The relative ordering of records produced from events with the same party identifier is undefined if they originated from different sources, although they will still be written to the same Avro file.)
 
-The currently supported types of file based sinks are HDFS sinks and Google Cloud Storage sinks.
+The supported types of file based sinks are:
+
+- HDFS
+- Google Cloud Storage (Experimental)
 
 The following properties are common to all file based sinks:
 
@@ -1251,6 +1254,10 @@ HDFS Sink Property: ``replication``
 
 Google Cloud Storage Sinks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+  Support for Google Cloud Storage is currently experimental.
 
 A built in HTTP client is used to write files to Google Cloud Storage.
 

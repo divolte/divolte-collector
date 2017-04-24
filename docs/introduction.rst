@@ -5,8 +5,9 @@ Introduction
 Divolte Collector is a solution for collecting `clickstream data <https://en.wikipedia.org/wiki/Clickstream>`_ from website users and subsequently store that data into a file based storage system as `Avro <http://avro.apache.org/>`_ files and push individual click events as messages onto a message queue. This is useful in scenarios where you need to perform offline and/or near real-time processing and analysis on user behavior in the form of click event data, such as when building recommender systems, personalization of websites or plain analytics on user behavior on a website.
 
 At present there is support for the following data sinks:
+
 * `Hadoop Distributed File System (HDFS) <http://hadoop.apache.org/>`_
-* `Google Cloud Storage <https://cloud.google.com/storage/>`_
+* `Google Cloud Storage <https://cloud.google.com/storage/>`_ (Experimental)
 * `Kafka <http://kafka.apache.org/>`_
 
 Several solutions exist already to this problem (hosted solution like Google Analytics, Omniture, or open source systems such as Piwik). Here's what makes Divolte Collector different:

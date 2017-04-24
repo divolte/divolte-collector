@@ -18,13 +18,13 @@ Features
 --------
 
 - **Single tag site integration**: Including Divolte Collector is a HTML one-liner. Just load the JavaScript at the end of your document body.
-- **Built for Hadoop and Kafka**: All data is collected directly in HDFS and on Kafka queues. Divolte Collector is both a HDFS client and a Kafka producer. No ETL or intermediate storage.
+- **Built for Hadoop and Kafka, with experimental support for Google Cloud Storage**: All collected data is written directly to HDFS, GCS or Kafka. No ETL or intermediate storage.
 - **Structured data collection**: All data is captured in Apache Avro records using your own schema definition. Divolte Collector does not enforce a particular structure on your data.
 - **User agent parsing**: It's not just a string. Add rich user-agent information to your click event records on the fly.
 - **ip2geo lookup**: Attach geo-coordinates to requests on the fly. (This requires a third-party database; a free version is available.)
 - **Fast**: Handle many thousands of requests per second on a single node. Scale out as you need.
 - **Custom events**: Just like any web analytics solution, you can log any event. Supply custom parameters in your page or JavaScript and map them onto your Avro schema.
-- **Integrate with anything**: Work with anything that understands Avro and either HDFS or Kafka. Hive, Impala, Spark, Spark Streaming, Storm, etc. No log file parsing is required.
+- **Integrate with anything**: Work with anything that understands Avro and HDFS, GCS or Kafka. Hive, Impala, Spark, Spark Streaming, Storm, etc. No log file parsing is required.
 - **Open source**: Divolte Collector is hosted on GitHub and released under the Apache License, Version 2.0.
 
 Building Prerequisites
