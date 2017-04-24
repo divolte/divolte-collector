@@ -26,7 +26,7 @@ public class GlobalConfiguration {
         this.mapper = Objects.requireNonNull(mapper);
         this.hdfs = Objects.requireNonNull(hdfs);
         this.kafka = Objects.requireNonNull(kafka);
-        this.gcs = gcs;
+        this.gcs = Objects.requireNonNull(gcs);
     }
 
     @Override
