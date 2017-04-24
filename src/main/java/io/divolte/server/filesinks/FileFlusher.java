@@ -207,12 +207,12 @@ public class FileFlusher implements ItemProcessor<AvroRecordBuffer> {
         }
     }
 
-    private void sync(final long time, final TrackedFile trackedFile) throws IOException {
+    private void sync(final long nanoTime, final TrackedFile trackedFile) throws IOException {
         logger.debug("Syncing file: {}", trackedFile.divolteFile);
         trackedFile.divolteFile.sync();
         trackedFile.totalRecords += trackedFile.recordsSinceLastSync;
         trackedFile.recordsSinceLastSync = 0;
-        trackedFile.lastSyncNanoTime = time;
+        trackedFile.lastSyncNanoTime = nanoTime;
     }
 
     private final class TrackedFile {
