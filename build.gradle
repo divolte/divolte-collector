@@ -27,7 +27,7 @@ buildscript {
 plugins {
     id 'java'
     id 'com.github.johnrengelman.shadow' version '1.2.4'
-    id 'pl.allegro.tech.build.axion-release' version '1.4.1'
+    id 'pl.allegro.tech.build.axion-release' version '1.6.0'
 }
 
 apply plugin: 'java'
@@ -42,17 +42,11 @@ apply plugin: 'groovy'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'pl.allegro.tech.build.axion-release'
 
-import com.github.zafarkhaja.semver.Version
-
 scmVersion {
     tag {
         prefix = rootProject.name
     }
-    versionCreator { versionFromTag, scmPosition ->
-        scmPosition.onTag || scmPosition.branch.startsWith('support/')
-            ? versionFromTag
-            : Version.valueOf(versionFromTag).incrementMinorVersion()
-    }
+    versionIncrementer 'incrementMinorIfNotOnRelease', [releaseBranchPattern: 'support/.*']
 }
 
 defaultTasks 'clean', 'build'
