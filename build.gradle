@@ -25,20 +25,17 @@ buildscript {
 }
 
 plugins {
-    id 'java'
-    id 'com.github.johnrengelman.shadow' version '1.2.4'
+    id 'com.github.johnrengelman.shadow' version '2.0.0'
     id 'pl.allegro.tech.build.axion-release' version '1.6.0'
 }
 
-apply plugin: 'java'
+apply plugin: 'groovy'
 apply plugin: 'eclipse'
 apply plugin: 'findbugs'
 apply plugin: 'pmd'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
-apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'application'
-apply plugin: 'groovy'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'pl.allegro.tech.build.axion-release'
 
