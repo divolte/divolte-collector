@@ -129,9 +129,9 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
                 batch.stream()
                      .map(producer::send)
                      .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
-        // The producer will send the messages in the background. As of 0.8.x we can't
-        // flush, but have to wait for that to occur based on the producer configuration.
-        // (By default it will immediately flush, but users can override this.)
+        // Force a flush so we can check the results without blocking unnecessarily due to
+        // a user-configured flushing policy.
+        producer.flush();
 
         // When finished, each message can be in one of several states.
         //  - Completed.

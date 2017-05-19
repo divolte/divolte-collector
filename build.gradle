@@ -108,10 +108,11 @@ dependencies {
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'
     }
-    // Currently on 0.8.2.0, even though 0.9.0.0 is out, because 0.9.0.0 isn't fully compatible
-    // with 0.8.X servers: Horton and Cloudera both ship 0.8, and we want to support them.
+    // Compatibility:
+    //   - Horton and Cloudera are both on 0.10+ at the time of writing.
+    //   - The client from 0.10.2.0 onwards supports brokers from 0.10.0.0 onwards.
     // Note: we refer to versioned producer documentation in our documentation.
-    compile group: 'org.apache.kafka', name:'kafka-clients', version: '0.8.2.0'
+    compile group: 'org.apache.kafka', name:'kafka-clients', version: '0.10.2.1'
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20170423'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.11', classifier: 'indy'
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.3'

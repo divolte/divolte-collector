@@ -121,7 +121,7 @@ Divolte Collector is written in pure Java and runs on any OS that supports the l
 
   * Tested to work against: CDH, HDP and MapR
 
-* Apache Kafka 0.8 or above (optional, see below)
+* Apache Kafka 0.10 or above (optional, see below)
 * Load balancer with SSL offloading to support HTTPS
 
 .. note::
