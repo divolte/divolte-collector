@@ -133,7 +133,7 @@ public class ServerSinkSourceConfigurationTest {
             this.directory = Objects.requireNonNull(directory);
             existingFiles = Files.list(directory)
                                  .filter(AvroFileLocator::isAvroFile)
-                                 .collect(MoreCollectors.toImmutableSet());
+                                 .collect(ImmutableSet.toImmutableSet());
         }
 
         private static boolean isAvroFile(final Path p) {

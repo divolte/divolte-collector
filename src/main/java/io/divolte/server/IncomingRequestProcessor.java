@@ -100,7 +100,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
                                                          kv.getKey())))           // Results in stream of (source_index, mapping_name)
           .collect(Collectors.groupingBy(Map.Entry::getKey,
                                          Collectors.mapping(e -> mappingsByName.get(e.getValue()),
-                                                            MoreCollectors.toImmutableList())
+                                                            ImmutableList.toImmutableList())
                   ))                                                              // Results in a Map<Integer, ImmutableList<Mapping>> where the key is the source index
           .forEach(sourceMappingResult::set);                                     // Populate the temporary result in ArrayList<ImmutableList<Mapping>>
 
@@ -139,7 +139,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
                 .filter(e -> sinksByName.containsKey(e.getValue()))
           .collect(Collectors.groupingBy(Map.Entry::getKey,
                                          Collectors.mapping(e -> sinksByName.get(e.getValue()),
-                                                            MoreCollectors.toImmutableList())));
+                                                            ImmutableList.toImmutableList())));
           collected.forEach(mappingMappingResult::set);
 
           sinksByMappingIndex = ImmutableList.copyOf(mappingMappingResult);

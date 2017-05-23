@@ -16,23 +16,9 @@
 
 package io.divolte.server;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Map;
-import java.util.Optional;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import io.undertow.server.handlers.*;
-import org.apache.hadoop.fs.FileSystem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.typesafe.config.ConfigFactory;
-
 import io.divolte.server.config.GoogleCloudStorageSinkConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
 import io.divolte.server.config.KafkaSinkConfiguration;
@@ -40,12 +26,22 @@ import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.*;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
+import org.apache.hadoop.fs.FileSystem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public final class Server implements Runnable {
@@ -77,7 +73,7 @@ public final class Server implements Runnable {
                 vc.configuration().mappings.values()
                                            .stream()
                                            .flatMap(mc -> mc.sinks.stream())
-                                           .collect(MoreCollectors.toImmutableSet());
+                                           .collect(ImmutableSet.toImmutableSet());
 
         // Instantiate the active sinks:
         //  - As a practical matter, unreferenced sinks have no associated schema, which means they
@@ -90,12 +86,10 @@ public final class Server implements Runnable {
                   .filter(sink -> vc.configuration().global.hdfs.enabled || !(sink.getValue() instanceof HdfsSinkConfiguration))
                   .filter(sink -> vc.configuration().global.gcs.enabled || !(sink.getValue() instanceof GoogleCloudStorageSinkConfiguration))
                   .filter(sink -> vc.configuration().global.kafka.enabled || !(sink.getValue() instanceof KafkaSinkConfiguration))
-                  .<Map.Entry<String,ProcessingPool<?, AvroRecordBuffer>>>map(sink ->
-                          Maps.immutableEntry(sink.getKey(),
-                                              sink.getValue()
-                                                  .getFactory()
-                                                  .create(vc, sink.getKey(), schemaRegistry)))
-                  .collect(MoreCollectors.toImmutableMap());
+                  .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey,
+                                                       sink -> sink.getValue()
+                                                                   .getFactory()
+                                                                   .create(vc, sink.getKey(), schemaRegistry)));
         logger.info("Initialized sinks: {}", sinks.keySet());
 
         logger.debug("Initializing mappings...");
@@ -108,13 +102,11 @@ public final class Server implements Runnable {
                   .sources
                   .entrySet()
                   .parallelStream()
-                  .map(source ->
-                          Maps.immutableEntry(source.getKey(),
-                                              source.getValue()
-                                                    .createSource(vc,
-                                                            source.getKey(),
-                                                            incomingRequestProcessingPool)))
-                  .collect(MoreCollectors.toImmutableMap());
+              .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey,
+                                                   source -> source.getValue()
+                                                                   .createSource(vc,
+                                                                                 source.getKey(),
+                                                                                 incomingRequestProcessingPool)));
 
         logger.debug("Attaching sources: {}", sources.keySet());
         // Once all created we can attach them to the server. This has to be done sequentially.

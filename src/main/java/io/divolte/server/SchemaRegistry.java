@@ -14,7 +14,9 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 @ParametersAreNonnullByDefault
 public class SchemaRegistry {
@@ -36,9 +38,7 @@ public class SchemaRegistry {
                 schemaLocationsByMapping.values()
                                         .stream()
                                         .distinct()
-                                        .map(schemaLocation ->
-                                                Maps.immutableEntry(schemaLocation, loadSchema(schemaLocation)))
-                                        .collect(MoreCollectors.toImmutableMap());
+                                        .collect(ImmutableMap.toImmutableMap(Function.identity(), SchemaRegistry::loadSchema));
 
         // Store the schema for each mapping.
         schemasByMappingName =
@@ -56,7 +56,7 @@ public class SchemaRegistry {
                                                          Maps.immutableEntry(sink,
                                                                              schemasByLocation.get(config.schemaFile))))
                         .distinct()
-                        .collect(MoreCollectors.toImmutableMap());
+                        .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Inferred schemas used for sinks: {}", schemasBySinkName.keySet());
     }
 
