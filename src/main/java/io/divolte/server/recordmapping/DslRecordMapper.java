@@ -16,19 +16,15 @@
 
 package io.divolte.server.recordmapping;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
+import com.google.common.collect.Maps;
+import groovy.lang.Binding;
+import groovy.lang.GroovyCodeSource;
+import groovy.lang.GroovyShell;
+import io.divolte.server.DivolteEvent;
+import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.ip2geo.LookupService;
+import io.divolte.server.recordmapping.DslRecordMapping.MappingAction;
+import io.divolte.server.recordmapping.DslRecordMapping.MappingAction.MappingResult;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
@@ -36,17 +32,13 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Maps;
-import com.google.common.io.Files;
-
-import groovy.lang.Binding;
-import groovy.lang.GroovyShell;
-import groovy.lang.Script;
-import io.divolte.server.DivolteEvent;
-import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.ip2geo.LookupService;
-import io.divolte.server.recordmapping.DslRecordMapping.MappingAction;
-import io.divolte.server.recordmapping.DslRecordMapping.MappingAction.MappingResult;
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -64,7 +56,7 @@ public class DslRecordMapper {
         try {
             final DslRecordMapping mapping = new DslRecordMapping(schema, new UserAgentParserAndCache(vc), geoipService);
 
-            final String groovyScript = Files.toString(new File(groovyFile), StandardCharsets.UTF_8);
+            final GroovyCodeSource groovySource = new GroovyCodeSource(new File(groovyFile), StandardCharsets.UTF_8.name());
 
             final CompilerConfiguration compilerConfig = new CompilerConfiguration();
             compilerConfig.setScriptBaseClass("io.divolte.groovyscript.MappingBase");
@@ -73,10 +65,7 @@ public class DslRecordMapper {
             binding.setProperty("mapping", mapping);
 
             final GroovyShell shell = new GroovyShell(binding, compilerConfig);
-            final Script script = shell.parse(groovyScript);
-
-            script.run();
-
+            shell.evaluate(groovySource);
             actions = mapping.actions();
         } catch (final IOException e) {
             throw new UncheckedIOException("Could not load mapping script file: " + groovyFile, e);
