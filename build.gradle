@@ -20,7 +20,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.14.0'
+        classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.15.0'
     }
 }
 
