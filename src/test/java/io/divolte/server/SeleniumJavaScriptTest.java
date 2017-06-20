@@ -22,6 +22,8 @@ import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.config.BrowserSourceConfiguration;
 import org.junit.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,6 +105,26 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         };
         final int numberOfUniquePageViewIDs = uniquePageViewIdsForSeriesOfActions(actions);
         assertEquals(actions.length, numberOfUniquePageViewIDs);
+    }
+
+    @Test
+    public void shouldSignalWhenLateLoaded() throws Exception {
+        doSetUp();
+        Preconditions.checkState(null != driver && null != server);
+
+        // Go to the page but don't load Divolte immediately.
+        gotoPage(PAGE_VIEW_DEFERRED_LOAD, false);
+        final WebDriverWait wait = new WebDriverWait(driver, 30);
+        final WebElement loadButton = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("load_divolte")));
+
+        logger.info("Triggering deferred loading of Divolte");
+        loadButton.click();
+
+        // Wait for the page-view event to arrive.
+        final EventPayload payload = server.waitForEvent();
+        final DivolteEvent eventData = payload.event;
+
+        assertEquals(Optional.of("pageView"), eventData.eventType);
     }
 
     @Test

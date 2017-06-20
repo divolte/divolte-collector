@@ -207,6 +207,7 @@ public abstract class SeleniumTestBase {
             BASIC("test-basic-page"),
             BASIC_COPY("test-basic-page-copy"),
             PAGE_VIEW_SUPPLIED("test-basic-page-provided-pv-id"),
+            PAGE_VIEW_DEFERRED_LOAD("test-page-view-deferred-load"),
             CUSTOM_JAVASCRIPT_NAME("test-custom-javascript-name"),
             CUSTOM_PAGE_VIEW("test-custom-page-view"),
             EVENT_COMMIT("test-event-commit");
@@ -226,11 +227,16 @@ public abstract class SeleniumTestBase {
     }
 
     protected String gotoPage(final TestPages page) {
+        return gotoPage(page, true);
+    }
+
+    protected String gotoPage(final TestPages page, final boolean waitForDivolte) {
         Preconditions.checkState(null != driver);
         String url = urlOf(page);
         driver.navigate().to(url);
-        // All test pages load Divolte.
-        waitDivolteLoaded();
+        if (waitForDivolte) {
+            waitDivolteLoaded();
+        }
         return url;
     }
 
