@@ -515,7 +515,7 @@ Property: ``divolte.global.kafka.producer``
   .. code-block:: none
 
     divolte.global.kafka.producer = {
-      metadata.broker.list = ["broker1:9092", "broker2:9092", "broker3:9092"]
+      bootstrap.servers = ["broker1:9092", "broker2:9092", "broker3:9092"]
       client.id = divolte.collector
 
       acks = 0
