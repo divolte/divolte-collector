@@ -115,7 +115,7 @@ dependencies {
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '0.10.2.1'
     compile group: 'com.google.javascript', name:'closure-compiler', version:'v20170521'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.4.12', classifier: 'indy'
-    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.3'
+    compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.4'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.2.0'
     compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: jacksonVersion
     compile group: 'com.fasterxml.jackson.datatype', name:'jackson-datatype-jdk8', version: jacksonVersion
