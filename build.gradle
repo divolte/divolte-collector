@@ -125,7 +125,7 @@ dependencies {
 
     // Used for configuration validation
     compile group: 'org.hibernate', name:'hibernate-validator', version: '6.0.2.Final'
-    compile group: 'org.glassfish', name: 'javax.el', version: '3.0.0'
+    compile group: 'org.glassfish', name:'javax.el', version: '3.0.0'
 
     // We use the SLF4J API. At runtime, this is LogBack.
     // (We also force any dependencies that use Log4J to go via SLF4J.)
