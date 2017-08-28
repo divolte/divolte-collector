@@ -124,7 +124,7 @@ dependencies {
     compile group: 'com.jasonclawson', name: 'jackson-dataformat-hocon', version: '1.1.0'
 
     // Used for configuration validation
-    compile group: 'org.hibernate', name:'hibernate-validator', version: '5.4.1.Final'
+    compile group: 'org.hibernate', name:'hibernate-validator', version: '6.0.2.Final'
     compile group: 'org.glassfish', name: 'javax.el', version: '3.0.0'
 
     // We use the SLF4J API. At runtime, this is LogBack.
