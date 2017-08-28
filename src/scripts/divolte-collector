@@ -44,9 +44,7 @@ fi
 
 # add libs to CLASSPATH
 join() { local IFS="$1"; shift; echo "$*"; }
-# there are multiple versions of guava on the classpath. Most important is avro that bundles guava in the jar.
-# we want to have guava in front of these dependencies.
-CLASSPATH=$(echo $APP_HOME/lib/guava*.jar):$(join ":" $APP_HOME/lib/*.jar)
+CLASSPATH=$(join ":" $APP_HOME/lib/*.jar)
 
 # add any present HADOOP_CONF_DIR
 [ -n "$HADOOP_CONF_DIR" ] && CLASSPATH="$HADOOP_CONF_DIR:$CLASSPATH"
