@@ -10,8 +10,8 @@ import javax.annotation.ParametersAreNonnullByDefault;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.std.StdScalarDeserializer;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.typesafe.config.impl.ConfigImplUtil;
 
 @ParametersAreNonnullByDefault
@@ -26,13 +26,13 @@ public class DurationDeserializer extends StdScalarDeserializer<Duration> {
     public Duration deserialize(final JsonParser p,
                                 final DeserializationContext ctx) throws IOException {
         if (VALUE_STRING != p.getCurrentToken()) {
-            throw ctx.mappingException("Expected string value for Duration mapping.");
+            ctx.reportWrongTokenException(this, VALUE_STRING, "Expected string value for Duration mapping.");
         }
         long result;
         try {
             result = parse(p.getText());
         } catch(final DurationFormatException e) {
-            throw new JsonMappingException(p, e.getMessage(), e);
+            throw InvalidFormatException.from(p, e.getMessage(), e);
         }
         return Duration.ofNanos(result);
     }

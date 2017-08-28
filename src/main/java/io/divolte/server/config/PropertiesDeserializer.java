@@ -1,13 +1,5 @@
 package io.divolte.server.config;
 
-import static com.fasterxml.jackson.core.JsonToken.*;
-
-import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Properties;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -15,6 +7,13 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.base.Joiner;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Properties;
+
+import static com.fasterxml.jackson.core.JsonToken.*;
 
 @ParametersAreNonnullByDefault
 public class PropertiesDeserializer extends JsonDeserializer<Properties> {
@@ -46,7 +45,7 @@ public class PropertiesDeserializer extends JsonDeserializer<Properties> {
                         break;
                     case START_OBJECT:
                         if (p.getParsingContext().inArray()) {
-                            throw ctx.mappingException("Nested objects within arrays not allowed in Properties object.");
+                            throw UnsupportedTypeException.from(p, START_OBJECT, "Nested objects within arrays not allowed in Properties object.");
                         }
                         break;
                     case END_OBJECT:
@@ -60,16 +59,16 @@ public class PropertiesDeserializer extends JsonDeserializer<Properties> {
                         stack.removeLast();
                         break;
                     case VALUE_NULL:
-                        throw ctx.mappingException("Null values not allowed in Properties object.");
+                        throw UnsupportedTypeException.from(p, VALUE_NULL, "Null values not allowed in Properties object.");
                     case VALUE_EMBEDDED_OBJECT:
-                        throw ctx.mappingException("Embedded object not allowed as part of Properties object.");
+                        throw UnsupportedTypeException.from(p, VALUE_EMBEDDED_OBJECT, "Embedded object not allowed as part of Properties object.");
                     case NOT_AVAILABLE:
                         break;
                 }
             }
             return properties;
         } else {
-            throw ctx.mappingException("Expected nested object for Properties mapping.");
+            throw ctx.wrongTokenException(p, handledType(), START_OBJECT, "Expected nested object for Properties mapping.");
         }
     }
 }
