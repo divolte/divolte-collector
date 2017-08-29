@@ -383,7 +383,7 @@ task copySourceTar(type: Copy) {
 
 import java.text.SimpleDateFormat
 
-def buildTime() {
+static def buildTime() {
     final SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss")
     df.setTimeZone(TimeZone.getTimeZone("GMT"))
     return df.format(new Date())
