@@ -532,9 +532,9 @@ Property: ``divolte.global.kafka.confluent_key_id``
 
     .. code-block:: none
 
-    divolte.global.kafka {
-      confluent_key_id = 12345
-    }
+      divolte.global.kafka {
+        confluent_key_id = 12345
+      }
 
 Sources (``divolte.sources``)
 -----------------------------
@@ -1067,9 +1067,9 @@ Mapping property: ``confluent_id``
 
     .. code-block:: none
 
-    divolte.mappings.a_mapping {
-      confluent_id = 1234
-    }
+      divolte.mappings.a_mapping {
+        confluent_id = 1234
+      }
 
 Mapping property: ``mapping_script_file``
 """""""""""""""""""""""""""""""""""""""""
@@ -1343,6 +1343,10 @@ Google Cloud Storage Sink Property: ``bucket``
 Kafka Sinks
 ^^^^^^^^^^^
 
+.. note::
+
+  The Confluent-compatility mode for the Kafka sink is currently experimental.
+
 A Kafka sink uses a Kafka producer to write Avro records as individual messages on a Kafka topic. The producer is configured according to the global Kafka settings.
 
 Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
@@ -1368,6 +1372,7 @@ Kafka sink property: ``topic``
 
 Kafka sink property: ``mode``
 """""""""""""""""""""""""""""
+
 :Description:
   The Kafka sink mode.  By default, Avro records are written directly as the Kafka message.  So it is not clear from the message itself which schema was used to write it.  The sink mode determines which "envelope" should be wrapped around the serialized Avro record.  The ``confluent`` mode does this in a way that is compatible with the `Confluent Schema Registry <http://docs.confluent.io/3.0.0/schema-registry/docs/>`_.  Note that this mode does require the schema ID to be specified in the ``mappings`` section.
 :Default:
@@ -1376,7 +1381,7 @@ Kafka sink property: ``mode``
 
     .. code-block:: none
 
-    divolte.sinks.a_sink {
-      type = kafka
-      mode = confluent
-    }
+      divolte.sinks.a_sink {
+        type = kafka
+        mode = confluent
+      }
