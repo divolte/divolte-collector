@@ -16,15 +16,11 @@
 
 package io.divolte.server.kafka;
 
-import avro.shaded.com.google.common.collect.ImmutableList;
+import io.divolte.record.DivolteIdentifierRecord;
 import io.divolte.server.DivolteIdentifier;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumWriter;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
@@ -36,13 +32,10 @@ class ConfluentDivolteIdentifierSerializer extends ConfluentDivolteSerializer<Di
     private static final int INITIAL_BUFFER_SIZE = 100;
 
     private static final char DIVOLTE_IDENTIFIER_SCHEMA_VERSION = '0';
-    static final Schema DIVOLTE_IDENTIFIER_SCHEMA = Schema.createRecord(ImmutableList.of(
-        new Schema.Field("version", Schema.create(Schema.Type.STRING), "Divolte Identifier Version", (Object) null),
-        new Schema.Field("timestamp", Schema.create(Schema.Type.LONG), "Timestamp", (Object) null),
-        new Schema.Field("id", Schema.create(Schema.Type.STRING), "Message identifier", (Object) null)
-    ));
+    private static final SpecificDatumWriter<DivolteIdentifierRecord> DIVOLTE_IDENTIFIER_RECORD_WRITER =
+        new SpecificDatumWriter<>(DivolteIdentifierRecord.class);
 
-    public ConfluentDivolteIdentifierSerializer(int schemaId) {
+    ConfluentDivolteIdentifierSerializer(int schemaId) {
         super(schemaId);
     }
 
@@ -55,16 +48,16 @@ class ConfluentDivolteIdentifierSerializer extends ConfluentDivolteSerializer<Di
     protected ByteBuffer serializeData(final DivolteIdentifier identifier) {
         assert identifier.version == DIVOLTE_IDENTIFIER_SCHEMA_VERSION;
 
+        final DivolteIdentifierRecord record = DivolteIdentifierRecord.newBuilder()
+            .setVersion("" + identifier.version)
+            .setTimestamp(identifier.timestamp)
+            .setId(identifier.getId())
+            .build();
         final ByteBuffer byteBuffer = ByteBuffer.allocate(INITIAL_BUFFER_SIZE);
-        final DatumWriter<GenericRecord> writer = new GenericDatumWriter<>(DIVOLTE_IDENTIFIER_SCHEMA);
-        final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
-        final GenericRecord record = new GenericData.Record(DIVOLTE_IDENTIFIER_SCHEMA);
-        record.put("version", "" + identifier.version);
-        record.put("timestamp", identifier.timestamp);
-        record.put("id", identifier.getId());
-
+        final ByteBufferOutputStream outputStream = new ByteBufferOutputStream(byteBuffer);
+        final Encoder encoder = EncoderFactory.get().directBinaryEncoder(outputStream, null);
         try {
-            writer.write(record, encoder);
+            DIVOLTE_IDENTIFIER_RECORD_WRITER.write(record, encoder);
         } catch (IOException ioe) {
             throw new RuntimeException("Unable to serialize divolte identifier", ioe);
         }
