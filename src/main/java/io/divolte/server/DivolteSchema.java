@@ -14,30 +14,21 @@
  * limitations under the License.
  */
 
-package io.divolte.server.kafka;
+package io.divolte.server;
 
-import io.divolte.server.DivolteIdentifier;
-import org.apache.kafka.common.serialization.Serializer;
+import org.apache.avro.Schema;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
-class DivolteIdentifierSerializer implements Serializer<DivolteIdentifier> {
+public class DivolteSchema {
 
-    @Override
-    public void configure(final Map<String, ?> configs, final boolean isKey) {
-        // Nothing needed here.
-    }
+    public final Optional<Integer> confluentId;
+    public final Schema schema;
 
-    @Override
-    public byte[] serialize(final String topic, final DivolteIdentifier data) {
-        return data.value.getBytes(StandardCharsets.UTF_8);
-    }
-
-    @Override
-    public void close() {
-        // Nothing needed here.
+    public DivolteSchema(Optional<Integer> confluentId, Schema schema) {
+        this.confluentId = confluentId;
+        this.schema = schema;
     }
 }

@@ -16,8 +16,20 @@
 
 package io.divolte.server.kafka;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
+import com.google.common.collect.ImmutableList;
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.processing.Item;
+import io.divolte.server.processing.ItemProcessor;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.errors.RetriableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -26,22 +38,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.errors.RetriableException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-
-import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.DivolteIdentifier;
-import io.divolte.server.processing.Item;
-import io.divolte.server.processing.ItemProcessor;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe

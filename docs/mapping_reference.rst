@@ -28,6 +28,14 @@ One other reason to always provide a default value is that Avro does not allow t
 
 In addition to introducing new fields with defaults, other forms of changes such as renaming and type changes can be permitted under some circumstances. For full details on the changes that are permitted and how the writing and reading schemas are reconciled refer to the `Avro documentation on schema resolution <https://avro.apache.org/docs/1.8.1/spec.html#Schema+Resolution>`_.
 
+Schema evolution on Kafka
+-------------------------
+For Avro to be able to perform the mapping of fields to the schema specified by the consumer, it needs access to the schema that was used to write a record.  The schema is embedded in HDFS files and the process is transparent to consumers of these files.  When records are written to a Kafka topic, the schema is not readily available.  This becomes a concern when the schema evolves and records with different schemas are (temporarily) written.
+
+Several solutions exist to deal with schema evolution on Kafka.  A straightforward approach is to fix the schema per topic and create a new one for each version of the schema.  While simple enough for the producing side (Divolte), it forces consumers to be reconfigured (at the least) with the new schema and the new topic.  This is the default mode for a Kafka sink (``naked``).
+
+A different approach is taken in `Kafka Connect <http://docs.confluent.io/3.0.0/connect/intro.html>`_.  The keys and values are prepended with the schema id; consumers can then look up the schema in the `Schema Registry <http://docs.confluent.io/3.0.0/schema-registry/docs/index.html>`_.  The exact format is specified in the `avro-serializer <https://github.com/confluentinc/schema-registry/blob/master/avro-serializer/src/main/java/io/confluent/kafka/serializers/AbstractKafkaAvroSerializer.java>`_ - Divolte implements the 5-byte format: MAGIC_BYTE (0x0) followed by the 4-byte integer schema id in network (big endian) order.  This is the ``confluent`` mode of a Kafka sink.
+
 Mapping DSL
 ===========
 Mappings are specified by Groovy scripts that are compiled and run by Divolte Collector on startup. Each mapping script is written in the mapping DSL. The result of running this script is a mapping that Divolte Collector can use to map incoming events from its configured sources onto an Avro schema.

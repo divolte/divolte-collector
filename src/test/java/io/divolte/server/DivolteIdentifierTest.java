@@ -59,6 +59,7 @@ public class DivolteIdentifierTest {
         Optional<DivolteIdentifier> value = DivolteIdentifier.tryParse(stringValue);
         assertEquals(Optional.of(42L), value.map(v -> v.timestamp));
         assertEquals(Optional.of('0'), value.map(v -> v.version));
+        assertEquals(Optional.of("5mRCeUO4p2_6R7u1m9ZoxXG2AfBeJeHD"), value.map(v -> v.getId()));
         assertEquals(Optional.of(stringValue), value.map(v -> v.value));
     }
 }

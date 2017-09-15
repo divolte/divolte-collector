@@ -522,6 +522,20 @@ Property: ``divolte.global.kafka.producer``
       retries = 5
     }
 
+Property: ``divolte.global.kafka.confluent_key_id``
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  This schema ID is used when writing out Divolte message identifiers to Kafka in ``confluent`` mode.  The same (built-in) schema is used for all mappings.
+:Default:
+    *Not specified*
+:Example:
+
+    .. code-block:: none
+
+      divolte.global.kafka {
+        confluent_key_id = 12345
+      }
+
 Sources (``divolte.sources``)
 -----------------------------
 
@@ -1043,6 +1057,20 @@ Mapping property: ``schema_file``
 .. |Built-in schema| replace:: *Built-in schema*
 .. _Built-in schema: https://github.com/divolte/divolte-schema
 
+Mapping property: ``confluent_id``
+""""""""""""""""""""""""""""""""""
+:Description:
+  The avro records written to Kafka are 'naked' by default.  The schema is not included in the message.  When the schema evolves over time, such metadata is necessary to be able to read the records.  The ``confluent_id`` allows the avro serializer to prepend each record with this id.  This becomes effective when the kafka sink mode is ``confluent``, for example.
+:Default:
+    *Not specified*
+:Example:
+
+    .. code-block:: none
+
+      divolte.mappings.a_mapping {
+        confluent_id = 1234
+      }
+
 Mapping property: ``mapping_script_file``
 """""""""""""""""""""""""""""""""""""""""
 :Description:
@@ -1315,6 +1343,10 @@ Google Cloud Storage Sink Property: ``bucket``
 Kafka Sinks
 ^^^^^^^^^^^
 
+.. note::
+
+  The Confluent-compatility mode for the Kafka sink is currently experimental.
+
 A Kafka sink uses a Kafka producer to write Avro records as individual messages on a Kafka topic. The producer is configured according to the global Kafka settings.
 
 Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
@@ -1337,3 +1369,19 @@ Kafka sink property: ``topic``
       type = kafka
       topic = clickevents
     }
+
+Kafka sink property: ``mode``
+"""""""""""""""""""""""""""""
+
+:Description:
+  The Kafka sink mode.  By default, Avro records are written directly as the Kafka message.  So it is not clear from the message itself which schema was used to write it.  The sink mode determines which "envelope" should be wrapped around the serialized Avro record.  The ``confluent`` mode does this in a way that is compatible with the `Confluent Schema Registry <http://docs.confluent.io/3.0.0/schema-registry/docs/>`_.  Note that this mode does require the schema ID to be specified in the ``mappings`` section.
+:Default:
+    ``naked``
+:Example:
+
+    .. code-block:: none
+
+      divolte.sinks.a_sink {
+        type = kafka
+        mode = confluent
+      }

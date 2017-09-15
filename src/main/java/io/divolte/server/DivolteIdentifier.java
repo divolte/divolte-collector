@@ -60,6 +60,11 @@ public final class DivolteIdentifier {
                      + Objects.requireNonNull(id);
     }
 
+    public String getId() {
+        final List<String> parts = splitter.splitToList(value);
+        return parts.get(2);
+    }
+
     @Override
     public String toString() {
         return value;

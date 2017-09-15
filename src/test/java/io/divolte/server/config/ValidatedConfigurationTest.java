@@ -98,4 +98,41 @@ public class ValidatedConfigurationTest {
                   .get(0)
                   .startsWith("Property 'divolte.' Any sink can only use one schema. The following sinks have multiple mappings with different schema's linked to them: [kafka].."));
     }
+
+    @Test
+    public void kafkaSinkSupportsConfluentMode() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent.conf"));
+        assertTrue(vc.isValid());
+    }
+
+    @Test
+    public void confluentSinkMustBeReferencedWithSchemaInMapping() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-without-schema.conf"));
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        System.out.println(vc.errors().get(0));
+        assertTrue(
+            vc.errors()
+            .get(0)
+            .startsWith("Property 'divolte.' Any Confluent sink must have a schema id. The following mappings refer to a Confluent sink, but do not have a 'confluent_id': [test]..")
+        );
+    }
+
+    @Test
+    public void confluentKeyIdMustBeDefinedWhenConfluentSinkExists() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-without-key.conf"));
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        assertTrue(
+            vc.errors()
+                .get(0)
+                .startsWith("Property 'divolte.' These sinks use mode 'confluent' but 'global.kafka.confluent_key_id' is not set: [kafka]..")
+        );
+    }
+
+    @Test
+    public void mappingCanContainSchemaId() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("mapping-with-schema-id.conf"));
+        assertTrue(vc.isValid());
+    }
 }

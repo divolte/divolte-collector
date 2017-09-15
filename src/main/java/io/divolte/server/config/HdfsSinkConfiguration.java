@@ -12,6 +12,7 @@ import com.google.common.base.MoreObjects;
 import io.divolte.server.filesinks.FileFlushingPool;
 import io.divolte.server.filesinks.FileManager.FileManagerFactory;
 import io.divolte.server.filesinks.hdfs.HdfsFileManager;
+import org.apache.avro.Schema;
 
 @ParametersAreNonnullByDefault
 public class HdfsSinkConfiguration extends FileSinkConfiguration {
@@ -37,7 +38,8 @@ public class HdfsSinkConfiguration extends FileSinkConfiguration {
     @Override
     public SinkFactory getFactory() {
         return (config, name, registry) -> {
-            final FileManagerFactory fileManagerFactory = HdfsFileManager.newFactory(config, name, registry.getSchemaBySinkName(name));
+            final Schema schema = registry.getSchemaBySinkName(name).schema;
+            final FileManagerFactory fileManagerFactory = HdfsFileManager.newFactory(config, name, schema);
             fileManagerFactory.verifyFileSystemConfiguration();
             return new FileFlushingPool(config, name, fileManagerFactory);
         };
