@@ -92,7 +92,7 @@ Safari (from version 10) has native Webdriver support. To set this up:
 
 Tests can then be executed:
 
-    % SELENIUM_DRIVER=safari ./gradlew cleanTest test
+    % SELENIUM_DRIVER=safari ./gradlew test
 
 ### PhantomJS ###
 
