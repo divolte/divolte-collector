@@ -22,7 +22,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
-public class DivolteSchema {
+public final class DivolteSchema {
 
     public final Optional<Integer> confluentId;
     public final Schema schema;
