@@ -34,7 +34,7 @@ public class SchemaRegistry {
 
         // Load the actual schemas. Once.
         logger.debug("Loading schemas for mappings: {}", schemaLocationsByMapping.keySet());
-        final ImmutableMap<Optional<String>, Schema> schemasByLocation =
+        final ImmutableMap<Optional<String>,Schema> schemasByLocation =
                 schemaLocationsByMapping.values()
                                         .stream()
                                         .distinct()
