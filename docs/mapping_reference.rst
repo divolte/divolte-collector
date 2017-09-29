@@ -28,13 +28,12 @@ One other reason to always provide a default value is that Avro does not allow t
 
 In addition to introducing new fields with defaults, other forms of changes such as renaming and type changes can be permitted under some circumstances. For full details on the changes that are permitted and how the writing and reading schemas are reconciled refer to the `Avro documentation on schema resolution <https://avro.apache.org/docs/1.8.1/spec.html#Schema+Resolution>`_.
 
-Schema evolution on Kafka
--------------------------
-For Avro to be able to perform the mapping of fields to the schema specified by the consumer, it needs access to the schema that was used to write a record.  The schema is embedded in HDFS files and the process is transparent to consumers of these files.  When records are written to a Kafka topic, the schema is not readily available.  This becomes a concern when the schema evolves and records with different schemas are (temporarily) written.
+Schema evolution with Kafka
+---------------------------
+Schema evolution is not automatically available when using Kafka. The file implementation `is defined by the Avro project <https://avro.apache.org/docs/1.8.1/spec.html#Object+Container+Files>`_, but this is not suitable for messaging systems and no alternative is defined. As a result there is no single standard and various strategies are in use:
 
-Several solutions exist to deal with schema evolution on Kafka.  A straightforward approach is to fix the schema per topic and create a new one for each version of the schema.  While simple enough for the producing side (Divolte), it forces consumers to be reconfigured (at the least) with the new schema and the new topic.  This is the default mode for a Kafka sink (``naked``).
-
-A different approach is taken in `Kafka Connect <http://docs.confluent.io/3.0.0/connect/intro.html>`_.  The keys and values are prepended with the schema id; consumers can then look up the schema in the `Schema Registry <http://docs.confluent.io/3.0.0/schema-registry/docs/index.html>`_.  The exact format is specified in the `avro-serializer <https://github.com/confluentinc/schema-registry/blob/master/avro-serializer/src/main/java/io/confluent/kafka/serializers/AbstractKafkaAvroSerializer.java>`_ - Divolte implements the 5-byte format: MAGIC_BYTE (0x0) followed by the 4-byte integer schema id in network (big endian) order.  This is the ``confluent`` mode of a Kafka sink.
+- Simply Avro-encode the record as a message payload. This is the ``naked`` (and default) mode in which Kafka sinks operate. Consumers are expected to implicitly know the schema used to write the record. This makes changing the schema infeasible without also switching to a new Kafka topic; consumers generally have no way to know which messages were written with the old or new schema.
+- Tag the message in some way so that consumers can detect the schema used to encode the payload. The Confluent platform uses this approach, prefixing each message with `a header <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_ to inform consumers which schema was used to write the message. Schema changes are possible so long as they remain backwards compatible. Kafka sinks have experimental support this, available by configuring the sink to operate in ``confluent`` mode.
 
 Mapping DSL
 ===========

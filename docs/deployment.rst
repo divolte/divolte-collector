@@ -101,23 +101,4 @@ When using `nginx <http://nginx.org/>`_ as a reverse proxy and load balancer in 
 
 Kafka Connect
 =============
-When deploying Divolte in conjunction with Kafka Connect, the schema IDs for keys (the Divolte Identifier of the visitor - aka the "Divolte Party ID") and values (the event record itself) need to be obtained from the Schema Registry.  These IDs then need to be set in :file:`divolte-collector.conf`.  The schema for the key is:
-
-.. code-block:: json
-
-  {
-    "type" : "record",
-    "fields" : [ {
-      "name" : "version",
-      "type" : "string",
-      "doc" : "Divolte Identifier Version"
-    }, {
-      "name" : "timestamp",
-      "type" : "long",
-      "doc" : "Timestamp at which the identifier was generated"
-    }, {
-      "name" : "id",
-      "type" : "string",
-      "doc" : "Random Base64-encoded String"
-    } ]
-  }
+When deploying in conjunction with Kafka Connect, the Avro schemas need to be pre-registered with the `Schema Registry <https://docs.confluent.io/3.3.0/schema-registry/docs>`_. Mappings that produce records for a Kafka sink operating in ``confluent`` mode need have their ``confluent_id`` property configured with the identifier of the schema in the registry. (This identifier is normally a simple integer.)

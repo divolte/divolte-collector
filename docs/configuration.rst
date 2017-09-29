@@ -1060,7 +1060,7 @@ Mapping property: ``schema_file``
 Mapping property: ``confluent_id``
 """"""""""""""""""""""""""""""""""
 :Description:
-  The avro records written to Kafka are 'naked' by default.  The schema is not included in the message.  When the schema evolves over time, such metadata is necessary to be able to read the records.  The ``confluent_id`` allows the avro serializer to prepend each record with this id.  This becomes effective when the kafka sink mode is ``confluent``, for example.
+  The identifier of the Avro schema, if it has been registered with with the Confluent Schema Registry. This is required if any Kafka sinks are associated with this mapping and are configured to operate in ``confluent`` mode.
 :Default:
     *Not specified*
 :Example:
@@ -1343,15 +1343,14 @@ Google Cloud Storage Sink Property: ``bucket``
 Kafka Sinks
 ^^^^^^^^^^^
 
-.. note::
-
-  The Confluent-compatility mode for the Kafka sink is currently experimental.
-
 A Kafka sink uses a Kafka producer to write Avro records as individual messages on a Kafka topic. The producer is configured according to the global Kafka settings.
 
 Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
 
-The body of each Kafka message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+The body of each Kafka message contains a single Avro record, serialized in one of two possible ways depending on the sink mode:
+
+- In ``naked`` mode (the default) the record is serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+- In ``confluent`` mode (experimental) the record is serialized using the `wire format for the Confluent platform <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This requires that mappings for this sink be configured with the ``confluent_id`` specifying the identifier of the Avro schema as registered in the Schema Registry. (Divolte does not register the schema itself.)
 
 Within the namespace for a Kafka sink properties are used to configure it.
 
@@ -1372,9 +1371,13 @@ Kafka sink property: ``topic``
 
 Kafka sink property: ``mode``
 """""""""""""""""""""""""""""
-
 :Description:
-  The Kafka sink mode.  By default, Avro records are written directly as the Kafka message.  So it is not clear from the message itself which schema was used to write it.  The sink mode determines which "envelope" should be wrapped around the serialized Avro record.  The ``confluent`` mode does this in a way that is compatible with the `Confluent Schema Registry <http://docs.confluent.io/3.0.0/schema-registry/docs/>`_.  Note that this mode does require the schema ID to be specified in the ``mappings`` section.
+  The Kafka sink mode, which controls how Avro records are formatted as Kafka messages:
+
+  - In ``naked`` mode the records are serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_.
+  - In ``confluent`` mode (experimental) the records are serialised using `Confluent platform's wire format <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This only affects the message body.
+
+  Note that ``confluent`` mode is only permitted if the ``confluent_id`` is specified (and the same) for all mappings that this sink consumes from.
 :Default:
     ``naked``
 :Example:
