@@ -1140,7 +1140,7 @@ If *any* sinks are configured these implicit sinks are not present and all sinks
 File Based Sinks
 ^^^^^^^^^^^^^^^^
 
-A file based sink writes `Avro files <http://avro.apache.org/docs/1.8.1/spec.html#Object+Container+Files>`_ containing records produced by mapping to a remote file system. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
+A file based sink writes `Avro files <http://avro.apache.org/docs/1.8.2/spec.html#Object+Container+Files>`_ containing records produced by mapping to a remote file system. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
 
 File based sinks use multiple threads to write the records as they are produced. Each thread writes to its own Avro file, flushing regularly. Periodically the Avro files are closed and new ones started. Files are initially created in the configured working directory and have an extension of ``.avro.partial`` while open and being written to. When closed, they are renamed to have an extension of ``.avro`` and moved to the publish directory. This happens in a single (atomic) move operation, so long as the underlying storage supports this.
 
@@ -1319,7 +1319,7 @@ A Kafka sink uses a Kafka producer to write Avro records as individual messages 
 
 Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
 
-The body of each Kafka message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+The body of each Kafka message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
 
 Within the namespace for a Kafka sink properties are used to configure it.
 
