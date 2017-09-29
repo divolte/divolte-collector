@@ -1154,7 +1154,7 @@ If *any* sinks are configured these implicit sinks are not present and all sinks
 File Based Sinks
 ^^^^^^^^^^^^^^^^
 
-A file based sink writes `Avro files <http://avro.apache.org/docs/1.8.1/spec.html#Object+Container+Files>`_ containing records produced by mapping to a remote file system. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
+A file based sink writes `Avro files <http://avro.apache.org/docs/1.8.2/spec.html#Object+Container+Files>`_ containing records produced by mapping to a remote file system. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
 
 File based sinks use multiple threads to write the records as they are produced. Each thread writes to its own Avro file, flushing regularly. Periodically the Avro files are closed and new ones started. Files are initially created in the configured working directory and have an extension of ``.avro.partial`` while open and being written to. When closed, they are renamed to have an extension of ``.avro`` and moved to the publish directory. This happens in a single (atomic) move operation, so long as the underlying storage supports this.
 
@@ -1335,7 +1335,7 @@ Records produced from events with the same party identifier are queued on a topi
 
 The body of each Kafka message contains a single Avro record, serialized in one of two possible ways depending on the sink mode:
 
-- In ``naked`` mode (the default) the record is serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+- In ``naked`` mode (the default) the record is serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
 - In ``confluent`` mode (experimental) the record is serialized using the `wire format for the Confluent platform <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This requires that mappings for this sink be configured with the ``confluent_id`` specifying the identifier of the Avro schema as registered in the Schema Registry. (Divolte does not register the schema itself.)
 
 Within the namespace for a Kafka sink properties are used to configure it.
@@ -1360,7 +1360,7 @@ Kafka sink property: ``mode``
 :Description:
   The Kafka sink mode, which controls how Avro records are formatted as Kafka messages:
 
-  - In ``naked`` mode the records are serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.1/spec.html#binary_encoding>`_.
+  - In ``naked`` mode the records are serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_.
   - In ``confluent`` mode (experimental) the records are serialised using `Confluent platform's wire format <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This only affects the message body.
 
   Note that ``confluent`` mode is only permitted if the ``confluent_id`` is specified (and the same) for all mappings that this sink consumes from.
