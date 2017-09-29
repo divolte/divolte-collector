@@ -100,39 +100,50 @@ public class ValidatedConfigurationTest {
     }
 
     @Test
-    public void kafkaSinkSupportsConfluentMode() {
+    public void kafkaSinksSupportsConfluentMode() {
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent.conf"));
         assertTrue(vc.isValid());
     }
 
     @Test
-    public void confluentSinkMustBeReferencedWithSchemaInMapping() {
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-without-schema.conf"));
+    public void mappingsCanContainConfluentId() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("mapping-configuration-confluent-id.conf"));
+        assertTrue(vc.isValid());
+    }
+
+    @Test
+    public void mappingsForConfluentSinksMustHaveConfluentId() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-without-confluent-id.conf"));
         assertFalse(vc.isValid());
         assertEquals(1, vc.errors().size());
-        System.out.println(vc.errors().get(0));
         assertTrue(
             vc.errors()
-            .get(0)
-            .startsWith("Property 'divolte.' Any Confluent sink must have a schema id. The following mappings refer to a Confluent sink, but do not have a 'confluent_id': [test]..")
+              .get(0)
+              .startsWith("Property 'divolte.' Mappings used by sinks in Confluent-mode must have their 'confluent_id' attribute set. The following mappings are missing this: [test]..")
         );
     }
 
     @Test
-    public void confluentKeyIdMustBeDefinedWhenConfluentSinkExists() {
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-without-key.conf"));
+    public void allMappingsForConfluentSinksMustHaveConfluentId() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-partially-without-confluent-id.conf"));
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        assertTrue(
+            vc.errors()
+              .get(0)
+              .startsWith("Property 'divolte.' Mappings used by sinks in Confluent-mode must have their 'confluent_id' attribute set. The following mappings are missing this: [test-2]..")
+        );
+    }
+
+    @Test
+    public void mappingsForConfluentSinksMustHaveSameConfluentId() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("kafka-sink-confluent-with-confluent-id-conflict.conf"));
         assertFalse(vc.isValid());
         assertEquals(1, vc.errors().size());
         assertTrue(
             vc.errors()
                 .get(0)
-                .startsWith("Property 'divolte.' These sinks use mode 'confluent' but 'global.kafka.confluent_key_id' is not set: [kafka]..")
+                .startsWith("Property 'divolte.' Any sink can only use one confluent identifier. The following sinks have multiple mappings with different 'confluent_id' attributes: [kafka]..")
         );
-    }
-
-    @Test
-    public void mappingCanContainSchemaId() {
-        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("mapping-with-schema-id.conf"));
-        assertTrue(vc.isValid());
     }
 }

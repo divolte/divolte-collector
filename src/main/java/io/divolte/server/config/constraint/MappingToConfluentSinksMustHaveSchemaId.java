@@ -15,16 +15,16 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 @Target({ TYPE })
 @Retention(RUNTIME)
-@Constraint(validatedBy=MappingToConfluentMustHaveSchemaId.Validator.class)
+@Constraint(validatedBy=MappingToConfluentSinksMustHaveSchemaId.Validator.class)
 @Documented
-public @interface MappingToConfluentMustHaveSchemaId {
-    String message() default "Any Confluent sink must have a schema id. The following mappings refer to a Confluent sink, but do not have a 'confluent_id': ${validatedValue.mappingsToConfluentSinksWithoutSchemaIds()}.";
+public @interface MappingToConfluentSinksMustHaveSchemaId {
+    String message() default "Mappings used by sinks in Confluent-mode must have their 'confluent_id' attribute set. The following mappings are missing this: ${validatedValue.mappingsToConfluentSinksWithoutSchemaIds()}.";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 
-    class Validator implements ConstraintValidator<MappingToConfluentMustHaveSchemaId, DivolteConfiguration> {
+    class Validator implements ConstraintValidator<MappingToConfluentSinksMustHaveSchemaId, DivolteConfiguration> {
         @Override
-        public void initialize(final MappingToConfluentMustHaveSchemaId constraintAnnotation) {
+        public void initialize(final MappingToConfluentSinksMustHaveSchemaId constraintAnnotation) {
             // Nothing needed here.
         }
 

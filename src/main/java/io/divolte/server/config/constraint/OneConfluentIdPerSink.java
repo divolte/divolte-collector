@@ -15,22 +15,22 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 @Target({ TYPE })
 @Retention(RUNTIME)
-@Constraint(validatedBy=ConfluentSinksHaveKeyId.Validator.class)
+@Constraint(validatedBy=OneConfluentIdPerSink.Validator.class)
 @Documented
-public @interface ConfluentSinksHaveKeyId {
-    String message() default "These sinks use mode 'confluent' but 'global.kafka.confluent_key_id' is not set: ${validatedValue.sinksMissingGlobalConfiguration()}.";
+public @interface OneConfluentIdPerSink {
+    String message() default "Any sink can only use one confluent identifier. The following sinks have multiple mappings with different 'confluent_id' attributes: ${validatedValue.sinksWithMultipleConfluentIds()}.";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 
-    class Validator implements ConstraintValidator<ConfluentSinksHaveKeyId, DivolteConfiguration> {
+    class Validator implements ConstraintValidator<OneConfluentIdPerSink, DivolteConfiguration> {
         @Override
-        public void initialize(final ConfluentSinksHaveKeyId constraintAnnotation) {
+        public void initialize(final OneConfluentIdPerSink constraintAnnotation) {
             // Nothing needed here.
         }
 
         @Override
         public boolean isValid(final DivolteConfiguration value, final ConstraintValidatorContext context) {
-            return value.sinksMissingGlobalConfiguration().isEmpty();
+            return value.sinksWithMultipleConfluentIds().isEmpty();
         }
     }
 }

@@ -38,8 +38,8 @@ public class HdfsSinkConfiguration extends FileSinkConfiguration {
     @Override
     public SinkFactory getFactory() {
         return (config, name, registry) -> {
-            final Schema schema = registry.getSchemaBySinkName(name).schema;
-            final FileManagerFactory fileManagerFactory = HdfsFileManager.newFactory(config, name, schema);
+            final Schema avroschema = registry.getSchemaBySinkName(name).avroSchema;
+            final FileManagerFactory fileManagerFactory = HdfsFileManager.newFactory(config, name, avroschema);
             fileManagerFactory.verifyFileSystemConfiguration();
             return new FileFlushingPool(config, name, fileManagerFactory);
         };

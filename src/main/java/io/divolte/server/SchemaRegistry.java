@@ -32,43 +32,31 @@ public class SchemaRegistry {
         final ImmutableMap<String,Optional<String>> schemaLocationsByMapping =
                 ImmutableMap.copyOf(Maps.transformValues(mappings, config -> config.schemaFile));
 
-        // Build a mapping of the schema location for each mapping.
-        final ImmutableMap<String,Optional<Integer>> schemaIdsByLocation =
-            mappings.values()
-            .stream()
-            .filter(config -> config.schemaFile.isPresent())
-            .collect(ImmutableMap.toImmutableMap(config -> config.schemaFile.get(), config -> config.confluentId));
-
         // Load the actual schemas. Once.
         logger.debug("Loading schemas for mappings: {}", schemaLocationsByMapping.keySet());
-        final ImmutableMap<Optional<String>, DivolteSchema> schemasByLocation =
+        final ImmutableMap<Optional<String>, Schema> schemasByLocation =
                 schemaLocationsByMapping.values()
                                         .stream()
                                         .distinct()
-                                        .collect(ImmutableMap.toImmutableMap(
-                                            Function.identity(),
-                                            schemaLocation -> {
-                                                Schema schema = loadSchema(schemaLocation);
-                                                Optional<Integer> schemaId = schemaLocation.flatMap(schemaIdsByLocation::get);
-                                                return new DivolteSchema(schemaId, schema);
-                                            })
-                                        );
+                                        .collect(ImmutableMap.toImmutableMap(Function.identity(), SchemaRegistry::loadSchema));
 
         // Store the schema for each mapping.
         schemasByMappingName =
-                ImmutableMap.copyOf(Maps.transformValues(schemaLocationsByMapping, schemasByLocation::get));
+                ImmutableMap.copyOf(Maps.transformValues(mappings,
+                                                         config -> new DivolteSchema(schemasByLocation.get(config.schemaFile), config.confluentId)));
         logger.info("Loaded schemas used for mappings: {}", schemasByMappingName.keySet());
 
         // Also calculate an inverse mapping by sink name.
-        // (Validation will ensure that multiple mappings for each sink have the same value.)
+        // (Validation has ensured that multiple mappings for each sink have the same schema and confluent id.)
         schemasBySinkName =
-                mappings.values()
+                mappings.entrySet()
                         .stream()
-                        .flatMap(config -> config.sinks
-                                                 .stream()
-                                                 .map(sink ->
-                                                         Maps.immutableEntry(sink,
-                                                                             schemasByLocation.get(config.schemaFile))))
+                        .flatMap(mapping -> {
+                            final DivolteSchema divolteSchema = schemasByMappingName.get(mapping.getKey());
+                            return mapping.getValue().sinks
+                                                     .stream()
+                                                     .map(sink -> Maps.immutableEntry(sink, divolteSchema));
+                        })
                         .distinct()
                         .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Inferred schemas used for sinks: {}", schemasBySinkName.keySet());

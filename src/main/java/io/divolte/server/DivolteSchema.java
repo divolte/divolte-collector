@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 GoDataDriven B.V.
+ * Copyright 2017 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,46 @@
 
 package io.divolte.server;
 
+import com.google.common.base.MoreObjects;
 import org.apache.avro.Schema;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public final class DivolteSchema {
 
+    public final Schema avroSchema;
     public final Optional<Integer> confluentId;
-    public final Schema schema;
 
-    public DivolteSchema(Optional<Integer> confluentId, Schema schema) {
-        this.confluentId = confluentId;
-        this.schema = schema;
+    public DivolteSchema(final Schema avroSchema, final Optional<Integer> confluentId) {
+        this.avroSchema = Objects.requireNonNull(avroSchema);
+        this.confluentId = Objects.requireNonNull(confluentId);
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+        return this == other
+            || other instanceof DivolteSchema && equals((DivolteSchema) other);
+    }
+
+    public boolean equals(final DivolteSchema other) {
+        return this == other
+            || Objects.equals(avroSchema, other.avroSchema)
+               && Objects.equals(confluentId, other.confluentId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(avroSchema, confluentId);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("avroSchema", avroSchema)
+            .add("confluentId", confluentId)
+            .toString();
     }
 }

@@ -17,10 +17,25 @@
 package io.divolte.server.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.DivolteSchema;
+import io.divolte.server.kafka.Serializers;
+import org.apache.kafka.common.serialization.Serializer;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+import java.util.function.Function;
+
+@ParametersAreNonnullByDefault
 public enum KafkaSinkMode {
     @JsonProperty("naked")
-    NAKED,
+    NAKED(Serializers::createNakedAvroSerializer),
     @JsonProperty("confluent")
-    CONFLUENT
+    CONFLUENT(Serializers::createConfluentAvroSerializer);
+
+    final Function<DivolteSchema, Serializer<AvroRecordBuffer>> serializerFactory;
+
+    KafkaSinkMode(Function<DivolteSchema, Serializer<AvroRecordBuffer>> serializerFactory) {
+        this.serializerFactory = Objects.requireNonNull(serializerFactory);
+    }
 }

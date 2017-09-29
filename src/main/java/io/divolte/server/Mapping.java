@@ -35,8 +35,7 @@ public class Mapping {
         this.listener = listener;
 
         final MappingConfiguration mappingConfiguration = vc.configuration().mappings.get(mappingName);
-        final DivolteSchema divolteSchema = schemaRegistry.getSchemaByMappingName(mappingName);
-        final Schema schema = divolteSchema.schema;
+        final Schema schema = schemaRegistry.getSchemaByMappingName(mappingName).avroSchema;
 
         this.mappingIndex = vc.configuration().mappingIndex(mappingName);
         this.keepCorrupted = !mappingConfiguration.discardCorrupted;

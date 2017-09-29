@@ -48,8 +48,8 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
     @Override
     public SinkFactory getFactory() {
         return (config, name, registry) -> {
-            final Schema schema = registry.getSchemaBySinkName(name).schema;
-            final FileManagerFactory fileManagerFactory = GoogleCloudStorageFileManager.newFactory(config, name, schema);
+            final Schema avroSchema = registry.getSchemaBySinkName(name).avroSchema;
+            final FileManagerFactory fileManagerFactory = GoogleCloudStorageFileManager.newFactory(config, name, avroSchema);
             fileManagerFactory.verifyFileSystemConfiguration();
             return new FileFlushingPool(config, name, fileManagerFactory);
         };
