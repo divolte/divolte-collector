@@ -139,7 +139,7 @@ dependencies {
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
     testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.23'
 
-    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '3.5.3'
+    testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '3.6.0'
     testCompile group: 'com.saucelabs', name:'saucerest', version: '1.0.35'
     testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.4.3'
 }
