@@ -219,7 +219,7 @@ findbugsTest.reports {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.1'
+    gradleVersion = '4.2'
     distributionType = 'all'
 }
 
