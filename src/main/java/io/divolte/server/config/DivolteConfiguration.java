@@ -20,7 +20,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import io.divolte.server.config.constraint.*;
+import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
+import io.divolte.server.config.constraint.MappingToConfluentSinksMustHaveSchemaId;
+import io.divolte.server.config.constraint.OneConfluentIdPerSink;
+import io.divolte.server.config.constraint.OneSchemaPerSink;
+import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
 
 @ParametersAreNonnullByDefault
 @MappingSourceSinkReferencesMustExist
