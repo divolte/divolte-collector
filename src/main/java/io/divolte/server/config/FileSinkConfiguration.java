@@ -20,9 +20,14 @@ import java.util.Optional;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
+
+@ParametersAreNonnullByDefault
 public abstract class FileSinkConfiguration extends SinkConfiguration {
     public final FileStrategyConfiguration fileStrategy;
 
+    @ParametersAreNullableByDefault
     public FileSinkConfiguration(final FileStrategyConfiguration fileStrategy) {
         this.fileStrategy = Optional.ofNullable(fileStrategy).orElse(FileStrategyConfiguration.DEFAULT_FILE_STRATEGY_CONFIGURATION);
     }
