@@ -998,25 +998,34 @@ public final class DslRecordMapping {
             this(identifier, supplier, false);
         }
 
+        @SuppressWarnings("unchecked")
         final Optional<T> produce(final DivolteEvent divolteEvent,
                                   final Map<String,Optional<?>> context) {
-            @SuppressWarnings("unchecked")
-            final Optional<T> result = memoize
-                    ? (Optional<T>)context.computeIfAbsent(identifier, x -> supplier.apply(divolteEvent, context))
-                    : supplier.apply(divolteEvent, context);
+            final Optional<T> result;
+            if (memoize) {
+                // We can't use context.computeIfAbsent(): in Java 9 they've made it clear that the supplier
+                // isn't allowed to modify the mapping being modified, and doing so will (often) throw
+                // ConcurrentModificationException.
+                // This makes memoization slightly more expensive since the first reference will incur an extra
+                // lookup (for the put).
+                // Note that recursive producers will trigger an infinite loop.
+                final Optional<?> candidate = context.get(identifier);
+                if (null == candidate) {
+                    result = supplier.apply(divolteEvent, context);
+                    context.put(identifier, result);
+                } else {
+                    result = (Optional<T>) candidate;
+                }
+            } else {
+                result = supplier.apply(divolteEvent, context);
+            }
             return result;
         }
 
         public ValueProducer<Boolean> equalTo(final ValueProducer<T> other) {
             return new BooleanValueProducer(
                     identifier + ".equalTo(" + other.identifier + ")",
-                    (e,c) -> {
-                        final Optional<T> left = this.produce(e, c);
-                        final Optional<T> right = other.produce(e, c);
-                        return Optional.of(left.isPresent() &&
-                                           right.isPresent() &&
-                                           left.get().equals(right.get()));
-                    });
+                    (e,c) -> Optional.of(this.produce(e, c).equals(other.produce(e, c))));
         }
 
         public ValueProducer<Boolean> equalTo(final T literal) {
