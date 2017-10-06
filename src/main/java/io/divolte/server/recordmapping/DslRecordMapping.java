@@ -717,7 +717,7 @@ public final class DslRecordMapping {
                         try {
                             return service.lookup(address);
                         } catch (final ClosedServiceException ex) {
-                            return null;
+                            return Optional.empty();
                         }
                     }),
                   true);

@@ -25,13 +25,13 @@ buildscript {
 }
 
 plugins {
+    id "com.github.spotbugs" version "1.4"
     id 'com.github.johnrengelman.shadow' version '2.0.1'
     id 'pl.allegro.tech.build.axion-release' version '1.7.2'
 }
 
 apply plugin: 'groovy'
 apply plugin: 'eclipse'
-apply plugin: 'findbugs'
 apply plugin: 'pmd'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
@@ -159,7 +159,7 @@ configurations {
                         "xml-apis:xml-apis:1.0.b2",
                     ]
                     boolean rejected = !(selection.candidate.displayName in whitelist) &&
-                        ['alpha', 'beta', 'rc', 'cr', 'pr', 'b'].any { qualifier ->
+                        ['alpha', 'beta', 'cr', 'pr', 'b'].any { qualifier ->
                             selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
                         }
                     if (rejected) {
@@ -189,8 +189,7 @@ tasks.withType(JavaCompile) {
     options.compilerArgs = ["-parameters"]
 }
 
-findbugs() {
-    toolVersion = "3.0.1"
+spotbugs() {
     excludeFilter = file("config/findbugs/findbugs-excludes.xml")
 }
 
@@ -209,11 +208,11 @@ jacoco {
     toolVersion = "0.7.9"
 }
 
-findbugsMain.reports {
+spotbugsMain.reports {
     xml.enabled = true
     html.enabled = false
 }
-findbugsTest.reports {
+spotbugsTest.reports {
     xml.enabled = true
     html.enabled = false
 }
