@@ -16,6 +16,7 @@
 
 package io.divolte.server;
 
+import avro.shaded.com.google.common.collect.ImmutableSortedMap;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -216,7 +217,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                      * the intermediate string representation. For now the debug value of the string exceeds
                      * the benefits of going slightly faster.
                      */
-                    final String canonicalRequestString = buildNormalizedChecksumString(exchange.getQueryParameters());
+                    final String canonicalRequestString = buildNormalizedChecksumString(sorted(exchange.getQueryParameters()));
                     final int requestChecksum =
                             CHECKSUM_HASH.hashString(canonicalRequestString, StandardCharsets.UTF_8).asInt();
                     final boolean isRequestChecksumCorrect = expectedChecksum == requestChecksum;
@@ -231,10 +232,10 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                 .orElse(false);
     }
 
-    private static String buildNormalizedChecksumString(final Map<String,Deque<String>> queryParameters) {
-        return buildNormalizedChecksumString(queryParameters instanceof SortedMap
-                ? (SortedMap)queryParameters
-                : new TreeMap<>(queryParameters));
+    private static <K,V> SortedMap<K, V> sorted(final Map<K, V> map) {
+        return map instanceof SortedMap
+            ? (SortedMap<K,V>)map
+            : ImmutableSortedMap.copyOf(map);
     }
 
     private static String buildNormalizedChecksumString(final SortedMap<String,Deque<String>> queryParameters) {
