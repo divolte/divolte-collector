@@ -186,7 +186,10 @@ tasks.withType(JavaCompile) {
 
     // Java 8 feature: parameter names via reflection, which makes
     // stuff like Jackson mapping easier.
-    options.compilerArgs = ["-parameters"]
+    options.compilerArgs = [
+        "-parameters",
+        "-Xlint:unchecked"
+    ]
 }
 
 spotbugs() {
