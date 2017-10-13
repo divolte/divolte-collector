@@ -491,7 +491,7 @@ Property: ``divolte.global.kafka.buffer_size``
 Property: ``divolte.global.kafka.producer``
 """""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The configuration to use for Kafka producers. All settings are used as-is to configure the Kafka producer; refer to the `Kafka Documentation <http://kafka.apache.org/0102/documentation.html#producerconfigs>`_ for further details.
+  The configuration to use for Kafka producers. All settings are used as-is to configure the Kafka producer; refer to the `Kafka Documentation <https://kafka.apache.org/0110/documentation.html#producerconfigs>`_ for further details.
 :Default:
 
   .. code-block:: none

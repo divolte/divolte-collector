@@ -444,7 +444,7 @@ Configuring Divolte Collector to write data to a Kafka topic is quite similar to
         // which is passed to Kafka as is. At the very least,
         // configure the broker list here. For more options
         // that can be passed to a Kafka producer, see this link:
-        // http://kafka.apache.org/0102/documentation.html#producerconfigs
+        // https://kafka.apache.org/0110/documentation.html#producerconfigs
         producer = {
           bootstrap.servers = "10.200.8.55:9092,10.200.8.53:9092,10.200.8.54:9092"
         }
