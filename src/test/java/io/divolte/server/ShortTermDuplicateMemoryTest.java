@@ -33,8 +33,12 @@ public class ShortTermDuplicateMemoryTest {
     private static final String URL_STRING = "http://%s:%d/csc-event";
 
     /*
-     * CAREFUL! The difference between the first and second query string are chosen,
-     * so they hash to different buckets in a memory array of length 2.
+     * CAREFUL! These query strings are special, and intended to hash into
+     * specific buckets in a memory array of length 2.
+     * The properties are:
+     *  - Each has to be different.
+     *  - 0 and 1 hash to different.
+     *  - 0 and 2 hash to the same.
      */
     private static final String[] URL_QUERY_STRINGS = {
             "?"
@@ -53,7 +57,7 @@ public class ShortTermDuplicateMemoryTest {
             + "h=sg&"
             + "t=pageView",
             "?"
-            + "p=0%3Ai0rjfnxc%3AJLfhe7Nda2c1uV8M~vmdiPGFEC3WxVNq&" // this one is different from above
+            + "p=0%3Ai0rjfnxc%3AJLfhe7Nda2c1uV8M~vmdjPGFEC3WxVNq&" // this one is different from above
             + "s=0%3Ai0rjfnxc%3AFPpXFMdcEORvvaP_HbpDgABG3Iu5__4d&"
             + "v=0%3AOxVC1WJ4PZNEGIUuzdXPsy_bztnKMuoH&"
             + "e=0%3AOxVC1WJ4PZNEGIUuzdXPsy_bztnKMuoH0&"
