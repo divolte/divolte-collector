@@ -945,14 +945,14 @@ JSON source property: ``maximum_body_size``
   The maximum acceptable size (in bytes) of the JSON body for an event. The HTTP request is aborted as quickly as possible once it becomes apparent this value is exceeded. Clients can use the HTTP Expect/Continue mechanism to determine whether a request body is too large.
 
 :Default:
-  4 KB
+  4096
 :Example:
 
   .. code-block:: none
 
     divolte.sources.a_source {
       type = json
-      maximum_body_size = 16K
+      maximum_body_size = 16384
     }
 
 Mappings (``divolte.mappings``)
