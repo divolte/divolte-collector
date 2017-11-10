@@ -69,7 +69,7 @@ dependencies {
     // Define some key versions for components that we use lots of artifacts from.
     // Note: we refer to the Avro documentation in our own documentation.
     def avroVersion = '1.8.2'
-    def hadoopVersion = '2.8.1'
+    def hadoopVersion = '2.8.2'
     def jacksonVersion = '2.9.2'
     def slf4jVersion = '1.7.25'
 
