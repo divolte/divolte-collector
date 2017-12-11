@@ -144,7 +144,7 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
                 if (logger.isDebugEnabled()) {
                     final ProducerRecord<DivolteIdentifier, AvroRecordBuffer> record = batch.get(i);
                     logger.debug("Finished sending event (partyId={}) to Kafka: topic/partition/offset = {}/{}/{}",
-                                 record.value(), metadata.topic(), metadata.partition(), metadata.offset());
+                                 record.key(), metadata.topic(), metadata.partition(), metadata.offset());
                 }
             } catch (final ExecutionException e) {
                 final Throwable cause = e.getCause();
@@ -157,7 +157,7 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
                     remaining.add(record);
                 } else {
                     // Fatal error.
-                    logger.error("Error sending event (partyId=" + record.key() + ") to Kafka. Abandoning batch.", cause);
+                    logger.error("Error sending event (partyId=" + record.key() + ") to Kafka; abandoning.", cause);
                 }
             }
         }
