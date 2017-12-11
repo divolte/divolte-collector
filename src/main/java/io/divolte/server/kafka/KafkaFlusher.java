@@ -115,6 +115,8 @@ public final class KafkaFlusher implements ItemProcessor<AvroRecordBuffer> {
             // This should only occur during shutdown. I think we can assume that anything missed can be discarded.
             logger.warn("Flushing interrupted. Not all messages in batch (size={}) may have been sent to Kafka.", batch.size());
             pendingMessages = ImmutableList.of();
+            // Preserve thread interruption invariant.
+            Thread.currentThread().interrupt();
             return CONTINUE;
         }
     }
