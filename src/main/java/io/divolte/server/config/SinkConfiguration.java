@@ -33,6 +33,7 @@ import io.divolte.server.processing.ProcessingPool;
         @JsonSubTypes.Type(value=HdfsSinkConfiguration.class, name = "hdfs"),
         @JsonSubTypes.Type(value=GoogleCloudStorageSinkConfiguration.class, name = "gcs"),
         @JsonSubTypes.Type(value=KafkaSinkConfiguration.class, name = "kafka"),
+        @JsonSubTypes.Type(value=GoogleCloudPubSubSinkConfiguration.class, name = "gcps"),
 })
 @ParametersAreNonnullByDefault
 public abstract class SinkConfiguration {

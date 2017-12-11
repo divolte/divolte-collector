@@ -19,10 +19,7 @@ package io.divolte.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.ConfigFactory;
-import io.divolte.server.config.GoogleCloudStorageSinkConfiguration;
-import io.divolte.server.config.HdfsSinkConfiguration;
-import io.divolte.server.config.KafkaSinkConfiguration;
-import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.config.*;
 import io.divolte.server.processing.ProcessingPool;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -86,6 +83,7 @@ public final class Server implements Runnable {
                   .filter(sink -> vc.configuration().global.hdfs.enabled || !(sink.getValue() instanceof HdfsSinkConfiguration))
                   .filter(sink -> vc.configuration().global.gcs.enabled || !(sink.getValue() instanceof GoogleCloudStorageSinkConfiguration))
                   .filter(sink -> vc.configuration().global.kafka.enabled || !(sink.getValue() instanceof KafkaSinkConfiguration))
+                  .filter(sink -> vc.configuration().global.gcps.enabled || !(sink.getValue() instanceof GoogleCloudPubSubSinkConfiguration))
                   .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey,
                                                        sink -> sink.getValue()
                                                                    .getFactory()
