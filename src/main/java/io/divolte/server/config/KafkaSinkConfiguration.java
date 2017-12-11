@@ -32,25 +32,23 @@ import io.divolte.server.kafka.Serializers;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
 @ParametersAreNonnullByDefault
-public class KafkaSinkConfiguration extends SinkConfiguration {
-    private static final String DEFAULT_TOPIC = "divolte";
+public class KafkaSinkConfiguration extends TopicSinkConfiguration {
     private static final KafkaSinkMode DEFAULT_SINK_MODE = KafkaSinkMode.NAKED;
 
-    public final String topic;
     public final KafkaSinkMode mode;
 
     @JsonCreator
     @ParametersAreNullableByDefault
-    KafkaSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic, @JsonProperty final KafkaSinkMode mode) {
+    KafkaSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic,
+                           @JsonProperty final KafkaSinkMode mode) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
-        this.topic = Optional.ofNullable(topic).orElse(DEFAULT_TOPIC);
+        super(topic);
         this.mode = Optional.ofNullable(mode).orElse(DEFAULT_SINK_MODE);
     }
 
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
-            .add("topic", topic)
             .add("mode", mode);
     }
 

@@ -26,7 +26,6 @@ import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
 import com.google.cloud.pubsub.v1.TopicAdminSettings;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 import com.google.pubsub.v1.ProjectName;
 import com.google.pubsub.v1.Topic;
@@ -46,24 +45,14 @@ import java.io.UncheckedIOException;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
-public class GoogleCloudPubSubSinkConfiguration extends SinkConfiguration {
+public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubSinkConfiguration.class);
-
-    private static final String DEFAULT_TOPIC = "divolte";
-
-    public final String topic;
 
     @JsonCreator
     @ParametersAreNullableByDefault
     GoogleCloudPubSubSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
-        this.topic = Optional.ofNullable(topic).orElse(DEFAULT_TOPIC);
-    }
-
-    @Override
-    protected MoreObjects.ToStringHelper toStringHelper() {
-        return super.toStringHelper()
-            .add("topic", topic);
+        super(topic);
     }
 
     @Override
