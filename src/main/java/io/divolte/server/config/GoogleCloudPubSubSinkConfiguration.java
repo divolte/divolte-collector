@@ -26,6 +26,7 @@ import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
 import com.google.cloud.pubsub.v1.TopicAdminSettings;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 import com.google.pubsub.v1.ProjectName;
 import com.google.pubsub.v1.Topic;
@@ -58,6 +59,12 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
                                        final GoogleRetryConfiguration retrySettings) {
         super(topic);
         this.retrySettings = Optional.ofNullable(retrySettings).orElse(DEFAULT_RETRY_SETTINGS);
+    }
+
+    @Override
+    protected MoreObjects.ToStringHelper toStringHelper() {
+        return super.toStringHelper()
+            .add("retrySettings", retrySettings);
     }
 
     @Override
