@@ -36,7 +36,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.bp.Duration;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
@@ -48,35 +47,22 @@ import java.util.Optional;
 public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubSinkConfiguration.class);
 
+    private static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
+        new GoogleRetryConfiguration(null, null, null, null, null, null, null, null);
+
+    public final GoogleRetryConfiguration retrySettings;
+
     @JsonCreator
     @ParametersAreNullableByDefault
-    GoogleCloudPubSubSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic) {
-        // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
+    GoogleCloudPubSubSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic,
+                                       final GoogleRetryConfiguration retrySettings) {
         super(topic);
+        this.retrySettings = Optional.ofNullable(retrySettings).orElse(DEFAULT_RETRY_SETTINGS);
     }
 
     @Override
     public SinkFactory getFactory() {
-        // Retry settings:
-        //  - Unlimited attempts
-        //  - For up to ~100 years.
-        //    (Effectively forever, and chosen because there's no 'unlimited' value, and using Long.MAX_VALUE
-        //     triggers overflow to a negative value.)
-        //  - The timeout for each attempt starts at 15 seconds, doubling on each attempt up to a maximum of a minute.
-        //  - The retry delay starts at 100ms, doubling on each attempt up to a max of 10s.
-        //    (Note that the retry delay is not the actual delay: the actual delay is a random number between 0 and
-        //     the retry delay.)
-        final RetrySettings retrySettings =
-            RetrySettings.newBuilder()
-                         .setMaxAttempts(0)
-                         .setTotalTimeout(Duration.ofDays(36524))
-                         .setInitialRetryDelay(Duration.ofMillis(100))
-                         .setRetryDelayMultiplier(2.0)
-                         .setMaxRetryDelay(Duration.ofSeconds(10))
-                         .setInitialRpcTimeout(Duration.ofSeconds(15))
-                         .setRpcTimeoutMultiplier(2)
-                         .setMaxRpcTimeout(Duration.ofMinutes(1))
-                         .build();
+        final RetrySettings retrySettings = this.retrySettings.createRetrySettings();
         final Optional<String> emulator = Optional.ofNullable(System.getenv("PUBSUB_EMULATOR_HOST"));
         return emulator.map(hostport -> createFlushingPool(retrySettings, hostport))
                        .orElseGet(() -> createFlushingPool(retrySettings));
