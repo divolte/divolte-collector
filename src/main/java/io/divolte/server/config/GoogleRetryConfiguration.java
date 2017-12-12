@@ -76,14 +76,14 @@ public class GoogleRetryConfiguration {
 
     @JsonCreator
     @ParametersAreNullableByDefault
-    GoogleRetryConfiguration(final Integer maxAttempts,
-                             final Duration totalTimeout,
-                             final Duration initialRetryDelay,
-                             final Double retryDelayMultiplier,
-                             final Duration maxRetryDelay,
-                             final Duration initialRpcTimeout,
-                             final Double rpcTimeoutMultiplier,
-                             final Duration maxRpcTimeout) {
+    public GoogleRetryConfiguration(final Integer maxAttempts,
+                                    final Duration totalTimeout,
+                                    final Duration initialRetryDelay,
+                                    final Double retryDelayMultiplier,
+                                    final Duration maxRetryDelay,
+                                    final Duration initialRpcTimeout,
+                                    final Double rpcTimeoutMultiplier,
+                                    final Duration maxRpcTimeout) {
         this.maxAttempts = Optional.ofNullable(maxAttempts);
         this.totalTimeout = Optional.ofNullable(totalTimeout).orElse(DEFAULT_TOTAL_TIMEOUT);
         this.initialRetryDelay = Optional.ofNullable(initialRetryDelay);
