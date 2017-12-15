@@ -48,7 +48,7 @@ import java.util.Optional;
 public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubSinkConfiguration.class);
 
-    private static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
+    static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
         new GoogleRetryConfiguration(null, null, null, null, null, null, null, null);
 
     public final GoogleRetryConfiguration retrySettings;
