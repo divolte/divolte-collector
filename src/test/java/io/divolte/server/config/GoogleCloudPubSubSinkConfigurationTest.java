@@ -17,13 +17,8 @@
 package io.divolte.server.config;
 
 import com.google.api.gax.retrying.RetrySettings;
-import com.typesafe.config.ConfigFactory;
-import io.divolte.server.DivolteSchema;
-import io.divolte.server.SchemaRegistry;
 import org.junit.Test;
 import org.threeten.bp.Duration;
-
-import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
