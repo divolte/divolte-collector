@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.divolte.server.pubsub;
+package io.divolte.server.topicsinks.pubsub;
 
 import com.google.cloud.pubsub.v1.Publisher;
 import io.divolte.server.AvroRecordBuffer;

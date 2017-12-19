@@ -33,7 +33,7 @@ import com.google.pubsub.v1.ProjectName;
 import com.google.pubsub.v1.Topic;
 import com.google.pubsub.v1.TopicName;
 import io.divolte.server.IOExceptions;
-import io.divolte.server.pubsub.GoogleCloudPubSubFlushingPool;
+import io.divolte.server.topicsinks.pubsub.GoogleCloudPubSubFlushingPool;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.slf4j.Logger;

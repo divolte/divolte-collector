@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.divolte.server.kafka;
+package io.divolte.server.topicsinks.kafka;
 
 import io.divolte.record.DefaultEventRecord;
 import io.divolte.server.AvroRecordBuffer;

@@ -1,4 +1,4 @@
-package io.divolte.server.pubsub;
+package io.divolte.server.topicsinks.pubsub;
 
 import com.google.api.core.ApiFuture;
 import com.google.api.core.SettableApiFuture;
