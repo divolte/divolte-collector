@@ -69,7 +69,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
-            .add("retrySettings", retrySettings);
+            .add("retrySettings", retrySettings)
+            .add("batchingSettings", batchingSettings);
     }
 
     @Override
