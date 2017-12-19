@@ -18,6 +18,7 @@ package io.divolte.server.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.gax.batching.BatchingSettings;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.retrying.RetrySettings;
@@ -42,23 +43,27 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubSinkConfiguration.class);
 
-    static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
+    public static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
         new GoogleRetryConfiguration(null, null, null, null, null, null, null, null);
 
     public final GoogleRetryConfiguration retrySettings;
+    public final Optional<GoogleBatchingConfiguration> batchingSettings;
 
     @JsonCreator
     @ParametersAreNullableByDefault
     GoogleCloudPubSubSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic,
-                                       final GoogleRetryConfiguration retrySettings) {
+                                       final GoogleRetryConfiguration retrySettings,
+                                       final GoogleBatchingConfiguration batchingSettings) {
         super(topic);
         this.retrySettings = Optional.ofNullable(retrySettings).orElse(DEFAULT_RETRY_SETTINGS);
+        this.batchingSettings = Optional.ofNullable(batchingSettings);
     }
 
     @Override
@@ -70,15 +75,21 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     @Override
     public SinkFactory getFactory() {
         final RetrySettings retrySettings = this.retrySettings.createRetrySettings();
+        final Optional<BatchingSettings> batchingSettings =
+            this.batchingSettings.map(GoogleBatchingConfiguration::createBatchingSettings);
         final Optional<String> emulator = Optional.ofNullable(System.getenv("PUBSUB_EMULATOR_HOST"));
-        return emulator.map(hostport -> createFlushingPool(retrySettings, hostport))
-                       .orElseGet(() -> createFlushingPool(retrySettings));
+        return emulator.map(hostport -> createFlushingPool(retrySettings, batchingSettings, hostport))
+                       .orElseGet(() -> createFlushingPool(retrySettings, batchingSettings));
     }
 
-    private SinkFactory createFlushingPool(final RetrySettings retrySettings) {
+    private SinkFactory createFlushingPool(final RetrySettings retrySettings,
+                                           final Optional<BatchingSettings> batchingSettings) {
         return (vc, sinkName, registry) -> {
             final TopicName topicName = TopicName.of(vc.configuration().global.gcps.projectId, topic);
-            final Publisher.Builder builder = Publisher.newBuilder(topicName).setRetrySettings(retrySettings);
+            final Publisher.Builder builder =
+                Publisher.newBuilder(topicName)
+                         .setRetrySettings(retrySettings);
+            batchingSettings.ifPresent(builder::setBatchingSettings);
             final Publisher publisher = IOExceptions.wrap(builder::build).get();
             return new GoogleCloudPubSubFlushingPool(sinkName,
                                                      vc.configuration().global.gcps.threads,
@@ -89,7 +100,9 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
         };
     }
 
-    private SinkFactory createFlushingPool(final RetrySettings retrySettings, final String hostPort) {
+    private SinkFactory createFlushingPool(final RetrySettings retrySettings,
+                                           final Optional<BatchingSettings> batchingSettings,
+                                           final String hostPort) {
         // Based on Google's PubSub documentation:
         //   https://cloud.google.com/pubsub/docs/emulator#pubsub-emulator-java
         // What's going on here? Well…
@@ -111,6 +124,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
                          .setRetrySettings(retrySettings)
                          .setChannelProvider(channelProvider)
                          .setCredentialsProvider(NoCredentialsProvider.create());
+            batchingSettings.ifPresent(builder::setBatchingSettings);
             final Publisher publisher = IOExceptions.wrap(builder::build).get();
             return new GoogleCloudPubSubFlushingPool(sinkName,
                                                      vc.configuration().global.gcps.threads,
@@ -142,5 +156,9 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
             logger.info("Initializing Pub/Sub emulator topic: {}", topic);
             topicClient.createTopic(topic);
         }
+    }
+
+    static org.threeten.bp.Duration to310bp(final Duration duration) {
+        return org.threeten.bp.Duration.ofSeconds(duration.getSeconds(), duration.getNano());
     }
 }
