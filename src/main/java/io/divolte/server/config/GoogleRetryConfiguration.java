@@ -68,7 +68,6 @@ public class GoogleRetryConfiguration {
      * To override these, they must _all_ be overridden and the defaults effectively revert
      * to those above. To help a bit, we normalize things by copying the Google PubSub values
      * as defaults with the following exceptions:
-     *  - TotalTimeout = 28 days
      *  - MaxRetryDelay = 1min
      *  - MaxRpcTimeout = InitialRpcTimeout
      *
@@ -76,7 +75,7 @@ public class GoogleRetryConfiguration {
      */
 
     private static final int DEFAULT_MAX_ATTEMPTS = 0;
-    private static final Duration DEFAULT_TOTAL_TIMEOUT = Duration.ofDays(28);
+    private static final Duration DEFAULT_TOTAL_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(5);
     private static final double DEFAULT_RETRY_DELAY_MULTIPLIER = 2.0;
     private static final Duration DEFAULT_MAX_RETRY_DELAY = Duration.ofMinutes(1);
