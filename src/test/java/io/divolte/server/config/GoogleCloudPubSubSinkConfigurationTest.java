@@ -19,7 +19,6 @@ package io.divolte.server.config;
 import com.google.api.gax.batching.BatchingSettings;
 import com.google.api.gax.retrying.RetrySettings;
 import org.junit.Test;
-import org.threeten.bp.Duration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
