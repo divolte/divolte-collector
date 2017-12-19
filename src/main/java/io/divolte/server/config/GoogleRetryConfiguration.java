@@ -28,16 +28,16 @@ import java.util.Optional;
 @ParametersAreNonnullByDefault
 public class GoogleRetryConfiguration {
     /*
-     * We leave Google's code to deal with most defaults, except for the situations where
-     * they fail out-of-the-box. In these cases we provide alternative defaults. These are:
+     * Default values and constraints are complicated due to Google code generation. As of 0.30.0-beta,
+     * the following is the situation...
      *
      * Internal defaults from Google's builder:
      *  - TotalTimeout = 0s
      *  - InitialRetryDelay = 0s
      *  - RetryDelayMultiplier = 1.0
      *  - MaxRetryDelay = 0s
-     *  - MaxAttempts = 0
-     *  - Jittered = true
+     *  - MaxAttempts = 0 (infinite)
+     *  - Jittered = true (unused)
      *  - InitialRpcTimeout = 0s
      *  - RpcTimeoutMultiplier = 1.0
      *  - MaxRpcTimeout = 0s
@@ -56,22 +56,40 @@ public class GoogleRetryConfiguration {
      *  - TotalTimeout >= 10s
      *  - InitalRpcTimeout >= 10ms
      *
-     * Our defaults, overriding the ones from Google:
+     * Google's PubSub overrides the defaults with the following:
+     *  - TotalTimeout = 10s
+     *  - InitialRetryDelay = 5ms
+     *  - RetryDelayMultiplier = 2
+     *  - MaxRetryDelay = LONG_MAX
+     *  - InitialRpcTimeout = 10s
+     *  - RpcTimeoutMultiplier = 2
+     *  - MaxRpcTimeout = 10s
+     *
+     * To override these, they must _all_ be overridden and the defaults effectively revert
+     * to those above. To help a bit, we normalize things by copying the Google PubSub values
+     * as defaults with the following exceptions:
      *  - TotalTimeout = 28 days
-     *  - InitalRpcTimeout = 15s
+     *  - MaxRetryDelay = 1min
      *  - MaxRpcTimeout = InitialRpcTimeout
+     *
+     * Selective overrides are allowed.
      */
 
+    private static final int DEFAULT_MAX_ATTEMPTS = 0;
     private static final Duration DEFAULT_TOTAL_TIMEOUT = Duration.ofDays(28);
+    private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(5);
+    private static final double DEFAULT_RETRY_DELAY_MULTIPLIER = 2.0;
+    private static final Duration DEFAULT_MAX_RETRY_DELAY = Duration.ofMinutes(1);
     private static final Duration DEFAULT_INITIAL_RPC_TIMEOUT = Duration.ofSeconds(15);
+    private static final double DEFAULT_RPC_TIMEOUT_MULTIPLIER = 2.0;
 
-    public final Optional<Integer> maxAttempts;
+    public final int maxAttempts;
     public final Duration totalTimeout;
-    public final Optional<Duration> initialRetryDelay;
-    public final Optional<Double> retryDelayMultiplier;
-    public final Optional<Duration> maxRetryDelay;
+    public final Duration initialRetryDelay;
+    public final double retryDelayMultiplier;
+    public final Duration maxRetryDelay;
     public final Duration initialRpcTimeout;
-    public final Optional<Double> rpcTimeoutMultiplier;
+    public final double rpcTimeoutMultiplier;
     public final Duration maxRpcTimeout;
 
     @JsonCreator
@@ -84,27 +102,26 @@ public class GoogleRetryConfiguration {
                                     final Duration initialRpcTimeout,
                                     final Double rpcTimeoutMultiplier,
                                     final Duration maxRpcTimeout) {
-        this.maxAttempts = Optional.ofNullable(maxAttempts);
+        this.maxAttempts = Optional.ofNullable(maxAttempts).orElse(DEFAULT_MAX_ATTEMPTS);
         this.totalTimeout = Optional.ofNullable(totalTimeout).orElse(DEFAULT_TOTAL_TIMEOUT);
-        this.initialRetryDelay = Optional.ofNullable(initialRetryDelay);
-        this.retryDelayMultiplier = Optional.ofNullable(retryDelayMultiplier);
-        this.maxRetryDelay = Optional.ofNullable(maxRetryDelay);
+        this.initialRetryDelay = Optional.ofNullable(initialRetryDelay).orElse(DEFAULT_INITIAL_RETRY_DELAY);
+        this.retryDelayMultiplier = Optional.ofNullable(retryDelayMultiplier).orElse(DEFAULT_RETRY_DELAY_MULTIPLIER);
+        this.maxRetryDelay = Optional.ofNullable(maxRetryDelay).orElse(DEFAULT_MAX_RETRY_DELAY);
         this.initialRpcTimeout = Optional.ofNullable(initialRpcTimeout).orElse(DEFAULT_INITIAL_RPC_TIMEOUT);
-        this.rpcTimeoutMultiplier = Optional.ofNullable(rpcTimeoutMultiplier);
+        this.rpcTimeoutMultiplier = Optional.ofNullable(rpcTimeoutMultiplier).orElse(DEFAULT_RPC_TIMEOUT_MULTIPLIER);
         this.maxRpcTimeout = Optional.ofNullable(maxRpcTimeout).orElse(this.initialRpcTimeout);
     }
 
     public RetrySettings createRetrySettings() {
-        RetrySettings.Builder builder = RetrySettings.newBuilder()
-            .setTotalTimeout(to310bp(totalTimeout))
-            .setInitialRpcTimeout(to310bp(initialRpcTimeout))
-            .setMaxRpcTimeout(to310bp(maxRpcTimeout));
-        maxAttempts.ifPresent(builder::setMaxAttempts);
-        initialRetryDelay.map(GoogleRetryConfiguration::to310bp).ifPresent(builder::setInitialRetryDelay);
-        retryDelayMultiplier.ifPresent(builder::setRetryDelayMultiplier);
-        maxRetryDelay.map(GoogleRetryConfiguration::to310bp).ifPresent(builder::setMaxRetryDelay);
-        rpcTimeoutMultiplier.ifPresent(builder::setRpcTimeoutMultiplier);
-        return builder.build();
+        return RetrySettings.newBuilder()
+                            .setMaxAttempts(maxAttempts)
+                            .setTotalTimeout(to310bp(totalTimeout))
+                            .setInitialRetryDelay(to310bp(initialRetryDelay))
+                            .setRetryDelayMultiplier(retryDelayMultiplier)
+                            .setMaxRetryDelay(to310bp(maxRetryDelay))
+                            .setInitialRpcTimeout(to310bp(initialRpcTimeout))
+                            .setRpcTimeoutMultiplier(rpcTimeoutMultiplier)
+                            .setMaxRpcTimeout(to310bp(maxRpcTimeout)).build();
     }
 
     private static org.threeten.bp.Duration to310bp(final Duration duration) {
