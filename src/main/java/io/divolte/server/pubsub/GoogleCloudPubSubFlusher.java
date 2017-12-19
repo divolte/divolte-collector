@@ -17,6 +17,7 @@
 package io.divolte.server.pubsub;
 
 import com.google.api.core.ApiFuture;
+import com.google.api.gax.rpc.ApiException;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
@@ -37,6 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
+import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
 
 @ParametersAreNonnullByDefault
 public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordBuffer> {
@@ -52,6 +54,9 @@ public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordB
     private final Publisher publisher;
     private final String schemaFingerprint;
     private final Optional<String> schemaConfluentId;
+
+    // On failure, we store the list of messages that are still pending here.
+    private ImmutableList<PubsubMessage> pendingMessages = ImmutableList.of();
 
     public GoogleCloudPubSubFlusher(final Publisher publisher,
                                     final DivolteSchema schema) {
@@ -119,23 +124,30 @@ public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordB
 
     @Override
     public ProcessingDirective heartbeat() {
-        return CONTINUE;
+        if (pendingMessages.isEmpty()) {
+            return CONTINUE;
+        } else {
+            logger.debug("Retrying to send {} pending message(s) that previously failed.", pendingMessages.size());
+            return flush(pendingMessages);
+        }
     }
 
     private ProcessingDirective flush(final List<PubsubMessage> batch) {
         try {
-            sendBatch(batch);
+            final ImmutableList<PubsubMessage> remaining = sendBatch(batch);
+            pendingMessages = remaining;
+            return remaining.isEmpty() ? CONTINUE : PAUSE;
         } catch (final InterruptedException e) {
             // This is painful; we don't know how much of the batch was published and how much wasn't.
             // This should only occur during shutdown.
             logger.warn("Flushing interrupted. Not all messages in batch (size={}) may have been published.", batch.size());
             // Preserve thread interruption invariant.
             Thread.currentThread().interrupt();
+            return CONTINUE;
         }
-        return CONTINUE;
     }
 
-    private void sendBatch(final List<PubsubMessage> batch) throws InterruptedException {
+    private ImmutableList<PubsubMessage> sendBatch(final List<PubsubMessage> batch) throws InterruptedException {
         // For Pub/Sub we assume the following:
         //  - Batching behaviour is set to flush everything ASAP.
         //  - Retry behaviour will retry indefinitely, so long as it seems likely to succeed.
@@ -153,6 +165,7 @@ public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordB
         //  - Completed.
         //  - An error occurred, but a retry may succeed.
         //  - A fatal error occurred.
+        final ImmutableList.Builder<PubsubMessage> remaining = ImmutableList.builder();
         for (int i = 0; i < batchSize; ++i) {
             final ApiFuture<String> pendingResult = sendResults.get(i);
             try {
@@ -163,12 +176,25 @@ public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordB
                                  message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID), messageId);
                 }
             } catch (final ExecutionException e) {
-                // The Pub/Sub publisher internally deals with retries, and doesn't expose to
-                // us what is and isn't retriable. As a result we just have to
-                final Throwable cause = e.getCause();
                 final PubsubMessage message = batch.get(i);
-                logger.error("Error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; abandoning.", cause);
+                // The Pub/Sub publisher internally has a retry policy, but outside that we also
+                // retry indefinitely unless it's a cause that we don't understand.
+                final Throwable cause = e.getCause();
+                if (cause instanceof ApiException) {
+                    final ApiException apiException = (ApiException)cause;
+                    if (apiException.isRetryable()) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Transient error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; retrying.", cause);
+                        }
+                        remaining.add(message);
+                    } else {
+                        logger.warn("Permanent error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; abandoning.", cause);
+                    }
+                } else {
+                    logger.error("Unknown error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; abandoning.", cause);
+                }
             }
         }
+        return remaining.build();
     }
 }
