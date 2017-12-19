@@ -2,6 +2,8 @@ package io.divolte.server.pubsub;
 
 import com.google.api.core.ApiFuture;
 import com.google.api.core.SettableApiFuture;
+import com.google.api.gax.grpc.GrpcStatusCode;
+import com.google.api.gax.rpc.ApiException;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -11,6 +13,8 @@ import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.DivolteSchema;
 import io.divolte.server.processing.Item;
+import io.divolte.server.processing.ItemProcessor;
+import io.grpc.Status;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.SchemaNormalization;
@@ -92,9 +96,15 @@ public class GoogleCloudPubSubFlusherTest {
         return Item.of(0, message.getPartyId().value, message);
     }
 
-    private <V> ApiFuture<V> completedFuture(final V value) {
+    private static <V> ApiFuture<V> completedFuture(final V value) {
         final SettableApiFuture<V> future = SettableApiFuture.create();
         future.set(value);
+        return future;
+    }
+
+    private static <V> ApiFuture<V> failedFuture(final Throwable throwable) {
+        final SettableApiFuture<V> future = SettableApiFuture.create();
+        future.setException(throwable);
         return future;
     }
 
@@ -108,7 +118,9 @@ public class GoogleCloudPubSubFlusherTest {
         // Process a single message.
         final DivolteSchema schema = new DivolteSchema(MINIMAL_SCHEMA, confluentId);
         final GoogleCloudPubSubFlusher flusher = new GoogleCloudPubSubFlusher(publisher, schema);
-        flusher.process(itemFromAvroRecordBuffer(generateMessage()));
+        if (ItemProcessor.ProcessingDirective.PAUSE == flusher.process(itemFromAvroRecordBuffer(generateMessage()))) {
+            flusher.heartbeat();
+        }
     }
 
     @Test
@@ -192,5 +204,41 @@ public class GoogleCloudPubSubFlusherTest {
         processSingleMessage(Optional.of(0x252));
         final PubsubMessage deliveredMessage = getFirstPublishedMessage();
         assertEquals("0x252", deliveredMessage.getAttributesOrThrow("schemaConfluentId"));
+    }
+
+    @Test
+    public void testMessagesAreRetriedOnRetriableFailure() throws IOException {
+        // Simulate a failure on the first send that indicates a retry should succeed.
+        final Publisher publisher = mockPublisher.orElseThrow(IllegalStateException::new);
+        when(publisher.publish(any(PubsubMessage.class)))
+            .thenReturn(failedFuture(new ApiException("simulated transient failure",
+                                                      new IOException(),
+                                                      GrpcStatusCode.of(Status.Code.INTERNAL),
+                                                      true)))
+            .thenAnswer(invocationOnMock -> completedFuture(String.valueOf(messageIdCounter++)));
+
+        // Here we send the message.
+        processSingleMessage();
+
+        // Now we check the invocations…
+        verify(publisher, times(2)).publish(any(PubsubMessage.class));
+        verifyNoMoreInteractions(publisher);
+    }
+
+    @Test
+    public void testMessagesAreAbandonedOnNonRetriableFailure() throws IOException {
+        // Simulate a failure on send that indicates a retry isn't allowed.
+        final Publisher publisher = mockPublisher.orElseThrow(IllegalStateException::new);
+        when(publisher.publish(any(PubsubMessage.class)))
+            .thenReturn(failedFuture(new ApiException("simulated permanent failure",
+                                                      new IOException(),
+                                                      GrpcStatusCode.of(Status.Code.NOT_FOUND),
+                                                      false)));
+        // Here we send the message.
+        processSingleMessage();
+
+        // Now we check the invocations…
+        verify(publisher).publish(any(PubsubMessage.class));
+        verifyNoMoreInteractions(publisher);
     }
 }
