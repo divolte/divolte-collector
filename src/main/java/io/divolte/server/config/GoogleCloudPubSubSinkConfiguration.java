@@ -50,11 +50,13 @@ import java.util.Optional;
 public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubSinkConfiguration.class);
 
-    public static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
+    static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
         new GoogleRetryConfiguration(null, null, null, null, null, null, null, null);
+    static final GoogleBatchingConfiguration DEFAULT_BATCHING_SETTINGS =
+        new GoogleBatchingConfiguration(null, null, null);
 
     public final GoogleRetryConfiguration retrySettings;
-    public final Optional<GoogleBatchingConfiguration> batchingSettings;
+    public final GoogleBatchingConfiguration batchingSettings;
 
     @JsonCreator
     @ParametersAreNullableByDefault
@@ -63,7 +65,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
                                        final GoogleBatchingConfiguration batchingSettings) {
         super(topic);
         this.retrySettings = Optional.ofNullable(retrySettings).orElse(DEFAULT_RETRY_SETTINGS);
-        this.batchingSettings = Optional.ofNullable(batchingSettings);
+        this.batchingSettings = Optional.ofNullable(batchingSettings).orElse(DEFAULT_BATCHING_SETTINGS);
     }
 
     @Override
@@ -76,21 +78,20 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     @Override
     public SinkFactory getFactory() {
         final RetrySettings retrySettings = this.retrySettings.createRetrySettings();
-        final Optional<BatchingSettings> batchingSettings =
-            this.batchingSettings.map(GoogleBatchingConfiguration::createBatchingSettings);
+        final BatchingSettings batchingSettings = this.batchingSettings.createBatchingSettings();
         final Optional<String> emulator = Optional.ofNullable(System.getenv("PUBSUB_EMULATOR_HOST"));
         return emulator.map(hostport -> createFlushingPool(retrySettings, batchingSettings, hostport))
                        .orElseGet(() -> createFlushingPool(retrySettings, batchingSettings));
     }
 
     private SinkFactory createFlushingPool(final RetrySettings retrySettings,
-                                           final Optional<BatchingSettings> batchingSettings) {
+                                           final BatchingSettings batchingSettings) {
         return (vc, sinkName, registry) -> {
             final TopicName topicName = TopicName.of(vc.configuration().global.gcps.projectId, topic);
             final Publisher.Builder builder =
                 Publisher.newBuilder(topicName)
-                         .setRetrySettings(retrySettings);
-            batchingSettings.ifPresent(builder::setBatchingSettings);
+                         .setRetrySettings(retrySettings)
+                         .setBatchingSettings(batchingSettings);
             final Publisher publisher = IOExceptions.wrap(builder::build).get();
             return new GoogleCloudPubSubFlushingPool(sinkName,
                                                      vc.configuration().global.gcps.threads,
@@ -102,7 +103,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     }
 
     private SinkFactory createFlushingPool(final RetrySettings retrySettings,
-                                           final Optional<BatchingSettings> batchingSettings,
+                                           final BatchingSettings batchingSettings,
                                            final String hostPort) {
         // Based on Google's PubSub documentation:
         //   https://cloud.google.com/pubsub/docs/emulator#pubsub-emulator-java
@@ -123,9 +124,9 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
             final Publisher.Builder builder =
                 Publisher.newBuilder(topicName)
                          .setRetrySettings(retrySettings)
+                         .setBatchingSettings(batchingSettings)
                          .setChannelProvider(channelProvider)
                          .setCredentialsProvider(NoCredentialsProvider.create());
-            batchingSettings.ifPresent(builder::setBatchingSettings);
             final Publisher publisher = IOExceptions.wrap(builder::build).get();
             return new GoogleCloudPubSubFlushingPool(sinkName,
                                                      vc.configuration().global.gcps.threads,
