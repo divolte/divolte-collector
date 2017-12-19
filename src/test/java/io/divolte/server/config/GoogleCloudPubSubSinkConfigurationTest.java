@@ -16,6 +16,7 @@
 
 package io.divolte.server.config;
 
+import com.google.api.gax.batching.BatchingSettings;
 import com.google.api.gax.retrying.RetrySettings;
 import org.junit.Test;
 import org.threeten.bp.Duration;
@@ -34,18 +35,11 @@ public class GoogleCloudPubSubSinkConfigurationTest {
     }
 
     @Test
-    public void testRetryConfigurationDefaults() {
-        // Check the defaults have their expected values.
-        final RetrySettings retrySettings =
-            GoogleCloudPubSubSinkConfiguration.DEFAULT_RETRY_SETTINGS.createRetrySettings();
-        assertEquals(Duration.ofSeconds(15), retrySettings.getInitialRpcTimeout());
-        assertEquals(1.0, retrySettings.getRpcTimeoutMultiplier(), 0.01);
-        assertEquals(Duration.ofSeconds(15), retrySettings.getMaxRpcTimeout());
-        assertEquals(Duration.ZERO, retrySettings.getInitialRetryDelay());
-        assertEquals(1.0, retrySettings.getRetryDelayMultiplier(), 0.01);
-        assertEquals(Duration.ZERO, retrySettings.getMaxRetryDelay());
-        assertEquals(Duration.ofDays(28), retrySettings.getTotalTimeout());
-        assertEquals(0, retrySettings.getMaxAttempts());
+    public void testDefaultBatchingConfigurationValid() {
+        // Check that we can generate settings from our defaults.
+        final BatchingSettings batchingSettings =
+            GoogleCloudPubSubSinkConfiguration.DEFAULT_BATCHING_SETTINGS.createBatchingSettings();
+        assertNotNull(batchingSettings);
     }
 
     @Test
