@@ -38,6 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @ParametersAreNonnullByDefault
+@NotThreadSafe
 public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> {
     private final static Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubFlusher.class);
     private final static String MESSAGE_ATTRIBUTE_PARTYID = "partyIdentifier";
