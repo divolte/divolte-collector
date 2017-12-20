@@ -24,24 +24,21 @@ import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteSchema;
-import io.divolte.server.processing.Item;
-import io.divolte.server.processing.ItemProcessor;
+import io.divolte.server.topicsinks.TopicFlusher;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaNormalization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.CONTINUE;
-import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.PAUSE;
-
 @ParametersAreNonnullByDefault
-public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordBuffer> {
+public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> {
     private final static Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubFlusher.class);
     private final static String MESSAGE_ATTRIBUTE_PARTYID = "partyIdentifier";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID = "schemaConfluentId";
@@ -55,11 +52,7 @@ public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordB
     private final String schemaFingerprint;
     private final Optional<String> schemaConfluentId;
 
-    // On failure, we store the list of messages that are still pending here.
-    private ImmutableList<PubsubMessage> pendingMessages = ImmutableList.of();
-
-    public GoogleCloudPubSubFlusher(final Publisher publisher,
-                                    final DivolteSchema schema) {
+    GoogleCloudPubSubFlusher(final Publisher publisher, final DivolteSchema schema) {
         this.publisher = Objects.requireNonNull(publisher);
         this.schemaFingerprint = schemaFingerprint(schema);
         this.schemaConfluentId = schema.confluentId.map(i -> "0x" + Integer.toHexString(i));
@@ -77,7 +70,8 @@ public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordB
         return FINGERPRINT_ENCODER.encodeToString(fingerprint);
     }
 
-    private PubsubMessage buildRecord(final AvroRecordBuffer record) {
+    @Override
+    protected PubsubMessage buildRecord(final AvroRecordBuffer record) {
         final PubsubMessage.Builder builder = PubsubMessage.newBuilder()
             .putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT, schemaFingerprint)
             .putAttributes(MESSAGE_ATTRIBUTE_PARTYID, record.getPartyId().toString())
@@ -89,65 +83,7 @@ public final class GoogleCloudPubSubFlusher implements ItemProcessor<AvroRecordB
     }
 
     @Override
-    public ProcessingDirective process(final Item<AvroRecordBuffer> item) {
-        final AvroRecordBuffer record = item.payload;
-        logger.debug("Processing individual record: {}", record);
-        return flush(ImmutableList.of(buildRecord(record)));
-    }
-
-    @Override
-    public ProcessingDirective process(final Queue<Item<AvroRecordBuffer>> batch) {
-        final int batchSize = batch.size();
-        final ProcessingDirective result;
-        switch (batchSize) {
-        case 0:
-            logger.warn("Ignoring empty batch of events.");
-            result = CONTINUE;
-            break;
-        case 1:
-            result = process(batch.remove());
-            break;
-        default:
-            logger.debug("Processing batch of {} records.", batchSize);
-            final List<PubsubMessage> messages =
-                    batch.stream()
-                         .map(i -> i.payload)
-                         .map(this::buildRecord)
-                         .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
-            // Clear the messages now; on failure they'll be retried as part of our
-            // pending operation.
-            batch.clear();
-            result = flush(messages);
-        }
-        return result;
-    }
-
-    @Override
-    public ProcessingDirective heartbeat() {
-        if (pendingMessages.isEmpty()) {
-            return CONTINUE;
-        } else {
-            logger.debug("Retrying to send {} pending message(s) that previously failed.", pendingMessages.size());
-            return flush(pendingMessages);
-        }
-    }
-
-    private ProcessingDirective flush(final List<PubsubMessage> batch) {
-        try {
-            final ImmutableList<PubsubMessage> remaining = sendBatch(batch);
-            pendingMessages = remaining;
-            return remaining.isEmpty() ? CONTINUE : PAUSE;
-        } catch (final InterruptedException e) {
-            // This is painful; we don't know how much of the batch was published and how much wasn't.
-            // This should only occur during shutdown.
-            logger.warn("Flushing interrupted. Not all messages in batch (size={}) may have been published.", batch.size());
-            // Preserve thread interruption invariant.
-            Thread.currentThread().interrupt();
-            return CONTINUE;
-        }
-    }
-
-    private ImmutableList<PubsubMessage> sendBatch(final List<PubsubMessage> batch) throws InterruptedException {
+    protected ImmutableList<PubsubMessage> sendBatch(final List<PubsubMessage> batch) throws InterruptedException {
         // For Pub/Sub we assume the following:
         //  - Batching behaviour is set to flush everything ASAP.
         //  - Retry behaviour will retry indefinitely, so long as it seems likely to succeed.
