@@ -18,6 +18,7 @@
 # Spec file for producing a RPM for the Divolte Collector.
 #
 %define _topdir %(echo $PWD)/
+%define _sourcedir %{_topdir}/SOURCES
 %define _buildrootdir %{_tmppath}/BUILDROOT
 %define snapshot %{nil}%{?snapshotVersion}
 
