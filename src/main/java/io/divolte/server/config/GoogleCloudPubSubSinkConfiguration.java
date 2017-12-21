@@ -87,7 +87,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private SinkFactory createFlushingPool(final RetrySettings retrySettings,
                                            final BatchingSettings batchingSettings) {
         return (vc, sinkName, registry) -> {
-            final TopicName topicName = TopicName.of(vc.configuration().global.gcps.projectId, topic);
+            final String projectId = vc.configuration().global.gcps.projectId.orElseThrow(IllegalStateException::new);
+            final TopicName topicName = TopicName.of(projectId, topic);
             final Publisher.Builder builder =
                 Publisher.newBuilder(topicName)
                          .setRetrySettings(retrySettings)
@@ -115,7 +116,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
         //
         return (vc, sinkName, registry) -> {
             logger.info("Configuring sink to use Google Cloud Pub/Sub emulator: {}", sinkName, hostPort);
-            final TopicName topicName = TopicName.of(vc.configuration().global.gcps.projectId, topic);
+            final String projectId = vc.configuration().global.gcps.projectId.orElseThrow(IllegalStateException::new);
+            final TopicName topicName = TopicName.of(projectId, topic);
             final ManagedChannel channel = ManagedChannelBuilder.forTarget(hostPort).usePlaintext(true).build();
             final TransportChannelProvider channelProvider =
                 FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));

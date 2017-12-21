@@ -19,6 +19,7 @@ package io.divolte.server.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.cloud.ServiceOptions;
 import com.google.common.base.MoreObjects;
+import io.divolte.server.config.constraint.GoogleCloudProjectIdRequiredForPubSub;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,10 +28,11 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
+@GoogleCloudProjectIdRequiredForPubSub
 public class GoogleCloudPubSubConfiguration extends SinkTypeConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubConfiguration.class);
 
-    public final String projectId;
+    public final Optional<String> projectId;
 
     @JsonCreator
     GoogleCloudPubSubConfiguration(final int bufferSize,
@@ -38,14 +40,16 @@ public class GoogleCloudPubSubConfiguration extends SinkTypeConfiguration {
                                    final boolean enabled,
                                    @Nullable final String projectId) {
         super(bufferSize, threads, enabled);
-        this.projectId = null != projectId
-            ? projectId
-            : getDefaultProjectId().orElseThrow(() -> new IllegalArgumentException("No configured or default Google Cloud project"));
+        this.projectId = null != projectId ? Optional.of(projectId) : getDefaultProjectId();
     }
 
     private static Optional<String> getDefaultProjectId() {
         final Optional<String> projectId = Optional.ofNullable(ServiceOptions.getDefaultProjectId());
-        logger.info("Discovered default Google Cloud project: {}", projectId.orElse("N/A"));
+        if (projectId.isPresent()) {
+            logger.info("Discovered default Google Cloud project: {}", projectId.get());
+        } else {
+            logger.debug("No default Google Cloud project available.");
+        }
         return projectId;
     }
 
