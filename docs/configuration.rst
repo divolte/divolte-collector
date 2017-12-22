@@ -629,7 +629,7 @@ Browser source property: ``event_suffix``
 :Description:
   The path suffix that will be added to the prefix to determine the complete path that the tracking tag should use for submitting events. Configuring this should not normally be necessary.
 :Default:
-    ``csc-event``
+  ``csc-event``
 :Example:
 
   .. code-block:: none
