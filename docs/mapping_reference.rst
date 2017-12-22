@@ -20,7 +20,7 @@ Before you dive in to creating your own mappings, it is important to understand 
 
 Schema evolution and default values
 -----------------------------------
-Schema evolution is the process of changing the schema over time as requirements change. For example when a new feature is added to your website, you add additional fields to the schema that contain specific information about user interactions with this new feature. In this scenario, you would update the schema to have these additional fields, update the mapping and then run Divolte Collector with the new schema and mapping. This means that there will be a difference between data that was written prior to the update and data that is written after the update. Also, it means that after the update, there can still be consumers of the data (from HDFS or Kafka) that still use the old schema. In order to make sure that this isn't a problem, the readers with the old schema need to be able to read data written with the new schema and readers with the new schema should also still work on data written with the old schema.
+Schema evolution is the process of changing the schema over time as requirements change. For example when a new feature is added to your website, you add additional fields to the schema that contain specific information about user interactions with this new feature. In this scenario, you would update the schema to have these additional fields, update the mapping and then run Divolte Collector with the new schema and mapping. This means that there will be a difference between data that was written prior to the update and data that is written after the update. Also, it means that after the update, there can still be consumers of the data that still use the old schema. In order to make sure that this isn't a problem, the readers with the old schema need to be able to read data written with the new schema and readers with the new schema should also still work on data written with the old schema.
 
 Luckily, Avro supports both of these cases. When reading newer data with an older schema, the fields that are not present in the old schema are simply ignored by the reader. The other way around is slightly trickier. When reading older data with a new schema, Avro will fill in the default values for fields that are present in the schema but not in the data. *This is provided that there is a default value.* Basically, this means that it is recommended to always provide a default value for all your fields in the schema. In case of nullable fields, the default value could just be null.
 
@@ -28,12 +28,16 @@ One other reason to always provide a default value is that Avro does not allow t
 
 In addition to introducing new fields with defaults, other forms of changes such as renaming and type changes can be permitted under some circumstances. For full details on the changes that are permitted and how the writing and reading schemas are reconciled refer to the `Avro documentation on schema resolution <https://avro.apache.org/docs/1.8.2/spec.html#Schema+Resolution>`_.
 
-Schema evolution with Kafka
----------------------------
-Schema evolution is not automatically available when using Kafka. The file implementation `is defined by the Avro project <https://avro.apache.org/docs/1.8.2/spec.html#Object+Container+Files>`_, but this is not suitable for messaging systems and no alternative is defined. As a result there is no single standard and various strategies are in use:
+Schema evolution with Kafka and Google Cloud Pub/Sub
+----------------------------------------------------
+Schema evolution is not automatically available when using event-based delivery via Kafka or Google Cloud Pub/Sub. The file implementation `is defined by the Avro project <https://avro.apache.org/docs/1.8.2/spec.html#Object+Container+Files>`_, but this is not suitable for messaging systems and no alternative is defined. As a result there is no single standard and various strategies are in use.
+
+For Kafka there are two methods:
 
 - Simply Avro-encode the record as a message payload. This is the ``naked`` (and default) mode in which Kafka sinks operate. Consumers are expected to implicitly know the schema used to write the record. This makes changing the schema infeasible without also switching to a new Kafka topic; consumers generally have no way to know which messages were written with the old or new schema.
-- Tag the message in some way so that consumers can detect the schema used to encode the payload. The Confluent platform uses this approach, prefixing each message with `a header <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_ to inform consumers which schema was used to write the message. Schema changes are possible so long as they remain backwards compatible. Kafka sinks have experimental support this, available by configuring the sink to operate in ``confluent`` mode.
+- Tag the message in some way so that consumers can detect the schema used to encode the payload. The Confluent platform uses this approach, prefixing each message with `a header <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_ to inform consumers which schema was used to write the message. Schema changes are possible so long as they remain backwardly compatible. Kafka sinks have experimental support for this, available by configuring the sink to operate in ``confluent`` mode.
+
+For Google Cloud Pub/Sub the message data is the Avro-encoded record, identical to the ``naked`` mode for Kafka sinks. In addition to the data messages have a ``schemaFingerprint`` attribute that refers to the schema that was used to encode the message. (See :ref:`pubsub-sinks-label` for details.) Schema changes are possible so long as they remain backwardly compatible.
 
 Mapping DSL
 ===========
