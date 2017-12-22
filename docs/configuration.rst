@@ -1365,12 +1365,12 @@ Kafka sink property: ``mode``
 
   Note that ``confluent`` mode is only permitted if the ``confluent_id`` is specified (and the same) for all mappings that this sink consumes from.
 :Default:
-    ``naked``
+  ``naked``
 :Example:
 
-    .. code-block:: none
+  .. code-block:: none
 
-      divolte.sinks.a_sink {
-        type = kafka
-        mode = confluent
-      }
+    divolte.sinks.a_sink {
+      type = kafka
+      mode = confluent
+    }
