@@ -807,7 +807,7 @@ Browser source property: ``javascript.event_timeout``
   sending the next. This property specifies a timeout after which the tag proceeds with the next event even if the previous
   has not been delivered yet.
 :Default:
-  :code:`750 milliseconds`
+  750 milliseconds
 :Example:
 
   .. code-block:: none
@@ -1316,7 +1316,7 @@ Google Cloud Storage Sink Property: ``bucket``
 :Description:
   The Google Cloud Storage bucket name to write the files to. The configured directories in the file strategy for this sink will be relative to the root of this bucket.
 :Default:
-  <none>
+  *Not specified*
 :Example:
 
   .. code-block:: none
