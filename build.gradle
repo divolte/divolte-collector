@@ -124,7 +124,7 @@ dependencies {
     compile group: 'com.jasonclawson', name: 'jackson-dataformat-hocon', version: '1.1.0'
 
     // Used for configuration validation
-    compile group: 'javax.validation', name:'validation-api', version: '2.0.0.Final'
+    compile group: 'javax.validation', name:'validation-api', version: '2.0.1.Final'
     compile group: 'org.hibernate', name:'hibernate-validator', version: '6.0.5.Final'
     compile group: 'org.glassfish', name:'javax.el', version: '3.0.0'
 
