@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2017 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,43 +27,6 @@ import com.google.common.collect.ImmutableList;
 
 public final class BrowserLists {
     public static final Collection<Object[]> SAUCE_BROWSER_LIST = ImmutableList.of(
-            // Windows XP
-            new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
-                caps.setCapability("platform", "Windows XP");
-                caps.setCapability("version", "6");
-                return caps;
-            }, "IE6 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.chrome();
-                caps.setCapability("platform", "Windows XP");
-                caps.setCapability("version", "30");
-                return caps;
-            }, "Chrome 30 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.chrome();
-                caps.setCapability("platform", "Windows XP");
-                caps.setCapability("version", "49");
-                return caps;
-            }, "Chrome 49 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.firefox();
-                caps.setCapability("platform", "Windows XP");
-                caps.setCapability("version", "27");
-                return caps;
-            }, "FF27 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.firefox();
-                caps.setCapability("platform", "Windows XP");
-                caps.setCapability("version", "44.0");
-                // SauceLabs workaround: without this initializing the Firefox driver fails.
-                caps.setCapability("marionette", "false");
-                return caps;
-            }, "FF44 on Windows XP" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.firefox();
-                caps.setCapability("platform", "Windows XP");
-                caps.setCapability("version", "45.0");
-                // SauceLabs workaround: without this initializing the Firefox driver fails.
-                caps.setCapability("marionette", "false");
-                return caps;
-            }, "FF45 on Windows XP" },
-
             // Windows 7
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.internetExplorer();
@@ -71,13 +34,6 @@ public final class BrowserLists {
                 caps.setCapability("version", "10");
                 return caps;
             }, "IE10 on Windows 7" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                // We really want (ancient) Opera here, not blink.
-                @SuppressWarnings("deprecation")
-                final DesiredCapabilities caps = DesiredCapabilities.opera();
-                caps.setCapability("platform", "Windows 7");
-                caps.setCapability("version", "12.12");
-                return caps;
-            }, "Opera 12.12 on Windows 7" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.chrome();
                 caps.setCapability("platform", "Windows 7");
                 caps.setCapability("version", "35");
@@ -147,11 +103,6 @@ public final class BrowserLists {
             // OS X
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.safari();
-                caps.setCapability("platform", "OS X 10.8");
-                caps.setCapability("version", "6.0");
-                return caps;
-            }, "Safari 6 on OS X 10.8" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                final DesiredCapabilities caps = DesiredCapabilities.safari();
                 caps.setCapability("platform", "OS X 10.9");
                 caps.setCapability("version", "7.0");
                 return caps;
@@ -199,13 +150,6 @@ public final class BrowserLists {
 
             // Linux
             new Object[] { (Supplier<DesiredCapabilities>) () -> {
-                // We really want (ancient) Opera here, not blink.
-                @SuppressWarnings("deprecation")
-                final DesiredCapabilities caps = DesiredCapabilities.opera();
-                caps.setCapability("platform", "Linux");
-                caps.setCapability("version", "12.15");
-                return caps;
-            }, "Opera 12.15 on Linux" }, new Object[] { (Supplier<DesiredCapabilities>) () -> {
                 final DesiredCapabilities caps = DesiredCapabilities.chrome();
                 caps.setCapability("platform", "Linux");
                 caps.setCapability("version", "35");

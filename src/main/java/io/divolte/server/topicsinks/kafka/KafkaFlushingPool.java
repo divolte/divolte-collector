@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2017 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,11 @@
  * limitations under the License.
  */
 
-package io.divolte.server.kafka;
+package io.divolte.server.topicsinks.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
-import io.divolte.server.SchemaRegistry;
-import io.divolte.server.config.KafkaSinkConfiguration;
-import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.processing.ProcessingPool;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -32,21 +28,6 @@ import java.util.Objects;
 public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBuffer> {
 
     private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
-
-    public KafkaFlushingPool(final ValidatedConfiguration vc,
-                             final String name,
-                             @SuppressWarnings("unused")
-                             final SchemaRegistry ignored) {
-        this(
-                name,
-                vc.configuration().global.kafka.threads,
-                vc.configuration().global.kafka.bufferSize,
-                vc.configuration().getSinkConfiguration(name, KafkaSinkConfiguration.class).topic,
-                new KafkaProducer<>(vc.configuration().global.kafka.producer,
-                        new DivolteIdentifierSerializer(),
-                        new AvroRecordBufferSerializer())
-                );
-    }
 
     public KafkaFlushingPool(final String name,
                              final int numThreads,

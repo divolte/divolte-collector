@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 GoDataDriven B.V.
+ * Copyright 2017 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,34 @@
  * limitations under the License.
  */
 
-package io.divolte.server.kafka;
+package io.divolte.server.topicsinks.kafka;
 
-import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.AvroRecordBuffer;
 import org.apache.kafka.common.serialization.Serializer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 @ParametersAreNonnullByDefault
-class DivolteIdentifierSerializer implements Serializer<DivolteIdentifier> {
+class AvroRecordBufferSerializer implements Serializer<AvroRecordBuffer> {
     @Override
     public void configure(final Map<String, ?> configs, final boolean isKey) {
-        // Nothing needed here.
+        // Nothing to do.
     }
 
     @Override
-    public byte[] serialize(final String topic, final DivolteIdentifier data) {
-        return data.value.getBytes(StandardCharsets.UTF_8);
+    public byte[] serialize(final String topic, final AvroRecordBuffer data) {
+        // Extract the AVRO record as a byte array.
+        // (There's no way to do this without copying the array.)
+        final ByteBuffer avroBuffer = data.getByteBuffer();
+        final byte[] avroBytes = new byte[avroBuffer.remaining()];
+        avroBuffer.get(avroBytes);
+        return avroBytes;
     }
 
     @Override
     public void close() {
-        // Nothing needed here.
+        // Nothing to do.
     }
 }

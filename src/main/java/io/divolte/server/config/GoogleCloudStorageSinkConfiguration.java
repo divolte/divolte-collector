@@ -27,6 +27,7 @@ import com.google.common.base.MoreObjects;
 import io.divolte.server.filesinks.FileFlushingPool;
 import io.divolte.server.filesinks.FileManager.FileManagerFactory;
 import io.divolte.server.filesinks.gcs.GoogleCloudStorageFileManager;
+import org.apache.avro.Schema;
 
 @ParametersAreNonnullByDefault
 public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
@@ -47,7 +48,8 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
     @Override
     public SinkFactory getFactory() {
         return (config, name, registry) -> {
-            final FileManagerFactory fileManagerFactory = GoogleCloudStorageFileManager.newFactory(config, name, registry.getSchemaBySinkName(name));
+            final Schema avroSchema = registry.getSchemaBySinkName(name).avroSchema;
+            final FileManagerFactory fileManagerFactory = GoogleCloudStorageFileManager.newFactory(config, name, avroSchema);
             fileManagerFactory.verifyFileSystemConfiguration();
             return new FileFlushingPool(config, name, fileManagerFactory);
         };

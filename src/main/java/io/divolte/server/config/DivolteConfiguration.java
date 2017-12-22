@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 GoDataDriven B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.divolte.server.config;
 
 import java.util.HashSet;
@@ -21,6 +37,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import io.divolte.server.config.constraint.MappingSourceSinkReferencesMustExist;
+import io.divolte.server.config.constraint.MappingToConfluentSinksMustHaveSchemaId;
+import io.divolte.server.config.constraint.OneConfluentIdPerSink;
 import io.divolte.server.config.constraint.OneSchemaPerSink;
 import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
 
@@ -28,6 +46,8 @@ import io.divolte.server.config.constraint.SourceAndSinkNamesCannotCollide;
 @MappingSourceSinkReferencesMustExist
 @SourceAndSinkNamesCannotCollide
 @OneSchemaPerSink
+@MappingToConfluentSinksMustHaveSchemaId
+@OneConfluentIdPerSink
 public final class DivolteConfiguration {
     @Valid public final GlobalConfiguration global;
 
@@ -148,12 +168,14 @@ public final class DivolteConfiguration {
 
     private static ImmutableMap<String,SinkConfiguration> defaultSinkConfigurations() {
         return ImmutableMap.of("hdfs", new HdfsSinkConfiguration((short) 1, FileStrategyConfiguration.DEFAULT_FILE_STRATEGY_CONFIGURATION),
-                               "kafka", new KafkaSinkConfiguration(null));
+                               "kafka", new KafkaSinkConfiguration(null, KafkaSinkMode.NAKED),
+                               "gcps", new GoogleCloudPubSubSinkConfiguration(null, null, null));
     }
 
     private static ImmutableMap<String,MappingConfiguration> defaultMappingConfigurations(final ImmutableSet<String> sourceNames,
                                                                                           final ImmutableSet<String> sinkNames) {
         return ImmutableMap.of("default", new MappingConfiguration(Optional.empty(),
+                                                                   Optional.empty(),
                                                                    Optional.empty(),
                                                                    sourceNames,
                                                                    sinkNames,
@@ -209,5 +231,47 @@ public final class DivolteConfiguration {
                         .distinct()
                         .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.counting()));
         return Maps.filterValues(countsBySink, count -> count > 1L).keySet();
+    }
+
+    public Set<String> sinksWithMultipleConfluentIds() {
+        final Map<String, Long> countsBySink =
+                mappings.values()
+                        .stream()
+                        .filter(config -> config.confluentId.isPresent())
+                        .flatMap(config -> config.sinks.stream()
+                                                       .map(sink -> Maps.immutableEntry(sink, config.confluentId)))
+                        .distinct()
+                        .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.counting()));
+        return Maps.filterValues(countsBySink, count -> count > 1L).keySet();
+    }
+
+    public Set<String> mappingsToConfluentSinksWithoutSchemaIds() {
+        // First assemble the names of the sinks that are in confluent-mode.
+        final Set<String> confluentSinkNames = getConfluentSinkNames();
+        // Next look at the mappings, filtering out those:
+        //  a) Without a confluent id; and
+        //  b) a sink in confluent mode.
+        return mappings.entrySet()
+            .stream()
+            .filter(mapping -> !mapping.getValue().confluentId.isPresent()
+                               && mapping.getValue().sinks.stream().anyMatch(confluentSinkNames::contains))
+            .map(Map.Entry::getKey)
+            .collect(ImmutableSet.toImmutableSet());
+    }
+
+    private Set<String> getConfluentSinkNames() {
+        return sinks
+            .entrySet()
+            .stream()
+            .flatMap(entry -> {
+                final SinkConfiguration value = entry.getValue();
+                if (value instanceof KafkaSinkConfiguration) {
+                    final KafkaSinkConfiguration kafkaSinkConfiguration = (KafkaSinkConfiguration) value;
+                    if (kafkaSinkConfiguration.mode == KafkaSinkMode.CONFLUENT) {
+                        return Stream.of(entry.getKey());
+                    }
+                }
+                return Stream.empty();
+            }).collect(ImmutableSet.toImmutableSet());
     }
 }

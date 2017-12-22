@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2017 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import com.google.common.primitives.Longs;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Probabilistic detection of duplicate events in a stream with fixed memory overhead.
@@ -132,7 +131,7 @@ final class ShortTermDuplicateMemory {
     public boolean isProbableDuplicate(final String... eventProperties) {
         final Hasher hasher = HASHING_FUNCTION.newHasher();
         for (final String eventProperty : eventProperties) {
-            hasher.putString(eventProperty, StandardCharsets.UTF_8);
+            hasher.putUnencodedChars(eventProperty);
         }
         return isProbablyDuplicate(hasher.hash());
     }

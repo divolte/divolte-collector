@@ -98,3 +98,7 @@ When using `nginx <http://nginx.org/>`_ as a reverse proxy and load balancer in 
           root   /usr/share/nginx/html;
       }
   }
+
+Kafka Connect
+=============
+When deploying in conjunction with Kafka Connect, the Avro schemas need to be pre-registered with the `Schema Registry <https://docs.confluent.io/3.3.0/schema-registry/docs>`_. Mappings that produce records for a Kafka sink operating in ``confluent`` mode need have their ``confluent_id`` property configured with the identifier of the schema in the registry. (This identifier is normally a simple integer.)

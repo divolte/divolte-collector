@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 GoDataDriven B.V.
+ * Copyright 2017 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,7 @@ package io.divolte.server;
 import static io.divolte.server.processing.ItemProcessor.ProcessingDirective.*;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -119,30 +117,24 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
          * it to that pool to multiplex events to different sinks destinations (HDFS
          * files or Kafka topics), which should move this code elsewhere.
          */
-        final ArrayList<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>> mappingMappingResult =                          // temporary mutable container for the result
+        // Temporary buffer into which we assemble results.
+        final ArrayList<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>> mappingMappingResult =
                 IntStream.range(0, vc.configuration().mappings.size())
-                         .<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>>mapToObj(ignored -> ImmutableList.of())       // initialized with empty lists per default
+                         .<ImmutableList<ProcessingPool<?,AvroRecordBuffer>>>mapToObj(ignored -> ImmutableList.of())
                          .collect(Collectors.toCollection(ArrayList::new));
-
-        /*
-         * Without the intermediate variable (collected), The Eclipse compiler's type
-         * inference doesn't know how to handle this. Don't know about Oracle Java compiler.
-         */
-        final Map<Integer, ImmutableList<ProcessingPool<?, AvroRecordBuffer>>> collected = vc.configuration()
-                .mappings
-                .entrySet()
-                .stream()
-                .flatMap(kv->kv.getValue()
-                               .sinks
-                               .stream()
-                               .map(s -> Maps.immutableEntry(vc.configuration().mappingIndex(kv.getKey()), s)))
-                .filter(e -> sinksByName.containsKey(e.getValue()))
-          .collect(Collectors.groupingBy(Map.Entry::getKey,
-                                         Collectors.mapping(e -> sinksByName.get(e.getValue()),
-                                                            ImmutableList.toImmutableList())));
-          collected.forEach(mappingMappingResult::set);
-
-          sinksByMappingIndex = ImmutableList.copyOf(mappingMappingResult);
+        vc.configuration()
+            .mappings
+            .entrySet()
+            .stream()
+            .map(kv -> Maps.immutableEntry(vc.configuration().mappingIndex(kv.getKey()),
+                                           kv.getValue()
+                                             .sinks
+                                             .stream()
+                                             .filter(sinksByName::containsKey)
+                                             .map(sinksByName::get)
+                                             .collect(ImmutableList.toImmutableList())))
+            .forEach(kv -> mappingMappingResult.set(kv.getKey(), kv.getValue()));
+        sinksByMappingIndex = ImmutableList.copyOf(mappingMappingResult);
     }
 
     @Override

@@ -145,7 +145,7 @@ This finds a ``.avro`` file in your :file:`/tmp` directory and passes it to the 
 Bring your own schema
 =====================
 
-Divolte Collector uses Avro to write data to files. Avro records require you to define a `Avro schema <http://avro.apache.org/docs/1.8.1/spec.html>`_ that defines the fields in the records. Divolte Collector comes with a `built-in generic schema <https://github.com/divolte/divolte-schema>`_ that is useful for keeping track of the basics of your clickstream data, but in most cases it makes sense to create your own schema with more specific fields that have a meaning within your website's domain. In order to achieve this two things are needed:
+Divolte Collector uses Avro to write data to files. Avro records require you to define a `Avro schema <http://avro.apache.org/docs/1.8.2/spec.html>`_ that defines the fields in the records. Divolte Collector comes with a `built-in generic schema <https://github.com/divolte/divolte-schema>`_ that is useful for keeping track of the basics of your clickstream data, but in most cases it makes sense to create your own schema with more specific fields that have a meaning within your website's domain. In order to achieve this two things are needed:
 
 1. A custom Avro schema
 2. A mapping that defines how to map requests onto the custom schema.
@@ -444,7 +444,7 @@ Configuring Divolte Collector to write data to a Kafka topic is quite similar to
         // which is passed to Kafka as is. At the very least,
         // configure the broker list here. For more options
         // that can be passed to a Kafka producer, see this link:
-        // http://kafka.apache.org/0102/documentation.html#producerconfigs
+        // https://kafka.apache.org/documentation.html#producerconfigs
         producer = {
           bootstrap.servers = "10.200.8.55:9092,10.200.8.53:9092,10.200.8.54:9092"
         }
