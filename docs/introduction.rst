@@ -7,12 +7,13 @@ Divolte Collector is a solution for collecting `clickstream data <https://en.wik
 At present there is support for the following data sinks:
 
 * `Hadoop Distributed File System (HDFS) <http://hadoop.apache.org/>`_
-* `Google Cloud Storage <https://cloud.google.com/storage/>`_ (Experimental)
 * `Kafka <http://kafka.apache.org/>`_
+* `Google Cloud Storage <https://cloud.google.com/storage/>`_ (Experimental)
+* `Google Cloud Pub/Sub <https://cloud.google.com/pubsub/>`_ (Experimental)
 
 Several solutions exist already to this problem (hosted solution like Google Analytics, Omniture, or open source systems such as Piwik). Here's what makes Divolte Collector different:
 
-* Built from the ground up with built-in support for file based storage and streaming (Divolte Collector writes directly to HDFS, Google Cloud Storage and Kafka; no plugins or integrations).
+* Built from the ground up with built-in support for file based storage and streaming (Divolte Collector writes directly to HDFS, Kafka and Google Cloud Storage and Pub/Sub; no plugins or integrations).
 * The collected data has a user defined schema, with domain specific fields in Apache Avro records; Divolte Collector allows for schema evolution as well.
 * The above means that click event URLs are parsed and transformed on the fly; this is done based on rich configuration, so no custom coding required.
 * Divolte Collector is built for data collection and does only that. It does not impose any restrictions on the tools you use for analytics on, processing or enrichment of your data. The open source Avro format provides complete freedom in tools and solutions.
@@ -126,4 +127,4 @@ Divolte Collector is written in pure Java and runs on any OS that supports the l
 
 .. note::
 
-  Divolte Collector can be configured to send data to HDFS, Google Cloud Storage and Kafka or any combination thereof. When running locally for testing it can also write to the local file system.
+  Divolte Collector can be configured to send data to any combination of the supported data sinks. When running locally for testing it can also write to the local file system.

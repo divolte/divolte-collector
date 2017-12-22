@@ -19,7 +19,7 @@ package io.divolte.server.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteSchema;
-import io.divolte.server.kafka.Serializers;
+import io.divolte.server.topicsinks.kafka.Serializers;
 import org.apache.kafka.common.serialization.Serializer;
 
 import javax.annotation.ParametersAreNonnullByDefault;

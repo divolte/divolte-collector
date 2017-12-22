@@ -55,13 +55,24 @@ This shell script is run by the startup script prior to starting the Divolte Col
 .. envvar:: GOOGLE_APPLICATION_CREDENTIALS
 
 :Description:
-  If using sinks that write to Google Cloud Storage, this environment variable is checked for the location of the file containing credentials for writing to your buckets. For more information about this environment variable please refer to Google's documentation on `How Application Default Credentials work <https://developers.google.com/identity/protocols/application-default-credentials>`_.
+  If using sinks that write to Google Cloud Storage or Pub/Sub, this environment variable is checked for the location of the file containing credentials for writing to your buckets. For more information about this environment variable please refer to Google's documentation on `How Application Default Credentials work <https://developers.google.com/identity/protocols/application-default-credentials>`_.
 
 :Example:
 
   .. code-block:: bash
 
     GOOGLE_APPLICATION_CREDENTIALS='/etc/divolte/gcs-credentials.json'
+
+.. envvar:: GOOGLE_CLOUD_PROJECT
+
+:Description:
+  If using sinks that use Google Cloud Pub/Sub, this environment variable is checked for the project id where the topics to use are defined.
+
+:Example:
+
+  .. code-block:: bash
+
+    GOOGLE_CLOUD_PROJECT='click-stream-collection'
 
 logback.xml
 -----------
@@ -396,52 +407,6 @@ Property: ``divolte.global.hdfs.client``
       fs.defaultFS = "file:///var/log/divolte/"
     }
 
-Global Google Cloud Storage Settings (``divolte.global.gcs``)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This section controls global Google Cloud Storage settings shared by all Google Cloud Storage sinks.
-
-Property: ``divolte.global.gcs.enabled``
-""""""""""""""""""""""""""""""""""""""""
-:Description:
-  Whether or not Google Cloud Storage support is enabled. When set to `false` all Google Cloud Storage sinks are ignored.
-:Default:
-  :code:`false`
-:Example:
-
-  .. code-block:: none
-
-    divolte.global.gcs {
-      enabled = true
-    }
-
-Property: ``divolte.global.gcs.threads``
-""""""""""""""""""""""""""""""""""""""""
-:Description:
-  Number of threads to use per Google Cloud Storage sink for writing events. Each thread creates its own files on Google Cloud Storage.
-:Default:
-  1
-:Example:
-
-  .. code-block:: none
-
-    divolte.global.gcs {
-      threads = 2
-    }
-
-Property: ``divolte.global.gcs.buffer_size``
-""""""""""""""""""""""""""""""""""""""""""""
-:Description:
-  The maximum number of mapped events to queue internally *per sink thread* for Google Cloud Storage before starting to drop them. This value will be rounded up to the nearest power of 2.
-:Default:
-  1048576
-:Example:
-
-  .. code-block:: none
-
-    divolte.global.gcs {
-      buffer_size = 1048576
-    }
-
 Global Kafka Settings (``divolte.global.kafka``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section controls global Kafka settings shared by all Kafka sinks. At present Divolte Collector only supports connecting to a single Kafka cluster.
@@ -521,6 +486,114 @@ Property: ``divolte.global.kafka.producer``
       acks = 0
       retries = 5
     }
+
+Global Google Cloud Storage Settings (``divolte.global.gcs``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section controls global Google Cloud Storage settings shared by all Google Cloud Storage sinks.
+
+Property: ``divolte.global.gcs.enabled``
+""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Whether or not Google Cloud Storage support is enabled. When set to `false` all Google Cloud Storage sinks are ignored.
+:Default:
+  :code:`false`
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcs {
+      enabled = true
+    }
+
+Property: ``divolte.global.gcs.threads``
+""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Number of threads to use per Google Cloud Storage sink for writing events. Each thread creates its own files on Google Cloud Storage.
+:Default:
+  1
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcs {
+      threads = 2
+    }
+
+Property: ``divolte.global.gcs.buffer_size``
+""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum number of mapped events to queue internally *per sink thread* for Google Cloud Storage before starting to drop them. This value will be rounded up to the nearest power of 2.
+:Default:
+  1048576
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcs {
+      buffer_size = 1048576
+    }
+
+Global Google Cloud Pub/Sub Settings (``divolte.global.gcps``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section controls global Google Cloud Pub/Sub settings shared by all Google Cloud Pub/Sub sinks.
+
+Property: ``divolte.global.gcps.enabled``
+"""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Whether or not Google Cloud Pub/Sub support is enabled. When set to `false` all Google Cloud Pub/Sub sinks are ignored.
+:Default:
+  :code:`false`
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcps {
+      enabled = true
+    }
+
+Property: ``divolte.global.gcps.threads``
+"""""""""""""""""""""""""""""""""""""""""
+:Description:
+  Number of threads to use per Google Cloud Pub/Sub sink for writing events. Each thread creates its own files on Google Cloud Pub/Sub.
+:Default:
+  2
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcps {
+      threads = 1
+    }
+
+Property: ``divolte.global.gcps.buffer_size``
+"""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum number of mapped events to queue internally *per sink thread* for Google Cloud Pub/Sub before starting to drop them. This value will be rounded up to the nearest power of 2.
+:Default:
+  1048576
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcps {
+      buffer_size = 1048576
+    }
+
+Property: ``divolte.global.gcps.project_id``
+""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The `project id`_ in which the the topics are located where Divolte will publish events. If Google Cloud Pub/Sub is enabled, then either this property must be set *or* a default project id must be available via the context in which the application is running.
+:Default:
+  *Not specified*
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.gcps {
+      project_id = divolte-event-ingest
+    }
+
+.. _project id: https://support.google.com/cloud/answer/6158840?hl=en
 
 Sources (``divolte.sources``)
 -----------------------------
@@ -629,7 +702,7 @@ Browser source property: ``event_suffix``
 :Description:
   The path suffix that will be added to the prefix to determine the complete path that the tracking tag should use for submitting events. Configuring this should not normally be necessary.
 :Default:
-    ``csc-event``
+  ``csc-event``
 :Example:
 
   .. code-block:: none
@@ -807,7 +880,7 @@ Browser source property: ``javascript.event_timeout``
   sending the next. This property specifies a timeout after which the tag proceeds with the next event even if the previous
   has not been delivered yet.
 :Default:
-  :code:`750 milliseconds`
+  750 milliseconds
 :Example:
 
   .. code-block:: none
@@ -1118,6 +1191,7 @@ Each sink has a type configured via a mandatory ``type`` property. The supported
 - Streaming sinks:
 
   - ``kafka``
+  - ``gcps``
 
 For example:
 
@@ -1316,7 +1390,7 @@ Google Cloud Storage Sink Property: ``bucket``
 :Description:
   The Google Cloud Storage bucket name to write the files to. The configured directories in the file strategy for this sink will be relative to the root of this bucket.
 :Default:
-  <none>
+  *Not specified*
 :Example:
 
   .. code-block:: none
@@ -1326,24 +1400,22 @@ Google Cloud Storage Sink Property: ``bucket``
       bucket = my_organisation_web_data
     }
 
-Kafka Sinks
-^^^^^^^^^^^
+Topic Based Sinks
+^^^^^^^^^^^^^^^^^
 
-A Kafka sink uses a Kafka producer to write Avro records as individual messages on a Kafka topic. The producer is configured according to the global Kafka settings.
+A topic based sink publishes events as Avro records to a topic for consumption in real-time. Each event is published as a single message on the topic.
 
-Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
+The supported types of topic based sinks are:
 
-The body of each Kafka message contains a single Avro record, serialized in one of two possible ways depending on the sink mode:
+- Kafka
+- Google Cloud Pub/Sub (Experimental)
 
-- In ``naked`` mode (the default) the record is serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
-- In ``confluent`` mode (experimental) the record is serialized using the `wire format for the Confluent platform <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This requires that mappings for this sink be configured with the ``confluent_id`` specifying the identifier of the Avro schema as registered in the Schema Registry. (Divolte does not register the schema itself.)
+The following properties are common to all topic based sinks:
 
-Within the namespace for a Kafka sink properties are used to configure it.
-
-Kafka sink property: ``topic``
-""""""""""""""""""""""""""""""
+Topic Based Sink Property: ``topic``
+""""""""""""""""""""""""""""""""""""
 :Description:
-  The Kafka topic onto which events are published.
+  The name of the topic onto which events will be published.
 :Default:
   ``divolte``
 :Example:
@@ -1355,6 +1427,20 @@ Kafka sink property: ``topic``
       topic = clickevents
     }
 
+Kafka Sinks
+^^^^^^^^^^^
+
+A Kafka sink publishes each event to a Kafka topic. The Kafka producer used to do this is configured according to the global Kafka settings.
+
+Records produced from events with the same party identifier are queued on a topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) The messages are keyed by their party identifier meaning that Kafka will preserve the relative ordering between messages with the same party identifier.
+
+The body of each Kafka message contains a single Avro record, serialized in one of two possible ways depending on the sink mode:
+
+- In ``naked`` mode (the default) the record is serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+- In ``confluent`` mode (experimental) the record is serialized using the `wire format for the Confluent platform <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This requires that mappings for this sink be configured with the ``confluent_id`` specifying the identifier of the Avro schema as registered in the Schema Registry. (Divolte does not register the schema itself.)
+
+Within the namespace for a Kafka sink properties are used to configure it.
+
 Kafka sink property: ``mode``
 """""""""""""""""""""""""""""
 :Description:
@@ -1365,12 +1451,206 @@ Kafka sink property: ``mode``
 
   Note that ``confluent`` mode is only permitted if the ``confluent_id`` is specified (and the same) for all mappings that this sink consumes from.
 :Default:
-    ``naked``
+  ``naked``
 :Example:
 
-    .. code-block:: none
+  .. code-block:: none
 
-      divolte.sinks.a_sink {
-        type = kafka
-        mode = confluent
-      }
+    divolte.sinks.a_sink {
+      type = kafka
+      mode = confluent
+    }
+
+.. _pubsub-sinks-label:
+
+Google Cloud Pub/Sub Sinks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+  Support for Google Cloud Storage is currently experimental.
+
+A Google Cloud Pub/Sub sink sends Avro records as messages to a Pub/Sub topic. The topic must exist when Divolte Collector starts; no attempt is made to create it on startup, and privileges must be available to allow for writing to it.
+
+For authentication against Google Cloud services, Divolte Collector expects `Application Default Credentials <https://developers.google.com/identity/protocols/application-default-credentials>`_ to be configured on the host running Divolte Collector. No other mechanism for authenticating against Google is currently supported. When running on Google Cloud infrastructure, application default credentials are usually available implicitly. To setup application default credentials in other environments, consider the `relevant documentation from Google <https://developers.google.com/identity/protocols/application-default-credentials#howtheywork>`_.
+
+Messages produced from events with the same party identifier are sent to the topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) Pub/Sub itself offers best-effort ordering for receipt by subscribers but this is not guaranteed.
+
+The data in each Pub/Sub message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_. In addition to the data, each message has several attributes set:
+
+:partyIdentifier:
+  The party id associated with this event.
+:schemaFingerprint:
+  This is set to the `schema fingerprint <https://avro.apache.org/docs/1.8.2/spec.html#schema_fingerprints>`_ of the Avro schema used to encode the message, calculated using the `SHA-256 digest algorithm <http://en.wikipedia.org/wiki/SHA-2>`_. The digest itself is encoded using the ``base64url`` encoding `specified in RFC4648 <https://tools.ietf.org/html/rfc4648#section-5>`_, without padding.
+:schemaConfluentId:
+  This attribute is only set if the mapping used to produce the record specifies a ``confluent_id``. In this case the attribute contains that value, encoded using base 16.
+
+Within the namespace for a Pub/Sub sink properties are used to configure it. These are grouped into into:
+
+- *Retry settings*: these control the internal retry behaviour of the underlying SDK when failures occur. Note that in general Divolte will attempt redelivery indefinitely if the underlying SDK indicates a retry might succeed. When this is not the case a message is abandoned.
+- *Batching settings*: these control the way the underlying SDK will accumulate messages for publication as a batch to improve performance.
+
+Google Cloud Pub/Sub sink property: ``retry_settings.max_attempts``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The number of times the internal publisher will attempt delivery before giving up. A value of ``0`` means there is no such limit.
+:Default:
+  ``0``
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.max_attempts = 10
+    }
+
+Google Cloud Pub/Sub sink property: ``retry_settings.total_timeout``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The total duration for which the internal publisher will attempt delivery before giving up.
+:Default:
+  10 seconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.total_timeout = 1 minute
+    }
+
+Google Cloud Pub/Sub sink property: ``retry_settings.initial_retry_delay``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  How long the internal publisher will wait if the first delivery attempt fails before the first retry.
+:Default:
+  5 milliseconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.initial_retry_delay = 10 milliseconds
+    }
+
+Google Cloud Pub/Sub sink property: ``retry_settings.retry_delay_multiplier``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  How much the wait used by the internal publisher between retries should be multiplied by before each subsequent retry.
+:Default:
+  2
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.retry_delay_multiplier = 1.5
+    }
+
+Google Cloud Pub/Sub sink property: ``retry_settings.max_retry_delay``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum delay used by the internal publisher between retries when delivery of a message fails.
+:Default:
+  1 minute
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.max_retry_delay = 30 seconds
+    }
+
+Google Cloud Pub/Sub sink property: ``retry_settings.initial_rpc_timeout``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  How long the internal publisher will wait for the first RPC to succeed.
+:Default:
+  15 seconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.initial_rpc_timeout = 10 seconds
+    }
+
+Google Cloud Pub/Sub sink property: ``retry_settings.rpc_timeout_multiplier``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  How much the RPC timeout used by the internal publisher between retries should be multiplied by before each subsequent retry.
+:Default:
+  2
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.rpc_timeout_multiplier = 1.5
+    }
+
+Google Cloud Pub/Sub sink property: ``retry_settings.max_rpc_timeout``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum RPC timeout used by the internal publisher when retrying.
+:Default:
+  *The value of ``initial_rpc_timeout``.*
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      retry_settings.max_rpc_timeout = 10 seconds
+    }
+
+Google Cloud Pub/Sub sink property: ``batching_settings.element_count_threshold``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum number of messages that should be accumulated before triggering delivering the batch.
+:Default:
+  100
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      batching_settings.element_count_threshold = 1000
+    }
+
+Google Cloud Pub/Sub sink property: ``batching_settings.request_bytes_threshold``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum total size of the accumulated messages that should be allowed before triggering delivery of the batch.
+:Default:
+  1000
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      batching_settings.request_bytes_threshold = 65536
+    }
+
+Google Cloud Pub/Sub sink property: ``batching_settings.delay_threshold``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum time to wait for additional messages to accumulate before triggering delivery of the batch.
+:Default:
+  1 millisecond
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcps
+      batching_settings.delay_threshold = 500 ms
+    }
