@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 GoDataDriven B.V.
+ * Copyright 2018 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ mapping {
     map firstInSession() onto 'sessionStart'
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
-    
+
     // referer is null in the expected request
     def refUri = parse referer() to uri
-    def refPath = refUri.path()    
+    def refPath = refUri.path()
     def refPathMatcher = match 'some regex with a (group)' against refPath
-    
+
     // we use the queryparam field, because it has a non-null default
     // which we expect to be preserved
     map refPathMatcher.group(1) onto 'queryparam'

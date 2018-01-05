@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 GoDataDriven B.V.
+ * Copyright 2018 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ mapping {
     map firstInSession() onto 'sessionStart'
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
-    
+
     map referer().isPresent().or(location().isPresent()) onto 'unreliable' //false || true == true
     map location().isPresent().and(referer().isPresent()) onto 'dupe' //true && false == false
     map not(location().isAbsent()) onto 'queryparamBoolean' // !false == true
-    
+
     map location().isPresent().and(referer().isPresent().or(location().isPresent())) onto 'pathBoolean' // true && (false || true) == true
 }
