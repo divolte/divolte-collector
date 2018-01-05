@@ -22,11 +22,14 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 import io.divolte.server.config.ValidatedConfiguration;
 import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
 import java.util.Map;
@@ -38,8 +41,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ServerTestUtils {
-    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
-    private static final String LOOPBACK = "127.0.0.1";
+    private static final Logger logger = LoggerFactory.getLogger(ServerTestUtils.class);
+
     /*
      * List of ports to cycle through.
      *
@@ -66,18 +69,40 @@ public final class ServerTestUtils {
         55001,
     };
     private static AtomicInteger nextSafePortIndex = new AtomicInteger(0);
-    @SuppressWarnings("PMD.EmptyCatchBlock")
-    private static int findFreePort() {
+    private static int findFreePort(final InetAddress bindAddress) {
         for(int attempt = 0; attempt < SAFE_PORTS.length * 2; ++attempt) {
             final int candidatePortIndex = nextSafePortIndex.getAndUpdate((lastPort) -> (lastPort + 1) % SAFE_PORTS.length);
-            try (final ServerSocket socket = new ServerSocket(SAFE_PORTS[candidatePortIndex])) {
+            final int candidatePort = SAFE_PORTS[candidatePortIndex];
+            try (final ServerSocket socket = new ServerSocket(candidatePort, 1, bindAddress)) {
                 return socket.getLocalPort();
             } catch (final IOException e) {
-                // Assume port already in use. Proceed to next one...
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Could not bind port %d on %s; assuming already in use.",
+                                               candidatePort, bindAddress), e);
+                }
             }
         }
         // Give up if we go through the list twice.
         throw new RuntimeException("Could not find unused safe port.");
+    }
+
+    private static InetAddress getBindAddress() {
+        final InetAddress bindAddress;
+        if (Boolean.getBoolean("io.divolte.test.bindExternal")) {
+            try {
+                bindAddress = InetAddress.getLocalHost();
+            } catch (final UnknownHostException e) {
+                throw new UncheckedIOException("Unable to determine external IP address", e);
+            }
+        } else {
+            bindAddress = InetAddress.getLoopbackAddress();
+        }
+        return bindAddress;
+    }
+
+    private static InetSocketAddress findBindPort() {
+        final InetAddress bindAddress = getBindAddress();
+        return new InetSocketAddress(bindAddress, findFreePort(bindAddress));
     }
 
     private static Config REFERENCE_TEST_CONFIG = ConfigFactory.parseResources("reference-test.conf");
@@ -106,25 +131,25 @@ public final class ServerTestUtils {
         final BlockingQueue<EventPayload> events;
 
         public TestServer() {
-            this(findFreePort(), REFERENCE_TEST_CONFIG);
+            this(findBindPort(), REFERENCE_TEST_CONFIG);
         }
 
         public TestServer(final String configResource) {
-            this(findFreePort(),
+            this(findBindPort(),
                  ConfigFactory.parseResources(configResource)
                               .withFallback(REFERENCE_TEST_CONFIG));
         }
 
         public TestServer(final String configResource, final Map<String,Object> extraConfig) {
-            this(findFreePort(),
+            this(findBindPort(),
                  ConfigFactory.parseMap(extraConfig, "Test-specific overrides")
                               .withFallback(ConfigFactory.parseResources(configResource))
                               .withFallback(REFERENCE_TEST_CONFIG));
         }
 
-        private TestServer(final int port, final Config config) {
-            this.port = port;
-            this.host = getBindAddress();
+        private TestServer(final InetSocketAddress hostPort, final Config config) {
+            this.port = hostPort.getPort();
+            this.host = hostPort.getAddress().getHostAddress();
             this.config = config.withValue("divolte.global.server.host", ConfigValueFactory.fromAnyRef(host))
                                 .withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
 
@@ -133,25 +158,15 @@ public final class ServerTestUtils {
             Preconditions.checkArgument(vc.isValid(),
                                         "Invalid test server configuration: %s", vc.errors());
             server = new Server(vc, (event, buffer, record) -> events.add(new EventPayload(event, buffer, record)));
-            server.run();
-        }
-
-        private static String getBindAddress() {
-            final String bindAddress;
-            if (Boolean.getBoolean("io.divolte.test.bindExternal")) {
-                try {
-                    bindAddress = InetAddress.getLocalHost().getHostAddress();
-                } catch (final UnknownHostException e) {
-                    throw new UncheckedIOException("Unable to determine external IP address", e);
-                }
-            } else {
-                bindAddress = LOOPBACK;
+            try {
+                server.run();
+            } catch (final RuntimeException e) {
+                throw new RuntimeException("Error starting test server listening on: " + hostPort, e);
             }
-            return bindAddress;
         }
 
         static TestServer createTestServerWithDefaultNonTestConfiguration() {
-            return new TestServer(findFreePort(), ConfigFactory.defaultReference());
+            return new TestServer(findBindPort(), ConfigFactory.defaultReference());
         }
 
         public EventPayload waitForEvent() throws InterruptedException {
