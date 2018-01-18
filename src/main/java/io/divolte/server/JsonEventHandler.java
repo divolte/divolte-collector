@@ -83,7 +83,7 @@ public class JsonEventHandler implements HttpHandler {
             } catch (final IncompleteRequestException e) {
                 // Improper request, could be anything.
                 exchange.setStatusCode(StatusCodes.BAD_REQUEST);
-                logger.warn("Improper request received from {}.",
+                logger.info("Improper request received from {}.",
                             Optional.ofNullable(exchange.getSourceAddress())
                                     .map(InetSocketAddress::getHostString)
                                     .orElse("<UNKNOWN HOST>"));
