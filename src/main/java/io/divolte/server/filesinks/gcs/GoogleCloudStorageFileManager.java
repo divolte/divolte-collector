@@ -174,20 +174,20 @@ public class GoogleCloudStorageFileManager implements FileManager {
              * googlePost(...) helper in the constructor, because we cannot set a final from
              * a lambda.
              */
-
-
-            avroTargetStream = new DynamicDelegatingOutputStream();
-            writer = Failsafe
+            this.avroTargetStream = new DynamicDelegatingOutputStream();
+            this.writer = Failsafe
                 .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
                 .onFailedAttempt((ignored, error, context) -> logger.error("Failed attempt to create new file on GCS. Attempt #" + context.getExecutions(), error))
                 .onFailure((ignored, error, context) -> logger.error("Failed to create new file on GCS after " +  context.getExecutions() + " attempts.", error))
                 .get(() -> {
+                    logger.warn(remoteFileUrl.toString());
                     final HttpURLConnection connection = setupUrlConnection(POST, remoteFileUrl, true, AVRO_CONTENT_TYPE_HEADER);
                     final OutputStream os = connection.getOutputStream();
                     avroTargetStream.attachDelegate(os);
                     try {
-                        final DataFileWriter<GenericRecord> writer;
-                        writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, avroTargetStream);
+                        final DataFileWriter<GenericRecord> writer =
+                            new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema))
+                                .create(schema, avroTargetStream);
                         writer.flush();
 
                         os.close();
@@ -239,13 +239,14 @@ public class GoogleCloudStorageFileManager implements FileManager {
             googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded));
         }
 
-        private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws MalformedURLException, IOException {
+        private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws IOException {
             final ImmutableList<SourceObject> sourcesToCompose;
 
             if (position > 0) {
                 final URL partUploadUrl = uploadUrlFor(bucketEncoded, inflightPartialNameEncoded);
                 final GcsObjectResponse uploadResponse = googlePost(partUploadUrl, GcsObjectResponse.class, AVRO_CONTENT_TYPE_HEADER, os -> {
                     avroTargetStream.attachDelegate(os);
+
                     try {
                         for (int c = 0; c < position; c++) {
                             // Write Avro record buffer to file

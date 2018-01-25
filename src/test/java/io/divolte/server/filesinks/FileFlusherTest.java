@@ -42,7 +42,7 @@ import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileManager.DivolteFile;
 import io.divolte.server.processing.Item;
 
-public class FileFlusherTest {
+public class FileFlusherTest extends FileSinkHelpers {
     @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     private static final String ARBITRARY_IP = "8.8.8.8";
     private final Schema schema;
@@ -482,11 +482,4 @@ public class FileFlusherTest {
 
         return vc.configuration().getSinkConfiguration("hdfs", HdfsSinkConfiguration.class).fileStrategy;
     }
-
-    private Schema schemaFromClassPath(final String resource) throws IOException {
-        try (final InputStream resourceStream = this.getClass().getResourceAsStream(resource)) {
-            return new Schema.Parser().parse(resourceStream);
-        }
-    }
-
 }
