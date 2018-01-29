@@ -29,6 +29,7 @@ import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
@@ -57,6 +58,8 @@ import io.divolte.server.filesinks.gcs.entities.ComposeRequest;
 import io.divolte.server.filesinks.gcs.entities.ComposeRequest.SourceObject;
 import io.divolte.server.filesinks.gcs.entities.GcsObjectResponse;
 import io.divolte.server.filesinks.gcs.entities.GetBucketResponse;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 
 public class GoogleCloudStorageFileManager implements FileManager {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudStorageFileManager.class);
@@ -96,6 +99,12 @@ public class GoogleCloudStorageFileManager implements FileManager {
     private final String bucketEncoded;
     private final String inflightDir;
     private final String publishDir;
+
+    private static final RetryPolicy RETRY_RETRIABLE_EXCEPTION_POLICY = new RetryPolicy()
+        .withBackoff(1L, 64L, TimeUnit.SECONDS)
+        .withJitter(1L, TimeUnit.SECONDS)
+        .withMaxRetries(5)
+        .retryOn(RetriableIOException.class);
 
     public GoogleCloudStorageFileManager(final int recordBufferSize, final Schema schema, final String bucket, final String inflightDir, final String publishDir) {
         try {
@@ -153,9 +162,6 @@ public class GoogleCloudStorageFileManager implements FileManager {
 
             final URL remoteFileUrl = uploadUrlFor(bucketEncoded, inflightNameEncoded);
 
-            final HttpURLConnection connection = setupUrlConnection(POST, remoteFileUrl, true, AVRO_CONTENT_TYPE_HEADER);
-            final OutputStream os = connection.getOutputStream();
-
             /*
              * We create a single Avro writer, but write parts of the Avro stream to
              * multiple files, which are composed into a single file after flushing files.
@@ -168,19 +174,31 @@ public class GoogleCloudStorageFileManager implements FileManager {
              * googlePost(...) helper in the constructor, because we cannot set a final from
              * a lambda.
              */
-            avroTargetStream = new DynamicDelegatingOutputStream();
-            avroTargetStream.attachDelegate(os);
-            try {
-                writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, avroTargetStream);
-                writer.flush();
-            } finally {
-                avroTargetStream.detachDelegate();
-            }
-            os.close();
+            this.avroTargetStream = new DynamicDelegatingOutputStream();
+            this.writer = Failsafe
+                .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+                .onFailedAttempt((ignored, error, context) -> logger.error("Failed attempt to create new file on GCS. Attempt #" + context.getExecutions(), error))
+                .onFailure((ignored, error, context) -> logger.error("Failed to create new file on GCS after " +  context.getExecutions() + " attempts.", error))
+                .get(() -> {
+                    logger.warn(remoteFileUrl.toString());
+                    final HttpURLConnection connection = setupUrlConnection(POST, remoteFileUrl, true, AVRO_CONTENT_TYPE_HEADER);
+                    final OutputStream os = connection.getOutputStream();
+                    avroTargetStream.attachDelegate(os);
+                    try {
+                        final DataFileWriter<GenericRecord> writer =
+                            new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema))
+                                .create(schema, avroTargetStream);
+                        writer.flush();
 
+                        os.close();
+                        final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
+                        logger.debug("Google Cloud Storage upload response {}", response);
 
-            final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
-            logger.debug("Google Cloud Storage upload response {}", response);
+                        return writer;
+                    } finally {
+                        avroTargetStream.detachDelegate();
+                    }
+                });
 
             partWritten = false;
         }
@@ -221,13 +239,14 @@ public class GoogleCloudStorageFileManager implements FileManager {
             googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded));
         }
 
-        private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws MalformedURLException, IOException {
+        private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws IOException {
             final ImmutableList<SourceObject> sourcesToCompose;
 
             if (position > 0) {
                 final URL partUploadUrl = uploadUrlFor(bucketEncoded, inflightPartialNameEncoded);
                 final GcsObjectResponse uploadResponse = googlePost(partUploadUrl, GcsObjectResponse.class, AVRO_CONTENT_TYPE_HEADER, os -> {
                     avroTargetStream.attachDelegate(os);
+
                     try {
                         for (int c = 0; c < position; c++) {
                             // Write Avro record buffer to file
@@ -286,7 +305,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
             try {
                 /*
                  * Get the credentials. This is a redundant operation, just to provide a nicer
-                 * error message if the presence of default credentials are the issue instead of
+                 * error message if the absence of default credentials is the issue instead of
                  * the actual connection / ACLs / bucket existence.
                  */
                 getGoogleCredentials();
@@ -326,14 +345,21 @@ public class GoogleCloudStorageFileManager implements FileManager {
     }
 
     private static <T> T googlePost(final URL url, final Class<T> resultType, final Map<String,String> additionalHeaders, final BodyWriter writer) throws IOException {
-        final HttpURLConnection connection = setupUrlConnection(POST, url, true, additionalHeaders);
 
-        final OutputStream os = connection.getOutputStream();
-        writer.write(os);
-        os.flush();
-        os.close();
+        return Failsafe
+            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+            .onFailedAttempt((ignored, error, context) -> logger.error("Failed POST call attempt to GCS API. Attempt #" + context.getExecutions(), error))
+            .onFailure((ignored, error, context) -> logger.error("Failed POST call to GCS API after " +  context.getExecutions() + " attempts.", error))
+            .get(() -> {
+                final HttpURLConnection connection = setupUrlConnection(POST, url, true, additionalHeaders);
 
-        return parseResponse(resultType, connection);
+                final OutputStream os = connection.getOutputStream();
+                writer.write(os);
+                os.flush();
+                os.close();
+
+                return parseResponse(resultType, connection);
+            });
     }
 
     private interface BodyWriter {
@@ -341,20 +367,26 @@ public class GoogleCloudStorageFileManager implements FileManager {
     }
 
     private static <T> T googleGet(final URL url, final Class<T> resultType) throws IOException {
-        return parseResponse(resultType, setupUrlConnection(GET, url, false, Collections.emptyMap()));
+        return Failsafe
+            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+            .get(() -> parseResponse(resultType, setupUrlConnection(GET, url, false, Collections.emptyMap())));
     }
 
     private static void googleDelete(final URL url) throws IOException {
-        final HttpURLConnection connection = setupUrlConnection(DELETE, url, false, Collections.emptyMap());
+        Failsafe
+            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+            .run(() -> {
+                final HttpURLConnection connection = setupUrlConnection(DELETE, url, false, Collections.emptyMap());
 
-        throwIOExceptionOnErrorResponse(connection);
+                throwIOExceptionOnErrorResponse(connection);
 
-        final InputStream stream = connection.getInputStream();
-        /*
-         * As per the docs, Google sends a empty response with a 200. We need to get and
-         * drain the stream for the HTTP client to consider the connection for reuse.
-         */
-        ByteStreams.exhaust(stream);
+                /*
+                 * As per the docs, Google sends a empty response with a 200. We
+                 * need to get and drain the stream for the HTTP client to
+                 * consider the connection for reuse.
+                 */
+                ByteStreams.exhaust(connection.getInputStream());
+            });
     }
 
     private static <T> T parseResponse(final Class<T> resultType, final HttpURLConnection connection) throws IOException, JsonParseException, JsonMappingException {
@@ -376,8 +408,14 @@ public class GoogleCloudStorageFileManager implements FileManager {
             // and sometimes text/plain (e.g. "Not found.")
             final String response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
             stream.close();
-            logger.error("Received unexpected response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
-            throw new IOException("Received unexpected response from Google Cloud Storage.");
+
+            if (responseCode == 429 || responseCode - 500 >= 0) {
+                logger.error("Received retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                throw new RetriableIOException("Received error response from Google Cloud Storage.");
+            } else {
+                logger.error("Received non-retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                throw new IOException("Received error response from Google Cloud Storage.");
+            }
         }
     }
 
@@ -398,6 +436,12 @@ public class GoogleCloudStorageFileManager implements FileManager {
         connection.setRequestMethod(method);
         connection.setDoInput(true);
         connection.setDoOutput(write);
+
+        try {
+            connection.connect();
+        } catch(final IOException ioe) {
+            throw new RetriableIOException(ioe);
+        }
 
         return connection;
     }
