@@ -5,14 +5,14 @@ Divolte Collector
 
 Divolte Collector is a scalable and performant server for collecting clickstream data in HDFS and on Kafka topics. It uses a JavaScript tag on the client side to gather user interaction data, similar to many other web tracking solutions. Divolte Collector can be used as the foundation to build anything from basic web analytics dashboarding to real-time recommender engines or banner optimization systems.
 
-[http://divolte.io](http://divolte.io)
+[https://divolte.io](https://divolte.io)
 
-![Divolte Collector](http://divolte-website.s3-website-eu-west-1.amazonaws.com/images/architecture.png)
+![Divolte Collector](https://divolte.io/images/architecture.png)
 
 Online documentation and downloads
 ----------------------------------
 
-You can find the latest downloads and documentation on our [project website](http://divolte.io). There is a series of examples for working with collected data in Spark, Hive / Impala, and Kafka in this repository: [https://github.com/divolte/divolte-examples](https://github.com/divolte/divolte-examples).
+You can find the latest downloads and documentation on our [project website](https://divolte.io). There is a series of examples for working with collected data in Spark, Hive / Impala, and Kafka in this repository: [https://github.com/divolte/divolte-examples](https://github.com/divolte/divolte-examples).
 
 Features
 --------
