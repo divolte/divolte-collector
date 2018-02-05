@@ -110,6 +110,8 @@ dependencies {
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'
     }
+    compile group: 'net.jodah', name: 'failsafe', version: '1.0.5'
+
     // Compatibility:
     //   - Horton and Cloudera are both on 0.10+ at the time of writing.
     //   - The client from 0.10.2.0 onwards supports brokers from 0.10.0.0 onwards.

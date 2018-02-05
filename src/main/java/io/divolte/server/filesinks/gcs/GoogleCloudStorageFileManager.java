@@ -29,17 +29,9 @@ import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.generic.GenericRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
@@ -48,7 +40,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
-
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.config.GoogleCloudStorageSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
@@ -57,6 +48,14 @@ import io.divolte.server.filesinks.gcs.entities.ComposeRequest;
 import io.divolte.server.filesinks.gcs.entities.ComposeRequest.SourceObject;
 import io.divolte.server.filesinks.gcs.entities.GcsObjectResponse;
 import io.divolte.server.filesinks.gcs.entities.GetBucketResponse;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GoogleCloudStorageFileManager implements FileManager {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudStorageFileManager.class);
@@ -96,6 +95,12 @@ public class GoogleCloudStorageFileManager implements FileManager {
     private final String bucketEncoded;
     private final String inflightDir;
     private final String publishDir;
+
+    private static final RetryPolicy RETRY_RETRIABLE_EXCEPTION_POLICY = new RetryPolicy()
+        .withBackoff(1L, 256L, TimeUnit.SECONDS)
+        .withJitter(.25)
+        .withMaxRetries(5)
+        .retryOn(IOException.class);
 
     public GoogleCloudStorageFileManager(final int recordBufferSize, final Schema schema, final String bucket, final String inflightDir, final String publishDir) {
         try {
@@ -153,9 +158,6 @@ public class GoogleCloudStorageFileManager implements FileManager {
 
             final URL remoteFileUrl = uploadUrlFor(bucketEncoded, inflightNameEncoded);
 
-            final HttpURLConnection connection = setupUrlConnection(POST, remoteFileUrl, true, AVRO_CONTENT_TYPE_HEADER);
-            final OutputStream os = connection.getOutputStream();
-
             /*
              * We create a single Avro writer, but write parts of the Avro stream to
              * multiple files, which are composed into a single file after flushing files.
@@ -169,24 +171,36 @@ public class GoogleCloudStorageFileManager implements FileManager {
              * a lambda.
              */
             avroTargetStream = new DynamicDelegatingOutputStream();
-            avroTargetStream.attachDelegate(os);
-            try {
-                writer = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, avroTargetStream);
-                writer.flush();
-            } finally {
-                avroTargetStream.detachDelegate();
-            }
-            os.close();
 
+            writer = Failsafe
+                .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+                .onRetry((ignored, error, context) -> logger.error("Retrying POST call (" + remoteFileUrl + ") attempt to GCS API. Attempt #" + context.getExecutions(), error))
+                .onFailure((ignored, error, context) -> logger.error("Failed POST call (" + remoteFileUrl + ") to GCS API after #" +  context.getExecutions() + " attempts.", error))
+                .get(() -> {
+                    final HttpURLConnection connection = setupUrlConnection(POST, remoteFileUrl, true, AVRO_CONTENT_TYPE_HEADER);
+                    final OutputStream os = connection.getOutputStream();
 
-            final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
-            logger.debug("Google Cloud Storage upload response {}", response);
+                    avroTargetStream.attachDelegate(os);
+                    final DataFileWriter<GenericRecord> localWriter;
+                    try {
+                        localWriter = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, avroTargetStream);
+                        localWriter.flush();
+                    } finally {
+                        avroTargetStream.detachDelegate();
+                    }
+                    os.close();
+
+                    final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
+                    logger.debug("Google Cloud Storage upload response {}", response);
+
+                    return localWriter;
+                });
 
             partWritten = false;
         }
 
         @Override
-        public void append(final AvroRecordBuffer record) throws IOException {
+        public void append(final AvroRecordBuffer record) {
             /*
              * Hang on to buffer; write later on sync. We don't guard against overflow, as
              * the buffer is allocated to the max configured number of inflight records
@@ -221,26 +235,36 @@ public class GoogleCloudStorageFileManager implements FileManager {
             googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded));
         }
 
-        private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws MalformedURLException, IOException {
+        private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws IOException {
             final ImmutableList<SourceObject> sourcesToCompose;
 
             if (position > 0) {
                 final URL partUploadUrl = uploadUrlFor(bucketEncoded, inflightPartialNameEncoded);
-                final GcsObjectResponse uploadResponse = googlePost(partUploadUrl, GcsObjectResponse.class, AVRO_CONTENT_TYPE_HEADER, os -> {
-                    avroTargetStream.attachDelegate(os);
-                    try {
-                        for (int c = 0; c < position; c++) {
-                            // Write Avro record buffer to file
-                            writer.appendEncoded(buffer[c].getByteBuffer());
 
-                            // Clear (our) reference to flushed buffer
-                            buffer[c] = null;
+                final GcsObjectResponse uploadResponse = googlePost(
+                    partUploadUrl,
+                    GcsObjectResponse.class,
+                    AVRO_CONTENT_TYPE_HEADER,
+                    os -> {
+                        avroTargetStream.attachDelegate(os);
+                        try {
+                            for (int c = 0; c < position; c++) {
+                                // Write Avro record buffer to file
+                                writer.appendEncoded(buffer[c].getByteBuffer());
+                            }
+                            writer.flush();
+                        } finally {
+                            avroTargetStream.detachDelegate();
                         }
-                        writer.flush();
-                    } finally {
-                        avroTargetStream.detachDelegate();
                     }
-                });
+                );
+
+                // Since it has been written, clear the buffer
+                for (int c = 0; c < position; c++) {
+                    // Clear (our) reference to flushed buffer
+                    buffer[c] = null;
+                }
+
                 partWritten = true;
                 position = 0;
 
@@ -261,9 +285,10 @@ public class GoogleCloudStorageFileManager implements FileManager {
                     sourcesToCompose);
 
             final URL composeUrl = composeUrlFor(bucketEncoded, composeDestinationObjectEncoded);
-            final GcsObjectResponse composeResponse =
-                googlePost(composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER,
-                           os -> MAPPER.writeValue(os, composeRequest));
+
+            final GcsObjectResponse composeResponse = googlePost(
+                composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER,
+                os -> MAPPER.writeValue(os, composeRequest));
 
             logger.debug("Google Cloud Storage compose response {}", composeResponse);
         }
@@ -325,45 +350,72 @@ public class GoogleCloudStorageFileManager implements FileManager {
                          .createScoped(Collections.singletonList(GoogleCloudStorageFileManager.GCS_OAUTH_SCOPE));
     }
 
-    private static <T> T googlePost(final URL url, final Class<T> resultType, final Map<String,String> additionalHeaders, final BodyWriter writer) throws IOException {
-        final HttpURLConnection connection = setupUrlConnection(POST, url, true, additionalHeaders);
-
-        final OutputStream os = connection.getOutputStream();
-        writer.write(os);
-        os.flush();
-        os.close();
-
-        return parseResponse(resultType, connection);
-    }
-
     private interface BodyWriter {
         void write(final OutputStream stream) throws IOException;
     }
 
-    private static <T> T googleGet(final URL url, final Class<T> resultType) throws IOException {
-        return parseResponse(resultType, setupUrlConnection(GET, url, false, Collections.emptyMap()));
-    }
-
-    private static void googleDelete(final URL url) throws IOException {
-        final HttpURLConnection connection = setupUrlConnection(DELETE, url, false, Collections.emptyMap());
-
-        throwIOExceptionOnErrorResponse(connection);
-
-        final InputStream stream = connection.getInputStream();
-        /*
-         * As per the docs, Google sends a empty response with a 200. We need to get and
-         * drain the stream for the HTTP client to consider the connection for reuse.
-         */
-        ByteStreams.exhaust(stream);
-    }
-
-    private static <T> T parseResponse(final Class<T> resultType, final HttpURLConnection connection) throws IOException, JsonParseException, JsonMappingException {
+    private static <T> T parseResponse(final Class<T> resultType, final HttpURLConnection connection) throws IOException {
         throwIOExceptionOnErrorResponse(connection);
 
         final InputStream stream = connection.getInputStream();
         final T response = MAPPER.readValue(stream, resultType);
         stream.close();
         return response;
+    }
+
+    private static <T> T googlePost(final URL url, final Class<T> resultType, final Map<String,String> additionalHeaders, final BodyWriter writer) {
+        return Failsafe
+            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+            .onRetry((ignored, error, context) -> logger.error("Retrying POST call (" + url + ") attempt to GCS API. Attempt #" + context.getExecutions(), error))
+            .onFailure((ignored, error, context) -> logger.error("Failed POST call (" + url + ") to GCS API after #" +  context.getExecutions() + " attempts.", error))
+            .get(() -> {
+                final HttpURLConnection connection = setupUrlConnection(POST, url, true, additionalHeaders);
+
+                final OutputStream os = connection.getOutputStream();
+                writer.write(os);
+                os.flush();
+                os.close();
+
+                return parseResponse(resultType, connection);
+            });
+    }
+
+    private static <T> T googleGet(final URL url, final Class<T> resultType) {
+        return Failsafe
+            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+            .onRetry((ignored, error, context) -> logger.error("Retrying GET call (" + url + ") attempt to GCS API. Attempt #" + context.getExecutions(), error))
+            .onFailure((ignored, error, context) -> logger.error("Failed GET call (" + url + ") to GCS API after #" +  context.getExecutions() + " attempts.", error))
+            .get(() -> parseResponse(resultType, setupUrlConnection(GET, url, false, Collections.emptyMap())));
+    }
+
+    private static void googleDelete(final URL url) {
+        Failsafe
+            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+            .onRetry((ignored, error, context) -> logger.error(
+                "Retrying DELETE call (" + url + ") attempt to GCS API. Attempt #" + context.getExecutions(),
+                error
+            ))
+            .onFailure((ignored, error, context) -> logger.error(
+                "Failed DELETE call (" + url + ") to GCS API after #" + context.getExecutions() + " attempts.",
+                error
+            ))
+            .run(() -> {
+                final HttpURLConnection connection = setupUrlConnection(
+                    DELETE,
+                    url,
+                    false,
+                    Collections.emptyMap()
+                );
+
+                throwIOExceptionOnErrorResponse(connection);
+
+                /*
+                 * As per the docs, Google sends a empty response with a 200. We
+                 * need to get and drain the stream for the HTTP client to
+                 * consider the connection for reuse.
+                 */
+                ByteStreams.exhaust(connection.getInputStream());
+            });
     }
 
     private static void throwIOExceptionOnErrorResponse(final HttpURLConnection connection) throws IOException {
@@ -377,7 +429,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
             final String response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
             stream.close();
             logger.error("Received unexpected response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
-            throw new IOException("Received unexpected response from Google Cloud Storage.");
+            throw new IOException("Received unexpected response (" + responseCode + ") from Google Cloud Storage.");
         }
     }
 
