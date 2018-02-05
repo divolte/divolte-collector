@@ -29,7 +29,9 @@ import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
+import com.jcabi.aspects.RetryOnFailure;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -325,6 +327,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
                          .createScoped(Collections.singletonList(GoogleCloudStorageFileManager.GCS_OAUTH_SCOPE));
     }
 
+    @RetryOnFailure(attempts = 3, delay = 2, unit = TimeUnit.SECONDS)
     private static <T> T googlePost(final URL url, final Class<T> resultType, final Map<String,String> additionalHeaders, final BodyWriter writer) throws IOException {
         final HttpURLConnection connection = setupUrlConnection(POST, url, true, additionalHeaders);
 
@@ -340,10 +343,12 @@ public class GoogleCloudStorageFileManager implements FileManager {
         void write(final OutputStream stream) throws IOException;
     }
 
+    @RetryOnFailure(attempts = 3, delay = 2, unit = TimeUnit.SECONDS)
     private static <T> T googleGet(final URL url, final Class<T> resultType) throws IOException {
         return parseResponse(resultType, setupUrlConnection(GET, url, false, Collections.emptyMap()));
     }
 
+    @RetryOnFailure(attempts = 3, delay = 2, unit = TimeUnit.SECONDS)
     private static void googleDelete(final URL url) throws IOException {
         final HttpURLConnection connection = setupUrlConnection(DELETE, url, false, Collections.emptyMap());
 
