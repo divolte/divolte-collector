@@ -42,7 +42,7 @@ import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public final class Server implements Runnable {
-    private static final long HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS = 120000L;
+    private static final long HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS = 120L * 1000L;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
     private final GracefulShutdownHandler shutdownHandler;
@@ -153,6 +153,7 @@ public final class Server implements Runnable {
 
     @Override
     public void run() {
+        // When a SIGTERM is received, initialize a graceful shutdown procedure
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
         logger.info("Starting server on {}:{}", host.orElse("localhost"), port);
@@ -160,6 +161,9 @@ public final class Server implements Runnable {
     }
 
     public void shutdown() {
+
+        logger.warn("Requested to kill process, init graceful shutdown");
+
         try {
             logger.info("Stopping HTTP server.");
             shutdownHandler.shutdown();
@@ -170,8 +174,11 @@ public final class Server implements Runnable {
         }
 
         logger.info("Stopping thread pools.");
+
         // Stop the mappings before the sinks to ensure work in progress doesn't get stranded.
         incomingRequestProcessingPool.stop();
+
+        logger.info("Closing the sinks filesystem connection.");
         sinks.values().forEach(ProcessingPool::stop);
 
         logger.info("Closing HDFS filesystem connection.");
