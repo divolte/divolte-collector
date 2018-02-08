@@ -32,18 +32,21 @@ public final class ServerConfiguration {
     public final boolean useXForwardedFor;
     public final boolean serveStaticResources;
     public final boolean debugRequests;
+    public final int shutdownGracePeriodMills;
 
     @JsonCreator
     ServerConfiguration(final Optional<String> host,
                         final int port,
                         @JsonProperty("use_x_forwarded_for") final boolean useXForwardedFor,
                         final boolean serveStaticResources,
-                        final boolean debugRequests) {
+                        final boolean debugRequests,
+                        final int shutdownGracePeriodMills) {
         this.host = Objects.requireNonNull(host);
         this.port = port;
         this.useXForwardedFor = useXForwardedFor;
         this.serveStaticResources = serveStaticResources;
         this.debugRequests = debugRequests;
+        this.shutdownGracePeriodMills = shutdownGracePeriodMills;
     }
 
     @Override
@@ -54,6 +57,7 @@ public final class ServerConfiguration {
                 .add("useXForwardedFor", useXForwardedFor)
                 .add("serverStaticResources", serveStaticResources)
                 .add("debugRequests", debugRequests)
+                .add("shutdownGracePeriodMills", shutdownGracePeriodMills)
                 .toString();
     }
 }
