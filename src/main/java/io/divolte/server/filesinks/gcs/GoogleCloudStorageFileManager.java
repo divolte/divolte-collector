@@ -27,7 +27,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +40,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.IOExceptions;
 import io.divolte.server.config.GoogleCloudStorageSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileManager;
@@ -83,10 +83,10 @@ public class GoogleCloudStorageFileManager implements FileManager {
     private static final String DELETE = "DELETE";
 
     private static final String JSON_CONTENT_TYPE = "application/json";
-    private static final Map<String,String> JSON_CONTENT_TYPE_HEADER = ImmutableMap.of("Content-Type", JSON_CONTENT_TYPE);
+    private static final ImmutableMap<String,String> JSON_CONTENT_TYPE_HEADER = ImmutableMap.of("Content-Type", JSON_CONTENT_TYPE);
 
     private static final String AVRO_CONTENT_TYPE = "application/octet-stream";
-    private static final Map<String,String> AVRO_CONTENT_TYPE_HEADER = ImmutableMap.of("Content-Type", AVRO_CONTENT_TYPE);
+    private static final ImmutableMap<String,String> AVRO_CONTENT_TYPE_HEADER = ImmutableMap.of("Content-Type", AVRO_CONTENT_TYPE);
 
     private static final String PART_CLASSIFIER = ".part";
 
@@ -172,30 +172,21 @@ public class GoogleCloudStorageFileManager implements FileManager {
              */
             avroTargetStream = new DynamicDelegatingOutputStream();
 
-            writer = Failsafe
-                .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
-                .onRetry((ignored, error, context) -> logger.error("Retrying POST call (" + remoteFileUrl + ") attempt to GCS API. Attempt #" + context.getExecutions(), error))
-                .onFailure((ignored, error, context) -> logger.error("Failed POST call (" + remoteFileUrl + ") to GCS API after #" +  context.getExecutions() + " attempts.", error))
-                .get(() -> {
-                    final HttpURLConnection connection = setupUrlConnection(POST, remoteFileUrl, true, AVRO_CONTENT_TYPE_HEADER);
-                    final OutputStream os = connection.getOutputStream();
-
+            writer = withRetry(POST, remoteFileUrl, true, AVRO_CONTENT_TYPE_HEADER, connection -> {
+                final DataFileWriter<GenericRecord> localWriter;
+                try (final OutputStream os = connection.getOutputStream()) {
                     avroTargetStream.attachDelegate(os);
-                    final DataFileWriter<GenericRecord> localWriter;
                     try {
                         localWriter = new DataFileWriter<GenericRecord>(new GenericDatumWriter<>(schema)).create(schema, avroTargetStream);
                         localWriter.flush();
                     } finally {
                         avroTargetStream.detachDelegate();
                     }
-                    os.close();
-
-                    final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
-                    logger.debug("Google Cloud Storage upload response {}", response);
-
-                    return localWriter;
-                });
-
+                }
+                final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
+                logger.debug("Google Cloud Storage upload response: {}", response);
+                return localWriter;
+            });
             partWritten = false;
         }
 
@@ -363,59 +354,31 @@ public class GoogleCloudStorageFileManager implements FileManager {
         return response;
     }
 
-    private static <T> T googlePost(final URL url, final Class<T> resultType, final Map<String,String> additionalHeaders, final BodyWriter writer) {
-        return Failsafe
-            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
-            .onRetry((ignored, error, context) -> logger.error("Retrying POST call (" + url + ") attempt to GCS API. Attempt #" + context.getExecutions(), error))
-            .onFailure((ignored, error, context) -> logger.error("Failed POST call (" + url + ") to GCS API after #" +  context.getExecutions() + " attempts.", error))
-            .get(() -> {
-                final HttpURLConnection connection = setupUrlConnection(POST, url, true, additionalHeaders);
-
-                final OutputStream os = connection.getOutputStream();
+    private static <T> T googlePost(final URL url, final Class<T> resultType, final ImmutableMap<String,String> additionalHeaders, final BodyWriter writer) {
+        return withRetry(POST, url, true, additionalHeaders, connection -> {
+            try (final OutputStream os = connection.getOutputStream()) {
                 writer.write(os);
                 os.flush();
-                os.close();
-
-                return parseResponse(resultType, connection);
-            });
+            }
+            return parseResponse(resultType, connection);
+        });
     }
 
     private static <T> T googleGet(final URL url, final Class<T> resultType) {
-        return Failsafe
-            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
-            .onRetry((ignored, error, context) -> logger.error("Retrying GET call (" + url + ") attempt to GCS API. Attempt #" + context.getExecutions(), error))
-            .onFailure((ignored, error, context) -> logger.error("Failed GET call (" + url + ") to GCS API after #" +  context.getExecutions() + " attempts.", error))
-            .get(() -> parseResponse(resultType, setupUrlConnection(GET, url, false, Collections.emptyMap())));
+        return withRetry(GET, url, false, ImmutableMap.of(), connection -> parseResponse(resultType, connection));
     }
 
     private static void googleDelete(final URL url) {
-        Failsafe
-            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
-            .onRetry((ignored, error, context) -> logger.error(
-                "Retrying DELETE call (" + url + ") attempt to GCS API. Attempt #" + context.getExecutions(),
-                error
-            ))
-            .onFailure((ignored, error, context) -> logger.error(
-                "Failed DELETE call (" + url + ") to GCS API after #" + context.getExecutions() + " attempts.",
-                error
-            ))
-            .run(() -> {
-                final HttpURLConnection connection = setupUrlConnection(
-                    DELETE,
-                    url,
-                    false,
-                    Collections.emptyMap()
-                );
-
-                throwIOExceptionOnErrorResponse(connection);
-
-                /*
-                 * As per the docs, Google sends a empty response with a 200. We
-                 * need to get and drain the stream for the HTTP client to
-                 * consider the connection for reuse.
-                 */
-                ByteStreams.exhaust(connection.getInputStream());
-            });
+        withRetry(DELETE, url, false, ImmutableMap.of(), connection -> {
+            throwIOExceptionOnErrorResponse(connection);
+            /*
+             * As per the docs, Google sends a empty response with a 200. We
+             * need to get and drain the stream for the HTTP client to
+             * consider the connection for reuse.
+             */
+            ByteStreams.exhaust(connection.getInputStream());
+            return null;
+        });
     }
 
     private static void throwIOExceptionOnErrorResponse(final HttpURLConnection connection) throws IOException {
@@ -433,7 +396,19 @@ public class GoogleCloudStorageFileManager implements FileManager {
         }
     }
 
-    private static HttpURLConnection setupUrlConnection(final String method, final URL url, final boolean write, final Map<String,String> additionalHeaders) throws IOException {
+    private static <T> T withRetry(final String method,
+                                   final URL url,
+                                   final boolean write,
+                                   final ImmutableMap<String, String> additionalHeaders,
+                                   final IOExceptions.IOFunction<HttpURLConnection, T> consumer) {
+        return Failsafe
+            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
+            .onRetry((ignored, error, context) -> logger.error("Will retry after attempt #{}/{} of call to GCS API failed: {} {}", context.getExecutions(), RETRY_RETRIABLE_EXCEPTION_POLICY.getMaxRetries(), method, url, error))
+            .onFailure((ignored, error, context) -> logger.error("Failed GCS API call after {} attempts: {} {}", context.getExecutions(), method, url, error))
+            .get(() -> consumer.apply(setupUrlConnection(method, url, write, additionalHeaders)));
+    }
+
+    private static HttpURLConnection setupUrlConnection(final String method, final URL url, final boolean write, final ImmutableMap<String,String> additionalHeaders) throws IOException {
         final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setAllowUserInteraction(false);
 
