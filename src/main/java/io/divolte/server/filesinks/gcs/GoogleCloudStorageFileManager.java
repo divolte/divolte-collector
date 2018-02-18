@@ -347,11 +347,9 @@ public class GoogleCloudStorageFileManager implements FileManager {
 
     private static <T> T parseResponse(final Class<T> resultType, final HttpURLConnection connection) throws IOException {
         throwIOExceptionOnErrorResponse(connection);
-
-        final InputStream stream = connection.getInputStream();
-        final T response = MAPPER.readValue(stream, resultType);
-        stream.close();
-        return response;
+        try (InputStream stream = connection.getInputStream()) {
+            return MAPPER.readValue(stream, resultType);
+        }
     }
 
     private static <T> T googlePost(final URL url, final Class<T> resultType, final ImmutableMap<String,String> additionalHeaders, final BodyWriter writer) {
@@ -386,11 +384,12 @@ public class GoogleCloudStorageFileManager implements FileManager {
         // Note: the docs are specific about closing the streams after reading in order
         // to trigger proper Keep-Alive usage
         if (responseCode < 200 || responseCode > 299) {
-            final InputStream stream = connection.getErrorStream();
-            // Read the error response as String; GCS sometimes sends a JSON error response
-            // and sometimes text/plain (e.g. "Not found.")
-            final String response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
-            stream.close();
+            final String response;
+            try (InputStream stream = connection.getErrorStream()) {
+                // Read the error response as String; GCS sometimes sends a JSON error response
+                // and sometimes text/plain (e.g. "Not found.")
+                response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
+            }
             logger.error("Received unexpected response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
             throw new IOException("Received unexpected response (" + responseCode + ") from Google Cloud Storage.");
         }
