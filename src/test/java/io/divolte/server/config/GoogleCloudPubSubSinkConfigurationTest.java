@@ -44,7 +44,7 @@ public class GoogleCloudPubSubSinkConfigurationTest {
     @Test
     public void testRetryMaxRpcTimeoutDefaultsToInitialRpcTimeout() {
         final RetrySettings retrySettings =
-            new GoogleRetryConfiguration(null, null, null, null, null, java.time.Duration.ofNanos(138263), null, null).createRetrySettings();
+            new GooglePubSubRetryConfiguration(null, null, null, null, null, java.time.Duration.ofNanos(138263), null, null).createRetrySettings();
         assertEquals(retrySettings.getInitialRpcTimeout(), retrySettings.getMaxRpcTimeout());
     }
 }

@@ -1400,6 +1400,81 @@ Google Cloud Storage Sink Property: ``bucket``
       bucket = my_organisation_web_data
     }
 
+Google Cloud Storage Sink Property: ``http_retry_exponential_backoff``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The Google Cloud Storage exponential backoff. When performing a HTTP request to the GCS environment, it is possible that the request will fail for an arbitrary reason, for example, network partition, service outage, etc. Therefore we would like to retry these requests to make sure no data will be lost. This property sets the initial delay for the http retry.
+:Default:
+  1 second
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      http_retry_exponential_backoff = 2 seconds
+    }
+
+Google Cloud Storage Sink Property: ``http_retry_exponential_backoff_max``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The maximum delay of retrying in seconds. After this period the request will not be retried and considered unrecoverable.
+:Default:
+  256 seconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      http_retry_exponential_backoff = 60 seconds
+    }
+
+Google Cloud Storage Sink Property: ``http_retry_exponential_backoff_delay_factor``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The delay factor to increase the timeout for the next retry. The default (2) will be a quadratic timeout.
+:Default:
+  2.0
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      http_retry_exponential_backoff_delay_factor = 2.2
+    }
+
+Google Cloud Storage Sink Property: ``http_retry_max_retries``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The absolute maximum retries. If set to -1 it will retry forever, or until another stopping criteria has met.
+:Default:
+  -1
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      http_retry_max_retries = 10
+    }
+
+Google Cloud Storage Sink Property: ``http_retry_jitter``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The retry jitter will randomly vary retry delays. For each retry delay, a random portion of the delay multiplied by the jitterFactor will be added or subtracted to the delay. Needs to be 0 <= jitter < 1.
+:Default:
+  0.25
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      http_retry_jitter = 0.5
+    }
+
 Topic Based Sinks
 ^^^^^^^^^^^^^^^^^
 
