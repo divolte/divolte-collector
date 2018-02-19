@@ -35,6 +35,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.IOExceptions;
+import io.divolte.server.RetriableIOException;
 import io.divolte.server.config.GoogleCloudStorageSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileManager;
@@ -50,6 +51,8 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.net.HttpURLConnection.*;
 
 public class GoogleCloudStorageFileManager implements FileManager {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudStorageFileManager.class);
@@ -106,7 +109,8 @@ public class GoogleCloudStorageFileManager implements FileManager {
             this.bucketEncoded = URLEncoder.encode(bucket, URL_ENCODING);
             this.inflightDir = Objects.requireNonNull(inflightDir);
             this.publishDir = Objects.requireNonNull(publishDir);
-            this.retryPolicy = Objects.requireNonNull(retryPolicy);
+            this.retryPolicy = Objects.requireNonNull(retryPolicy)
+                                      .retryOn(RetriableIOException.class);
         } catch (final UnsupportedEncodingException e) {
             // Should not happen. URL encoding the bucket and dirs is verified during
             // configuration verification.
@@ -399,8 +403,17 @@ public class GoogleCloudStorageFileManager implements FileManager {
             // and sometimes text/plain (e.g. "Not found.")
             final String response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
             stream.close();
-            logger.error("Received unexpected response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
-            throw new IOException("Received unexpected response (" + responseCode + ") from Google Cloud Storage.");
+
+            if (responseCode == HTTP_INTERNAL_ERROR ||
+                responseCode == HTTP_BAD_GATEWAY ||
+                responseCode == HTTP_UNAVAILABLE ||
+                responseCode == HTTP_GATEWAY_TIMEOUT) {
+                logger.error("Received retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                throw new RetriableIOException("Received error response from Google Cloud Storage.");
+            } else {
+                logger.error("Received non-retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                throw new IOException("Received error response from Google Cloud Storage.");
+            }
         }
     }
 
