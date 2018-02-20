@@ -1460,19 +1460,19 @@ Google Cloud Storage Sink Property: ``http_retry_max_retries``
       http_retry_max_retries = 10
     }
 
-Google Cloud Storage Sink Property: ``http_retry_jitter``
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Google Cloud Storage Sink Property: ``http_retry_jitter_milliseconds``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The retry jitter will randomly vary retry delays. For each retry delay, a random portion of the delay multiplied by the jitterFactor will be added or subtracted to the delay. Needs to be 0 <= jitter < 1.
+  Sets the jitter to randomly vary retry delays by. For each retry delay, a random portion of the jitter will be added or subtracted to the delay. For example: a jitter of 100 milliseconds will randomly add between -100 and 100 milliseconds to each retry delay.
 :Default:
-  0.25
+  100
 :Example:
 
   .. code-block:: none
 
     divolte.sinks.a_sink {
       type = gcs
-      http_retry_jitter = 0.5
+      http_retry_jitter_milliseconds = 100
     }
 
 Topic Based Sinks

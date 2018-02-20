@@ -41,19 +41,19 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
      *  - HttpRetryExponentialBackoffMax = 256s
      *  - HttpRetryExponentialBackoffDelayFactor = 2.0
      *  - HttpRetryMaxRetries = 5
-     *  - HttpRetryJitter = 0.25
+     *  - HttpRetryJitterMilliseconds = 100
      */
     private static final Duration HTTP_RETRY_EXPONENTIAL_BACKOFF = Duration.ofSeconds(1);
     private static final Duration HTTP_RETRY_EXPONENTIAL_BACKOFF_MAX = Duration.ofSeconds(256);
     private static final double HTTP_RETRY_EXPONENTIAL_BACKOFF_DELAY_FACTOR = 2.0;
     private static final int HTTP_RETRY_BACKOFF_MAX_RETRIES = -1;
-    private static final double HTTP_RETRY_JITTER_FACTOR = 0.25;
+    private static final int HTTP_RETRY_JITTER_MILLISECONDS = 100;
 
     private final Duration httpRetryExponentialBackoff;
     private final Duration httpRetryExponentialBackoffMax;
     private final double httpRetryExponentialBackoffDelayFactor;
     private final int httpRetryMaxRetries;
-    private final double httpRetryJitter;
+    private final int httpRetryJitterMilliseconds;
 
     @JsonCreator
     GoogleCloudStorageSinkConfiguration(final FileStrategyConfiguration fileStrategy,
@@ -62,7 +62,7 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
                                         final Duration httpRetryExponentialBackoffMax,
                                         final Double httpRetryExponentialBackoffDelayFactor,
                                         final Integer httpRetryMaxRetries,
-                                        final Double httpRetryJitter) {
+                                        final Integer httpRetryJitterMilliseconds) {
         super(fileStrategy);
         this.bucket = Objects.requireNonNull(bucket);
 
@@ -70,7 +70,7 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
         this.httpRetryExponentialBackoffMax =  Optional.ofNullable(httpRetryExponentialBackoffMax).orElse(HTTP_RETRY_EXPONENTIAL_BACKOFF_MAX);
         this.httpRetryExponentialBackoffDelayFactor =  Optional.ofNullable(httpRetryExponentialBackoffDelayFactor).orElse(HTTP_RETRY_EXPONENTIAL_BACKOFF_DELAY_FACTOR);
         this.httpRetryMaxRetries =  Optional.ofNullable(httpRetryMaxRetries).orElse(HTTP_RETRY_BACKOFF_MAX_RETRIES);
-        this.httpRetryJitter =  Optional.ofNullable(httpRetryJitter).orElse(HTTP_RETRY_JITTER_FACTOR);
+        this.httpRetryJitterMilliseconds =  Optional.ofNullable(httpRetryJitterMilliseconds).orElse(HTTP_RETRY_JITTER_MILLISECONDS);
     }
 
     public RetryPolicy createRetryPolicy() {
@@ -82,7 +82,7 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
                 this.httpRetryExponentialBackoffDelayFactor
             )
             .withMaxRetries(this.httpRetryMaxRetries)
-            .withJitter(this.httpRetryJitter);
+            .withJitter(this.httpRetryJitterMilliseconds, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -93,7 +93,7 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
             .add("httpRetryExponentialBackoffMax", httpRetryExponentialBackoffMax)
             .add("httpRetryExponentialBackoffDelayFactor", httpRetryExponentialBackoffDelayFactor)
             .add("httpRetryMaxRetries", httpRetryMaxRetries)
-            .add("httpRetryJitter", httpRetryJitter);
+            .add("httpRetryJitterMilliseconds", httpRetryJitterMilliseconds);
     }
 
     @Override

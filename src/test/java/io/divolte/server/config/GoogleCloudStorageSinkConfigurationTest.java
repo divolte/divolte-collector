@@ -44,7 +44,7 @@ public class GoogleCloudStorageSinkConfigurationTest {
 
         assertNotNull(policy);
 
-        assertEquals(0.22, policy.getJitterFactor(), DEFAULT_DELTA);
+        assertEquals(1925, policy.getJitter().toMillis(), DEFAULT_DELTA);
         assertEquals(8, policy.getMaxRetries());
         assertEquals(2.2, policy.getDelayFactor(), DEFAULT_DELTA);
         assertEquals(new Duration(19, TimeUnit.SECONDS), policy.getDelay());
