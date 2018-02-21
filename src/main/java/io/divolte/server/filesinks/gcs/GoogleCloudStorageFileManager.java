@@ -403,15 +403,16 @@ public class GoogleCloudStorageFileManager implements FileManager {
                 response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
             }
 
-            if (responseCode == HTTP_INTERNAL_ERROR ||
-                responseCode == HTTP_BAD_GATEWAY ||
-                responseCode == HTTP_UNAVAILABLE ||
-                responseCode == HTTP_GATEWAY_TIMEOUT) {
-                logger.error("Received retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
-                throw new RetriableIOException("Received error response from Google Cloud Storage.");
-            } else {
-                logger.error("Received non-retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
-                throw new IOException("Received error response from Google Cloud Storage.");
+            switch (responseCode) {
+                case HTTP_INTERNAL_ERROR:
+                case HTTP_BAD_GATEWAY:
+                case HTTP_UNAVAILABLE:
+                case HTTP_GATEWAY_TIMEOUT:
+                    logger.error("Received retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                    throw new RetriableIOException("Received error response from Google Cloud Storage.");
+                default:
+                    logger.error("Received non-retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                    throw new IOException("Received error response from Google Cloud Storage.");
             }
         }
     }
