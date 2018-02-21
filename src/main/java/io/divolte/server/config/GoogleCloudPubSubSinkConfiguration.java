@@ -155,7 +155,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
         }
         final ProjectName project = ProjectName.of(topic.getProject());
         if (Streams.stream(topicClient.listTopics(project).iterateAll())
-                   .map(Topic::getNameAsTopicName)
+                   .map(Topic::getName)
+                   .map(TopicName::parse)
                    .noneMatch(topic::equals)) {
             logger.info("Initializing Pub/Sub emulator topic: {}", topic);
             topicClient.createTopic(topic);
