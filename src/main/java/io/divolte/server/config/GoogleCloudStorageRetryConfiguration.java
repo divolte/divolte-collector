@@ -30,12 +30,13 @@ import java.util.concurrent.TimeUnit;
 @ParametersAreNonnullByDefault
 @EitherJitterDurationOrFactorButNotBoth
 public class GoogleCloudStorageRetryConfiguration extends RetryConfiguration {
+
     private static final int DEFAULT_MAX_ATTEMPTS = 0;
     private static final Duration DEFAULT_TOTAL_TIMEOUT = Duration.ofMinutes(10);
-    private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(5);
+    private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
     private static final double DEFAULT_RETRY_DELAY_MULTIPLIER = 2.0;
-    private static final Duration DEFAULT_MAX_RETRY_DELAY = Duration.ofMinutes(1);
-    private static final Optional<Double> DEFAULT_JITTER_FACTOR = Optional.of(0.25);
+    private static final Duration DEFAULT_MAX_RETRY_DELAY = Duration.ofSeconds(64);
+    private static final Optional<Duration> DEFAULT_JITTER_DURATION = Optional.of(Duration.ofMillis(1000));
 
     // Either of these may be set, but never both.
     public final Optional<Double> jitterFactor;
@@ -55,11 +56,11 @@ public class GoogleCloudStorageRetryConfiguration extends RetryConfiguration {
               Optional.ofNullable(initialRetryDelay).orElse(DEFAULT_INITIAL_RETRY_DELAY),
               Optional.ofNullable(retryDelayMultiplier).orElse(DEFAULT_RETRY_DELAY_MULTIPLIER),
               Optional.ofNullable(maxRetryDelay).orElse(DEFAULT_MAX_RETRY_DELAY));
-        this.jitterDelay = Optional.ofNullable(jitterDelay);
-        // The default jitter factor only applies if neither a duration nor a factor were specified.
-        this.jitterFactor = null != jitterFactor
-            ? Optional.of(jitterFactor)
-            : this.jitterDelay.isPresent() ? Optional.empty() : DEFAULT_JITTER_FACTOR;
+        this.jitterFactor = Optional.ofNullable(jitterFactor);
+        // The default jitter delay only applies if neither a duration nor a factor were specified.
+        this.jitterDelay = null != jitterDelay
+            ? Optional.of(jitterDelay)
+            : this.jitterFactor.isPresent() ? Optional.empty() : DEFAULT_JITTER_DURATION;
     }
 
     public RetryPolicy createRetryPolicy() {
