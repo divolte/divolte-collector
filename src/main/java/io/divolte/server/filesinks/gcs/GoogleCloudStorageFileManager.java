@@ -16,19 +16,13 @@
 
 package io.divolte.server.filesinks.gcs;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.UncheckedIOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +35,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.IOExceptions;
+import io.divolte.server.RetriableIOException;
 import io.divolte.server.config.GoogleCloudStorageSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileManager;
@@ -56,6 +51,8 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.net.HttpURLConnection.*;
 
 public class GoogleCloudStorageFileManager implements FileManager {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudStorageFileManager.class);
@@ -96,19 +93,24 @@ public class GoogleCloudStorageFileManager implements FileManager {
     private final String inflightDir;
     private final String publishDir;
 
-    private static final RetryPolicy RETRY_RETRIABLE_EXCEPTION_POLICY = new RetryPolicy()
-        .withBackoff(1L, 256L, TimeUnit.SECONDS)
-        .withJitter(.25)
-        .withMaxRetries(5)
-        .retryOn(IOException.class);
+    private final RetryPolicy retryPolicy;
 
-    public GoogleCloudStorageFileManager(final int recordBufferSize, final Schema schema, final String bucket, final String inflightDir, final String publishDir) {
+    public GoogleCloudStorageFileManager(
+        final int recordBufferSize,
+        final Schema schema,
+        final String bucket,
+        final String inflightDir,
+        final String publishDir,
+        RetryPolicy retryPolicy
+    ) {
         try {
             this.recordBufferSize = recordBufferSize;
             this.schema = Objects.requireNonNull(schema);
             this.bucketEncoded = URLEncoder.encode(bucket, URL_ENCODING);
             this.inflightDir = Objects.requireNonNull(inflightDir);
             this.publishDir = Objects.requireNonNull(publishDir);
+            this.retryPolicy = Objects.requireNonNull(retryPolicy)
+                                      .retryOn(RetriableIOException.class);
         } catch (final UnsupportedEncodingException e) {
             // Should not happen. URL encoding the bucket and dirs is verified during
             // configuration verification.
@@ -186,7 +188,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
                 final GcsObjectResponse response = parseResponse(GcsObjectResponse.class, connection);
                 logger.debug("Google Cloud Storage upload response: {}", response);
                 return localWriter;
-            });
+            }, retryPolicy);
             partWritten = false;
         }
 
@@ -211,19 +213,19 @@ public class GoogleCloudStorageFileManager implements FileManager {
             writeBufferAndComposeParts(publishNameEncoded);
 
             // delete inflight partial
-            googleDelete(deleteUrlFor(bucketEncoded, inflightPartialNameEncoded));
+            googleDelete(deleteUrlFor(bucketEncoded, inflightPartialNameEncoded), retryPolicy);
 
             // delete inflight composed
-            googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded));
+            googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded), retryPolicy);
         }
 
         @Override
         public void discard() throws IOException {
             // best effort to delete partial file
             if (partWritten) {
-                googleDelete(deleteUrlFor(bucketEncoded, inflightPartialNameEncoded));
+                googleDelete(deleteUrlFor(bucketEncoded, inflightPartialNameEncoded), retryPolicy);
             }
-            googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded));
+            googleDelete(deleteUrlFor(bucketEncoded, inflightNameEncoded), retryPolicy);
         }
 
         private void writeBufferAndComposeParts(final String composeDestinationObjectEncoded) throws IOException {
@@ -247,7 +249,8 @@ public class GoogleCloudStorageFileManager implements FileManager {
                         } finally {
                             avroTargetStream.detachDelegate();
                         }
-                    }
+                    },
+                    retryPolicy
                 );
 
                 // Since it has been written, clear the buffer
@@ -279,7 +282,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
 
             final GcsObjectResponse composeResponse = googlePost(
                 composeUrl, GcsObjectResponse.class, JSON_CONTENT_TYPE_HEADER,
-                os -> MAPPER.writeValue(os, composeRequest));
+                os -> MAPPER.writeValue(os, composeRequest), retryPolicy);
 
             logger.debug("Google Cloud Storage compose response {}", composeResponse);
         }
@@ -315,7 +318,10 @@ public class GoogleCloudStorageFileManager implements FileManager {
             try {
                 // Perform a GET on the bucket
                 final URL bucketUrl = new URL(GoogleCloudStorageFileManager.GET_BUCKET_URL_PREFIX + URLEncoder.encode(sinkConfiguration.bucket, URL_ENCODING));
-                final GetBucketResponse response = googleGet(bucketUrl, GetBucketResponse.class);
+                // Empty RetryPolicy
+                final RetryPolicy retryPolicy = new RetryPolicy();
+
+                final GetBucketResponse response = googleGet(bucketUrl, GetBucketResponse.class, retryPolicy);
                 logger.info("Google Cloud Storage sink {} using bucket {}", name, response);
 
                 // Additionally, make sure that the working dir and publish dir are URL
@@ -331,8 +337,14 @@ public class GoogleCloudStorageFileManager implements FileManager {
         @Override
         public FileManager create() {
             final GoogleCloudStorageSinkConfiguration sinkConfiguration = configuration.configuration().getSinkConfiguration(name, GoogleCloudStorageSinkConfiguration.class);
-            return new GoogleCloudStorageFileManager(sinkConfiguration.fileStrategy.syncFileAfterRecords, schema, sinkConfiguration.bucket,
-                    sinkConfiguration.fileStrategy.workingDir, sinkConfiguration.fileStrategy.publishDir);
+            return new GoogleCloudStorageFileManager(
+                sinkConfiguration.fileStrategy.syncFileAfterRecords,
+                schema,
+                sinkConfiguration.bucket,
+                sinkConfiguration.fileStrategy.workingDir,
+                sinkConfiguration.fileStrategy.publishDir,
+                sinkConfiguration.createRetryPolicy()
+            );
         }
     }
 
@@ -352,21 +364,21 @@ public class GoogleCloudStorageFileManager implements FileManager {
         }
     }
 
-    private static <T> T googlePost(final URL url, final Class<T> resultType, final ImmutableMap<String,String> additionalHeaders, final BodyWriter writer) {
+    private static <T> T googlePost(final URL url, final Class<T> resultType, final ImmutableMap<String,String> additionalHeaders, final BodyWriter writer, final RetryPolicy retryPolicy) {
         return withRetry(POST, url, true, additionalHeaders, connection -> {
             try (final OutputStream os = connection.getOutputStream()) {
                 writer.write(os);
                 os.flush();
             }
             return parseResponse(resultType, connection);
-        });
+        }, retryPolicy);
     }
 
-    private static <T> T googleGet(final URL url, final Class<T> resultType) {
-        return withRetry(GET, url, false, ImmutableMap.of(), connection -> parseResponse(resultType, connection));
+    private static <T> T googleGet(final URL url, final Class<T> resultType, final RetryPolicy retryPolicy) {
+        return withRetry(GET, url, false, ImmutableMap.of(), connection -> parseResponse(resultType, connection), retryPolicy);
     }
 
-    private static void googleDelete(final URL url) {
+    private static void googleDelete(final URL url, final RetryPolicy retryPolicy) {
         withRetry(DELETE, url, false, ImmutableMap.of(), connection -> {
             throwIOExceptionOnErrorResponse(connection);
             /*
@@ -376,7 +388,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
              */
             ByteStreams.exhaust(connection.getInputStream());
             return null;
-        });
+        }, retryPolicy);
     }
 
     private static void throwIOExceptionOnErrorResponse(final HttpURLConnection connection) throws IOException {
@@ -390,8 +402,17 @@ public class GoogleCloudStorageFileManager implements FileManager {
                 // and sometimes text/plain (e.g. "Not found.")
                 response = CharStreams.toString(new InputStreamReader(stream, URL_ENCODING));
             }
-            logger.error("Received unexpected response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
-            throw new IOException("Received unexpected response (" + responseCode + ") from Google Cloud Storage.");
+
+            if (responseCode == HTTP_INTERNAL_ERROR ||
+                responseCode == HTTP_BAD_GATEWAY ||
+                responseCode == HTTP_UNAVAILABLE ||
+                responseCode == HTTP_GATEWAY_TIMEOUT) {
+                logger.error("Received retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                throw new RetriableIOException("Received error response from Google Cloud Storage.");
+            } else {
+                logger.error("Received non-retriable error response from Google Cloud Storage. Response status code: {}. Response body: {}", responseCode, response);
+                throw new IOException("Received error response from Google Cloud Storage.");
+            }
         }
     }
 
@@ -399,10 +420,11 @@ public class GoogleCloudStorageFileManager implements FileManager {
                                    final URL url,
                                    final boolean write,
                                    final ImmutableMap<String, String> additionalHeaders,
-                                   final IOExceptions.IOFunction<HttpURLConnection, T> consumer) {
+                                   final IOExceptions.IOFunction<HttpURLConnection, T> consumer,
+                                   final RetryPolicy retryPolicy) {
         return Failsafe
-            .with(RETRY_RETRIABLE_EXCEPTION_POLICY)
-            .onRetry((ignored, error, context) -> logger.error("Will retry after attempt #{}/{} of call to GCS API failed: {} {}", context.getExecutions(), RETRY_RETRIABLE_EXCEPTION_POLICY.getMaxRetries(), method, url, error))
+            .with(retryPolicy)
+            .onRetry((ignored, error, context) -> logger.error("Will retry after attempt #{}/{} of call to GCS API failed: {} {}", context.getExecutions(), retryPolicy.getMaxRetries(), method, url, error))
             .onFailure((ignored, error, context) -> logger.error("Failed GCS API call after {} attempts: {} {}", context.getExecutions(), method, url, error))
             .get(() -> consumer.apply(setupUrlConnection(method, url, write, additionalHeaders)));
     }

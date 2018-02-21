@@ -50,18 +50,18 @@ import java.util.Optional;
 public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubSinkConfiguration.class);
 
-    static final GoogleRetryConfiguration DEFAULT_RETRY_SETTINGS =
-        new GoogleRetryConfiguration(null, null, null, null, null, null, null, null);
+    static final GooglePubSubRetryConfiguration DEFAULT_RETRY_SETTINGS =
+        new GooglePubSubRetryConfiguration(null, null, null, null, null, null, null, null);
     static final GoogleBatchingConfiguration DEFAULT_BATCHING_SETTINGS =
         new GoogleBatchingConfiguration(null, null, null);
 
-    public final GoogleRetryConfiguration retrySettings;
+    public final GooglePubSubRetryConfiguration retrySettings;
     public final GoogleBatchingConfiguration batchingSettings;
 
     @JsonCreator
     @ParametersAreNullableByDefault
     GoogleCloudPubSubSinkConfiguration(@JsonProperty(defaultValue=DEFAULT_TOPIC) final String topic,
-                                       final GoogleRetryConfiguration retrySettings,
+                                       final GooglePubSubRetryConfiguration retrySettings,
                                        final GoogleBatchingConfiguration batchingSettings) {
         super(topic);
         this.retrySettings = Optional.ofNullable(retrySettings).orElse(DEFAULT_RETRY_SETTINGS);
