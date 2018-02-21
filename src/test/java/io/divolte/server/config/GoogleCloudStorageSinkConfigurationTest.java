@@ -36,6 +36,8 @@ public class GoogleCloudStorageSinkConfigurationTest {
         assertNotNull(retryPolicy);
     }
 
+    // TODO: Test the jitter validation constraints.
+
     private static double DEFAULT_DELTA = 1e-7;
 
     @Test
