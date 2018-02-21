@@ -26,7 +26,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
-public class GooglePubSubRetryConfiguration {
+public class GooglePubSubRetryConfiguration extends RetryConfiguration {
     /*
      * Default values and constraints are complicated due to Google code generation. As of 0.30.0-beta,
      * the following is the situation...
@@ -82,11 +82,6 @@ public class GooglePubSubRetryConfiguration {
     private static final Duration DEFAULT_INITIAL_RPC_TIMEOUT = Duration.ofSeconds(15);
     private static final double DEFAULT_RPC_TIMEOUT_MULTIPLIER = 2.0;
 
-    private final int maxAttempts;
-    private final Duration totalTimeout;
-    private final Duration initialRetryDelay;
-    private final double retryDelayMultiplier;
-    private final Duration maxRetryDelay;
     private final Duration initialRpcTimeout;
     private final double rpcTimeoutMultiplier;
     private final Duration maxRpcTimeout;
@@ -101,11 +96,11 @@ public class GooglePubSubRetryConfiguration {
                                           final Duration initialRpcTimeout,
                                           final Double rpcTimeoutMultiplier,
                                           final Duration maxRpcTimeout) {
-        this.maxAttempts = Optional.ofNullable(maxAttempts).orElse(DEFAULT_MAX_ATTEMPTS);
-        this.totalTimeout = Optional.ofNullable(totalTimeout).orElse(DEFAULT_TOTAL_TIMEOUT);
-        this.initialRetryDelay = Optional.ofNullable(initialRetryDelay).orElse(DEFAULT_INITIAL_RETRY_DELAY);
-        this.retryDelayMultiplier = Optional.ofNullable(retryDelayMultiplier).orElse(DEFAULT_RETRY_DELAY_MULTIPLIER);
-        this.maxRetryDelay = Optional.ofNullable(maxRetryDelay).orElse(DEFAULT_MAX_RETRY_DELAY);
+        super(Optional.ofNullable(maxAttempts).orElse(DEFAULT_MAX_ATTEMPTS),
+              Optional.ofNullable(totalTimeout).orElse(DEFAULT_TOTAL_TIMEOUT),
+              Optional.ofNullable(initialRetryDelay).orElse(DEFAULT_INITIAL_RETRY_DELAY),
+              Optional.ofNullable(retryDelayMultiplier).orElse(DEFAULT_RETRY_DELAY_MULTIPLIER),
+              Optional.ofNullable(maxRetryDelay).orElse(DEFAULT_MAX_RETRY_DELAY));
         this.initialRpcTimeout = Optional.ofNullable(initialRpcTimeout).orElse(DEFAULT_INITIAL_RPC_TIMEOUT);
         this.rpcTimeoutMultiplier = Optional.ofNullable(rpcTimeoutMultiplier).orElse(DEFAULT_RPC_TIMEOUT_MULTIPLIER);
         this.maxRpcTimeout = Optional.ofNullable(maxRpcTimeout).orElse(this.initialRpcTimeout);
@@ -128,16 +123,10 @@ public class GooglePubSubRetryConfiguration {
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-            .add("maxAttempts", maxAttempts)
-            .add("totalTimeout", totalTimeout)
-            .add("initialRetryDelay", initialRetryDelay)
-            .add("retryDelayMultiplier", retryDelayMultiplier)
-            .add("maxRetryDelay", maxRetryDelay)
+    protected MoreObjects.ToStringHelper toStringHelper() {
+        return super.toStringHelper()
             .add("initialRpcTimeout", initialRpcTimeout)
             .add("rpcTimeoutMultiplier", rpcTimeoutMultiplier)
-            .add("maxRpcTimeout", maxRpcTimeout)
-            .toString();
+            .add("maxRpcTimeout", maxRpcTimeout);
     }
 }

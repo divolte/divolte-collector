@@ -28,6 +28,14 @@ import static org.junit.Assert.assertNotNull;
 
 public class GoogleCloudStorageSinkConfigurationTest {
 
+    @Test
+    public void testDefaultRetryConfigurationValid() {
+        // Check that we can generate settings from our defaults.
+        final RetryPolicy retryPolicy =
+            GoogleCloudStorageSinkConfiguration.DEFAULT_RETRY_SETTINGS.createRetryPolicy();
+        assertNotNull(retryPolicy);
+    }
+
     private static double DEFAULT_DELTA = 1e-7;
 
     @Test
@@ -40,7 +48,7 @@ public class GoogleCloudStorageSinkConfigurationTest {
 
         assertEquals("gs://bucket/folder", gcsConfig.bucket);
 
-        RetryPolicy policy = gcsConfig.createRetryPolicy();
+        RetryPolicy policy = gcsConfig.retrySettings.createRetryPolicy();
 
         assertNotNull(policy);
 

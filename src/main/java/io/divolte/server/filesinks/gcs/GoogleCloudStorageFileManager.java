@@ -343,7 +343,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
                 sinkConfiguration.bucket,
                 sinkConfiguration.fileStrategy.workingDir,
                 sinkConfiguration.fileStrategy.publishDir,
-                sinkConfiguration.createRetryPolicy()
+                sinkConfiguration.retrySettings.createRetryPolicy()
             );
         }
     }
