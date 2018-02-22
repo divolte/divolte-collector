@@ -21,12 +21,13 @@ import net.jodah.failsafe.RetryPolicy;
 import net.jodah.failsafe.util.Duration;
 import org.junit.Test;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 public class GoogleCloudStorageSinkConfigurationTest {
+    private static double DEFAULT_DELTA = 1e-7;
 
     @Test
     public void testDefaultRetryConfigurationValid() {
@@ -36,28 +37,42 @@ public class GoogleCloudStorageSinkConfigurationTest {
         assertNotNull(retryPolicy);
     }
 
-    // TODO: Test the jitter validation constraints.
+    @Test
+    public void testSpecifyingBothJitterSettingsInvalid() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("gcs-both-jitter-invalid.conf"));
 
-    private static double DEFAULT_DELTA = 1e-7;
+        // Verify that the configuration is invalid, and the error message is as expected.
+        assertFalse(vc.isValid());
+        assertEquals(1, vc.errors().size());
+        assertTrue(vc.errors()
+                     .get(0)
+                     .startsWith("Property 'divolte.sinks[gcs].retrySettings' Retry settings may specify a jitter duration or factor, but not both.."));
+    }
 
     @Test
-    public void testRetryConfigurationValid() {
+    public void testJitterFactorSuppressesJitterDelayDefault() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("gcs-jitter-factor.conf"));
+        assertTrue(vc.isValid());
+
+        final GoogleCloudStorageRetryConfiguration retrySettings = vc.configuration().getSinkConfiguration("gcs", GoogleCloudStorageSinkConfiguration.class).retrySettings;
+        assertEquals(Optional.empty(), retrySettings.jitterDelay);
+        assertEquals(0.1, retrySettings.jitterFactor.orElseThrow(IllegalStateException::new), DEFAULT_DELTA);
+    }
+
+    @Test
+    public void testRetryConfiguration() {
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources(
             "gcs-sink.conf"));
-        // Check that we can generate settings from our defaults.
-        GoogleCloudStorageSinkConfiguration gcsConfig = (GoogleCloudStorageSinkConfiguration) vc.configuration().sinks
-            .get("gcs");
 
-        assertEquals("gs://bucket/folder", gcsConfig.bucket);
+        // Check that we generate the retry policy that matches the settings.
+        final GoogleCloudStorageRetryConfiguration retrySettings = vc.configuration().getSinkConfiguration("gcs", GoogleCloudStorageSinkConfiguration.class).retrySettings;
+        final RetryPolicy retryPolicy = retrySettings.createRetryPolicy();
 
-        RetryPolicy policy = gcsConfig.retrySettings.createRetryPolicy();
-
-        assertNotNull(policy);
-
-        assertEquals(1925, policy.getJitter().toMillis(), DEFAULT_DELTA);
-        assertEquals(8, policy.getMaxRetries());
-        assertEquals(2.2, policy.getDelayFactor(), DEFAULT_DELTA);
-        assertEquals(new Duration(19, TimeUnit.SECONDS), policy.getDelay());
-        assertEquals(new Duration(25, TimeUnit.SECONDS), policy.getMaxDelay());
+        assertEquals(8, retryPolicy.getMaxRetries());
+        assertEquals(new Duration(138, TimeUnit.SECONDS), retryPolicy.getMaxDuration());
+        assertEquals(new Duration(19, TimeUnit.SECONDS), retryPolicy.getDelay());
+        assertEquals(2.2, retryPolicy.getDelayFactor(), DEFAULT_DELTA);
+        assertEquals(new Duration(25, TimeUnit.SECONDS), retryPolicy.getMaxDelay());
+        assertEquals(1925, retryPolicy.getJitter().toMillis(), DEFAULT_DELTA);
     }
 }
