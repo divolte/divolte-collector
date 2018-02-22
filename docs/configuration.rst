@@ -1385,6 +1385,8 @@ To enable this behaviour, Divolte Collector performs in-memory buffering up to a
 
 A Google Cloud Storage sink can use multiple threads to write the records as they are produced. Each thread writes to its own Avro files. Records produced from events with the same party identifier are always written to the same Avro file, and in the order they were received by the originating source. (The relative ordering of records produced from events with the same party identifier is undefined if they originated from different sources, although they will still be written to the same Avro file.)
 
+The minimum required configuration for a Google Cloud Storage sink is the name of the bucket to write to. In addition to this a group of retry settings can be specified; these control the internal retry behaviour when failures occur interacting with the Google Cloud Storage APIs.
+
 Google Cloud Storage Sink Property: ``bucket``
 """"""""""""""""""""""""""""""""""""""""""""""
 :Description:
@@ -1400,79 +1402,117 @@ Google Cloud Storage Sink Property: ``bucket``
       bucket = my_organisation_web_data
     }
 
-Google Cloud Storage Sink Property: ``http_retry_exponential_backoff``
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Google Cloud Storage Sink Property: ``retry_settings.max_attempts``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The Google Cloud Storage exponential backoff. When performing a HTTP request to the GCS environment, it is possible that the request will fail for an arbitrary reason, for example, network partition, service outage, etc. Therefore we would like to retry these requests to make sure no data will be lost. This property sets the initial delay for the http retry.
+  The maximum number of times the sink will attempt a specific API call before giving up. A value of ``0`` means there is no such limit.
 :Default:
-  1 second
+    ``0``
 :Example:
 
   .. code-block:: none
 
     divolte.sinks.a_sink {
       type = gcs
-      http_retry_exponential_backoff = 2 seconds
+      bucket = my_organisation_web_data
+      retry_settings.max_attempts = 10
     }
 
-Google Cloud Storage Sink Property: ``http_retry_exponential_backoff_max``
+Google Cloud Storage Sink Property: ``retry_settings.total_timeout``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The total duration for which the sink will attempt a specific API call before giving up.
+:Default:
+    10 minutes
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      bucket = my_organisation_web_data
+      retry_settings.total_timeout = 30 minutes
+    }
+
+Google Cloud Storage Sink Property: ``retry_settings.initial_retry_delay``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The maximum delay of retrying in seconds. After this period the request will not be retried and considered unrecoverable.
+  How long the sink will wait before the first time it retries an API call that has failed.
 :Default:
-  256 seconds
+    1 second
 :Example:
 
   .. code-block:: none
 
     divolte.sinks.a_sink {
       type = gcs
-      http_retry_exponential_backoff = 60 seconds
+      bucket = my_organisation_web_data
+      retry_settings.initial_retry_delay = 10 milliseconds
     }
 
-Google Cloud Storage Sink Property: ``http_retry_exponential_backoff_delay_factor``
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Google Cloud Storage Sink Property: ``retry_settings.retry_delay_multiplier``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  The delay factor to increase the timeout for the next retry. The default (2) will be a quadratic timeout.
+  How much the wait used by the sink between retries of a failed API call should be multiplied by before each subsequent retry.
 :Default:
-  2.0
+    2
 :Example:
 
   .. code-block:: none
 
     divolte.sinks.a_sink {
       type = gcs
-      http_retry_exponential_backoff_delay_factor = 2.2
+      bucket = my_organisation_web_data
+      retry_settings.retry_delay_multiplier = 1.5
     }
 
-Google Cloud Storage Sink Property: ``http_retry_max_retries``
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-:Description:
-  The absolute maximum retries. If set to -1 it will retry forever, or until another stopping criteria has met.
-:Default:
-  -1
-:Example:
-
-  .. code-block:: none
-
-    divolte.sinks.a_sink {
-      type = gcs
-      http_retry_max_retries = 10
-    }
-
-Google Cloud Storage Sink Property: ``http_retry_jitter_milliseconds``
+Google Cloud Storage Sink Property: ``retry_settings.max_retry_delay``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
-  Sets the jitter to randomly vary retry delays by. For each retry delay, a random portion of the jitter will be added or subtracted to the delay. For example: a jitter of 100 milliseconds will randomly add between -100 and 100 milliseconds to each retry delay.
+  The maximum delay used by the sink between retries when an API call has failed.
 :Default:
-  100
+    64 seconds
 :Example:
 
   .. code-block:: none
 
     divolte.sinks.a_sink {
       type = gcs
-      http_retry_jitter_milliseconds = 100
+      bucket = my_organisation_web_data
+      retry_settings.max_retry_delay = 30 seconds
+    }
+
+Google Cloud Storage Sink Property: ``retry_settings.jitter_delay``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  If set, a random delay up to this amount will be added to or subtracted from each delay between retry attempts after an API call has failed. Note that either this setting or ``jitter_factor`` may be specified, but not both.
+:Default:
+    1 second (if ``jitter_factor`` has not been specified)
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      bucket = my_organisation_web_data
+      retry_settings.jitter_delay = 500 ms
+    }
+
+Google Cloud Storage Sink Property: ``retry_settings.jitter_factor``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  If set, each delay between retry attempts after an API call has failed will be scaled by a random amount up to this proportion of the nominal delay for a particular attempt. For example, if set to 0.1 and a retry was due to take place 20 seconds after the previous attempt, the actual delay would be a between 18 and 22 seconds. Note that either this setting or ``jitter_delay`` may be specified, but not both.
+  The maximum delay used by the sink between retries when an API call has failed.
+:Default:
+    *Not set*
+:Example:
+
+  .. code-block:: none
+
+    divolte.sinks.a_sink {
+      type = gcs
+      bucket = my_organisation_web_data
+      retry_settings.jitter_factor = 0.25
     }
 
 Topic Based Sinks

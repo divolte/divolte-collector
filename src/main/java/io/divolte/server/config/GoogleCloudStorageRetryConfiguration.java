@@ -36,7 +36,7 @@ public class GoogleCloudStorageRetryConfiguration extends RetryConfiguration {
     private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
     private static final double DEFAULT_RETRY_DELAY_MULTIPLIER = 2.0;
     private static final Duration DEFAULT_MAX_RETRY_DELAY = Duration.ofSeconds(64);
-    private static final Optional<Duration> DEFAULT_JITTER_DURATION = Optional.of(Duration.ofMillis(1000));
+    private static final Optional<Duration> DEFAULT_JITTER_DURATION = Optional.of(Duration.ofSeconds(1));
 
     // Either of these may be set, but never both.
     public final Optional<Double> jitterFactor;
