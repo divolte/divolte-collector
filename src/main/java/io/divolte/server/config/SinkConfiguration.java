@@ -43,7 +43,6 @@ public abstract class SinkConfiguration {
     }
 
     @Override
-    @OverridingMethodsMustInvokeSuper
     public final String toString() {
         return toStringHelper().toString();
     }
