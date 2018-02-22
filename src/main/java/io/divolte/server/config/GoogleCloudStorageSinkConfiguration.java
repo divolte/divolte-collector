@@ -24,10 +24,13 @@ import io.divolte.server.filesinks.FileManager.FileManagerFactory;
 import io.divolte.server.filesinks.gcs.GoogleCloudStorageFileManager;
 import org.apache.avro.Schema;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import javax.validation.Valid;
 import java.util.Objects;
 import java.util.Optional;
 
+@ParametersAreNonnullByDefault
 public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
 
     static final GoogleCloudStorageRetryConfiguration DEFAULT_RETRY_SETTINGS =
@@ -37,9 +40,9 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
     @Valid public final GoogleCloudStorageRetryConfiguration retrySettings;
 
     @JsonCreator
-    GoogleCloudStorageSinkConfiguration(final FileStrategyConfiguration fileStrategy,
-                                        @JsonProperty(required = true) final String bucket,
-                                        final GoogleCloudStorageRetryConfiguration retrySettings) {
+    GoogleCloudStorageSinkConfiguration(@Nullable final FileStrategyConfiguration fileStrategy,
+                                        @JsonProperty(required=true) final String bucket,
+                                        @Nullable final GoogleCloudStorageRetryConfiguration retrySettings) {
         super(fileStrategy);
         this.bucket = Objects.requireNonNull(bucket);
         this.retrySettings = Optional.ofNullable(retrySettings).orElse(DEFAULT_RETRY_SETTINGS);
