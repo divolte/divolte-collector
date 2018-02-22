@@ -1556,7 +1556,7 @@ The body of each Kafka message contains a single Avro record, serialized in one 
 
 Within the namespace for a Kafka sink properties are used to configure it.
 
-Kafka sink property: ``mode``
+Kafka Sink Property: ``mode``
 """""""""""""""""""""""""""""
 :Description:
   The Kafka sink mode, which controls how Avro records are formatted as Kafka messages:
@@ -1605,7 +1605,7 @@ Within the namespace for a Pub/Sub sink properties are used to configure it. The
 - *Retry settings*: these control the internal retry behaviour of the underlying SDK when failures occur. Note that in general Divolte will attempt redelivery indefinitely if the underlying SDK indicates a retry might succeed. When this is not the case a message is abandoned.
 - *Batching settings*: these control the way the underlying SDK will accumulate messages for publication as a batch to improve performance.
 
-Google Cloud Pub/Sub sink property: ``retry_settings.max_attempts``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.max_attempts``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   The number of times the internal publisher will attempt delivery before giving up. A value of ``0`` means there is no such limit.
@@ -1620,7 +1620,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.max_attempts``
       retry_settings.max_attempts = 10
     }
 
-Google Cloud Pub/Sub sink property: ``retry_settings.total_timeout``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.total_timeout``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   The total duration for which the internal publisher will attempt delivery before giving up.
@@ -1635,7 +1635,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.total_timeout``
       retry_settings.total_timeout = 1 minute
     }
 
-Google Cloud Pub/Sub sink property: ``retry_settings.initial_retry_delay``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.initial_retry_delay``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   How long the internal publisher will wait if the first delivery attempt fails before the first retry.
@@ -1650,7 +1650,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.initial_retry_delay``
       retry_settings.initial_retry_delay = 10 milliseconds
     }
 
-Google Cloud Pub/Sub sink property: ``retry_settings.retry_delay_multiplier``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.retry_delay_multiplier``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   How much the wait used by the internal publisher between retries should be multiplied by before each subsequent retry.
@@ -1665,7 +1665,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.retry_delay_multiplier``
       retry_settings.retry_delay_multiplier = 1.5
     }
 
-Google Cloud Pub/Sub sink property: ``retry_settings.max_retry_delay``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.max_retry_delay``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   The maximum delay used by the internal publisher between retries when delivery of a message fails.
@@ -1680,7 +1680,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.max_retry_delay``
       retry_settings.max_retry_delay = 30 seconds
     }
 
-Google Cloud Pub/Sub sink property: ``retry_settings.initial_rpc_timeout``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.initial_rpc_timeout``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   How long the internal publisher will wait for the first RPC to succeed.
@@ -1695,7 +1695,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.initial_rpc_timeout``
       retry_settings.initial_rpc_timeout = 10 seconds
     }
 
-Google Cloud Pub/Sub sink property: ``retry_settings.rpc_timeout_multiplier``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.rpc_timeout_multiplier``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   How much the RPC timeout used by the internal publisher between retries should be multiplied by before each subsequent retry.
@@ -1710,7 +1710,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.rpc_timeout_multiplier``
       retry_settings.rpc_timeout_multiplier = 1.5
     }
 
-Google Cloud Pub/Sub sink property: ``retry_settings.max_rpc_timeout``
+Google Cloud Pub/Sub Sink Property: ``retry_settings.max_rpc_timeout``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   The maximum RPC timeout used by the internal publisher when retrying.
@@ -1725,7 +1725,7 @@ Google Cloud Pub/Sub sink property: ``retry_settings.max_rpc_timeout``
       retry_settings.max_rpc_timeout = 10 seconds
     }
 
-Google Cloud Pub/Sub sink property: ``batching_settings.element_count_threshold``
+Google Cloud Pub/Sub Sink Property: ``batching_settings.element_count_threshold``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   The maximum number of messages that should be accumulated before triggering delivering the batch.
@@ -1740,7 +1740,7 @@ Google Cloud Pub/Sub sink property: ``batching_settings.element_count_threshold`
       batching_settings.element_count_threshold = 1000
     }
 
-Google Cloud Pub/Sub sink property: ``batching_settings.request_bytes_threshold``
+Google Cloud Pub/Sub Sink Property: ``batching_settings.request_bytes_threshold``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   The maximum total size of the accumulated messages that should be allowed before triggering delivery of the batch.
@@ -1755,7 +1755,7 @@ Google Cloud Pub/Sub sink property: ``batching_settings.request_bytes_threshold`
       batching_settings.request_bytes_threshold = 65536
     }
 
-Google Cloud Pub/Sub sink property: ``batching_settings.delay_threshold``
+Google Cloud Pub/Sub Sink Property: ``batching_settings.delay_threshold``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 :Description:
   The maximum time to wait for additional messages to accumulate before triggering delivery of the batch.
