@@ -28,6 +28,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import javax.validation.Valid;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -57,7 +58,7 @@ public final class DivolteConfiguration {
     @Valid public final ImmutableMap<String,SinkConfiguration> sinks;
 
     @JsonCreator
-    DivolteConfiguration(final GlobalConfiguration global,
+    DivolteConfiguration(@JsonProperty(required=true) final GlobalConfiguration global,
                          final Optional<ImmutableMap<String,SourceConfiguration>> sources,
                          final Optional<ImmutableMap<String,SinkConfiguration>> sinks,
                          final Optional<ImmutableMap<String,MappingConfiguration>> mappings) {
