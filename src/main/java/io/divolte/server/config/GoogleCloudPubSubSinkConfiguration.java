@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
+import javax.validation.Valid;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
@@ -55,8 +56,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     static final GoogleBatchingConfiguration DEFAULT_BATCHING_SETTINGS =
         new GoogleBatchingConfiguration(null, null, null);
 
-    public final GooglePubSubRetryConfiguration retrySettings;
-    public final GoogleBatchingConfiguration batchingSettings;
+    @Valid public final GooglePubSubRetryConfiguration retrySettings;
+    @Valid public final GoogleBatchingConfiguration batchingSettings;
 
     @JsonCreator
     @ParametersAreNullableByDefault

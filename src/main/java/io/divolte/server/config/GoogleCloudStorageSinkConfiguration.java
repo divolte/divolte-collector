@@ -24,6 +24,7 @@ import io.divolte.server.filesinks.FileManager.FileManagerFactory;
 import io.divolte.server.filesinks.gcs.GoogleCloudStorageFileManager;
 import org.apache.avro.Schema;
 
+import javax.validation.Valid;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -33,7 +34,7 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
         new GoogleCloudStorageRetryConfiguration(null, null, null, null, null, null, null);
 
     public final String bucket;
-    public final GoogleCloudStorageRetryConfiguration retrySettings;
+    @Valid public final GoogleCloudStorageRetryConfiguration retrySettings;
 
     @JsonCreator
     GoogleCloudStorageSinkConfiguration(final FileStrategyConfiguration fileStrategy,

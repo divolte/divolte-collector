@@ -22,10 +22,11 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
+import javax.validation.Valid;
 
 @ParametersAreNonnullByDefault
 public abstract class FileSinkConfiguration extends SinkConfiguration {
-    public final FileStrategyConfiguration fileStrategy;
+    @Valid public final FileStrategyConfiguration fileStrategy;
 
     @ParametersAreNullableByDefault
     public FileSinkConfiguration(final FileStrategyConfiguration fileStrategy) {
