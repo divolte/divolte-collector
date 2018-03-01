@@ -32,11 +32,4 @@
         <Method name="getBufferUsed"/>
         <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     </Match>
-    <Match>
-        <!--
-          ~ This currently triggers lots of false-positives due to SpotBugs not
-          ~ recognizing Guava's @CanIgnoreReturnValue annotation.
-          -->
-        <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
-    </Match>
 </FindBugsFilter>
