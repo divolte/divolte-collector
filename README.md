@@ -105,8 +105,6 @@ Tests can then be executed:
 
     % SELENIUM_DRIVER=phantom ./gradlew test
 
-(Some tests currently fail.)
-
 ### SauceLabs ###
 
 If you have a SauceLabs account, you can test against a wide variety of browsers.
