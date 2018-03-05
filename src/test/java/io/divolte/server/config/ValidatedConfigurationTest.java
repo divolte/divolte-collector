@@ -162,4 +162,20 @@ public class ValidatedConfigurationTest {
                 .startsWith("Property 'divolte.' Any sink can only use one confluent identifier. The following sinks have multiple mappings with different 'confluent_id' attributes: [kafka]..")
         );
     }
+
+    @Test
+    public void shouldSetShutdownGracePeriodMills() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("reference-test-shutdown.conf"));
+
+        assertTrue(vc.isValid());
+        assertEquals(192500, vc.configuration().global.server.shutdownGracePeriodMills);
+    }
+
+    @Test
+    public void shouldSetShutdownWaitPeriodMills() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("reference-test-shutdown.conf"));
+
+        assertTrue(vc.isValid());
+        assertEquals(2200, vc.configuration().global.server.shutdownWaitPeriodMills);
+    }
 }

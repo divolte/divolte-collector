@@ -42,16 +42,18 @@ import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public final class Server implements Runnable {
-    private static final long HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS = 120000L;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
     private final GracefulShutdownHandler shutdownHandler;
+    private final HealthHandler healthHandler;
 
     private final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinks;
     private final IncomingRequestProcessingPool incomingRequestProcessingPool;
 
     private final Optional<String> host;
     private final int port;
+    private final int shutdownGracePeriodMills;
+    private final int shutdownWaitPeriodMills;
 
     public Server(final ValidatedConfiguration vc) {
         this(vc, (e,b,r) -> {});
@@ -60,6 +62,8 @@ public final class Server implements Runnable {
     Server(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
         host = vc.configuration().global.server.host;
         port = vc.configuration().global.server.port;
+        shutdownGracePeriodMills = vc.configuration().global.server.shutdownGracePeriodMills;
+        shutdownWaitPeriodMills = vc.configuration().global.server.shutdownWaitPeriodMills;
 
         // First thing we need to do is load all the schemas: the sinks need these, but they come from the
         // mappings.
@@ -115,6 +119,10 @@ public final class Server implements Runnable {
         logger.info("Initialized sources: {}", sources.keySet());
 
         pathHandler.addExactPath("/ping", PingHandler::handlePingRequest);
+
+        healthHandler = new HealthHandler();
+        pathHandler.addExactPath("/health", healthHandler);
+
         if (vc.configuration().global.server.serveStaticResources) {
             // Catch-all handler; must be last if present.
             // XXX: Our static resources assume the default 'browser' endpoint.
@@ -153,6 +161,7 @@ public final class Server implements Runnable {
 
     @Override
     public void run() {
+        // When a SIGTERM is received, initialize a graceful shutdown procedure
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
         logger.info("Starting server on {}:{}", host.orElse("localhost"), port);
@@ -160,18 +169,40 @@ public final class Server implements Runnable {
     }
 
     public void shutdown() {
+
+        logger.warn("Requested to kill process, init graceful shutdown");
+
         try {
-            logger.info("Stopping HTTP server.");
+            // Let upstream know that we are shutting down, by letting the HEALTH CHECK return
+            // a HTTP SERVICE_UNAVAILABLE 503
+            healthHandler.shutdown();
+
+            if(shutdownWaitPeriodMills > 0) {
+                logger.info("Wait {}ms to let upstream know that we are shutting down", shutdownWaitPeriodMills);
+                Thread.sleep(shutdownWaitPeriodMills);
+            }
+
             shutdownHandler.shutdown();
-            shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
-            undertow.stop();
-        } catch (final Exception ie) {
+
+            logger.info("Wait {}ms till all the connections are closed", shutdownGracePeriodMills);
+
+            if(shutdownHandler.awaitShutdown(shutdownGracePeriodMills)) {
+                logger.info("Undertow shut down with no remaining connections");
+            } else {
+                logger.warn("Undertow shut down with remaining connections!");
+            }
+        } catch (final InterruptedException ie) {
             Thread.currentThread().interrupt();
+        } finally {
+            undertow.stop();
         }
 
         logger.info("Stopping thread pools.");
+
         // Stop the mappings before the sinks to ensure work in progress doesn't get stranded.
         incomingRequestProcessingPool.stop();
+
+        logger.info("Closing the sinks filesystem connection.");
         sinks.values().forEach(ProcessingPool::stop);
 
         logger.info("Closing HDFS filesystem connection.");
