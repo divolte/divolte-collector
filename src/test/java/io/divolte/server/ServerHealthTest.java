@@ -16,21 +16,19 @@
 
 package io.divolte.server;
 
+import com.google.common.base.Preconditions;
+import com.google.common.io.ByteStreams;
+import io.divolte.server.ServerTestUtils.TestServer;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import com.google.common.base.Preconditions;
-import com.google.common.io.ByteStreams;
-import com.typesafe.config.ConfigFactory;
-import io.divolte.server.ServerTestUtils.TestServer;
-import io.divolte.server.config.ValidatedConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
