@@ -45,7 +45,7 @@ public final class Server implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private final Undertow undertow;
     private final GracefulShutdownHandler shutdownHandler;
-    private final HealthHandler healthHandler;
+    private final PingHandler pingHandler;
 
     private final ImmutableMap<String, ProcessingPool<?, AvroRecordBuffer>> sinks;
     private final IncomingRequestProcessingPool incomingRequestProcessingPool;
@@ -118,10 +118,8 @@ public final class Server implements Runnable {
         }
         logger.info("Initialized sources: {}", sources.keySet());
 
-        pathHandler.addExactPath("/ping", PingHandler::handlePingRequest);
-
-        healthHandler = new HealthHandler();
-        pathHandler.addExactPath("/health", healthHandler);
+        pingHandler = new PingHandler();
+        pathHandler.addExactPath("/ping", pingHandler);
 
         if (vc.configuration().global.server.serveStaticResources) {
             // Catch-all handler; must be last if present.
@@ -175,7 +173,7 @@ public final class Server implements Runnable {
         try {
             // Let upstream know that we are shutting down, by letting the HEALTH CHECK return
             // a HTTP SERVICE_UNAVAILABLE 503
-            healthHandler.shutdown();
+            pingHandler.shutdown();
 
             if(shutdownWaitPeriodMills > 0) {
                 logger.info("Wait {}ms to let upstream know that we are shutting down", shutdownWaitPeriodMills);

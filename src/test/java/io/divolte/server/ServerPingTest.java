@@ -30,6 +30,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.junit.Assert.assertEquals;
 
 @ParametersAreNonnullByDefault
@@ -40,29 +42,40 @@ public class ServerPingTest {
 
     @Before
     public void setup() {
-        testServer = new TestServer();
+        testServer = new TestServer("reference-test-shutdown.conf");
     }
 
     @Test
-    public void shouldRespondToPingWithPong() throws IOException {
+    public void shouldRespondToHealthCheck() throws IOException {
         Preconditions.checkState(null != testServer);
         final URL url = new URL(String.format("http://%s:%d/ping", testServer.host, testServer.port));
-        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        final HttpURLConnection conn1 = (HttpURLConnection) url.openConnection();
         try {
-            conn.setRequestMethod("GET");
-            assertEquals(200, conn.getResponseCode());
-            assertEquals("text/plain; charset=utf-8", conn.getContentType());
-            final String body = new String(ByteStreams.toByteArray(conn.getInputStream()), StandardCharsets.UTF_8);
-            assertEquals("pong", body);
+            conn1.setRequestMethod("GET");
+            assertEquals(HTTP_OK, conn1.getResponseCode());
+            assertEquals("text/plain; charset=utf-8", conn1.getContentType());
+            final String body = new String(ByteStreams.toByteArray(conn1.getInputStream()), StandardCharsets.UTF_8);
+            assertEquals("Pong", body);
         } finally {
-            conn.disconnect();
+            conn1.disconnect();
+        }
+
+        // Start the shutdown procedure
+        testServer.shutdown();
+
+        final HttpURLConnection conn2 = (HttpURLConnection) url.openConnection();
+        try {
+            conn2.setRequestMethod("GET");
+            assertEquals(HTTP_UNAVAILABLE, conn2.getResponseCode());
+            assertEquals("text/plain; charset=utf-8", conn2.getContentType());
+        } finally {
+            conn2.disconnect();
         }
     }
 
     @After
     public void tearDown() {
         if (null != testServer) {
-            testServer.shutdown();
             testServer = null;
         }
     }

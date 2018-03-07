@@ -16,15 +16,16 @@
 
 package io.divolte.server;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-
 import java.nio.charset.StandardCharsets;
-
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
 /**
  * Event handler for ping requests.
@@ -32,16 +33,32 @@ import org.slf4j.LoggerFactory;
  * Ping requests are immediately and always responded to with a "pong" text response.
  */
 @ParametersAreNonnullByDefault
-final class PingHandler {
+final class PingHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
+    private boolean shutdown;
 
-    private PingHandler() {
+    public PingHandler() {
         // Prevent external instantiation.
+        shutdown = false;
     }
 
-    public static void handlePingRequest(final HttpServerExchange exchange) {
-        logger.debug("Ping received from {}", exchange.getSourceAddress().getHostString());
+    public void shutdown() {
+        this.shutdown = true;
+    }
+
+    @Override
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
+        logger.debug("Health check from {}", exchange.getSourceAddress().getHostString());
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-        exchange.getResponseSender().send("pong", StandardCharsets.UTF_8);
+        if(shutdown) {
+            // If we started a shutdown, we want the health check to a 503 to let upstream
+            // know that we are shutting down and it should be removed from the pool
+            exchange.setStatusCode(HTTP_UNAVAILABLE);
+            exchange.getResponseSender().send("No p*ng for you, shutting down", StandardCharsets.UTF_8);
+
+            logger.info("Return 503 on health check to indicate shutdown");
+        } else {
+            exchange.getResponseSender().send("Pong", StandardCharsets.UTF_8);
+        }
     }
 }
