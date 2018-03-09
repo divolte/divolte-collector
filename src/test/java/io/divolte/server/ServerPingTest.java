@@ -55,7 +55,7 @@ public class ServerPingTest {
             assertEquals(HTTP_OK, conn1.getResponseCode());
             assertEquals("text/plain; charset=utf-8", conn1.getContentType());
             final String body = new String(ByteStreams.toByteArray(conn1.getInputStream()), StandardCharsets.UTF_8);
-            assertEquals("Pong", body);
+            assertEquals("pong", body);
         } finally {
             conn1.disconnect();
         }

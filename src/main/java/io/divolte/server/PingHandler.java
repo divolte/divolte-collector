@@ -35,7 +35,8 @@ import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 @ParametersAreNonnullByDefault
 final class PingHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
-    private boolean shutdown;
+
+    private volatile boolean shutdown;
 
     public PingHandler() {
         // Prevent external instantiation.
@@ -58,7 +59,7 @@ final class PingHandler implements HttpHandler {
 
             logger.info("Return 503 on health check to indicate shutdown");
         } else {
-            exchange.getResponseSender().send("Pong", StandardCharsets.UTF_8);
+            exchange.getResponseSender().send("pong", StandardCharsets.UTF_8);
         }
     }
 }
