@@ -167,9 +167,7 @@ public final class Server implements Runnable {
     }
 
     public void shutdown() {
-
         logger.warn("Requested to kill process, init graceful shutdown");
-
         try {
             // Let upstream know that we are shutting down, by letting the HEALTH CHECK return
             // a HTTP SERVICE_UNAVAILABLE 503
@@ -196,7 +194,6 @@ public final class Server implements Runnable {
         }
 
         logger.info("Stopping thread pools.");
-
         // Stop the mappings before the sinks to ensure work in progress doesn't get stranded.
         incomingRequestProcessingPool.stop();
 
