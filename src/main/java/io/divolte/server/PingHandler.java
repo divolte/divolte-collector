@@ -16,14 +16,14 @@
 
 package io.divolte.server;
 
-import java.nio.charset.StandardCharsets;
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.nio.charset.StandardCharsets;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
@@ -46,13 +46,12 @@ final class PingHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) {
         logger.debug("Health check from {}", exchange.getSourceAddress().getHostString());
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-        if(shutdown) {
-            // If we started a shutdown, we want the health check to a 503 to let upstream
-            // know that we are shutting down and it should be removed from the pool
-            exchange.setStatusCode(HTTP_UNAVAILABLE);
-            exchange.getResponseSender().send("No p*ng for you, shutting down", StandardCharsets.UTF_8);
-
-            logger.info("Return 503 on health check to indicate shutdown");
+        if (shutdown) {
+            logger.debug("Health check indicating unavailable; shutdown has commenced.");
+            // If we started a shutdown, we want the health check to return a 503 to
+            // indicate that we are shutting down and won't be available soon.
+            exchange.setStatusCode(HTTP_UNAVAILABLE)
+                    .getResponseSender().send("No p*ng for you, shutting down", StandardCharsets.UTF_8);
         } else {
             exchange.getResponseSender().send("pong", StandardCharsets.UTF_8);
         }
