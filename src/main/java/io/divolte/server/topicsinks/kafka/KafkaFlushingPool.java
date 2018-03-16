@@ -18,6 +18,7 @@ package io.divolte.server.topicsinks.kafka;
 
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.DivolteSchema;
 import io.divolte.server.processing.ProcessingPool;
 import org.apache.kafka.clients.producer.Producer;
 
@@ -33,11 +34,12 @@ public class KafkaFlushingPool extends ProcessingPool<KafkaFlusher, AvroRecordBu
                              final int numThreads,
                              final int maxWriteQueue,
                              final String topic,
-                             final Producer<DivolteIdentifier, AvroRecordBuffer> producer ) {
+                             final Producer<DivolteIdentifier, AvroRecordBuffer> producer,
+                             final DivolteSchema schema) {
         super(numThreads,
               maxWriteQueue,
               String.format("Kafka Flusher [%s]", Objects.requireNonNull(name)),
-              () -> new KafkaFlusher(topic, producer));
+              () -> new KafkaFlusher(topic, producer, schema));
         this.producer = Objects.requireNonNull(producer);
     }
 

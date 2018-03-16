@@ -19,11 +19,14 @@ package io.divolte.server.topicsinks.kafka;
 import com.google.common.collect.ImmutableList;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
+import io.divolte.server.DivolteSchema;
 import io.divolte.server.topicsinks.TopicFlusher;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.errors.RetriableException;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,15 +46,21 @@ public final class KafkaFlusher extends TopicFlusher<ProducerRecord<DivolteIdent
 
     private final String topic;
     private final Producer<DivolteIdentifier, AvroRecordBuffer> producer;
+    private final Header schemaFingerprint;
 
-    KafkaFlusher(final String topic, final Producer<DivolteIdentifier, AvroRecordBuffer> producer) {
+    KafkaFlusher(final String topic,
+                 final Producer<DivolteIdentifier, AvroRecordBuffer> producer,
+                 final DivolteSchema schema) {
         this.topic = Objects.requireNonNull(topic);
         this.producer = Objects.requireNonNull(producer);
+        this.schemaFingerprint = new RecordHeader(MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT, schemaFingerprint(schema));
     }
 
     @Override
     protected ProducerRecord<DivolteIdentifier, AvroRecordBuffer> buildRecord(final AvroRecordBuffer record) {
-        return new ProducerRecord<>(topic, record.getPartyId(), record);
+        final ProducerRecord<DivolteIdentifier, AvroRecordBuffer> pr = new ProducerRecord<>(topic, record.getPartyId(), record);
+        pr.headers().add(schemaFingerprint);
+        return pr;
     }
 
     @Override

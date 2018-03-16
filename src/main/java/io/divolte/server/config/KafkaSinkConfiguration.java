@@ -63,7 +63,8 @@ public class KafkaSinkConfiguration extends TopicSinkConfiguration {
                                          vc.configuration().global.kafka.threads,
                                          vc.configuration().global.kafka.bufferSize,
                                          topic,
-                                         producer
+                                         producer,
+                                         registry.getSchemaBySinkName(sink)
             );
         };
     }
