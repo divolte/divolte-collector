@@ -43,7 +43,7 @@ final class PingHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(HttpServerExchange exchange) throws Exception {
+    public void handleRequest(HttpServerExchange exchange) {
         logger.debug("Health check from {}", exchange.getSourceAddress().getHostString());
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
         if(shutdown) {
