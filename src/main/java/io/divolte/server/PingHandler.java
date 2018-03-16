@@ -38,11 +38,6 @@ final class PingHandler implements HttpHandler {
 
     private volatile boolean shutdown;
 
-    public PingHandler() {
-        // Prevent external instantiation.
-        shutdown = false;
-    }
-
     public void shutdown() {
         this.shutdown = true;
     }
