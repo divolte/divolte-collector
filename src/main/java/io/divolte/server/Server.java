@@ -165,7 +165,7 @@ public final class Server implements Runnable {
             shutdownHandler.shutdown();
             shutdownHandler.awaitShutdown(HTTP_SHUTDOWN_GRACE_PERIOD_MILLIS);
             undertow.stop();
-        } catch (final Exception ie) {
+        } catch (final InterruptedException ie) {
             Thread.currentThread().interrupt();
         }
 
