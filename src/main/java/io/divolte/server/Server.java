@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @ParametersAreNonnullByDefault
 public final class Server implements Runnable {
@@ -52,8 +53,9 @@ public final class Server implements Runnable {
 
     private final Optional<String> host;
     private final int port;
-    private final int shutdownGracePeriodMills;
-    private final int shutdownWaitPeriodMills;
+
+    private final Duration shutdownDelay;
+    private final Duration shutdownTimeout;
 
     public Server(final ValidatedConfiguration vc) {
         this(vc, (e,b,r) -> {});
@@ -62,8 +64,9 @@ public final class Server implements Runnable {
     Server(final ValidatedConfiguration vc, final IncomingRequestListener listener) {
         host = vc.configuration().global.server.host;
         port = vc.configuration().global.server.port;
-        shutdownGracePeriodMills = vc.configuration().global.server.shutdownGracePeriodMills;
-        shutdownWaitPeriodMills = vc.configuration().global.server.shutdownWaitPeriodMills;
+
+        shutdownDelay = vc.configuration().global.server.shutdownDelay;
+        shutdownTimeout = vc.configuration().global.server.shutdownTimeout;
 
         // First thing we need to do is load all the schemas: the sinks need these, but they come from the
         // mappings.
@@ -173,19 +176,18 @@ public final class Server implements Runnable {
             // a HTTP SERVICE_UNAVAILABLE 503
             pingHandler.shutdown();
 
-            if(shutdownWaitPeriodMills > 0) {
-                logger.info("Wait {}ms to let upstream know that we are shutting down", shutdownWaitPeriodMills);
-                Thread.sleep(shutdownWaitPeriodMills);
+            if (0 < shutdownDelay.compareTo(Duration.ZERO)) {
+                logger.info("Waiting to let upstream know that we are shutting down: {}", shutdownDelay);
+                Thread.sleep(shutdownDelay.toMillis(), shutdownDelay.getNano() % (int)TimeUnit.MILLISECONDS.toNanos(1));
             }
 
             shutdownHandler.shutdown();
 
-            logger.info("Wait {}ms till all the connections are closed", shutdownGracePeriodMills);
-
-            if(shutdownHandler.awaitShutdown(shutdownGracePeriodMills)) {
-                logger.info("Undertow shut down with no remaining connections");
+            logger.info("Waiting until all the connections are closed: {}", shutdownTimeout);
+            if (shutdownHandler.awaitShutdown(shutdownTimeout.toMillis())) {
+                logger.info("Shutting down cleanly; all requests completed.");
             } else {
-                logger.warn("Undertow shut down with remaining connections!");
+                logger.warn("Shutdown timeout lapsed with requests underway; shutting down anyway.");
             }
         } catch (final InterruptedException ie) {
             Thread.currentThread().interrupt();
@@ -193,11 +195,11 @@ public final class Server implements Runnable {
             undertow.stop();
         }
 
-        logger.info("Stopping thread pools.");
         // Stop the mappings before the sinks to ensure work in progress doesn't get stranded.
+        logger.info("Stopping thread pools.");
         incomingRequestProcessingPool.stop();
 
-        logger.info("Closing the sinks filesystem connection.");
+        logger.info("Stopping all sinks.");
         sinks.values().forEach(ProcessingPool::stop);
 
         logger.info("Closing HDFS filesystem connection.");

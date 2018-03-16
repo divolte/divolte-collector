@@ -24,6 +24,8 @@ import org.junit.Test;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import java.time.Duration;
+
 public class ValidatedConfigurationTest {
     @Test
     public void shouldNotThrowExceptionsOnInvalidConfiguration() {
@@ -164,18 +166,18 @@ public class ValidatedConfigurationTest {
     }
 
     @Test
-    public void shouldSetShutdownGracePeriodMills() {
+    public void shouldSetShutdownDelay() {
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("reference-test-shutdown.conf"));
 
         assertTrue(vc.isValid());
-        assertEquals(192500, vc.configuration().global.server.shutdownGracePeriodMills);
+        assertEquals(Duration.ofMillis(2200), vc.configuration().global.server.shutdownDelay);
     }
 
     @Test
-    public void shouldSetShutdownWaitPeriodMills() {
+    public void shouldSetShutdownTimeout() {
         final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("reference-test-shutdown.conf"));
 
         assertTrue(vc.isValid());
-        assertEquals(2200, vc.configuration().global.server.shutdownWaitPeriodMills);
+        assertEquals(Duration.ofMinutes(3), vc.configuration().global.server.shutdownTimeout);
     }
 }
