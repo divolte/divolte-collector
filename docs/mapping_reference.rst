@@ -1637,9 +1637,17 @@ Complex value: :code:`ip2geo({optionalIP})`
     def ua = ip2geo()
 
     // If a load balancer sets custom headers for IP addresses, use like this
-    def ip = header('X-Custom-Header').first()
+    def ip = header('X-Forwarded-For').first()
     def myUa = ip2geo(ip)
 
+Also other functions are available depending on the array of IP's:
+
+  .. code-block:: groovy
+
+    // Returns the last item of the list
+    def ip = header('X-Forwarded-For').last()
+    // Returns the second last item
+    def ip = header('X-Forwarded-For').get(-2)
 
 :Sources:
 

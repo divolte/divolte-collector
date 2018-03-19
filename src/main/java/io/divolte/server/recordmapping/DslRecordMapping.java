@@ -23,14 +23,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.util.ArrayDeque;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -658,6 +655,10 @@ public final class DslRecordMapping {
         return new HeaderValueProducer(name);
     }
 
+    public HeaderValueProducer header(final String name, final String regex) {
+        return new HeaderValueProducer(name, regex);
+    }
+
     public final static class HeaderValueProducer extends PrimitiveListValueProducer<String> {
         private final static Joiner COMMA_JOINER = Joiner.on(',');
 
@@ -666,6 +667,29 @@ public final class DslRecordMapping {
                   String.class,
                   (e,c) -> Optional.ofNullable(e.exchange.getRequestHeaders().get(name)));
         }
+
+        HeaderValueProducer(final String name, final String regex) {
+            super(
+                "header(" + name + ")",
+                String.class,
+                (e, c) -> splitHeaderLines(e, name, regex)
+            );
+        }
+
+        private static Optional<List<String>> splitHeaderLines(DivolteEvent e, String name, String regex) {
+            final HeaderValues headerValues = e.exchange.getRequestHeaders().get(name);
+
+            final List<String> parts = headerValues
+                .stream()
+                .flatMap(str -> Arrays.stream(str.split(regex)))
+                .collect(Collectors.toList());
+
+            headerValues.clear();
+            headerValues.addAll(parts);
+
+            return Optional.of(headerValues);
+        }
+
 
         public ValueProducer<String> first() {
             return new PrimitiveValueProducer<>(identifier + ".first()",
@@ -677,6 +701,12 @@ public final class DslRecordMapping {
             return new PrimitiveValueProducer<>(identifier + ".last()",
                                                 String.class,
                                                 (e,c) -> produce(e, c).map((hv) -> ((HeaderValues) hv).getLast()));
+        }
+
+        public ValueProducer<String> get(final int idx) {
+            return new PrimitiveValueProducer<>(identifier + ".get(" + idx + ")",
+                                                String.class,
+                                                (e,c) -> produce(e, c).map((hv) -> hv.get(idx < 0 ? hv.size() + idx : idx)));
         }
 
         public ValueProducer<String> commaSeparated() {

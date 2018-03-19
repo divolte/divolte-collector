@@ -279,11 +279,19 @@ public class DslRecordMapperTest {
     }
 
     @Test
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     public void shouldSetCustomHeaders() throws IOException, InterruptedException {
         setupServer("header-mapping.groovy");
         final EventPayload event = request("http://www.example.com/");
+
+        assertEquals("192.168.0.1", event.record.get("headerArrayFirst"));
+        assertEquals("10.19.25.22", event.record.get("headerArrayLast"));
+        assertEquals("127.0.0.1", event.record.get("headerArraySecondLast"));
+
         assertEquals(Arrays.asList("first", "second", "last"), event.record.get("headerList"));
-        assertEquals("first", event.record.get("header"));
+        assertEquals("first", event.record.get("headerFirst"));
+        assertEquals("last", event.record.get("headerLast"));
+        assertEquals("second", event.record.get("headerSecondLast"));
         assertEquals("first,second,last", event.record.get("headers"));
     }
 
@@ -516,6 +524,7 @@ public class DslRecordMapperTest {
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.addRequestProperty("User-Agent", USER_AGENT);
         conn.addRequestProperty("Cookie", "custom_cookie=custom_cookie_value;");
+        conn.addRequestProperty("X-Divolte-Test-Array", "192.168.0.1, 127.0.0.1, 10.19.25.22");
         conn.addRequestProperty("X-Divolte-Test", "first");
         conn.addRequestProperty("X-Divolte-Test", "second");
         conn.addRequestProperty("X-Divolte-Test", "last");
