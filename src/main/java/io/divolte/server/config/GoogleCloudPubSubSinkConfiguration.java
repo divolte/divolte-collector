@@ -24,14 +24,12 @@ import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.TransportChannelProvider;
-import com.google.cloud.pubsub.v1.Publisher;
-import com.google.cloud.pubsub.v1.TopicAdminClient;
-import com.google.cloud.pubsub.v1.TopicAdminSettings;
+import com.google.cloud.pubsub.v1.*;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 import com.google.pubsub.v1.ProjectName;
+import com.google.pubsub.v1.ProjectTopicName;
 import com.google.pubsub.v1.Topic;
-import com.google.pubsub.v1.TopicName;
 import io.divolte.server.IOExceptions;
 import io.divolte.server.topicsinks.pubsub.GoogleCloudPubSubFlushingPool;
 import io.grpc.ManagedChannel;
@@ -89,7 +87,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
                                            final BatchingSettings batchingSettings) {
         return (vc, sinkName, registry) -> {
             final String projectId = vc.configuration().global.gcps.projectId.orElseThrow(IllegalStateException::new);
-            final TopicName topicName = TopicName.of(projectId, topic);
+            final ProjectTopicName topicName = ProjectTopicName.of(projectId, topic);
             final Publisher.Builder builder =
                 Publisher.newBuilder(topicName)
                          .setRetrySettings(retrySettings)
@@ -118,7 +116,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
         return (vc, sinkName, registry) -> {
             logger.info("Configuring sink to use Google Cloud Pub/Sub emulator: {}", sinkName, hostPort);
             final String projectId = vc.configuration().global.gcps.projectId.orElseThrow(IllegalStateException::new);
-            final TopicName topicName = TopicName.of(projectId, topic);
+            final ProjectTopicName topicName = ProjectTopicName.of(projectId, topic);
             final ManagedChannel channel = ManagedChannelBuilder.forTarget(hostPort).usePlaintext(true).build();
             final TransportChannelProvider channelProvider =
                 FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
@@ -142,7 +140,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
 
     private static void createTopic(final String hostPort,
                                     final TransportChannelProvider channelProvider,
-                                    final TopicName topic) {
+                                    final ProjectTopicName topic) {
         final TopicAdminClient topicClient;
         try {
             final TopicAdminSettings topicAdminSettings = TopicAdminSettings.newBuilder()
@@ -157,7 +155,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
         final ProjectName project = ProjectName.of(topic.getProject());
         if (Streams.stream(topicClient.listTopics(project).iterateAll())
                    .map(Topic::getName)
-                   .map(TopicName::parse)
+                   .map(ProjectTopicName::parse)
                    .noneMatch(topic::equals)) {
             logger.info("Initializing Pub/Sub emulator topic: {}", topic);
             topicClient.createTopic(topic);

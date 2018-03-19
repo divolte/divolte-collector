@@ -56,7 +56,7 @@ public class GoogleCloudPubSubFlushingPool extends ProcessingPool<GoogleCloudPub
             // Pass-through without re-wrapping.
             throw e;
         } catch (final Exception e) {
-            final String topicName = publisher.getTopicName().getTopic();
+            final String topicName = publisher.getTopicNameString();
             throw new RuntimeException("Error shutting down pub/sub publisher for topic: " + topicName, e);
         }
     }
