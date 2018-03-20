@@ -29,9 +29,11 @@ If possible, load balancers should use a consistent hashing scheme when performi
 
 Liveness checking
 -----------------
-Divolte Collector supports a simple liveness probe via its ``/ping`` endpoint. During normal operation this will respond with a HTTP 200 status code. Load balancers can query this to check for whether an instance of the service is up or not.
+Divolte Collector supports a simple liveness probe via its ``/ping`` endpoint. During normal operation this will respond with a HTTP 200 status code. Load balancers can query this to check whether an instance of the service is up or not.
 
-When shutting a backend down (for example during a rolling upgrade or scaling operation) the server can be configured to be gracefully removed from service. This is done by setting the `divolte.global.server.shutdown_delay` property to a duration long enough that failing liveness checks will remove the backend from service. When the shutdown is requested, the server will keep handling normal traffic but the `/ping` endpoint will start returning a HTTP 503 status code. For example, if a load-balancer checks for liveness every 10 seconds and removes a backend from service after 2 failed checks, setting this property to 20 seconds or higher will mean that the load-balancer will remove the backend from service before it starts refusing new requests.
+To help with operations such as restarts or scaling down, the ``divolte.global.server.shutdown_delay`` property can be set to a duration long enough that failing liveness checks will cause the load balancer to remove the backend from service before it truly stops. When the shutdown is requested, the server will continue handling normal traffic but the ``/ping`` endpoint will start returning a HTTP 503 status code. Once the delay elapses the server stop normally and no new requests will be processed.
+
+For example, if a load balancer checks backends for liveness every 10 seconds and removes a backend from service after 2 failed checks, setting the shutdown delay to 20 seconds would ensure that all traffic to it ceases before it actually stops.
 
 SSL
 ===
@@ -113,8 +115,8 @@ Kubernetes
 ==========
 When deploying under Kubernetes there are some steps to take to minimise data loss during rolling updates and scaling. These are:
 
- - Use the :code:`/ping` endpoint as a liveness probe.
- - Set the ``divolte.global.server.shutdown_delay`` property to be long enough for liveness to evaluate as false. Kubernetes defaults to using a probe interval of 10 seconds, with 2 successive probes failing before an instance is not considered live. In this case setting the delay to 20 seconds would be appropriate.
- - Set the ``divolte.global.server.shutdown_timeout`` property appropriately so that requests underway can complete, but the Kubernetes shutdown timeout is not exceeded. The Kubernetes shutdown timeout defaults to 30 seconds: after accounting for the liveness delay, this means that setting this property to 5 seconds leaves another 5 seconds for the sinks to flush any outstanding data before Kubernetes forcefully kills the container.
+- Use the :code:`/ping` endpoint as a liveness probe.
+- Set the ``divolte.global.server.shutdown_delay`` property to be long enough for liveness to evaluate as false. Kubernetes defaults to using a probe interval of 10 seconds, with 2 successive probes failing before an instance is not considered live. In this case setting the delay to 20 seconds would be appropriate.
+- Set the ``divolte.global.server.shutdown_timeout`` property so that requests underway can complete while ensuring that the Kubernetes shutdown timeout is not exceeded. The Kubernetes shutdown timeout defaults to 30 seconds: after accounting for the liveness delay, this means that setting this property to 5 seconds leaves another 5 seconds for the sinks to flush any outstanding data before Kubernetes forcefully kills the container.
 
 These values may need to be adjusted appropriately for your infrastructure.
