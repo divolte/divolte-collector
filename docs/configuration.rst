@@ -245,6 +245,41 @@ Property: ``divolte.global.server.debug_requests``
       debug_requests = true
     }
 
+Property: ``divolte.global.server.shutdown_delay``
+""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  When a shutdown signal (``TERM``) is received, delay the shutdown for this long
+  before starting to actually shut down. During this interval all HTTP requests will be
+  served as usual, with the exception of the ``/ping`` endpoint which will return
+  a response with a 503 HTTP status code. The purpose of this is delay is allow
+  load balancers to gracefully remove the server from service without disrupting normal
+  traffic.
+:Default:
+  0 milliseconds
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.server {
+      shutdown_delay = 30 seconds
+    }
+
+Property: ``divolte.global.server.shutdown_timeout``
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  When shutting down, the server will wait for existing HTTP requests to complete. This
+  setting controls how long the server will wait before shutting down anyway even if there
+  are still some HTTP requests underway.
+:Default:
+  2 minutes
+:Example:
+
+  .. code-block:: none
+
+    divolte.global.server {
+      shutdown_timeout = 1 minute
+    }
+
 Global Mapper Settings (``divolte.global.mapper``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section controls global settings related to the processing of incoming requests after they have been received by the server. Incoming requests for Divolte Collector are responded to as quickly as possible, with mapping and flushing occurring in the background.
