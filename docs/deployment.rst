@@ -27,6 +27,12 @@ Consistent hashing and event de-duplication
 -------------------------------------------
 If possible, load balancers should use a consistent hashing scheme when performing URI hash-based routing. This should ensure that most traffic continues to be routed to the same instance as before. The benefit of this is that the duplicate memory kept by Divolte Collector nodes remains effective.
 
+Liveness checking
+-----------------
+Divolte Collector supports a simple liveness probe via its ``/ping`` endpoint. During normal operation this will respond with a HTTP 200 status code. Load balancers can query this to check for whether an instance of the service is up or not.
+
+When shutting a backend down (for example during a rolling upgrade or scaling operation) the server can be configured to be gracefully removed from service. This is done by setting the `divolte.global.server.shutdown_delay` property to a duration long enough that failing liveness checks will remove the backend from service. When the shutdown is requested, the server will keep handling normal traffic but the `/ping` endpoint will start returning a HTTP 503 status code. For example, if a load-balancer checks for liveness every 10 seconds and removes a backend from service after 2 failed checks, setting this property to 20 seconds or higher will mean that the load-balancer will remove the backend from service before it starts refusing new requests.
+
 SSL
 ===
 Divolte Collector does not handle SSL itself. SSL offloading needs to be done by a load balancer or a reverse proxy server. This can normally handled by the load balancer in front of Divolte Collector in production setups.
@@ -103,14 +109,12 @@ Kafka Connect
 =============
 When deploying in conjunction with Kafka Connect, the Avro schemas need to be pre-registered with the `Schema Registry <https://docs.confluent.io/3.3.0/schema-registry/docs>`_. Mappings that produce records for a Kafka sink operating in ``confluent`` mode need have their ``confluent_id`` property configured with the identifier of the schema in the registry. (This identifier is normally a simple integer.)
 
-Service endpoint
-================
+Kubernetes
+==========
+When deploying under Kubernetes there are some steps to take to minimise data loss during rolling updates and scaling. These are:
 
-To support rolling updates and scaling without losing data, Divolte exposes an endpoint that allows graceful shutdown of the docker container. Currently the `/ping` endpoint is tested on Kubernetes. The main issue with Kubernetes is, even it has send a signal to stop the container, the container will remain in the pool of the load balancer. This will cause the divolte container to receive new connections, which is not something that we want when initializing a graceful shutdown procedure. Instead Divolte should clear all the buffers by flushing them to persistent storage. The sequence:
+ - Use the :code:`/ping` endpoint as a liveness probe.
+ - Set the ``divolte.global.server.shutdown_delay`` property to be long enough for liveness to evaluate as false. Kubernetes defaults to using a probe interval of 10 seconds, with 2 successive probes failing before an instance is not considered live. In this case setting the delay to 20 seconds would be appropriate.
+ - Set the ``divolte.global.server.shutdown_timeout`` property appropriately so that requests underway can complete, but the Kubernetes shutdown timeout is not exceeded. The Kubernetes shutdown timeout defaults to 30 seconds: after accounting for the liveness delay, this means that setting this property to 5 seconds leaves another 5 seconds for the sinks to flush any outstanding data before Kubernetes forcefully kills the container.
 
-- Kubernetes sends a SIGTERM to Divolte to let it know that it wants to shutdown the container.
-- Making the container unhealthy by replying with HTTP 503 over the `/ping` endpoint, which will cause the container to be removed from the pool of the load balancer.
-- The `divolte.global.server.shutdown_wait_period_mills` property should be at least twice the kubernetes liveness probe interval (10 seconds by default).
-- The container is removed from the loadbalancer pool and divolte will wait `divolte.global.server.shutdown_grace_period_mills` to handle and close the open connections.
-- Undertow will shut down, and all the sinks are flushed and closed.
-- If everything is not handled within 30 seconds (by default), kubernetes will kill the container and data might be lost forever :(
+These values may need to be adjusted appropriately for your infrastructure.
