@@ -16,15 +16,16 @@
 
 package io.divolte.server;
 
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-
-import java.nio.charset.StandardCharsets;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.nio.charset.StandardCharsets;
+
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
 /**
  * Event handler for ping requests.
@@ -32,16 +33,27 @@ import org.slf4j.LoggerFactory;
  * Ping requests are immediately and always responded to with a "pong" text response.
  */
 @ParametersAreNonnullByDefault
-final class PingHandler {
+final class PingHandler implements HttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
-    private PingHandler() {
-        // Prevent external instantiation.
+    private volatile boolean shutdown;
+
+    public void shutdown() {
+        this.shutdown = true;
     }
 
-    public static void handlePingRequest(final HttpServerExchange exchange) {
-        logger.debug("Ping received from {}", exchange.getSourceAddress().getHostString());
+    @Override
+    public void handleRequest(HttpServerExchange exchange) {
+        logger.debug("Health check from {}", exchange.getSourceAddress().getHostString());
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=utf-8");
-        exchange.getResponseSender().send("pong", StandardCharsets.UTF_8);
+        if (shutdown) {
+            logger.debug("Health check indicating unavailable; shutdown has commenced.");
+            // If we started a shutdown, we want the health check to return a 503 to
+            // indicate that we are shutting down and won't be available soon.
+            exchange.setStatusCode(HTTP_UNAVAILABLE)
+                    .getResponseSender().send("No p*ng for you, shutting down", StandardCharsets.UTF_8);
+        } else {
+            exchange.getResponseSender().send("pong", StandardCharsets.UTF_8);
+        }
     }
 }

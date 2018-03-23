@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -32,18 +33,24 @@ public final class ServerConfiguration {
     public final boolean useXForwardedFor;
     public final boolean serveStaticResources;
     public final boolean debugRequests;
+    public final Duration shutdownDelay;
+    public final Duration shutdownTimeout;
 
     @JsonCreator
     ServerConfiguration(final Optional<String> host,
                         final int port,
                         @JsonProperty("use_x_forwarded_for") final boolean useXForwardedFor,
                         final boolean serveStaticResources,
-                        final boolean debugRequests) {
+                        final boolean debugRequests,
+                        final Duration shutdownDelay,
+                        final Duration shutdownTimeout) {
         this.host = Objects.requireNonNull(host);
         this.port = port;
         this.useXForwardedFor = useXForwardedFor;
         this.serveStaticResources = serveStaticResources;
         this.debugRequests = debugRequests;
+        this.shutdownDelay = shutdownDelay;
+        this.shutdownTimeout = shutdownTimeout;
     }
 
     @Override
@@ -54,6 +61,8 @@ public final class ServerConfiguration {
                 .add("useXForwardedFor", useXForwardedFor)
                 .add("serverStaticResources", serveStaticResources)
                 .add("debugRequests", debugRequests)
+                .add("shutdownDelay", shutdownDelay)
+                .add("shutdownTimeout", shutdownTimeout)
                 .toString();
     }
 }
