@@ -19,17 +19,5 @@ mapping {
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
 
-    def hdr = header('X-Divolte-Test')
-    map hdr onto 'headerList'
-    map hdr.first() onto 'headerFirst'
-    map hdr.get(0) onto 'headerGet0'
-    map hdr.get(1) onto 'headerGet1'
-    map hdr.get(2) onto 'headerGet2'
-    map hdr.get(3) onto 'headerGet3'
-    map hdr.get(-4) onto 'headerGet_4'
-    map hdr.get(-3) onto 'headerGet_3'
-    map hdr.get(-2) onto 'headerGet_2'
-    map hdr.get(-1) onto 'headerGet_1'
-    map hdr.last() onto 'headerLast'
-    map hdr.commaSeparated() onto 'headers'
+    map header('X-Divolte-Horrible') onto 'headerList'
 }

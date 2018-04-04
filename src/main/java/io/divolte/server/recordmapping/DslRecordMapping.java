@@ -16,40 +16,9 @@
 
 package io.divolte.server.recordmapping;
 
-import static io.divolte.server.IncomingRequestProcessor.*;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.util.ArrayDeque;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.NotThreadSafe;
-
-import com.maxmind.geoip2.model.AbstractCityResponse;
-import com.maxmind.geoip2.model.AbstractCountryResponse;
-import org.apache.avro.Schema;
-import org.apache.avro.Schema.Field;
-import org.apache.avro.Schema.Type;
-import org.apache.avro.generic.GenericRecordBuilder;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.*;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
@@ -58,22 +27,40 @@ import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
+import com.maxmind.geoip2.model.AbstractCityResponse;
+import com.maxmind.geoip2.model.AbstractCountryResponse;
 import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.record.City;
-import com.maxmind.geoip2.record.Continent;
-import com.maxmind.geoip2.record.Country;
-import com.maxmind.geoip2.record.Location;
-import com.maxmind.geoip2.record.Postal;
-import com.maxmind.geoip2.record.Subdivision;
-import com.maxmind.geoip2.record.Traits;
-
+import com.maxmind.geoip2.record.*;
 import io.divolte.server.DivolteEvent;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import net.sf.uadetector.ReadableUserAgent;
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
+import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
 @ParametersAreNonnullByDefault
 @NotThreadSafe
@@ -660,23 +647,70 @@ public final class DslRecordMapping {
 
     public final static class HeaderValueProducer extends PrimitiveListValueProducer<String> {
         private final static Joiner COMMA_JOINER = Joiner.on(',');
+        private final String headerName;
 
-        HeaderValueProducer(final String name) {
-            super("header(" + name + ")",
+        HeaderValueProducer(final String headerName) {
+            super("header(" + headerName + ")",
                   String.class,
-                  (e,c) -> Optional.ofNullable(e.exchange.getRequestHeaders().get(name)));
+                  (e,c) -> normalizedValues(e.exchange, headerName).map(x -> x.collect(Collectors.toList())));
+            this.headerName = Objects.requireNonNull(headerName);
+        }
+
+        private static Optional<Stream<String>> normalizedValues(final HttpServerExchange exchange, final String headerName) {
+            return Optional.ofNullable(exchange.getRequestHeaders().get(headerName))
+                           .map(h -> h.stream().flatMap(HeaderValueParser::values));
         }
 
         public ValueProducer<String> first() {
-            return new PrimitiveValueProducer<>(identifier + ".first()",
+            return first(identifier + ".first()");
+        }
+
+        private ValueProducer<String> first(final String readableName) {
+            return new PrimitiveValueProducer<>(readableName,
                                                 String.class,
-                                                (e,c) -> produce(e, c).map((hv) -> ((HeaderValues) hv).getFirst()));
+                                                (e,c) -> normalizedValues(e.exchange, headerName).map(s -> s.findFirst().orElse(null)));
         }
 
         public ValueProducer<String> last() {
-            return new PrimitiveValueProducer<>(identifier + ".last()",
+            return last(identifier + ".last()");
+        }
+        public ValueProducer<String> last(final String readableName) {
+            return new PrimitiveValueProducer<>(readableName,
                                                 String.class,
-                                                (e,c) -> produce(e, c).map((hv) -> ((HeaderValues) hv).getLast()));
+                                                (e,c) -> normalizedValues(e.exchange, headerName).map(s -> Streams.findLast(s).orElse(null)));
+        }
+
+        // Find the x'th element from the end.
+        // Note that indexes here are zero-based: 0 means the last element, 1 the second-last, etc.
+        private static <T> Optional<T> findFromEnd(final Stream<T> stream, final int index) {
+            // To do this we'll pump the stream through a FIFO bounded buffer.
+            // When it finishes, the head of the buffer is the x-th last element.
+            final int bufferSize = index + 1;
+            final EvictingQueue<T> buffer = EvictingQueue.create(bufferSize);
+            stream.forEachOrdered(buffer::add);
+            // If we didn't fill the buffer there weren't enough elements in the stream.
+            return buffer.size() < bufferSize ? Optional.empty() : Optional.ofNullable(buffer.peek());
+        }
+
+        public ValueProducer<String> get(final int index) {
+            final ValueProducer<String> producer;
+            final String readableName = identifier + ".get(" + index + ')';
+            switch (index) {
+                case -1:
+                    producer = last(readableName);
+                    break;
+                case 0:
+                    producer = first(readableName);
+                    break;
+                default:
+                    final ValueProducer.FieldSupplier<String> supplier = 0 < index
+                        ? (e,c) -> normalizedValues(e.exchange, headerName)
+                                    .map(s -> s.skip(index).findFirst().orElse(null))
+                        : (e,c) -> normalizedValues(e.exchange, headerName)
+                                    .map(s -> findFromEnd(s, -index - 1).orElse(null));
+                    producer = new PrimitiveValueProducer<>(readableName, String.class, supplier);
+            }
+            return producer;
         }
 
         public ValueProducer<String> commaSeparated() {
