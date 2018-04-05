@@ -61,7 +61,11 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
             final Schema avroSchema = registry.getSchemaBySinkName(name).avroSchema;
             final FileManagerFactory fileManagerFactory = GoogleCloudStorageFileManager.newFactory(config, name, avroSchema);
             fileManagerFactory.verifyFileSystemConfiguration();
-            return new FileFlushingPool(config, name, fileManagerFactory);
+
+            final int threads = config.configuration().global.gcs.threads;
+            final int bufferSize = config.configuration().global.gcs.bufferSize;
+
+            return new FileFlushingPool(config, name, threads, bufferSize, fileManagerFactory);
         };
     }
 

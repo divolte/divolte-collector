@@ -57,7 +57,11 @@ public class HdfsSinkConfiguration extends FileSinkConfiguration {
             final Schema avroschema = registry.getSchemaBySinkName(name).avroSchema;
             final FileManagerFactory fileManagerFactory = HdfsFileManager.newFactory(config, name, avroschema);
             fileManagerFactory.verifyFileSystemConfiguration();
-            return new FileFlushingPool(config, name, fileManagerFactory);
+
+            final int threads = config.configuration().global.hdfs.threads;
+            final int bufferSize = config.configuration().global.hdfs.bufferSize;
+
+            return new FileFlushingPool(config, name, threads, bufferSize, fileManagerFactory);
         };
     }
 
