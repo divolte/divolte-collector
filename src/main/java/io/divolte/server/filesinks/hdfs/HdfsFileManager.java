@@ -42,6 +42,7 @@ import io.divolte.server.config.FileSinkConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileManager;
+import java.io.FileNotFoundException;
 
 @ParametersAreNonnullByDefault
 public class HdfsFileManager implements FileManager {
@@ -159,11 +160,20 @@ public class HdfsFileManager implements FileManager {
                 final String hdfsWorkingDir = configuration.configuration().getSinkConfiguration(name, FileSinkConfiguration.class).fileStrategy.workingDir;
                 final String hdfsPublishDir = configuration.configuration().getSinkConfiguration(name, FileSinkConfiguration.class).fileStrategy.publishDir;
 
-                if (!hdfs.isDirectory(new Path(hdfsWorkingDir))) {
+                try {
+                    if (!hdfs.getFileStatus(new Path(hdfsWorkingDir)).isDirectory()) {
+                        throw new RuntimeException("Path for in-flight AVRO records is not a directory: " + hdfsWorkingDir);
+                    }
+                } catch (final FileNotFoundException e) {
                     throw new RuntimeException("Working directory for in-flight AVRO records does not exist: " + hdfsWorkingDir);
                 }
-                if (!hdfs.isDirectory(new Path(hdfsPublishDir))) {
-                    throw new RuntimeException("Working directory for publishing AVRO records does not exist: " + hdfsPublishDir);
+
+                try {
+                    if (!hdfs.getFileStatus(new Path(hdfsPublishDir)).isDirectory()) {
+                        throw new RuntimeException("Path for publishing AVRO record is not a directory: " + hdfsPublishDir);
+                    }
+                } catch (final FileNotFoundException e) {
+                    throw new RuntimeException("Directory for publishing AVRO records does not exist: " + hdfsPublishDir);
                 }
             } catch (final IOException ioe) {
                 /*
