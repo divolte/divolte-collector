@@ -1462,7 +1462,7 @@ Derived simple value: :samp:`header({name}).get({index})`
   from the incoming request. The first element in the list has an index of 0, the second is 1 and so on.
   If the position requested is negative, the position is relative to the *end* of the list. The last element in the list
   has an index of -1, the second last is -2 and so on.
-  
+
   No value is mapped if the specified position exceeds the bounds of the list of values.
 
 :Type:
