@@ -86,6 +86,7 @@ public final class DslRecordMapping {
 
     private final UserAgentParserAndCache uaParser;
     private final Optional<LookupService> geoIpService;
+    private final AvroGenericRecordMapper jsonMapper = JacksonSupport.createAvroMapper();
 
     public DslRecordMapping(final Schema schema, final UserAgentParserAndCache uaParser, final Optional<LookupService> geoIpService) {
         this.schema = Objects.requireNonNull(schema);
@@ -566,7 +567,7 @@ public final class DslRecordMapping {
     /*
      * Custom event parameter mapping
      */
-    public final static class EventParameterValueProducer extends JsonValueProducer {
+    public final class EventParameterValueProducer extends JsonValueProducer {
         EventParameterValueProducer() {
             super("eventParameters()", (e,c) -> e.eventParametersProducer.get(), true);
         }
@@ -588,8 +589,8 @@ public final class DslRecordMapping {
     }
 
     @ParametersAreNonnullByDefault
-    private static class JsonValueProducer extends ValueProducer<JsonNode> {
-        private static final Logger logger = LoggerFactory.getLogger(JsonValueProducer.class);
+    private class JsonValueProducer extends ValueProducer<JsonNode> {
+        private final Logger logger = LoggerFactory.getLogger(JsonValueProducer.class);
 
         protected JsonValueProducer(final String identifier,
                                     final FieldSupplier<JsonNode> supplier,
@@ -604,14 +605,14 @@ public final class DslRecordMapping {
              * some Avro schemas (e.g non-trivial unions) that we don't
              * support.
              */
-            return JacksonSupport.AVRO_MAPPER.checkValid(target.schema());
+            return jsonMapper.checkValid(target.schema());
         }
 
         @Override
         Optional<Object> mapToGenericRecord(final JsonNode value,
                                             final Schema schema) throws SchemaMappingException {
             try {
-                return Optional.ofNullable(JacksonSupport.AVRO_MAPPER.read(value, schema));
+                return Optional.ofNullable(jsonMapper.read(value, schema));
             } catch (final IOException e) {
                 if (logger.isInfoEnabled()) {
                     logger.info(String.format("Error mapping JSON value %s to schema: %s", value, schema), e);
