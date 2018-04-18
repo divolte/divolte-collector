@@ -338,7 +338,7 @@
         { "name": "baz", "type": "string" }
       ]
     },
-    "json": { "foo": "bar", "baz": "daz", "extraField": { "foo": "x", "baz": "y" }, "baz": "daz"},
+    "json": { "foo": "bar", "baz": "daz", "extraField": { "foo": "x", "baz": "y" }},
     "deserialization_features": {
       "FAIL_ON_UNKNOWN_PROPERTIES": false
     },
