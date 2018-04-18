@@ -276,8 +276,8 @@ Some expressions, for example, :code:`eventParameters()` (and its :code:`path()`
 +-------------------+---------------------------------------------------------------------------+
 | | :code:`string`  | A JSON string, number or boolean value.                                   |
 +-------------------+---------------------------------------------------------------------------+
-| | :code:`enum`    | A JSON string, so long as the it's identical to one of the enumeration's  |
-|                   | symbols. (If not, the value will be treated as :code:`null`.              |
+| | :code:`enum`    | A JSON string, so long as it's identical to one of the enumeration's      |
+|                   | symbols. (If not, the value will be treated as :code:`null`).             |
 +-------------------+---------------------------------------------------------------------------+
 | | :code:`record`  | A JSON object, with each property corresponding to a field in the record. |
 |                   | (Extraneous properties are ignored.) The property values and field types  |
