@@ -169,7 +169,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
                    logger.info("Browser action #{} yielded pageview/event: {}/{}", index, pageViewId, event.eventId);
                    return pageViewId;
                })
-               .flatMap((pageViewId) -> pageViewId.map(Stream::of).orElse(null))
+               .flatMap(pageViewId -> pageViewId.map(Stream::of).orElse(null))
                .collect(Collectors.toSet()).size();
     }
 
