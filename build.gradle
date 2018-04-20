@@ -89,7 +89,6 @@ dependencies {
      * tested with these deps.
      */
     runtime (group: 'org.apache.avro', name: 'avro-tools', version: avroVersion, classifier: 'nodeps') {
-        exclude group: 'org.apache.avro', module: 'avro-ipc'
         exclude group: 'org.apache.avro', module: 'avro-mapred'
     }
 
