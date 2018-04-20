@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,11 +41,16 @@ public final class AvroRecordBuffer {
 
     private final DivolteIdentifier partyId;
     private final DivolteIdentifier sessionId;
+    private final Instant timestamp;
     private final ByteBuffer byteBuffer;
 
-    private AvroRecordBuffer(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final GenericRecord record) throws IOException {
+    private AvroRecordBuffer(final DivolteIdentifier partyId,
+                             final DivolteIdentifier sessionId,
+                             final Instant timestamp,
+                             final GenericRecord record) throws IOException {
         this.partyId = Objects.requireNonNull(partyId);
         this.sessionId = Objects.requireNonNull(sessionId);
+        this.timestamp = Objects.requireNonNull(timestamp);
 
         /*
          * We avoid ByteArrayOutputStream as it is fully synchronized and performs
@@ -73,10 +79,17 @@ public final class AvroRecordBuffer {
         return sessionId;
     }
 
-    public static AvroRecordBuffer fromRecord(final DivolteIdentifier partyId, final DivolteIdentifier sessionId, final GenericRecord record) {
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public static AvroRecordBuffer fromRecord(final DivolteIdentifier partyId,
+                                              final DivolteIdentifier sessionId,
+                                              final Instant timestamp,
+                                              final GenericRecord record) {
         for (;;) {
             try {
-                return new AvroRecordBuffer(partyId, sessionId, record);
+                return new AvroRecordBuffer(partyId, sessionId, timestamp, record);
             } catch (final BufferOverflowException boe) {
                 // Increase the buffer size by about 10%
                 // Because we only ever increase the buffer size, we discard the

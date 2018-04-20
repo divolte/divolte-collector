@@ -48,6 +48,7 @@ import org.mockito.ArgumentCaptor;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -105,7 +106,7 @@ public class GoogleCloudPubSubFlusherTest {
             .set("sessionId", sessionId.toString())
             .set("counter", generatedEventCounter++)
             .build();
-        return AvroRecordBuffer.fromRecord(partyId, sessionId, record);
+        return AvroRecordBuffer.fromRecord(partyId, sessionId, Instant.EPOCH, record);
     }
 
     private Item<AvroRecordBuffer> itemFromAvroRecordBuffer(final AvroRecordBuffer message) {

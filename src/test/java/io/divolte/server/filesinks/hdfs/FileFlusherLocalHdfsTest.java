@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -196,6 +197,7 @@ public class FileFlusherLocalHdfsTest {
         records.stream().map(
                 (record) -> AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
                                                         DivolteIdentifier.generate(),
+                                                        Instant.ofEpochMilli((long)record.get("ts")),
                                                         record))
                         .forEach((arb) -> flusher.process(Item.of(0, arb.getPartyId().value, arb)));
     }

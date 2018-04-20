@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData.Record;
@@ -457,14 +458,16 @@ public class FileFlusherTest {
     }
 
     private AvroRecordBuffer newAvroRecordBuffer() {
+        final Instant now = Instant.now();
         final Record record = new GenericRecordBuilder(schema)
-            .set("ts", System.currentTimeMillis())
+            .set("ts", now.toEpochMilli())
             .set("remoteHost", ARBITRARY_IP)
             .build();
 
         return AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
-                DivolteIdentifier.generate(),
-                record);
+                                           DivolteIdentifier.generate(),
+                                           now,
+                                           record);
     }
 
     private FileStrategyConfiguration setupConfiguration(final String roll, final String syncDuration, final String syncRecords) {
