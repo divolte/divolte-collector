@@ -491,5 +491,4 @@ public class FileFlusherTest {
             return new Schema.Parser().parse(resourceStream);
         }
     }
-
 }
