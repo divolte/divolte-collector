@@ -106,11 +106,14 @@
   },
   {
     "title": "Test enum mapping missing value to null",
-    "schema": {
-      "type": "enum",
-      "name": "Suit",
-      "symbols": [ "SPADES", "HEARTS", "DIAMONDS", "CLUBS" ]
-    },
+    "schema": [
+      {
+        "type": "enum",
+        "name": "Suit",
+        "symbols": [ "SPADES", "HEARTS", "DIAMONDS", "CLUBS" ]
+      },
+      "null"
+    ],
     "json": "RAKES",
     "deserialization_features": {
       "READ_UNKNOWN_ENUM_VALUES_AS_NULL": true
@@ -338,7 +341,7 @@
         { "name": "baz", "type": "string" }
       ]
     },
-    "json": { "foo": "bar", "baz": "daz", "extraField": { "foo": "x", "baz": "y" }, "baz": "daz"},
+    "json": { "foo": "bar", "baz": "daz", "extraField": { "foo": "x", "baz": "y" }},
     "deserialization_features": {
       "FAIL_ON_UNKNOWN_PROPERTIES": false
     },

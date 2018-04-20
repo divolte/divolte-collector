@@ -25,14 +25,13 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericFixed;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.avro.generic.*;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -49,8 +48,10 @@ import java.util.stream.Collectors;
  * around (and available) during deserialization.
  */
 @ParametersAreNonnullByDefault
+@NotThreadSafe
 public class AvroGenericRecordMapper {
     private final ObjectReader reader;
+    private final Map<Schema,ImmutableMap<String, GenericEnumSymbol>> enumSymbols = new HashMap<>();
 
     /**
      * Construct a mapper.
@@ -247,16 +248,24 @@ public class AvroGenericRecordMapper {
         return result;
     }
 
-    private String readEnum(final JsonParser parser,
-                            final Schema targetSchema) throws IOException {
+    private static ImmutableMap<String, GenericEnumSymbol> createSymbols(final Schema schema) {
+        Preconditions.checkArgument(schema.getType() == Schema.Type.ENUM);
+        return schema.getEnumSymbols()
+                     .stream()
+                     .collect(ImmutableMap.toImmutableMap(symbol -> symbol,
+                                                          symbol -> new GenericData.EnumSymbol(schema, symbol)));
+    }
+
+    @Nullable
+    private GenericEnumSymbol readEnum(final JsonParser parser,
+                                       final Schema targetSchema) throws IOException {
         Preconditions.checkArgument(targetSchema.getType() == Schema.Type.ENUM);
-        String symbol = reader.readValue(parser, String.class);
-        if (!targetSchema.hasEnumSymbol(symbol)) {
-            if (reader.isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL)) {
-                symbol = null;
-            } else {
-                throw unknownEnumValueException(parser, targetSchema, symbol);
-            }
+        final String potentialSymbol = reader.readValue(parser, String.class);
+        final ImmutableMap<String, GenericEnumSymbol> symbols =
+            enumSymbols.computeIfAbsent(targetSchema, AvroGenericRecordMapper::createSymbols);
+        final GenericEnumSymbol symbol = symbols.get(potentialSymbol);
+        if (null == symbol && !reader.isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL)) {
+            throw unknownEnumValueException(parser, targetSchema, potentialSymbol);
         }
         return symbol;
     }
