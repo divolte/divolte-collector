@@ -176,6 +176,21 @@ public class DslRecordMapperTest {
     }
 
     @Test
+    public void shouldSupportMappingToEnumerations() throws IOException, InterruptedException {
+        setupServer("enumeration-mapping.groovy");
+        final EventPayload event = request("http://example.com/#HEARTS",
+                                           ImmutableList.of("u=" + encodeUrl("(ssuit!CLUBS!)")));
+        assertEquals("DIAMONDS", event.record.get("suit"));
+        assertEquals("HEARTS", event.record.get("secondSuit"));
+        assertEquals("CLUBS", event.record.get("thirdSuit").toString());
+    }
+
+    @Test
+    public void shouldTreatInvalidEnumerationValueAsNotPresent() {
+        throw new UnsupportedOperationException("Not yet implemented.");
+    }
+
+    @Test
     public void shouldApplyActionsInClosureWhenEqualToConditionHolds() throws IOException, InterruptedException {
         setupServer("when-mapping.groovy");
         final EventPayload event = request("http://www.example.com/", "http://www.example.com/somepage.html");

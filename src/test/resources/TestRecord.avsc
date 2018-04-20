@@ -132,6 +132,22 @@
             "default": null
         },
 
+        {
+            "name": "suit",
+            "type":
+                [
+                    "null",
+                    {
+                        "type": "enum",
+                        "name": "Suit",
+                        "symbols": ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"]
+                    }
+                ],
+            "default": null
+        },
+        { "name": "secondSuit",                       "type": ["null","Suit"],    "default": null },
+        { "name": "thirdSuit",                        "type": ["null","Suit"],    "default": null },
+
         { "name": "uriScheme",                        "type": ["null","string"],  "default": null },
         { "name": "uriPath",                          "type": ["null","string"],  "default": null },
         { "name": "uriHost",                          "type": ["null","string"],  "default": null },
