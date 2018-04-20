@@ -18,6 +18,7 @@ package io.divolte.server.recordmapping;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -27,10 +28,13 @@ public class JacksonSupport {
         // Prevent external instantiation.
     }
 
-    static final AvroGenericRecordMapper AVRO_MAPPER =
-            new AvroGenericRecordMapper(
-                    new ObjectMapper().reader()
-                                      .with(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
-                                            DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)
-                                      .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
+    private static final ObjectReader OBJECT_READER =
+        new ObjectMapper().reader()
+                          .with(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
+                                DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)
+                          .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+    static AvroGenericRecordMapper createAvroMapper() {
+        return new AvroGenericRecordMapper(OBJECT_READER);
+    }
 }

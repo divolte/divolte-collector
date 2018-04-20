@@ -16,34 +16,6 @@
 
 package io.divolte.server;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import io.divolte.server.config.ValidatedConfiguration;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.util.Utf8;
-import org.junit.After;
-import org.junit.Test;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -52,13 +24,34 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.maxmind.geoip2.model.CityResponse;
-
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.divolte.server.ServerTestUtils.EventPayload;
 import io.divolte.server.ServerTestUtils.TestServer;
+import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.ip2geo.LookupService;
 import io.divolte.server.ip2geo.LookupService.ClosedServiceException;
 import io.divolte.server.recordmapping.DslRecordMapper;
 import io.divolte.server.recordmapping.SchemaMappingException;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
+import org.junit.After;
+import org.junit.Test;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.*;
+import java.util.stream.Stream;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 @ParametersAreNonnullByDefault
 public class DslRecordMapperTest {
@@ -279,12 +272,41 @@ public class DslRecordMapperTest {
     }
 
     @Test
-    public void shouldSetCustomHeaders() throws IOException, InterruptedException {
+    public void shouldSupportHeaderExtraction() throws IOException, InterruptedException {
         setupServer("header-mapping.groovy");
         final EventPayload event = request("http://www.example.com/");
+
         assertEquals(Arrays.asList("first", "second", "last"), event.record.get("headerList"));
-        assertEquals("first", event.record.get("header"));
+        assertEquals("first", event.record.get("headerFirst"));
+        assertEquals("first", event.record.get("headerGet0"));
+        assertEquals("second", event.record.get("headerGet1"));
+        assertEquals("last", event.record.get("headerGet2"));
+        assertNull(event.record.get("headerGet3"));
+        assertNull(event.record.get("headerGet_4"));
+        assertEquals("first", event.record.get("headerGet_3"));
+        assertEquals("second", event.record.get("headerGet_2"));
+        assertEquals("last", event.record.get("headerGet_1"));
+        assertEquals("last", event.record.get("headerLast"));
         assertEquals("first,second,last", event.record.get("headers"));
+    }
+
+    @Test
+    public void shouldNormalizeHeadersBeforeExtraction() throws IOException, InterruptedException {
+        setupServer("header-normalization-mapping.groovy");
+        final EventPayload event = request("http://www.example.com/");
+        // Note: Undertow has a bug wherein it normalizes all WS, even within quoted strings.
+        // So for now we don't include that in our fixture.
+        assertEquals(Arrays.asList("first",
+                                   "second",
+                                   "third",
+                                   "fourth",
+                                   "fifth",
+                                   "sixth,still_sixth",
+                                   "seventh",
+                                   " eighth,\"still eighth ",
+                                   "ninth still ninth",
+                                   "last"),
+                     event.record.get("headerList"));
     }
 
     @Test
@@ -519,6 +541,12 @@ public class DslRecordMapperTest {
         conn.addRequestProperty("X-Divolte-Test", "first");
         conn.addRequestProperty("X-Divolte-Test", "second");
         conn.addRequestProperty("X-Divolte-Test", "last");
+        conn.addRequestProperty("X-Divolte-Horrible", "first");
+        conn.addRequestProperty("X-Divolte-Horrible", "second, third ,fourth,fifth");
+        conn.addRequestProperty("X-Divolte-Horrible", "\"sixth,still_sixth\", seventh,");
+        conn.addRequestProperty("X-Divolte-Horrible", "\" eighth,\\\"still eighth \"");
+        conn.addRequestProperty("X-Divolte-Horrible", "ninth  still ninth");
+        conn.addRequestProperty("X-Divolte-Horrible", "last");
         conn.setRequestMethod("GET");
 
         assertEquals(200, conn.getResponseCode());

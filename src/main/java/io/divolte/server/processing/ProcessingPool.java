@@ -97,6 +97,7 @@ public class ProcessingPool<T extends ItemProcessor<E>, E> {
             executorService.shutdown();
             executorService.awaitTermination(1, TimeUnit.HOURS);
         } catch (final InterruptedException e) {
+            logger.warn("Received an exception while stopping the executor service", e);
             Thread.currentThread().interrupt();
         }
     }

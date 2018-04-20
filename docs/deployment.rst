@@ -27,6 +27,14 @@ Consistent hashing and event de-duplication
 -------------------------------------------
 If possible, load balancers should use a consistent hashing scheme when performing URI hash-based routing. This should ensure that most traffic continues to be routed to the same instance as before. The benefit of this is that the duplicate memory kept by Divolte Collector nodes remains effective.
 
+Liveness checking
+-----------------
+Divolte Collector supports a simple liveness probe via its ``/ping`` endpoint. During normal operation this will respond with a HTTP 200 status code. Load balancers can query this to check whether an instance of the service is up or not.
+
+To help with operations such as restarts or scaling down, the ``divolte.global.server.shutdown_delay`` property can be set to a duration long enough that failing liveness checks will cause the load balancer to remove the backend from service before it truly stops. When the shutdown is requested, the server will continue handling normal traffic but the ``/ping`` endpoint will start returning a HTTP 503 status code. Once the delay elapses the server stop normally and no new requests will be processed.
+
+For example, if a load balancer checks backends for liveness every 10 seconds and removes a backend from service after 2 failed checks, setting the shutdown delay to 20 seconds would ensure that all traffic to it ceases before it actually stops.
+
 SSL
 ===
 Divolte Collector does not handle SSL itself. SSL offloading needs to be done by a load balancer or a reverse proxy server. This can normally handled by the load balancer in front of Divolte Collector in production setups.
@@ -102,3 +110,13 @@ When using `nginx <http://nginx.org/>`_ as a reverse proxy and load balancer in 
 Kafka Connect
 =============
 When deploying in conjunction with Kafka Connect, the Avro schemas need to be pre-registered with the `Schema Registry <https://docs.confluent.io/3.3.0/schema-registry/docs>`_. Mappings that produce records for a Kafka sink operating in ``confluent`` mode need have their ``confluent_id`` property configured with the identifier of the schema in the registry. (This identifier is normally a simple integer.)
+
+Kubernetes
+==========
+When deploying under Kubernetes there are some steps to take to minimise data loss during rolling updates and scaling. These are:
+
+- Use the :code:`/ping` endpoint as a liveness probe.
+- Set the ``divolte.global.server.shutdown_delay`` property to be long enough for liveness to evaluate as false. Kubernetes defaults to using a probe interval of 10 seconds, with 2 successive probes failing before an instance is not considered live. In this case setting the delay to 20 seconds would be appropriate.
+- Set the ``divolte.global.server.shutdown_timeout`` property so that requests underway can complete while ensuring that the Kubernetes shutdown timeout is not exceeded. The Kubernetes shutdown timeout defaults to 30 seconds: after accounting for the liveness delay, this means that setting this property to 5 seconds leaves another 5 seconds for the sinks to flush any outstanding data before Kubernetes forcefully kills the container.
+
+These values may need to be adjusted appropriately for your infrastructure.

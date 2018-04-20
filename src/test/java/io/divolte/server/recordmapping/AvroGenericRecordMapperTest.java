@@ -26,6 +26,10 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.Encoder;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,14 +37,17 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 @ParametersAreNonnullByDefault
 @RunWith(Parameterized.class)
@@ -152,9 +159,15 @@ public class AvroGenericRecordMapperTest {
             final Object avroResult = reader.read(testFixture.jsonToMap, testFixture.avroSchema);
             // If we expected an exception, fail...
             testFixture.expectedException.ifPresent(e -> fail("Expected exception to be thrown: " + e));
-            // ...otherwise verify the result.
+            // ...otherwise verify the result...
             final JsonNode avroResultJson = JSON_MAPPER.readTree(GenericData.get().toString(avroResult));
             assertEquals(testFixture.expectedJson, avroResultJson);
+            // ...and ensure it can be written out as a record.
+            final DatumWriter<Object> writer = new SpecificDatumWriter<>(testFixture.avroSchema);
+            try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+                final Encoder encoder = EncoderFactory.get().directBinaryEncoder(byteArrayOutputStream, null);
+                writer.write(avroResult, encoder);
+            }
         } catch (final Exception e) {
             // Suppress the exception if it was expected; otherwise rethrow.
             testFixture.expectedException

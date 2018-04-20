@@ -27,16 +27,6 @@ import io.divolte.server.processing.ProcessingPool;
 
 @ParametersAreNonnullByDefault
 public class FileFlushingPool extends ProcessingPool<FileFlusher, AvroRecordBuffer> {
-    public FileFlushingPool(
-            final ValidatedConfiguration vc,
-            final String sinkName,
-            final FileManager.FileManagerFactory managerFactory) {
-        this(vc,
-             sinkName,
-             vc.configuration().global.hdfs.threads,
-             vc.configuration().global.hdfs.bufferSize,
-             managerFactory);
-    }
 
     public FileFlushingPool(
             final ValidatedConfiguration vc,

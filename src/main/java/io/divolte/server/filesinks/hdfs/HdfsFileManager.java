@@ -16,13 +16,13 @@
 
 package io.divolte.server.filesinks.hdfs;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Objects;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
+import com.google.common.base.MoreObjects;
+import com.google.common.io.Closeables;
+import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.config.FileSinkConfiguration;
+import io.divolte.server.config.HdfsSinkConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
+import io.divolte.server.filesinks.FileManager;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -31,17 +31,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.MoreObjects;
-
-import io.divolte.server.AvroRecordBuffer;
-import io.divolte.server.config.FileSinkConfiguration;
-import io.divolte.server.config.HdfsSinkConfiguration;
-import io.divolte.server.config.ValidatedConfiguration;
-import io.divolte.server.filesinks.FileManager;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Objects;
 
 @ParametersAreNonnullByDefault
 public class HdfsFileManager implements FileManager {
@@ -122,7 +119,7 @@ public class HdfsFileManager implements FileManager {
 
         @Override
         public void discard() throws IOException {
-            closeQuitely(writer);
+            Closeables.close(writer, true);
 
             if (hdfs.exists(inflightPath)) {
                 hdfs.delete(inflightPath, false);
@@ -159,11 +156,20 @@ public class HdfsFileManager implements FileManager {
                 final String hdfsWorkingDir = configuration.configuration().getSinkConfiguration(name, FileSinkConfiguration.class).fileStrategy.workingDir;
                 final String hdfsPublishDir = configuration.configuration().getSinkConfiguration(name, FileSinkConfiguration.class).fileStrategy.publishDir;
 
-                if (!hdfs.isDirectory(new Path(hdfsWorkingDir))) {
+                try {
+                    if (!hdfs.getFileStatus(new Path(hdfsWorkingDir)).isDirectory()) {
+                        throw new RuntimeException("Path for in-flight AVRO records is not a directory: " + hdfsWorkingDir);
+                    }
+                } catch (final FileNotFoundException e) {
                     throw new RuntimeException("Working directory for in-flight AVRO records does not exist: " + hdfsWorkingDir);
                 }
-                if (!hdfs.isDirectory(new Path(hdfsPublishDir))) {
-                    throw new RuntimeException("Working directory for publishing AVRO records does not exist: " + hdfsPublishDir);
+
+                try {
+                    if (!hdfs.getFileStatus(new Path(hdfsPublishDir)).isDirectory()) {
+                        throw new RuntimeException("Path for publishing AVRO record is not a directory: " + hdfsPublishDir);
+                    }
+                } catch (final FileNotFoundException e) {
+                    throw new RuntimeException("Directory for publishing AVRO records does not exist: " + hdfsPublishDir);
                 }
             } catch (final IOException ioe) {
                 /*
@@ -211,14 +217,6 @@ public class HdfsFileManager implements FileManager {
             hdfsConfiguration.setBoolean("fs.automatic.close", false);
 
             return FileSystem.get(hdfsConfiguration);
-        }
-    }
-
-    private static void closeQuitely(final Closeable c) {
-        try {
-            c.close();
-        } catch (final IOException ioe) {
-            Log.warn("Failed to quietly close.", ioe);
         }
     }
 }

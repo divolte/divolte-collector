@@ -276,8 +276,8 @@ Some expressions, for example, :code:`eventParameters()` (and its :code:`path()`
 +-------------------+---------------------------------------------------------------------------+
 | | :code:`string`  | A JSON string, number or boolean value.                                   |
 +-------------------+---------------------------------------------------------------------------+
-| | :code:`enum`    | A JSON string, so long as the it's identical to one of the enumeration's  |
-|                   | symbols. (If not, the value will be treated as :code:`null`.              |
+| | :code:`enum`    | A JSON string, so long as it's identical to one of the enumeration's      |
+|                   | symbols. (If not, the value will be treated as :code:`null`).             |
 +-------------------+---------------------------------------------------------------------------+
 | | :code:`record`  | A JSON object, with each property corresponding to a field in the record. |
 |                   | (Extraneous properties are ignored.) The property values and field types  |
@@ -1397,7 +1397,9 @@ Complex value: :samp:`header({name})`
   ``browser``, ``json``
 
 :Description:
-  The list of all values associated with the given HTTP header from the incoming request. A HTTP header can be present in a request multiple times, yielding multiple values for the same header name; these are returned as a list. The Avro type of the target field for this mapping must be a list of string:
+  The list of all values associated with the given HTTP header from the incoming request. A HTTP header can be present in a request multiple times, and each header can contain a comma-separated list of values. The list of values is normalized by splitting the comma-separated lists for each header and concatenating them together. Empty values are omitted.
+
+  The Avro type of the target field for this mapping must be a list of string:
 
   .. code-block:: json
 
@@ -1428,7 +1430,7 @@ Derived simple value: :samp:`header({name}).first()`
     map header('header-name').first() onto 'fieldName'
 
 :Description:
-  The *first* of all values associated with the given HTTP header from the incoming request. A HTTP header can be present in a request multiple times, yielding multiple values for the same header name. This returns the first value in that list.
+  The *first* of the normalized values associated with the given HTTP header from the incoming request.
 
 :Type:
   :code:`String`
@@ -1442,7 +1444,26 @@ Derived simple value: :samp:`header({name}).last()`
     map header('header-name').last() onto 'fieldName'
 
 :Description:
-  The *last* of all values associated with the given HTTP header from the incoming request. A HTTP header can be present in a request multiple times, yielding multiple values for the same header name. This returns the last value in that list.
+  The *last* of the normalized values associated with the given HTTP header from the incoming request.
+
+:Type:
+  :code:`String`
+
+Derived simple value: :samp:`header({name}).get({index})`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:Usage:
+
+  .. code-block:: groovy
+
+    map header('header-name').get(2) onto 'fieldName'
+
+:Description:
+  Retrieve the value at the specified position in the list of normalized values associated with the given HTTP header
+  from the incoming request. The first element in the list has an index of 0, the second is 1 and so on.
+  If the position requested is negative, the position is relative to the *end* of the list. The last element in the list
+  has an index of -1, the second last is -2 and so on.
+
+  No value is mapped if the specified position exceeds the bounds of the list of values.
 
 :Type:
   :code:`String`
@@ -1456,7 +1477,7 @@ Derived simple value: :samp:`header({name}).commaSeparated()`
     map header('header-name').commaSeparated() onto 'fieldName'
 
 :Description:
-  The comma separated string of all values associated with the given HTTP header from the incoming request. A HTTP header can be present in a request multiple times, yielding multiple values for the same header name. This joins that list using a comma as separator.
+  The comma separated string of all values associated with the given HTTP header from the incoming request. If the HTTP header is present in the requested multiple times, the header values are joined using a comma as separator.
 
 :Type:
   :code:`String`
@@ -1637,9 +1658,17 @@ Complex value: :code:`ip2geo({optionalIP})`
     def ua = ip2geo()
 
     // If a load balancer sets custom headers for IP addresses, use like this
-    def ip = header('X-Custom-Header').first()
+    def ip = header('X-Forwarded-For').first()
     def myUa = ip2geo(ip)
 
+Also other functions are available depending on the array of IP's:
+
+  .. code-block:: groovy
+
+    // Returns the last item of the list
+    def ip = header('X-Forwarded-For').last()
+    // Returns the second last item
+    def ip = header('X-Forwarded-For').get(-2)
 
 :Sources:
 

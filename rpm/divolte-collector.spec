@@ -23,7 +23,7 @@
 %define snapshot %{nil}%{?snapshotVersion}
 
 Name:           divolte-collector
-Version:        0.7.0
+Version:        0.9.0
 Release:        %{?snapshotVersion:1}%{?!snapshotVersion:2}%{?dist}
 Summary:        The Divolte click-stream collection agent.
 

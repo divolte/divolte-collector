@@ -24,6 +24,8 @@ import org.junit.Test;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import java.time.Duration;
+
 public class ValidatedConfigurationTest {
     @Test
     public void shouldNotThrowExceptionsOnInvalidConfiguration() {
@@ -161,5 +163,21 @@ public class ValidatedConfigurationTest {
                 .get(0)
                 .startsWith("Property 'divolte.' Any sink can only use one confluent identifier. The following sinks have multiple mappings with different 'confluent_id' attributes: [kafka]..")
         );
+    }
+
+    @Test
+    public void shouldSetShutdownDelay() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("reference-test-shutdown.conf"));
+
+        assertTrue(vc.isValid());
+        assertEquals(Duration.ofMillis(2200), vc.configuration().global.server.shutdownDelay);
+    }
+
+    @Test
+    public void shouldSetShutdownTimeout() {
+        final ValidatedConfiguration vc = new ValidatedConfiguration(() -> ConfigFactory.parseResources("reference-test-shutdown.conf"));
+
+        assertTrue(vc.isValid());
+        assertEquals(Duration.ofMinutes(3), vc.configuration().global.server.shutdownTimeout);
     }
 }
