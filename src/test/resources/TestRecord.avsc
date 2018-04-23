@@ -95,6 +95,7 @@
         { "name": "geoOrganisation",                 "type": ["null","string"],  "default": null },
         { "name": "geoAnonymousProxy",               "type": ["null","boolean"], "default": null },
         { "name": "geoSatelliteProvider",            "type": ["null","boolean"], "default": null },
+        { "name": "stringConcat",                    "type": ["null","string"],  "default": null },
         {
             "name": "geoSubdivisionCodes",
             "type":

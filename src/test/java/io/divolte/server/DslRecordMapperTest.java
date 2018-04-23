@@ -509,6 +509,15 @@ public class DslRecordMapperTest {
         assertTrue((Boolean) event.record.get("pathBoolean"));
     }
 
+    @Test
+    public void shouldSupportStringOperations() throws IOException, InterruptedException {
+        setupServer("string-operations.groovy");
+        final EventPayload event = request("http://www.example.com/");
+
+        // Concat two fields in the mapping
+        assertEquals(USER_AGENT.concat(event.event.partyId.value), event.record.get("stringConcat"));
+    }
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
