@@ -6,11 +6,11 @@ Mapping in Divolte Collector is the definition that determines how incoming even
 
 Why mapping?
 ============
-Most clickstream data collection services or solutions use a canonical data model that is specific to click events and related properties. Things such as location, referrer, remote IP address, path, etc. are all properties of a click event that come to mind. While Divolte Collector exposes all of these fields just as well, it is our vision that this is not enough to make it easy to build online and near real-time data driven products within specific domains and environments. For example, when working on a system for product recommendation, the notion of a URL or path for a specific page is completely in the wrong domain; what you care about in this case is likely a product ID and probably a type of interaction (e.g. product page view, large product photo view, add to basket, etc.). It is usually possible to extract these pieces of information from the clickstream representation, which means custom parsers have to be created to parse this information out of URLs, custom events from JavaScript and other sources. This means that whenever you work with the clickstream data, you have to run these custom parsers initially in order to get meaninful, domain specific information from the data. When building real-time systems, it normally means that this parser has to run in multiple locations: as part of the off line processing jobs and as part of the real-time processing.
+Most clickstream data collection services or solutions use a canonical data model that is specific to click events and related properties. Things such as location, referrer, remote IP address, path, etc. are all properties of a click event that come to mind. While Divolte Collector exposes all of these fields just as well, it is our vision that this is not enough to make it easy to build online and near real-time data driven products within specific domains and environments. For example, when working on a system for product recommendation, the notion of a URL or path for a specific page is completely in the wrong domain; what you care about in this case is likely a product ID and probably a type of interaction (e.g. product page view, large product photo view, add to basket, etc.). It is usually possible to extract these pieces of information from the clickstream representation, which means custom parsers have to be created to parse this information out of URLs, custom events from JavaScript and other sources. This means that whenever you work with the clickstream data, you have to run these custom parsers initially in order to get meaningful, domain specific information from the data. When building real-time systems, it normally means that this parser has to run in multiple locations: as part of the off line processing jobs and as part of the real-time processing.
 
 With Divolte Collector, instead of writing parsers and working with the raw clickstream event data in your processing, you define mappings that allows Divolte Collector to do all the required parsing on the fly as events come in and subsequently produce structured records with a schema to use in further processing. This means that all data that comes in can already have the relevant domain specific fields populated. Whenever the need for a new extracted piece of information arises, you can update the mapping to include the new field in the newly produced data. The older data that lacks newly additional fields can co-exist with newer data that does have the additional fields through a process called schema evolution. This is supported by Avro's ability to read data with a different schema from the one that the data was written with. (This is implemented at read-time using a process called `schema resolution <https://avro.apache.org/docs/1.8.2/spec.html#Schema+Resolution>`_.)
 
-The goal of the mapping is to get rid of log file or URL parsing on collected data after it is published. The event stream from Divolte Collector should have all the domain specific fields to support you use cases directly.
+The goal of the mapping is to get rid of log file or URL parsing on collected data after it is published. The event stream from Divolte Collector should have all the domain specific fields to support your use cases directly.
 
 Understanding the mapping process
 ---------------------------------
@@ -127,9 +127,9 @@ This is most often used in combination with `Conditional mapping (when)`_ as in 
   }
 
 Value presence
-""""""""""""""
-Not all values are present in each event. For example, when using a custom cookie value there could be incoming events where the cookie is not sent by the client. In this case the cookie value is said to absent. Similarly, events from a JSON source do not have a location value; this is specific to events from a browser source.
+^^^^^^^^^^^^^^
 
+Not all values are present in each event. For example, when using a custom cookie value there could be incoming events where the cookie is not sent by the client. In this case the cookie value is said to be absent. Similarly, events from a JSON source do not have a location value; this is specific to events from a browser source.
 Divolte Collector will never actively set an absent value. Instead for absent values it does nothing at all: the mapped field is not set on the Avro record. When values that are absent are used in subsequent expressions the derived values will also be absent. In the following example the :code:`intField` field will never be set because the incoming request has no referrer. This is not an error:
 
 .. code-block:: groovy
@@ -210,8 +210,8 @@ Below is a table of all types that can be produced in a mapping and the correspo
 |                                  | See :ref:`mapping-json-label`.                                         |
 +----------------------------------+------------------------------------------------------------------------+
 
-Casting/parsing
-"""""""""""""""
+**Casting/parsing**
+"""""""""""""""""""
 Many of the simple values that can be extracted from an event are strings. Sometimes these values are not intended to be strings. Because type information about things like query parameters or path components is not present in a HTTP request, Divolte Collector can only treat these values as strings. It is, however, possible to parse a string to a primitive or other type in the mapping using this construct:
 
 .. code-block:: groovy
@@ -254,8 +254,8 @@ Because :code:`int`, :code:`long`, :code:`Boolean`, etc. are reserved words in G
 
 .. _mapping-json-label:
 
-Mapping JSON (:code:`JsonNode`) to Avro fields
-""""""""""""""""""""""""""""""""""""""""""""""
+**Mapping JSON (:code:`JsonNode`) to Avro fields**
+""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Some expressions, for example, :code:`eventParameters()` (and its :code:`path()` method), produce a :code:`JsonNode` value that represents JSON supplied by a client. Because Avro doesn't have a type for handling arbitrary JSON data, a *compatible* Avro type must be chosen to match the expected structure of the JSON from the client. The following table lists the rules for compatibility between JSON values and Avro types.
 
@@ -388,8 +388,8 @@ As an alternative syntax, it is possible to use a closure that produces the bool
     map true onto 'signedInUser'
   }
 
-Conditions
-""""""""""
+**Conditions**
+""""""""""""""
 Any boolean value can be used as a condition. In order to be able to create flexible conditional mappings, the mapping DSL provides a number of methods on values that return booleans useful in conditional mappings, such as equality comparisons and boolean logic:
 
 +-------------------------------------------------+----------------------------------------------------------------+
@@ -449,7 +449,7 @@ The :code:`exit()` function will, at any point, break out of the enclosing secti
 
   // other mappings here
 
-There is a optional shorthand syntax for conditionally exiting from a section which leaves out the :code:`apply` keyword and closure:
+There is an optional shorthand syntax for conditionally exiting from a section which leaves out the :code:`apply` keyword and closure:
 
 .. code-block:: groovy
 
@@ -629,7 +629,7 @@ Simple value: :code:`corrupt()`
   ``browser``, ``json``
 
 :Description:
-  A boolean flag that is true if the source for the event detected corruption of the event data. Event corruption usually occurs when intermediate parties try to re-write HTTP requests or truncate long URLs. Real-world proxies and anti-virus software has been observed doing this.
+  A boolean flag that is true if the source for the event detected corruption of the event data. Event corruption usually occurs when intermediate parties try to re-write HTTP requests or truncate long URLs. Real-world proxies and anti-virus softwares have been observed doing this.
 
   Note that although this field is available on events from all sources, only browser sources currently detect corruption and set this value accordingly.
 
@@ -855,7 +855,7 @@ Simple value: :code:`sessionId()`
 :Description:
   A short-lived unique identifier stored by a client that is associated with each event from that source within a session of activity. All events from the same client within a session should have the same session identifier.
 
-  For browser sources a session to expire when 30 minutes has elapsed without any events occurring.
+  For browser sources a session expires when 30 minutes has elapsed without any events occurring.
 
 :Type:
   :code:`String`
@@ -970,7 +970,7 @@ Simple value: :code:`eventType()`
 
 Complex values
 ^^^^^^^^^^^^^^
-Complex values often return intermediate objects that you extract derived, simple values for mapping onto fields. The main exception to this is when working with event-parameters: the :code:`JsonNode` results can be mapped directly to fields, so long as they are of the right 'shape'; see :ref:`mapping-json-label` for more details.
+Complex values often return intermediate objects that you extract derived, simple values for mapping onto fields. The main exception to this is when working with event-parameters: the :code:`JsonNode` results can be mapped directly to fields, as long as they are of the right 'shape'; see :ref:`mapping-json-label` for more details.
 
 Complex value: :code:`eventParameters()`
 """"""""""""""""""""""""""""""""""""""""
@@ -1101,7 +1101,7 @@ Complex conversion: :code:`uri`
     def locationUri = parse location() to uri
 
 :Description:
-  Attempts to parse a string as a URI. The most obvious candidates to use for this are the :code:`location()` and :code:`referer()` values, but you can equally do this same with custom event parameters or any other string value. If the parser fails to create a URI from a string, then the value will be absent. Note that the parsed URI itself is not directly mappable onto any Avro field.
+  Attempts to parse a string as a URI. The most obvious candidates to use for this are the :code:`location()` and :code:`referer()` values, but you can equally do the same with custom event parameters or any other string value. If the parser fails to create a URI from a string, then the value will be absent. Note that the parsed URI itself is not directly mappable onto any Avro field.
 
 :Type:
   :code:`URI`
