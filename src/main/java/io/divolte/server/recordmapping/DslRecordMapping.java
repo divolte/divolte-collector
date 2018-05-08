@@ -1173,6 +1173,31 @@ public final class DslRecordMapping {
         }
     }
 
+    @SafeVarargs
+    public static ValueProducer<String> concat(final ValueProducer<String>... strings) {
+        final String identifier = Arrays.stream(strings)
+                                        .map(p -> p.identifier)
+                                        .collect(Collectors.joining(",", "concat(", ")"));
+        return new PrimitiveValueProducer<>(identifier, String.class,
+            (e,c) -> {
+                final Iterator<String> values =
+                    Arrays.stream(strings)
+                          .map(p -> p.produce(e, c))
+                          .filter(Optional::isPresent)
+                          .map(Optional::get)
+                          .iterator();
+                // This is slightly tricky: we want to handle the corner-case where
+                // we have nothing to concatenate because there were no "present" strings.
+                // In this case we ourselves map are "absent". This lets mappings distinguish
+                // between non-present and empty strings strings.
+                return values.hasNext()
+                    ? Optional.of(Streams.stream(values)
+                                         .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                                         .toString())
+                    : Optional.empty();
+            }, true);
+    }
+
     private static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,
                                                                   final Function<Schema, Boolean> validator,
                                                                   final String messageIfInvalid,

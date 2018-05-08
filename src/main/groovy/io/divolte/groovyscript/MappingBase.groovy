@@ -16,6 +16,7 @@
 
 package io.divolte.groovyscript
 
+import io.divolte.server.recordmapping.DslRecordMapping
 import io.divolte.server.recordmapping.DslRecordMapping.ValueProducer
 import io.divolte.server.recordmapping.SchemaMappingException
 
@@ -102,5 +103,9 @@ abstract class MappingBase extends Script {
                 }
             }
         ]
+    }
+
+    static ValueProducer<String> concat(ValueProducer<String>... strings) {
+        DslRecordMapping.concat(strings)
     }
 }
