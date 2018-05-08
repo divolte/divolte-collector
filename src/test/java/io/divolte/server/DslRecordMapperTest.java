@@ -519,6 +519,7 @@ public class DslRecordMapperTest {
         assertNull(event.record.get("stringConcatEmpty"));
         assertEquals(USER_AGENT.concat(event.event.sessionId.value), event.record.get("stringConcatSomeMissing"));
         assertNull(event.record.get("stringConcatAllMissing"));
+        assertEquals(USER_AGENT + "-" + event.event.sessionId.value, event.record.get("stringWithSeparatorConcatAllMissing"));
     }
 
     private static final ObjectMapper MAPPER =

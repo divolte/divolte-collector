@@ -99,6 +99,7 @@
         { "name": "stringConcatEmpty",               "type": ["null","string"],  "default": null },
         { "name": "stringConcatSomeMissing",         "type": ["null","string"],  "default": null },
         { "name": "stringConcatAllMissing",          "type": ["null","string"],  "default": null },
+        { "name": "stringWithSeparatorConcatAllMissing", "type": ["null","string"],  "default": null },
         {
             "name": "geoSubdivisionCodes",
             "type":

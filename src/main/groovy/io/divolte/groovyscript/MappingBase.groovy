@@ -108,4 +108,8 @@ abstract class MappingBase extends Script {
     static ValueProducer<String> concat(ValueProducer<String>... strings) {
         DslRecordMapping.concat(strings)
     }
+
+    static ValueProducer<String> concat_ws(String separator, ValueProducer<String>... strings) {
+        DslRecordMapping.concat_ws(separator, strings)
+    }
 }

@@ -30,4 +30,7 @@ mapping {
 
     // Map a series where everything is missing.
     map concat(header("not-present"), header("also-not-present")) onto 'stringConcatAllMissing'
+
+    // Map a series where everything is missing.
+    map concat_ws("-", userAgentString(), header("not-present"), sessionId()) onto 'stringWithSeparatorConcatAllMissing'
 }
