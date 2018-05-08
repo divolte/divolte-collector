@@ -414,6 +414,17 @@ Any boolean value can be used as a condition. In order to be able to create flex
 |                                                 | `Regular expression matching`_.                                |
 +-------------------------------------------------+----------------------------------------------------------------+
 
+String manipulation
+^^^^^^^^^^^^^^^^^^^
+Any string value van be manipulated. In order to combine strings.
+
++-------------------------------------------------+----------------------------------------------------------------+
+| Operation                                       | Description                                                    |
++=================================================+================================================================+
+| :samp:`{value}.concat({string})`                | Concat two strings. If one of the strings is empty, the not    |
+|                                                 | null value will be returned                                    |
++-------------------------------------------------+----------------------------------------------------------------+
+
 Sections and short circuiting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Sections are useful for grouping together parts of the mapping that form a logical subset of the entire mapping. In addition to grouping it is possible to conditionally stop processing a section prematurely. Sections are defined using the :code:`section` keyword followed by a closure that contains the section:

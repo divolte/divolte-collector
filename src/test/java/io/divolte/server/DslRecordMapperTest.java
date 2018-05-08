@@ -509,6 +509,19 @@ public class DslRecordMapperTest {
         assertTrue((Boolean) event.record.get("pathBoolean"));
     }
 
+    @Test
+    public void shouldSupportStringConcatenation() throws IOException, InterruptedException {
+        setupServer("string-operations.groovy");
+        final EventPayload event = request("http://www.example.com/");
+
+        // Check the various concatenations worked as expected.
+        assertEquals(USER_AGENT.concat(event.event.partyId.value), event.record.get("stringConcatSimple"));
+        assertNull(event.record.get("stringConcatEmpty"));
+        assertEquals(USER_AGENT.concat(event.event.sessionId.value), event.record.get("stringConcatSomeMissing"));
+        assertNull(event.record.get("stringConcatAllMissing"));
+        assertEquals(USER_AGENT + "-" + event.event.sessionId.value, event.record.get("stringWithSeparatorConcatAllMissing"));
+    }
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
