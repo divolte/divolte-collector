@@ -19,5 +19,15 @@ mapping {
     map timestamp() onto 'ts'
     map remoteHost() onto 'remoteHost'
 
-    map userAgentString().concat(partyId()) onto 'stringConcat'
+    // Simply concatenation of two values.
+    map concat(userAgentString(), partyId()) onto 'stringConcatSimple'
+
+    // Map nothing.
+    map concat() onto 'stringConcatEmpty'
+
+    // Map a mix of present and missing attributes.
+    map concat(userAgentString(), header("not-present"), sessionId()) onto 'stringConcatSomeMissing'
+
+    // Map a series where everything is missing.
+    map concat(header("not-present"), header("also-not-present")) onto 'stringConcatAllMissing'
 }
