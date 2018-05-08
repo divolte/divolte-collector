@@ -1175,27 +1175,52 @@ public final class DslRecordMapping {
 
     @SafeVarargs
     public static ValueProducer<String> concat(final ValueProducer<String>... strings) {
-        final String identifier = Arrays.stream(strings)
-                                        .map(p -> p.identifier)
-                                        .collect(Collectors.joining(",", "concat(", ")"));
-        return new PrimitiveValueProducer<>(identifier, String.class,
-            (e,c) -> {
-                final Iterator<String> values =
-                    Arrays.stream(strings)
-                          .map(p -> p.produce(e, c))
-                          .filter(Optional::isPresent)
-                          .map(Optional::get)
-                          .iterator();
-                // This is slightly tricky: we want to handle the corner-case where
-                // we have nothing to concatenate because there were no "present" strings.
-                // In this case we ourselves map are "absent". This lets mappings distinguish
-                // between non-present and empty strings strings.
-                return values.hasNext()
-                    ? Optional.of(Streams.stream(values)
-                                         .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
-                                         .toString())
-                    : Optional.empty();
-            }, true);
+        final String identifier = Arrays
+            .stream(strings)
+            .map(p -> p.identifier)
+            .collect(Collectors.joining(",", "concat(", ")"));
+        return new StringValueProducer(identifier, (e,c) ->
+            Arrays
+                .stream(strings)
+                .map(p -> p.produce(e, c))
+                .reduce(
+                    Optional.empty(),
+                    (left, right) -> {
+                        if(left.isPresent() && right.isPresent()) {
+                            return Optional.of(left.get().concat(right.get()));
+                        } else if(left.isPresent()) {
+                            return left;
+                        }
+                        else {
+                            return right;
+                        }
+                    })
+        );
+    }
+
+    @SafeVarargs
+    public static ValueProducer<String> concat_ws(final String separator, final ValueProducer<String>... strings) {
+        final String identifier = Arrays
+            .stream(strings)
+            .map(p -> p.identifier)
+            .collect(Collectors.joining(",", "concat_ws(" + separator + ",", ")"));
+        return new StringValueProducer(identifier, (e,c) ->
+            Arrays
+                .stream(strings)
+                .map(p -> p.produce(e, c))
+                .reduce(
+                    Optional.empty(),
+                    (left, right) -> {
+                        if(left.isPresent() && right.isPresent()) {
+                            return Optional.of(left.get() + separator + right.get());
+                        } else if(left.isPresent()) {
+                            return left;
+                        }
+                        else {
+                            return right;
+                        }
+                    })
+        );
     }
 
     private static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,
