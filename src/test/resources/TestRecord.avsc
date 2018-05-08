@@ -100,6 +100,7 @@
         { "name": "stringConcatSomeMissing",         "type": ["null","string"],  "default": null },
         { "name": "stringConcatAllMissing",          "type": ["null","string"],  "default": null },
         { "name": "stringWithSeparatorConcatAllMissing", "type": ["null","string"],  "default": null },
+        { "name": "stringHashedUsingSha256",         "type": ["null","string"],  "default": null },
         {
             "name": "geoSubdivisionCodes",
             "type":

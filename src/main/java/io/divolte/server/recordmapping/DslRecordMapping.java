@@ -42,9 +42,12 @@ import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.bouncycastle.jcajce.provider.digest.SHA3.DigestSHA3;
+import org.bouncycastle.jcajce.provider.digest.SHA3.Digest256;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -53,12 +56,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 
 import static io.divolte.server.IncomingRequestProcessor.DUPLICATE_EVENT_KEY;
 
@@ -1170,6 +1175,19 @@ public final class DslRecordMapping {
                     }
                 }
             );
+        }
+
+        public StringValueProducer sha3_256(){
+            return new StringValueProducer(identifier + ".sha3_256()",
+               (e,c) ->
+                   produce(e, c).map(
+                       str -> {
+                           final DigestSHA3 sha3 = new Digest256();
+                           sha3.update(str.getBytes(Charset.forName("UTF-8")));
+                           return Hex.encodeHexString(sha3.digest());
+                       }
+                   )
+               );
         }
     }
 

@@ -33,4 +33,7 @@ mapping {
 
     // Map a series where everything is missing.
     map concat_ws("-", userAgentString(), header("not-present"), sessionId()) onto 'stringWithSeparatorConcatAllMissing'
+
+    // Map a series where everything is missing.
+    map userAgentString().sha3_256() onto 'stringHashedUsingSha256'
 }
