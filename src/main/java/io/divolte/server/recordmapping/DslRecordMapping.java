@@ -17,6 +17,7 @@
 package io.divolte.server.recordmapping;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.*;
 import com.google.common.primitives.Doubles;
@@ -1159,19 +1160,26 @@ public final class DslRecordMapping {
             super(identifier, String.class, supplier);
         }
 
-        public StringValueProducer concat(final ValueProducer<String> other) {
+        public StringValueProducer concat(final ValueProducer<Object> other) {
             return new StringValueProducer(
                 identifier + ".concat(" + other.identifier + ")",
                 (e,c) -> {
-                    final Optional<String> left = produce(e, c);
-                    final Optional<String> right = other.produce(e, c);
+                    Optional<String> left = produce(e,c);
+                    Optional<Object> right = other.produce(e,c);
                     if(left.isPresent() && right.isPresent()) {
-                        return Optional.of(left.get().concat(right.get()));
+                        Object r = right.get();
+                        final String strRight;
+                        if(r instanceof TextNode) {
+                            strRight = ((TextNode)r).asText();
+                        } else {
+                            strRight = r.toString();
+                        }
+                        return Optional.of(left.get().concat(strRight));
                     } else if(left.isPresent()) {
                         return left;
                     }
                     else {
-                        return right;
+                        return right.map(Object::toString);
                     }
                 }
             );
