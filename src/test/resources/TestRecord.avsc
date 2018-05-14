@@ -95,6 +95,12 @@
         { "name": "geoOrganisation",                 "type": ["null","string"],  "default": null },
         { "name": "geoAnonymousProxy",               "type": ["null","boolean"], "default": null },
         { "name": "geoSatelliteProvider",            "type": ["null","boolean"], "default": null },
+        { "name": "stringConcatSimple",              "type": ["null","string"],  "default": null },
+        { "name": "stringConcatEmpty",               "type": ["null","string"],  "default": null },
+        { "name": "stringConcatSomeMissing",         "type": ["null","string"],  "default": null },
+        { "name": "stringConcatAllMissing",          "type": ["null","string"],  "default": null },
+        { "name": "stringWithSeparatorConcatAllMissing", "type": ["null","string"],  "default": null },
+        { "name": "stringHashedUsingSha256",         "type": ["null","string"],  "default": null },
         {
             "name": "geoSubdivisionCodes",
             "type":
