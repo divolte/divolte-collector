@@ -16,20 +16,19 @@
 
 package io.divolte.server.recordmapping;
 
-import static java.net.URLDecoder.*;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.concurrent.ThreadSafe;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.concurrent.ThreadSafe;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import static java.net.URLDecoder.decode;
 
 @ParametersAreNonnullByDefault
 @ThreadSafe

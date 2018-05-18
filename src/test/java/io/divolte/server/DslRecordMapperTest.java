@@ -510,15 +510,24 @@ public class DslRecordMapperTest {
     }
 
     @Test
-    public void shouldSupportStringConcatenation() throws IOException, InterruptedException {
-        setupServer("string-operations.groovy");
+    public void shouldSupportStringJoining() throws IOException, InterruptedException {
+        setupServer("string-joining.groovy");
         final EventPayload event = request("http://www.example.com/");
 
-        // Check the various concatenations worked as expected.
-        assertEquals(USER_AGENT.concat(event.event.partyId.value), event.record.get("stringConcatSimple"));
-        assertNull(event.record.get("stringConcatEmpty"));
-        assertEquals(USER_AGENT.concat(event.event.sessionId.value), event.record.get("stringConcatSomeMissing"));
-        assertNull(event.record.get("stringConcatAllMissing"));
+        // Check the various joins all work as expected.
+        assertEquals(USER_AGENT.concat(event.event.partyId.value), event.record.get("stringJoinSimple"));
+        assertNull(event.record.get("stringJoinEmpty"));
+        assertEquals(USER_AGENT + ',' + event.event.partyId.value, event.record.get("stringJoinSimpleComma"));
+        assertEquals(USER_AGENT + ',' + event.event.sessionId.value, event.record.get("stringJoinSomeMissing"));
+        assertEquals('{' + event.event.eventId + '}', event.record.get("stringJoinBookends"));
+        assertNull(event.record.get("stringJoinAllMissing"));
+        assertEquals('{' + event.event.eventId + '}', event.record.get("stringJoinSomeLiteral"));
+        assertEquals("leftear<banana>rightear" + event.event.eventId, event.record.get("stringJoinGroovyLiteral"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldDetectJoiningNonStringDuringStartup() throws IOException {
+        setupServer("string-joining-illegal-argument.groovy");
     }
 
     private static final ObjectMapper MAPPER =

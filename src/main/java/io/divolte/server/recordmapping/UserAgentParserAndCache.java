@@ -16,25 +16,21 @@
 
 package io.divolte.server.recordmapping;
 
-import io.divolte.server.config.UserAgentParserConfiguration;
-import io.divolte.server.config.ValidatedConfiguration;
-
-import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
-
-import net.sf.uadetector.ReadableUserAgent;
-import net.sf.uadetector.UserAgentStringParser;
-import net.sf.uadetector.service.UADetectorServiceFactory;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import io.divolte.server.config.UserAgentParserConfiguration;
+import io.divolte.server.config.ValidatedConfiguration;
+import net.sf.uadetector.ReadableUserAgent;
+import net.sf.uadetector.UserAgentStringParser;
+import net.sf.uadetector.service.UADetectorServiceFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 @ParametersAreNonnullByDefault
 public final class UserAgentParserAndCache {

@@ -1153,49 +1153,6 @@ public final class DslRecordMapping {
                             final FieldSupplier<String> supplier) {
             super(identifier, String.class, supplier);
         }
-
-        public StringValueProducer concat(final ValueProducer<String> other) {
-            return new StringValueProducer(
-                identifier + ".concat(" + other.identifier + ")",
-                (e,c) -> {
-                    final Optional<String> left = produce(e, c);
-                    final Optional<String> right = other.produce(e, c);
-                    if(left.isPresent() && right.isPresent()) {
-                        return Optional.of(left.get().concat(right.get()));
-                    } else if(left.isPresent()) {
-                        return left;
-                    }
-                    else {
-                        return right;
-                    }
-                }
-            );
-        }
-    }
-
-    @SafeVarargs
-    public static ValueProducer<String> concat(final ValueProducer<String>... strings) {
-        final String identifier = Arrays.stream(strings)
-                                        .map(p -> p.identifier)
-                                        .collect(Collectors.joining(",", "concat(", ")"));
-        return new PrimitiveValueProducer<>(identifier, String.class,
-            (e,c) -> {
-                final Iterator<String> values =
-                    Arrays.stream(strings)
-                          .map(p -> p.produce(e, c))
-                          .filter(Optional::isPresent)
-                          .map(Optional::get)
-                          .iterator();
-                // This is slightly tricky: we want to handle the corner-case where
-                // we have nothing to concatenate because there were no "present" strings.
-                // In this case we ourselves are "absent". This lets mappings distinguish
-                // between non-present and empty strings.
-                return values.hasNext()
-                    ? Optional.of(Streams.stream(values)
-                                         .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
-                                         .toString())
-                    : Optional.empty();
-            }, true);
     }
 
     private static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,

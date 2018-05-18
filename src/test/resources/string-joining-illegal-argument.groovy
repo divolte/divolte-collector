@@ -15,19 +15,6 @@
  */
 
 mapping {
-    map firstInSession() onto 'sessionStart'
-    map timestamp() onto 'ts'
-    map remoteHost() onto 'remoteHost'
-
-    // Simply concatenation of two values.
-    map concat(userAgentString(), partyId()) onto 'stringConcatSimple'
-
-    // Map nothing.
-    map concat() onto 'stringConcatEmpty'
-
-    // Map a mix of present and missing attributes.
-    map concat(userAgentString(), header("not-present"), sessionId()) onto 'stringConcatSomeMissing'
-
-    // Map a series where everything is missing.
-    map concat(header("not-present"), header("also-not-present")) onto 'stringConcatAllMissing'
+    // Only strings can be joined. This should throw an error.
+    map join(1, 2) onto 'stringJoinSimple'
 }
