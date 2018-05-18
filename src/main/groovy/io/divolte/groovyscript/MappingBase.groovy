@@ -16,7 +16,6 @@
 
 package io.divolte.groovyscript
 
-import io.divolte.server.recordmapping.DslRecordMapping
 import io.divolte.server.recordmapping.DslRecordMapping.ValueProducer
 import io.divolte.server.recordmapping.Joiner
 import io.divolte.server.recordmapping.SchemaMappingException
