@@ -1188,8 +1188,8 @@ public final class DslRecordMapping {
                           .iterator();
                 // This is slightly tricky: we want to handle the corner-case where
                 // we have nothing to concatenate because there were no "present" strings.
-                // In this case we ourselves map are "absent". This lets mappings distinguish
-                // between non-present and empty strings strings.
+                // In this case we ourselves are "absent". This lets mappings distinguish
+                // between non-present and empty strings.
                 return values.hasNext()
                     ? Optional.of(Streams.stream(values)
                                          .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
