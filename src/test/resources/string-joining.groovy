@@ -40,7 +40,16 @@ mapping {
     // Concatenation with some literals.
     map join('{', eventId(), '}') onto 'stringJoinSomeLiteral'
 
-    // Also check Groovy's interpolated strings.
+    // Check Groovy's interpolated strings.
+    // (Our "Object..." signature doesn't trigger the normal automagic conversion.)
     final String somethingToInterpolate = "banana"
     map join("leftear<$somethingToInterpolate>rightear", eventId()) onto 'stringJoinGroovyLiteral'
+
+    // Check strings from the JSON world. (JSON that can't be mapped to a string is skipped.)
+    map join("literal",
+             eventId(),
+             eventParameters().path('$.foo'),
+             eventParameters().path('$.bar'),
+             eventParameters().path('$.items[*].name'),
+             eventParameters().path('$.items[0].name')) onto 'stringJoinSomeJson'
 }

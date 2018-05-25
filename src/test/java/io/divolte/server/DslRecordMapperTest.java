@@ -512,7 +512,7 @@ public class DslRecordMapperTest {
     @Test
     public void shouldSupportStringJoining() throws IOException, InterruptedException {
         setupServer("string-joining.groovy");
-        final EventPayload event = request("http://www.example.com/");
+        final EventPayload event = request("http://www.example.com/", ImmutableList.of(HETEROGENOUS_EVENT_PARAMS));
 
         // Check the various joins all work as expected.
         assertEquals(USER_AGENT.concat(event.event.partyId.value), event.record.get("stringJoinSimple"));
@@ -523,6 +523,7 @@ public class DslRecordMapperTest {
         assertNull(event.record.get("stringJoinAllMissing"));
         assertEquals('{' + event.event.eventId + '}', event.record.get("stringJoinSomeLiteral"));
         assertEquals("leftear<banana>rightear" + event.event.eventId, event.record.get("stringJoinGroovyLiteral"));
+        assertEquals("literal" + event.event.eventId + "string42apple", event.record.get("stringJoinSomeJson"));
     }
 
     @Test(expected = IllegalArgumentException.class)

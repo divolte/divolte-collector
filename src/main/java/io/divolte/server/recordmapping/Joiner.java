@@ -16,6 +16,7 @@
 
 package io.divolte.server.recordmapping;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.reflect.TypeToken;
 import groovy.lang.GString;
 import io.divolte.server.recordmapping.DslRecordMapping.ValueProducer;
@@ -132,19 +133,28 @@ public final class Joiner {
 
     @SuppressWarnings("unchecked")
     private static ValueProducer<String> coerce(final Object value) {
-        final ValueProducer<String> producer;
-        if (value instanceof ValueProducer
-            && String.class.isAssignableFrom(getProducerType((ValueProducer) value))) {
-            producer = (ValueProducer<String>) value;
+        final Optional<ValueProducer<String>> producer;
+        if (value instanceof ValueProducer) {
+            final ValueProducer<?> valueProducer = (ValueProducer) value;
+            final Class<?> producerType = getProducerType(valueProducer);
+            if (String.class.isAssignableFrom(producerType)) {
+                producer = Optional.of((ValueProducer<String>) value);
+            } else if (JsonNode.class.isAssignableFrom(producerType)) {
+                producer = Optional.of(new DslRecordMapping.PrimitiveValueProducer<>(valueProducer.identifier,
+                                                                                     String.class,
+                            (e, c) -> valueProducer.produce(e, c).flatMap(JacksonSupport::toString)));
+            } else {
+                producer = Optional.empty();
+            }
         } else if (value instanceof String || value instanceof GString) {
             final String literal = value.toString();
             final Optional<String> producedValue = Optional.of(literal);
-            producer = new DslRecordMapping.PrimitiveValueProducer<>('"' + literal.replace("\"", "\\\""),
-                                                                     String.class,
-                                                                     (e, c) -> producedValue);
+            producer = Optional.of(new DslRecordMapping.PrimitiveValueProducer<>('"' + literal.replace("\"", "\\\""),
+                                                                                 String.class,
+                                                                                 (e, c) -> producedValue));
         } else {
-            throw new IllegalArgumentException("Only strings can be joined");
+            producer = Optional.empty();
         }
-        return producer;
+        return producer.orElseThrow(() -> new IllegalArgumentException("Only strings can be joined"));
     }
 }

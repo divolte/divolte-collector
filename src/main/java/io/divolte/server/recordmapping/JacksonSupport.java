@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public class JacksonSupport {
@@ -28,13 +29,21 @@ public class JacksonSupport {
         // Prevent external instantiation.
     }
 
-    private static final ObjectReader OBJECT_READER =
-        new ObjectMapper().reader()
-                          .with(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
-                                DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)
-                          .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader()
+                                                                   .with(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
+                                                                         DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)
+                                                                   .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     static AvroGenericRecordMapper createAvroMapper() {
         return new AvroGenericRecordMapper(OBJECT_READER);
+    }
+
+    static Optional<String> toString(final Object jsonNode) {
+        try {
+            return Optional.of(OBJECT_MAPPER.convertValue(jsonNode, String.class));
+        } catch (final IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 }

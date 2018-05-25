@@ -103,6 +103,7 @@
         { "name": "stringJoinAllMissing",            "type": ["null","string"],  "default": null },
         { "name": "stringJoinSomeLiteral",           "type": ["null","string"],  "default": null },
         { "name": "stringJoinGroovyLiteral",         "type": ["null","string"],  "default": null },
+        { "name": "stringJoinSomeJson",              "type": ["null","string"],  "default": null },
         {
             "name": "geoSubdivisionCodes",
             "type":
