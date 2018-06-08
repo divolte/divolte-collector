@@ -26,7 +26,7 @@ buildscript {
 
 plugins {
     id 'com.github.spotbugs' version '1.6.2'
-    id 'com.github.johnrengelman.shadow' version '2.0.3'
+    id 'com.github.johnrengelman.shadow' version '2.0.4'
     id 'pl.allegro.tech.build.axion-release' version '1.9.0'
 }
 
