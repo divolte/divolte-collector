@@ -32,4 +32,12 @@
         <Method name="getBufferUsed"/>
         <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     </Match>
+    <Match>
+        <!--
+          ~ Groovy closures are auto-generated; there's no way
+          ~ to provide a serial version UID.
+          -->
+        <Class name="~io.divolte.groovyscript.MappingBase\$.*"/>
+        <Bug pattern="SE_NO_SERIALVERSIONID"/>
+    </Match>
 </FindBugsFilter>
