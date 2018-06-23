@@ -960,7 +960,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
        * @const
        * @type {RegExp}
        */
-      var stringEscapingRegex = /~!/g;
+      var stringEscapingRegex = /[~!]/g;
       return function(s) {
         return s.replace(stringEscapingRegex, "~$&");
       }
