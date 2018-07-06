@@ -884,7 +884,7 @@ public final class DslRecordMapping {
         public ValueProducer<String> representedCountryCode() {
             return new PrimitiveValueProducer<>(identifier + ".representedCountryCode()",
                                                 String.class,
-                                                (e,c) -> produce(e, c).map((r) -> r.getRepresentedCountry()).map(Country::getIsoCode));
+                                                (e,c) -> produce(e, c).map(AbstractCountryResponse::getRepresentedCountry).map(Country::getIsoCode));
         }
 
         public ValueProducer<Integer> representedCountryId() {
