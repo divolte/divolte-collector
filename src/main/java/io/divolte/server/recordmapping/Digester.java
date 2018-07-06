@@ -19,9 +19,7 @@ package io.divolte.server.recordmapping;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.reflect.TypeToken;
 import io.divolte.server.DivolteEvent;
-import io.divolte.server.recordmapping.DslRecordMapping.PrimitiveValueProducer;
 import io.divolte.server.recordmapping.DslRecordMapping.ValueProducer;
-import org.apache.avro.Schema;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.nio.ByteBuffer;
@@ -114,18 +112,5 @@ public final class Digester {
 
     public static Digester create(final String algorithm) {
         return new Digester(String.format("digester(\"%s\")", algorithm), algorithm);
-    }
-
-    private static class BytesValueProducer extends PrimitiveValueProducer<ByteBuffer> {
-        BytesValueProducer(final String readableName, final FieldSupplier<ByteBuffer> supplier) {
-            super(readableName, ByteBuffer.class, supplier, true);
-        }
-
-        @Override
-        Optional<ValidationError> validateTypes(final Schema.Field target) {
-            return DslRecordMapping.validateTrivialUnion(target.schema(),
-                                                         x -> x.getType() == Schema.Type.BYTES,
-                                                         "only 'bytes' are supported");
-        }
     }
 }
