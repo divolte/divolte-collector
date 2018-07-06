@@ -132,6 +132,8 @@
             "default": null
         },
 
+        { "name": "digestBinary",                     "type": ["null","bytes"],   "default": null },
+
         { "name": "uriScheme",                        "type": ["null","string"],  "default": null },
         { "name": "uriPath",                          "type": ["null","string"],  "default": null },
         { "name": "uriHost",                          "type": ["null","string"],  "default": null },

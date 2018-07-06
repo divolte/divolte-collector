@@ -23,6 +23,8 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.reflect.TypeParameter;
+import com.google.common.reflect.TypeToken;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
@@ -335,7 +337,10 @@ public final class DslRecordMapping {
 
     public final class UserAgentValueProducer extends ValueProducer<ReadableUserAgent> {
         UserAgentValueProducer(final ValueProducer<String> source, final UserAgentParserAndCache parser) {
-            super("userAgent()", (e, c) -> source.produce(e, c).flatMap(parser::tryParse), true);
+            super("userAgent()",
+                  ReadableUserAgent.class,
+                  (e, c) -> source.produce(e, c).flatMap(parser::tryParse),
+                  true);
         }
 
         public ValueProducer<String> name() {
@@ -409,6 +414,7 @@ public final class DslRecordMapping {
     public final static class MatcherValueProducer extends ValueProducer<Matcher> {
         MatcherValueProducer(final ValueProducer<String> source, final String regex) {
             super("match(" + regex + " against " + source.identifier + ")",
+                  Matcher.class,
                   (e, c) -> source.produce(e, c).map((s) -> Pattern.compile(regex).matcher(s)),
                   true);
         }
@@ -450,6 +456,7 @@ public final class DslRecordMapping {
     public final static class UriValueProducer extends ValueProducer<URI> {
         UriValueProducer(final ValueProducer<String> source) {
             super("parse(" + source.identifier + " to uri)",
+                  URI.class,
                   (e,c) -> source.produce(e, c).map((location) -> {
                         try {
                             return new URI(location);
@@ -528,7 +535,8 @@ public final class DslRecordMapping {
     public final static class QueryStringValueProducer extends ValueProducer<Map<String,List<String>>> {
         QueryStringValueProducer(final ValueProducer<String> source) {
             super("parse (" + source.identifier + " to querystring)",
-                  (e,c) -> source.produce(e, c).map(QueryStringParser::parseQueryString),
+                  new TypeToken<Map<String, List<String>>>() {},
+                  (e, c) -> source.produce(e, c).map(QueryStringParser::parseQueryString),
                   true);
         }
 
@@ -595,7 +603,7 @@ public final class DslRecordMapping {
         protected JsonValueProducer(final String identifier,
                                     final FieldSupplier<JsonNode> supplier,
                                     final boolean memoize) {
-            super(identifier, supplier, memoize);
+            super(identifier, JsonNode.class, supplier, memoize);
         }
 
         @Override
@@ -748,6 +756,7 @@ public final class DslRecordMapping {
     public final static class GeoIpValueProducer extends ValueProducer<CityResponse> {
         GeoIpValueProducer(final ValueProducer<InetAddress> source, final LookupService service) {
             super("ip2geo(" + source.identifier + ")",
+                  CityResponse.class,
                   (e,c) -> source.produce(e, c).flatMap((address) -> {
                         try {
                             return service.lookup(address);
@@ -1020,17 +1029,19 @@ public final class DslRecordMapping {
         }
 
         protected final String identifier;
+        public final TypeToken<T> producerType;
         private final FieldSupplier<T> supplier;
         private final boolean memoize;
 
-        ValueProducer(final String identifier, final FieldSupplier<T> supplier, final boolean memoize) {
-            this.identifier = Objects.requireNonNull(identifier);
-            this.supplier   = Objects.requireNonNull(supplier);
-            this.memoize    = memoize;
+        ValueProducer(final String identifier, final TypeToken<T> producerType, final FieldSupplier<T> supplier, final boolean memoize) {
+            this.identifier   = Objects.requireNonNull(identifier);
+            this.producerType = Objects.requireNonNull(producerType);
+            this.supplier     = Objects.requireNonNull(supplier);
+            this.memoize      = memoize;
         }
 
-        ValueProducer(final String identifier, final FieldSupplier<T> supplier) {
-            this(identifier, supplier, false);
+        ValueProducer(final String identifier, final Class<T> producerType, final FieldSupplier<T> supplier, final boolean memoize) {
+            this(identifier, TypeToken.of(producerType), supplier, memoize);
         }
 
         @SuppressWarnings("unchecked")
@@ -1097,8 +1108,6 @@ public final class DslRecordMapping {
 
     @ParametersAreNonnullByDefault
     public static class PrimitiveValueProducer<T> extends ValueProducer<T> {
-        private final Class<T> type;
-
         /**
          * Construct a value producer that will produce a primitive value.
          * @param readableName  A human-readable description of this producer, used in error messages.
@@ -1111,8 +1120,7 @@ public final class DslRecordMapping {
                                final Class<T> type,
                                final FieldSupplier<T> supplier,
                                final boolean memoize) {
-            super(readableName, supplier, memoize);
-            this.type = Objects.requireNonNull(type);
+            super(readableName, type, supplier, memoize);
         }
 
         PrimitiveValueProducer(final String readableName,
@@ -1124,20 +1132,26 @@ public final class DslRecordMapping {
         @Override
         Optional<ValidationError> validateTypes(final Field target) {
             return validateTrivialUnion(target.schema(),
-                                        s -> COMPATIBLE_PRIMITIVES.get(type) == s.getType(),
-                                        "type must be compatible with %s", type);
+                                        s -> COMPATIBLE_PRIMITIVES.get(producerType.getRawType()) == s.getType(),
+                                        "type must be compatible with %s", producerType);
         }
     }
 
     @ParametersAreNonnullByDefault
     public static class PrimitiveListValueProducer<T> extends ValueProducer<List<T>> {
-        private final Class<T> type;
+        private final TypeToken<T> listType;
 
         PrimitiveListValueProducer(final String identifier,
-                                   final Class<T> type,
+                                   final TypeToken<T> listType,
                                    final FieldSupplier<List<T>> supplier) {
-            super(identifier, supplier);
-            this.type = Objects.requireNonNull(type);
+            super(identifier, new TypeToken<List<T>>() {}.where(new TypeParameter<T>() {}, listType), supplier, false);
+            this.listType = Objects.requireNonNull(listType);
+        }
+
+        PrimitiveListValueProducer(final String identifier,
+                                   final Class<T> listType,
+                                   final FieldSupplier<List<T>> supplier) {
+            this(identifier, TypeToken.of(listType), supplier);
         }
 
         @Override
@@ -1149,9 +1163,9 @@ public final class DslRecordMapping {
                                          "must map to an Avro array, not %s", target);
             return validationError.isPresent()
                     ? validationError
-                    : validateTrivialUnion(unpackNullableUnion(targetSchema).get().getElementType(),
-                                           s -> COMPATIBLE_PRIMITIVES.get(type) == s.getType(),
-                                           "array type must be compatible with %s", type);
+                    : validateTrivialUnion(unpackNullableUnion(targetSchema).orElseThrow(IllegalArgumentException::new).getElementType(),
+                                           s -> COMPATIBLE_PRIMITIVES.get(listType.getRawType()) == s.getType(),
+                                           "array type must be compatible with %s", listType);
         }
     }
 
@@ -1193,10 +1207,10 @@ public final class DslRecordMapping {
         }
     }
 
-    private static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,
-                                                                  final Function<Schema, Boolean> validator,
-                                                                  final String messageIfInvalid,
-                                                                  final Object... messageParameters) {
+    static Optional<ValidationError> validateTrivialUnion(final Schema targetSchema,
+                                                          final Function<Schema, Boolean> validator,
+                                                          final String messageIfInvalid,
+                                                          final Object... messageParameters) {
         final Optional<Schema> resolvedSchema = unpackNullableUnion(targetSchema);
         final Optional<Optional<ValidationError>> unionValidation =
                 resolvedSchema.map(s -> validator.apply(s)

@@ -16,6 +16,7 @@
 
 package io.divolte.groovyscript
 
+import io.divolte.server.recordmapping.Digester
 import io.divolte.server.recordmapping.DslRecordMapping.ValueProducer
 import io.divolte.server.recordmapping.SchemaMappingException
 
@@ -102,5 +103,9 @@ abstract class MappingBase extends Script {
                 }
             }
         ]
+    }
+
+    static Digester digest(String algorithm) {
+        Digester.create(algorithm)
     }
 }
