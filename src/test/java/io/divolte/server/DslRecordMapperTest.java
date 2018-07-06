@@ -574,6 +574,15 @@ public class DslRecordMapperTest {
         assertByteBufferEquals(ByteBuffer.wrap(MessageDigest.getInstance("sha-256").digest()), (ByteBuffer)event.record.get("digestBinary"));
     }
 
+    @Test
+    public void shouldSupportDigestingToBase64() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-with-string-conversion.groovy");
+        final EventPayload event = request("http://www.example.com");
+
+        assertEquals(StandardCharsets.UTF_8.decode(Base64.getEncoder().encode(digest(event.event.eventId))).toString(),
+                     event.record.get("digestString"));
+    }
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
