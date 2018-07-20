@@ -583,6 +583,21 @@ public class DslRecordMapperTest {
                      event.record.get("digestString"));
     }
 
+    @Test
+    public void shouldSupportSeededDigesting() throws IOException, InterruptedException {
+        setupServer("digest-with-seed.groovy");
+        final EventPayload event = request("http://www.example.com");
+
+        // Check that the same value produces a different hash if the seed is different.
+        final ImmutableList<String> values = ImmutableList.of(
+            (String) event.record.get("digestString"),
+            (String) event.record.get("digestString2"),
+            (String) event.record.get("digestString3")
+        );
+        final long uniqueValues = values.stream().distinct().count();
+        assertEquals(values.size(), uniqueValues);
+    }
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)

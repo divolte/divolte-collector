@@ -134,6 +134,8 @@
 
         { "name": "digestBinary",                     "type": ["null","bytes"],   "default": null },
         { "name": "digestString",                     "type": ["null","string"],  "default": null },
+        { "name": "digestString2",                    "type": ["null","string"],  "default": null },
+        { "name": "digestString3",                    "type": ["null","string"],  "default": null },
 
         { "name": "uriScheme",                        "type": ["null","string"],  "default": null },
         { "name": "uriPath",                          "type": ["null","string"],  "default": null },

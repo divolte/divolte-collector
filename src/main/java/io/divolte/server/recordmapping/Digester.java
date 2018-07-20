@@ -22,37 +22,39 @@ import io.divolte.server.DivolteEvent;
 import io.divolte.server.recordmapping.DslRecordMapping.ValueProducer;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @ParametersAreNonnullByDefault
-public final class Digester {
+public final class Digester<T> {
     private final String digestIdentifier;
-    private final Supplier<MessageDigest> digestFactory;
+    private final Supplier<T> digestFactory;
+    private final Function<T,Consumer<ByteBuffer>> digestUpdaterFactory;
+    private final Function<T,Supplier<byte[]>> digestFinalizerFactory;
     private List<ValueProducer<ByteBuffer>> digestPieces = new ArrayList<>();
 
-    private Digester(final String identifier, final String algorithm) {
+    private Digester(final String identifier,
+                     final Supplier<T> digestFactory,
+                     final Function<T,Consumer<ByteBuffer>> digestUpdater,
+                     final Function<T,Supplier<byte[]>> digestFinalizer) {
         digestIdentifier = Objects.requireNonNull(identifier);
-        // Check the algorithm is valid.
-        try {
-            MessageDigest.getInstance(algorithm);
-        } catch (final NoSuchAlgorithmException e) {
-            final SchemaMappingException exception = new SchemaMappingException("Algorithm not supported for digester: %s", identifier);
-            exception.initCause(e);
-            throw exception;
-        }
-        digestFactory = () -> {
-            try {
-                return MessageDigest.getInstance(algorithm);
-            } catch (final NoSuchAlgorithmException e) {
-                throw new IllegalStateException("Cannot instantiate digester for algorithm: " + algorithm, e);
-            }
-        };
+        this.digestFactory = Objects.requireNonNull(digestFactory);
+        this.digestUpdaterFactory = Objects.requireNonNull(digestUpdater);
+        this.digestFinalizerFactory = Objects.requireNonNull(digestFinalizer);
     }
 
     public ValueProducer<ByteBuffer> result() {
@@ -64,13 +66,15 @@ public final class Digester {
     }
 
     private Optional<ByteBuffer> calculateDigest(final DivolteEvent e, final Map<String,Optional<?>> context) {
-        final MessageDigest messageDigest = digestFactory.get();
+        final T messageDigest = digestFactory.get();
+        final Consumer<ByteBuffer> digestUpdater = digestUpdaterFactory.apply(messageDigest);
+        final Supplier<byte[]> digestFinalizer = digestFinalizerFactory.apply(messageDigest);
         digestPieces.stream()
                     .map(x -> x.produce(e, context))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .forEachOrdered(messageDigest::update);
-        return Optional.of(ByteBuffer.wrap(messageDigest.digest()));
+                    .forEachOrdered(digestUpdater);
+        return Optional.of(ByteBuffer.wrap(digestFinalizer.get()));
     }
 
     public Digester add(final ValueProducer<?> piece) {
@@ -111,6 +115,75 @@ public final class Digester {
     }
 
     public static Digester create(final String algorithm) {
-        return new Digester(String.format("digester(\"%s\")", algorithm), algorithm);
+        final String identifier = String.format("digester(\"%s\")", algorithm);
+        // Check the algorithm is valid.
+        try {
+            MessageDigest.getInstance(algorithm);
+        } catch (final NoSuchAlgorithmException e) {
+            final SchemaMappingException exception = new SchemaMappingException("Algorithm not supported for digester: %s", identifier);
+            exception.initCause(e);
+            throw exception;
+        }
+
+        return new Digester<>(
+            identifier,
+            () -> {
+                try {
+                    return MessageDigest.getInstance(algorithm);
+                } catch (final NoSuchAlgorithmException e) {
+                    throw new IllegalStateException("Cannot instantiate digester for algorithm: " + algorithm, e);
+                }
+            },
+            md -> md::update,
+            md -> md::digest);
+    }
+
+    public static Digester<?> create(final String algorithm, final String seed) {
+        final String identifier = String.format("digester(\"%s\", \"%s\")", algorithm, seed);
+        // Check we can hash with the supplied algorithm, and convert the seed into a password that we use
+        // when producing values.
+        final String macAlgorithm = "hmac" + algorithm.replace("-", "");
+        final SecretKey seedKey;
+        try {
+            final Mac mac = Mac.getInstance(macAlgorithm);
+            // For HMAC the desired key length is the same as the output length.
+            seedKey = deriveKey(macAlgorithm, seed, mac.getMacLength());
+            mac.init(seedKey);
+        } catch (final NoSuchAlgorithmException | InvalidKeyException e) {
+            final SchemaMappingException exception = new SchemaMappingException("Algorithm not supported for digester: %s", identifier);
+            exception.initCause(e);
+            throw exception;
+        }
+
+        return new Digester<>(
+            identifier,
+            () -> {
+                try {
+                    final Mac mac = Mac.getInstance(macAlgorithm);
+                    mac.init(seedKey);
+                    return mac;
+                } catch (final NoSuchAlgorithmException | InvalidKeyException e) {
+                    throw new IllegalStateException("Cannot instantiate digester for algorithm: " + algorithm, e);
+                }
+            },
+            m -> m::update,
+            m -> m::doFinal);
+    }
+
+    // Normally salt should be randomised. In our use-case though a single salt value is okay.
+    // (It's really serving as a "personalisation" vector.)
+    private static final byte[] STATIC_SALT =
+        { 'd', 'i', 'v', 'o', 'l', 't', 'e',
+          (byte) 0xb6, (byte) 0x87, (byte) 0xe2, (byte) 0xd9, (byte) 0xaa, (byte) 0x06, (byte) 0x03, (byte) 0x72 };
+
+    private static SecretKey deriveKey(final String macAlgorithm, final String seed, final int keyLength)
+            throws NoSuchAlgorithmException {
+        final SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("PBKDF2With" + macAlgorithm);
+        final KeySpec keySpec = new PBEKeySpec(seed.toCharArray(), STATIC_SALT, 100000, keyLength);
+        try {
+            return keyFactory.generateSecret(keySpec);
+        } catch (final InvalidKeySpecException e) {
+            throw new IllegalArgumentException("Unable to initialise using the supplied seed: " + seed, e);
+        }
     }
 }
