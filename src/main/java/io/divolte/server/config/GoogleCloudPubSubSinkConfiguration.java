@@ -46,7 +46,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
-public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
+public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration<GoogleCloudPubSubConfiguration> {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubSinkConfiguration.class);
 
     static final GooglePubSubRetryConfiguration DEFAULT_RETRY_SETTINGS =
@@ -86,7 +86,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
     private SinkFactory createFlushingPool(final RetrySettings retrySettings,
                                            final BatchingSettings batchingSettings) {
         return (vc, sinkName, registry) -> {
-            final String projectId = vc.configuration().global.gcps.projectId.orElseThrow(IllegalStateException::new);
+            final GoogleCloudPubSubConfiguration gcpsConfiguration = getGlobalConfiguration(vc);
+            final String projectId = gcpsConfiguration.projectId.orElseThrow(IllegalStateException::new);
             final ProjectTopicName topicName = ProjectTopicName.of(projectId, topic);
             final Publisher.Builder builder =
                 Publisher.newBuilder(topicName)
@@ -94,8 +95,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
                          .setBatchingSettings(batchingSettings);
             final Publisher publisher = IOExceptions.wrap(builder::build).get();
             return new GoogleCloudPubSubFlushingPool(sinkName,
-                                                     vc.configuration().global.gcps.threads,
-                                                     vc.configuration().global.gcps.bufferSize,
+                                                     gcpsConfiguration.threads,
+                                                     gcpsConfiguration.bufferSize,
                                                      publisher,
                                                      Optional.empty(),
                                                      registry.getSchemaBySinkName(sinkName));
@@ -115,7 +116,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
         //
         return (vc, sinkName, registry) -> {
             logger.info("Configuring sink to use Google Cloud Pub/Sub emulator: {}", sinkName, hostPort);
-            final String projectId = vc.configuration().global.gcps.projectId.orElseThrow(IllegalStateException::new);
+            final GoogleCloudPubSubConfiguration gcpsConfiguration = getGlobalConfiguration(vc);
+            final String projectId = gcpsConfiguration.projectId.orElseThrow(IllegalStateException::new);
             final ProjectTopicName topicName = ProjectTopicName.of(projectId, topic);
             final ManagedChannel channel = ManagedChannelBuilder.forTarget(hostPort).usePlaintext(true).build();
             final TransportChannelProvider channelProvider =
@@ -130,8 +132,8 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
                          .setCredentialsProvider(NoCredentialsProvider.create());
             final Publisher publisher = IOExceptions.wrap(builder::build).get();
             return new GoogleCloudPubSubFlushingPool(sinkName,
-                                                     vc.configuration().global.gcps.threads,
-                                                     vc.configuration().global.gcps.bufferSize,
+                                                     gcpsConfiguration.threads,
+                                                     gcpsConfiguration.bufferSize,
                                                      publisher,
                                                      Optional.of(channel),
                                                      registry.getSchemaBySinkName(sinkName));

@@ -25,7 +25,7 @@ import javax.annotation.ParametersAreNullableByDefault;
 import javax.validation.Valid;
 
 @ParametersAreNonnullByDefault
-public abstract class FileSinkConfiguration extends SinkConfiguration {
+public abstract class FileSinkConfiguration<T extends SinkTypeConfiguration> extends SinkConfiguration<T> {
     @Valid public final FileStrategyConfiguration fileStrategy;
 
     @ParametersAreNullableByDefault

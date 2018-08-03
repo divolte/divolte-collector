@@ -16,22 +16,27 @@
 
 package io.divolte.server.config;
 
-import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.validation.Valid;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.MoreObjects;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
 
 @ParametersAreNonnullByDefault
 public class GlobalConfiguration {
-    @Valid public final ServerConfiguration server;
-    @Valid public final MapperConfiguration mapper;
-    @Valid public final HdfsConfiguration hdfs;
-    @Valid public final KafkaConfiguration kafka;
-    @Valid public final GoogleCloudStorageConfiguration gcs;
-    @Valid public final GoogleCloudPubSubConfiguration gcps;
+    @Valid
+    public final ServerConfiguration server;
+    @Valid
+    public final MapperConfiguration mapper;
+
+    @Valid
+    private final ImmutableMap<String,? extends SinkTypeConfiguration> sinkTypeConfigurations;
+
+    private final ImmutableMap<Class<? extends SinkTypeConfiguration>, ? extends SinkTypeConfiguration> sinkTypeConfigurationsByClass;
 
     @JsonCreator
     GlobalConfiguration(final ServerConfiguration server,
@@ -42,21 +47,30 @@ public class GlobalConfiguration {
                         final GoogleCloudPubSubConfiguration gcps) {
         this.server = Objects.requireNonNull(server);
         this.mapper = Objects.requireNonNull(mapper);
-        this.hdfs = Objects.requireNonNull(hdfs);
-        this.kafka = Objects.requireNonNull(kafka);
-        this.gcs = Objects.requireNonNull(gcs);
-        this.gcps = Objects.requireNonNull(gcps);
+        this.sinkTypeConfigurations = ImmutableMap.of(
+            "hdfs", Objects.requireNonNull(hdfs),
+            "kafka", Objects.requireNonNull(kafka),
+            "gcs", Objects.requireNonNull(gcs),
+            "gcps", Objects.requireNonNull(gcps)
+        );
+        sinkTypeConfigurationsByClass =
+            sinkTypeConfigurations.values()
+                                  .stream()
+                                  .collect(ImmutableMap.toImmutableMap(SinkTypeConfiguration::getClass, Function.identity()));
+    }
+
+    public <T extends SinkTypeConfiguration> T getSinkTypeConfiguration(final Class<T> configurationClass) {
+        return Optional.ofNullable(sinkTypeConfigurationsByClass.get(configurationClass))
+                       .map(configurationClass::cast)
+                       .orElseThrow(IllegalArgumentException::new);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                .add("server", server)
-                .add("mapper", mapper)
-                .add("hdfs", hdfs)
-                .add("gcs", gcs)
-                .add("kafka", kafka)
-                .add("gcps", gcps)
-                .toString();
+        final MoreObjects.ToStringHelper stringHelper = MoreObjects.toStringHelper(this)
+            .add("server", server)
+            .add("mapper", mapper);
+        sinkTypeConfigurations.forEach(stringHelper::add);
+        return stringHelper.toString();
     }
 }

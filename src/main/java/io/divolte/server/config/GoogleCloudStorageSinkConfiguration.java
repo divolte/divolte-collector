@@ -31,7 +31,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
-public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
+public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration<GoogleCloudStorageConfiguration> {
 
     static final GoogleCloudStorageRetryConfiguration DEFAULT_RETRY_SETTINGS =
         new GoogleCloudStorageRetryConfiguration(null, null, null, null, null, null, null);
@@ -62,8 +62,9 @@ public class GoogleCloudStorageSinkConfiguration extends FileSinkConfiguration {
             final FileManagerFactory fileManagerFactory = GoogleCloudStorageFileManager.newFactory(config, name, avroSchema);
             fileManagerFactory.verifyFileSystemConfiguration();
 
-            final int threads = config.configuration().global.gcs.threads;
-            final int bufferSize = config.configuration().global.gcs.bufferSize;
+            final GoogleCloudStorageConfiguration gcsConfiguration = getGlobalConfiguration(config);
+            final int threads = gcsConfiguration.threads;
+            final int bufferSize = gcsConfiguration.bufferSize;
 
             return new FileFlushingPool(config, name, threads, bufferSize, fileManagerFactory);
         };

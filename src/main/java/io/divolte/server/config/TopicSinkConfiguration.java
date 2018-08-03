@@ -24,7 +24,7 @@ import javax.annotation.ParametersAreNullableByDefault;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
-public abstract class TopicSinkConfiguration extends SinkConfiguration {
+public abstract class TopicSinkConfiguration<T extends SinkTypeConfiguration> extends SinkConfiguration<T> {
     protected static final String DEFAULT_TOPIC = "divolte";
 
     public final String topic;

@@ -16,22 +16,20 @@
 
 package io.divolte.server.config;
 
-import java.util.Optional;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-
 import io.divolte.server.filesinks.FileFlushingPool;
 import io.divolte.server.filesinks.FileManager.FileManagerFactory;
 import io.divolte.server.filesinks.hdfs.HdfsFileManager;
 import org.apache.avro.Schema;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
+import java.util.Optional;
+
 @ParametersAreNonnullByDefault
-public class HdfsSinkConfiguration extends FileSinkConfiguration {
+public class HdfsSinkConfiguration extends FileSinkConfiguration<HdfsConfiguration> {
     private static final String DEFAULT_REPLICATION = "3";
 
     public final short replication;
@@ -57,11 +55,8 @@ public class HdfsSinkConfiguration extends FileSinkConfiguration {
             final Schema avroschema = registry.getSchemaBySinkName(name).avroSchema;
             final FileManagerFactory fileManagerFactory = HdfsFileManager.newFactory(config, name, avroschema);
             fileManagerFactory.verifyFileSystemConfiguration();
-
-            final int threads = config.configuration().global.hdfs.threads;
-            final int bufferSize = config.configuration().global.hdfs.bufferSize;
-
-            return new FileFlushingPool(config, name, threads, bufferSize, fileManagerFactory);
+            final HdfsConfiguration hdfsConfiguration = getGlobalConfiguration(config);
+            return new FileFlushingPool(config, name, hdfsConfiguration.threads, hdfsConfiguration.bufferSize, fileManagerFactory);
         };
     }
 

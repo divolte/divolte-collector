@@ -16,23 +16,21 @@
 
 package io.divolte.server.config;
 
-import java.util.Optional;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.ParametersAreNullableByDefault;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteIdentifier;
 import io.divolte.server.topicsinks.kafka.KafkaFlushingPool;
 import io.divolte.server.topicsinks.kafka.Serializers;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
+import java.util.Optional;
+
 @ParametersAreNonnullByDefault
-public class KafkaSinkConfiguration extends TopicSinkConfiguration {
+public class KafkaSinkConfiguration extends TopicSinkConfiguration<KafkaConfiguration> {
     private static final KafkaSinkMode DEFAULT_SINK_MODE = KafkaSinkMode.NAKED;
 
     public final KafkaSinkMode mode;
@@ -55,13 +53,14 @@ public class KafkaSinkConfiguration extends TopicSinkConfiguration {
     @Override
     public SinkFactory getFactory() {
         return (vc, sink, registry) -> {
+            final KafkaConfiguration kafkaConfiguration = getGlobalConfiguration(vc);
             final KafkaProducer<DivolteIdentifier, AvroRecordBuffer> producer =
-                new KafkaProducer<>(vc.configuration().global.kafka.producer,
+                new KafkaProducer<>(kafkaConfiguration.producer,
                                     Serializers.createKeySerializer(),
                                     mode.serializerFactory.apply(registry.getSchemaBySinkName(sink)));
             return new KafkaFlushingPool(sink,
-                                         vc.configuration().global.kafka.threads,
-                                         vc.configuration().global.kafka.bufferSize,
+                                         kafkaConfiguration.threads,
+                                         kafkaConfiguration.bufferSize,
                                          topic,
                                          producer
             );

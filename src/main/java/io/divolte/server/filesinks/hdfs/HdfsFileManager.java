@@ -20,6 +20,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.io.Closeables;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.config.FileSinkConfiguration;
+import io.divolte.server.config.HdfsConfiguration;
 import io.divolte.server.config.HdfsSinkConfiguration;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.divolte.server.filesinks.FileManager;
@@ -200,7 +201,9 @@ public class HdfsFileManager implements FileManager {
         }
 
         private FileSystem getFileSystemInstance() throws IOException {
-            final Configuration hdfsConfiguration = configuration.configuration().global.hdfs.client
+            final HdfsConfiguration hdfsConfiguration = configuration.configuration().global.getSinkTypeConfiguration(HdfsConfiguration.class);
+
+            final Configuration hdfsClientConfiguration = hdfsConfiguration.client
                     .map(clientProperties -> {
                         final Configuration configuration = new Configuration(false);
                         for (final String propertyName : clientProperties.stringPropertyNames()) {
@@ -214,9 +217,9 @@ public class HdfsFileManager implements FileManager {
              * This config option disabled the built in shutdown hook. We call FileSystem.closeAll() ourselves
              * in the server shutdown hook instead.
              */
-            hdfsConfiguration.setBoolean("fs.automatic.close", false);
+            hdfsClientConfiguration.setBoolean("fs.automatic.close", false);
 
-            return FileSystem.get(hdfsConfiguration);
+            return FileSystem.get(hdfsClientConfiguration);
         }
     }
 }
