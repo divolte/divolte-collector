@@ -117,7 +117,7 @@ public class GoogleCloudPubSubSinkConfiguration extends TopicSinkConfiguration {
             logger.info("Configuring sink to use Google Cloud Pub/Sub emulator: {}", sinkName, hostPort);
             final String projectId = vc.configuration().global.gcps.projectId.orElseThrow(IllegalStateException::new);
             final ProjectTopicName topicName = ProjectTopicName.of(projectId, topic);
-            final ManagedChannel channel = ManagedChannelBuilder.forTarget(hostPort).usePlaintext(true).build();
+            final ManagedChannel channel = ManagedChannelBuilder.forTarget(hostPort).usePlaintext().build();
             final TransportChannelProvider channelProvider =
                 FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
             // There's no easy way to create topics for the emulator, so we create the topic ourselves.
