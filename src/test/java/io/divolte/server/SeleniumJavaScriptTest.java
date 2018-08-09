@@ -272,6 +272,7 @@ public class SeleniumJavaScriptTest extends SeleniumTestBase {
         assertTrue(customEventParameters.isPresent());
         assertEquals("{\"a\":{}," +
                      "\"b\":\"c\"," +
+                     "\"c\":\"A string with lots of things to escape\u2026 !+~?=;()-_[]<>%|^`&\\\"'\"," +
                      "\"d\":{\"a\":[],\"b\":\"g\"}," +
                      "\"e\":[\"1\",\"2\"]," +
                      "\"f\":42," +

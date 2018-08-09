@@ -238,7 +238,7 @@ public final class DslRecordMapping {
                 (e,c) -> source.produce(e, c).map(Doubles::tryParse));
     }
 
-    public ValueProducer<Boolean> toBoolean(final ValueProducer<String> source) {
+    public BooleanValueProducer toBoolean(final ValueProducer<String> source) {
         return new BooleanValueProducer(
                 "parse(" + source.identifier + " to bool)",
                 (e,c) -> source.produce(e, c).map(Boolean::parseBoolean));
@@ -259,15 +259,15 @@ public final class DslRecordMapping {
         return new PrimitiveValueProducer<>("eventType()", String.class, (e,c) -> e.eventType);
     }
 
-    public ValueProducer<Boolean> firstInSession() {
+    public BooleanValueProducer firstInSession() {
         return new BooleanValueProducer("firstInSession()", (e,c) -> Optional.of(e.firstInSession));
     }
 
-    public ValueProducer<Boolean> corrupt() {
+    public BooleanValueProducer corrupt() {
         return new BooleanValueProducer("corrupt()", (e,c) -> Optional.of(e.corruptEvent));
     }
 
-    public ValueProducer<Boolean> duplicate() {
+    public BooleanValueProducer duplicate() {
         return new BooleanValueProducer("duplicate()", (e,c) -> Optional.ofNullable(e.exchange.getAttachment(DUPLICATE_EVENT_KEY)));
     }
 
@@ -413,7 +413,7 @@ public final class DslRecordMapping {
                   true);
         }
 
-        public ValueProducer<Boolean> matches() {
+        public BooleanValueProducer matches() {
             return new BooleanValueProducer(identifier + ".matches()",
                                             (e,c) -> produce(e, c).map(Matcher::matches));
         }
@@ -875,7 +875,7 @@ public final class DslRecordMapping {
         public ValueProducer<String> representedCountryCode() {
             return new PrimitiveValueProducer<>(identifier + ".representedCountryCode()",
                                                 String.class,
-                                                (e,c) -> produce(e, c).map((r) -> r.getRepresentedCountry()).map(Country::getIsoCode));
+                                                (e,c) -> produce(e, c).map(AbstractCountryResponse::getRepresentedCountry).map(Country::getIsoCode));
         }
 
         public ValueProducer<Integer> representedCountryId() {
@@ -940,14 +940,14 @@ public final class DslRecordMapping {
 
         @Deprecated
         @SuppressWarnings("deprecation")
-        public ValueProducer<Boolean> anonymousProxy() {
+        public BooleanValueProducer anonymousProxy() {
             return new BooleanValueProducer(identifier + ".anonymousProxy()",
                                             (e,c) -> produce(e, c).map(AbstractCountryResponse::getTraits).map(Traits::isAnonymousProxy));
         }
 
         @Deprecated
         @SuppressWarnings("deprecation")
-        public ValueProducer<Boolean> satelliteProvider() {
+        public BooleanValueProducer satelliteProvider() {
             return new BooleanValueProducer(identifier + ".satelliteProvider()",
                                             (e,c) -> produce(e, c).map(AbstractCountryResponse::getTraits).map(Traits::isSatelliteProvider));
         }
@@ -1057,13 +1057,13 @@ public final class DslRecordMapping {
             return result;
         }
 
-        public ValueProducer<Boolean> equalTo(final ValueProducer<T> other) {
+        public BooleanValueProducer equalTo(final ValueProducer<T> other) {
             return new BooleanValueProducer(
                     identifier + ".equalTo(" + other.identifier + ")",
                     (e,c) -> Optional.of(this.produce(e, c).equals(other.produce(e, c))));
         }
 
-        public ValueProducer<Boolean> equalTo(final T literal) {
+        public BooleanValueProducer equalTo(final T literal) {
             return new BooleanValueProducer(
                     identifier + ".equalTo(" + literal + ")",
                     (e,c) -> {
@@ -1072,16 +1072,14 @@ public final class DslRecordMapping {
                     });
         }
 
-        public ValueProducer<Boolean> isPresent() {
+        public BooleanValueProducer isPresent() {
             return new BooleanValueProducer(
                     identifier + ".isPresent()",
                     (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.TRUE).orElse(Boolean.FALSE)));
         }
 
-        public ValueProducer<Boolean> isAbsent() {
-            return new BooleanValueProducer(
-                    identifier + ".isAbsent()",
-                    (e,c) -> Optional.of(produce(e, c).map((x) -> Boolean.FALSE).orElse(Boolean.TRUE)));
+        public BooleanValueProducer isAbsent() {
+            return isPresent().negate();
         }
 
         abstract Optional<ValidationError> validateTypes(final Field target);
@@ -1163,7 +1161,7 @@ public final class DslRecordMapping {
             super(identifier, Boolean.class, supplier);
         }
 
-        public ValueProducer<Boolean> or(final ValueProducer<Boolean> other) {
+        public BooleanValueProducer or(final ValueProducer<Boolean> other) {
             return new BooleanValueProducer(
                     identifier + ".or(" + other.identifier + ")",
                     (e,c) -> {
@@ -1175,7 +1173,7 @@ public final class DslRecordMapping {
                     });
         }
 
-        public ValueProducer<Boolean> and(final ValueProducer<Boolean> other) {
+        public BooleanValueProducer and(final ValueProducer<Boolean> other) {
             return new BooleanValueProducer(
                     identifier + ".and(" + other.identifier + ")",
                     (e,c) -> {
@@ -1187,7 +1185,7 @@ public final class DslRecordMapping {
                     });
         }
 
-        public ValueProducer<Boolean> negate() {
+        public BooleanValueProducer negate() {
             return new BooleanValueProducer(
                         "not(" + identifier + ")",
                         (e,c) -> produce(e,c).map((b) -> !b));
