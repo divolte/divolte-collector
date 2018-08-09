@@ -1661,7 +1661,7 @@ Complex value: :code:`ip2geo({optionalIP})`
     def ip = header('X-Forwarded-For').first()
     def myUa = ip2geo(ip)
 
-Also other functions are available depending on the array of IP's:
+  Also other functions are available depending on the array of IP's:
 
   .. code-block:: groovy
 
