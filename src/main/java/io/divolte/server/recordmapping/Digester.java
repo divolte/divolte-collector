@@ -17,6 +17,7 @@
 package io.divolte.server.recordmapping;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.Streams;
 import com.google.common.reflect.TypeToken;
 import io.divolte.server.DivolteEvent;
 import io.divolte.server.recordmapping.DslRecordMapping.ValueProducer;
@@ -71,8 +72,7 @@ public final class Digester<T> {
         final Supplier<byte[]> digestFinalizer = digestFinalizerFactory.apply(messageDigest);
         digestPieces.stream()
                     .map(x -> x.produce(e, context))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
+                    .flatMap(Streams::stream)
                     .forEachOrdered(digestUpdater);
         return Optional.of(ByteBuffer.wrap(digestFinalizer.get()));
     }
