@@ -87,31 +87,35 @@ public final class Digester<T> {
             @SuppressWarnings("unchecked")
             final ValueProducer<JsonNode> jsonPiece = (ValueProducer<JsonNode>) piece;
             return addJsonValueProducer(jsonPiece);
+        } else if (producerType.isSubtypeOf(ByteBuffer.class)) {
+            @SuppressWarnings("unchecked")
+            final ValueProducer<ByteBuffer> bytesPiece = (ValueProducer<ByteBuffer>) piece;
+            return addPiece(bytesPiece);
         }
         throw new SchemaMappingException("Cannot digest value of type: %s", producerType);
     }
 
-    private Digester add(final BytesValueProducer piece) {
+    private Digester addPiece(final ValueProducer<ByteBuffer> piece) {
         digestPieces.add(piece);
         return this;
     }
 
     private Digester addStringValueProducer(final ValueProducer<String> piece) {
-        return add(new BytesValueProducer(piece.identifier,
-                   (e, c) -> piece.produce(e, c).map(s -> ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8)))));
+        return addPiece(new BytesValueProducer(piece.identifier,
+                        (e, c) -> piece.produce(e, c).map(s -> ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8)))));
     }
 
     private Digester addJsonValueProducer(ValueProducer<JsonNode> piece) {
-        return add(new BytesValueProducer(piece.identifier,
-                   (e, c) -> piece.produce(e, c).flatMap(jsonNode ->
-                           jsonNode.isValueNode()
-                               ? Optional.of(ByteBuffer.wrap(jsonNode.asText().getBytes(StandardCharsets.UTF_8)))
-                               : Optional.empty())));
+        return addPiece(new BytesValueProducer(piece.identifier,
+                        (e, c) -> piece.produce(e, c).flatMap(jsonNode ->
+                                jsonNode.isValueNode()
+                                    ? Optional.of(ByteBuffer.wrap(jsonNode.asText().getBytes(StandardCharsets.UTF_8)))
+                                    : Optional.empty())));
     }
 
     public Digester add(final String text) {
-        return add(new BytesValueProducer('"' + text + '"',
-                                          (e, c) -> Optional.of(ByteBuffer.wrap(text.getBytes(StandardCharsets.UTF_8)))));
+        return addPiece(new BytesValueProducer('"' + text + '"',
+                                               (e, c) -> Optional.of(ByteBuffer.wrap(text.getBytes(StandardCharsets.UTF_8)))));
     }
 
     public static Digester create(final String algorithm) {

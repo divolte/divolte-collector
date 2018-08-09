@@ -512,9 +512,14 @@ public class DslRecordMapperTest {
         assertTrue((Boolean) event.record.get("pathBoolean"));
     }
 
-    private static ByteBuffer digest(final String s) throws NoSuchAlgorithmException {
+    private static ByteBuffer digest(final ByteBuffer buffer) throws NoSuchAlgorithmException {
         final MessageDigest digester = MessageDigest.getInstance("sha-256");
-        return ByteBuffer.wrap(digester.digest(s.getBytes(StandardCharsets.UTF_8)));
+        digester.update(buffer);
+        return ByteBuffer.wrap(digester.digest());
+    }
+
+    private static ByteBuffer digest(final String s) throws NoSuchAlgorithmException {
+        return digest(ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8)));
     }
 
     private static String hexDump(final ByteBuffer buffer) {
@@ -564,6 +569,14 @@ public class DslRecordMapperTest {
         final EventPayload event = request("http://www.example.com/", ImmutableList.of(HETEROGENOUS_EVENT_PARAMS));
 
         assertByteBufferEquals(digest("string42apple"), (ByteBuffer)event.record.get("digestBinary"));
+    }
+
+    @Test
+    public void shouldSupportDigestingBytes() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-bytebuffer.groovy");
+        final EventPayload event = request("http://www.example.com/", ImmutableList.of(HETEROGENOUS_EVENT_PARAMS));
+
+        assertByteBufferEquals(digest(digest(ByteBuffer.allocate(0))), (ByteBuffer)event.record.get("digestBinary"));
     }
 
     @Test
