@@ -586,7 +586,7 @@ This way you don't have to add parentheses to all intermediate method calls and 
 
 Simple values
 ^^^^^^^^^^^^^
-Simple values are pieces of information that are directly extracted from the event without any processing. You can map simple values directly onto fields of the correct type or you can use them in further processing, such as matching againast a regular expression or URI parsing.
+Simple values are pieces of information that are directly extracted from the event without any processing. You can map simple values directly onto fields of the correct type or you can use them in further processing, such as matching against a regular expression or URI parsing.
 
 .. _location:
 
@@ -1772,7 +1772,7 @@ Complex value: :code:`ip2geo({optionalIP})`
     def ip = header('X-Forwarded-For').first()
     def myUa = ip2geo(ip)
 
-Also other functions are available depending on the array of IP's:
+  Also other functions are available depending on the array of IP's:
 
   .. code-block:: groovy
 
