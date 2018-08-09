@@ -141,6 +141,9 @@ Divolte Collector will never actively set an absent value. Instead for absent va
 
 Because absent values result in fields not being set your schema must have default values for all fields that are used for mappings where the value can be absent. In practice, it is recommended to always use default values for all fields in your schema.
 
+
+.. _mapping-types-label:
+
 Types
 ^^^^^
 Values in a mapping are typed and the value type must match the type of the Avro field that they are mapped onto. Divolte Collector checks for type compatibility during startup and will report an error if there is a mismatch. The type for a value can be found in the documentation below.
@@ -205,6 +208,10 @@ Below is a table of all types that can be produced in a mapping and the correspo
 |                                  |       ],                                                               |
 |                                  |     "default": null                                                    |
 |                                  |   }                                                                    |
++----------------------------------+------------------------------------------------------------------------+
+| :code:`ByteBuffer`               | .. code-block:: json                                                   |
+|                                  |                                                                        |
+|                                  |   { "name": "fieldName", "type": ["null","bytes"], "default": null }   |
 +----------------------------------+------------------------------------------------------------------------+
 | JSON (:code:`JsonNode`)          | Must match the structure of the JSON fragment.                         |
 |                                  | See :ref:`mapping-json-label`.                                         |
@@ -355,6 +362,33 @@ The Avro field will remain unchanged if mapping fails at runtime because the JSO
 
    Unlike most mappings, schema compatibility for JSON mappings cannot be checked on startup because
    compatibility depends on the JSON supplied with each individual event.
+
+.. _formatting-binary-label:
+
+Formatting binary data
+""""""""""""""""""""""
+
+The :code:`digest()` method produces binary data via its :code:`result()` method. Although this can be mapped directly to Avro, often it's convenient to map a human-readable format instead. The following conversions are supported:
+
++-------------------------+---------------------------------------------------------------------------+
+| Conversion              | Description                                                               |
++=========================+===========================================================================+
+| | :code:`.toHexLower()` | Hexadecimal format using lower-case letters (:code:`a`–:code:`f`).        |
++-------------------------+---------------------------------------------------------------------------+
+| | :code:`.toHexUpper()` | Hexadecimal format using upper-case letters (:code:`A`–:code:`F`).        |
++-------------------------+---------------------------------------------------------------------------+
+| | :code:`.toBase64()`   | Base-64 format, without newlines.                                         |
++-------------------------+---------------------------------------------------------------------------+
+
+An example mapping onto an Avro field that is a string would be:
+
+.. code-block:: groovy
+
+  map digest('sha-256', 'pseudoSession')
+      .add(partyId())
+      .add('-')
+      .add(sessionId())
+      .result().toBase64() to 'pseudoSession'
 
 Conditional mapping (:code:`when`)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -970,7 +1004,12 @@ Simple value: :code:`eventType()`
 
 Complex values
 ^^^^^^^^^^^^^^
-Complex values often return intermediate objects that you extract derived, simple values for mapping onto fields. The main exception to this is when working with event-parameters: the :code:`JsonNode` results can be mapped directly to fields, so long as they are of the right 'shape'; see :ref:`mapping-json-label` for more details.
+Complex values often return objects that allow for two different behaviours:
+
+- Mapping directly to a field, assuming the complex value is compatible with the field type. (Check :ref:`mapping-types-label` for compatibility details.)
+- Deriving further values.
+
+This differs from simple values which can only be mapped; no further derived values can be obtained.
 
 Complex value: :code:`eventParameters()`
 """"""""""""""""""""""""""""""""""""""""
@@ -1481,6 +1520,78 @@ Derived simple value: :samp:`header({name}).commaSeparated()`
 
 :Type:
   :code:`String`
+
+Complex value: :samp:`digest({algorithm}[, {seed}])`
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+:Usage:
+
+  .. code-block:: groovy
+
+    // A simple digester.
+    def digester = digest("sha-256")
+
+    // A seeded digester.
+    def digester = digest("sha-256","a seed value")
+
+:Sources:
+
+    ``browser``, ``json``
+
+:Description:
+  Initializes a *digester* that can cryptographically hash data using the supplied algorithm to produce a _digest_. Valid algorithms include :code:`SHA-224`, :code:`SHA-256`, :code:`SHA-384` and :code:`SHA-512`. The optional seed parameter can be used to personalize hash function: changing the parameter will affect all the values produced by the algorithm.
+
+
+  .. warning::
+
+    It is best practice to:
+
+    - Specify a seed value when digesting data; and
+    - Use a different seed for every digester.
+
+    The seed does not have to be kept secret.
+
+:Type:
+  :code:`Digester`
+
+Derived complex value: :code:`digester(…).add(value)`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:Usage:
+
+  .. code-block:: groovy
+
+    map digest('sha-256', 'pseudoSession')
+        .add(partyId())
+        .add('-')
+        .add(sessionId())
+        .result() onto 'fieldName'
+
+:Description:
+  Appends some data for the digester to process, returning the digester so that chained additions are supported. The data to process be:
+
+  - A simple :code:`String` or :code:`ByteBuffer` value;
+  - An actual string;
+  - A :code:`JsonNode` value that isn't an object or array; these will be converted to string form.
+
+  Internally the strings are converted for processing into bytes using the UTF-8 encoding.
+
+:Type:
+  :code:`Digestor`
+
+Derived complex value: :code:`digester(…).result()`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:Usage:
+
+  .. code-block:: groovy
+
+    map digest('sha-256', 'aSeed')
+        .add('...')
+        .result() onto 'fieldName'
+
+:Description:
+  Finalise the data to be digested so that it can be mapped to a field. The digest itself is binary data which can be mapped directly to an Avro field or formatted as a string first. (See :ref:`formatting-binary-label` for more information.)
+
+:Type:
+  :code:`ByteBuffer`
 
 .. _User agent parsing:
 
