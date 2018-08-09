@@ -611,6 +611,14 @@ public class DslRecordMapperTest {
         assertEquals(values.size(), uniqueValues);
     }
 
+    @Test
+    public void shouldSupportDocumentedAlgorithms() throws IOException, InterruptedException {
+        // The mapping exercises the documented algorithms.
+        setupServer("digest-with-documented-algorithms.groovy");
+        final EventPayload event = request("http://www.example.com");
+        assertNotNull(event);
+    }
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
