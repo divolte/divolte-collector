@@ -18,13 +18,17 @@ package io.divolte.server.topicsinks;
 
 import com.google.common.collect.ImmutableList;
 import io.divolte.server.AvroRecordBuffer;
+import io.divolte.server.DivolteSchema;
 import io.divolte.server.processing.Item;
 import io.divolte.server.processing.ItemProcessor;
+import org.apache.avro.Schema;
+import org.apache.avro.SchemaNormalization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -40,6 +44,18 @@ public abstract class TopicFlusher<T> implements ItemProcessor<AvroRecordBuffer>
 
     // On failure, we store the list of messages that are still pending here.
     private ImmutableList<T> pendingMessages = ImmutableList.of();
+
+    protected static byte[] schemaFingerprint(final DivolteSchema schema) {
+        final Schema avroSchema = schema.avroSchema;
+        final byte[] fingerprint;
+        // SHA-256 is on the list of mandatory JCE algorithms, so this shouldn't be an issue.
+        try {
+            fingerprint = SchemaNormalization.parsingFingerprint("SHA-256", avroSchema);
+        } catch (final NoSuchAlgorithmException e) {
+            throw new RuntimeException("Cannot calculate schema fingerprint; missing SHA-256 digest algorithm", e);
+        }
+        return fingerprint;
+    }
 
     @Override
     public final ProcessingDirective process(final Item<AvroRecordBuffer> item) {

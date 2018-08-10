@@ -25,14 +25,11 @@ import com.google.pubsub.v1.PubsubMessage;
 import io.divolte.server.AvroRecordBuffer;
 import io.divolte.server.DivolteSchema;
 import io.divolte.server.topicsinks.TopicFlusher;
-import org.apache.avro.Schema;
-import org.apache.avro.SchemaNormalization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -55,20 +52,8 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
 
     GoogleCloudPubSubFlusher(final Publisher publisher, final DivolteSchema schema) {
         this.publisher = Objects.requireNonNull(publisher);
-        this.schemaFingerprint = schemaFingerprint(schema);
+        this.schemaFingerprint = FINGERPRINT_ENCODER.encodeToString(schemaFingerprint(schema));
         this.schemaConfluentId = schema.confluentId.map(i -> "0x" + Integer.toHexString(i));
-    }
-
-    private static String schemaFingerprint(final DivolteSchema schema) {
-        final Schema avroSchema = schema.avroSchema;
-        final byte[] fingerprint;
-        // SHA-256 is on the list of mandatory JCE algorithms, so this shouldn't be an issue.
-        try {
-            fingerprint = SchemaNormalization.parsingFingerprint("SHA-256", avroSchema);
-        } catch (final NoSuchAlgorithmException e) {
-            throw new RuntimeException("Cannot calculate schema fingerprint; missing SHA-256 digest algorithm", e);
-        }
-        return FINGERPRINT_ENCODER.encodeToString(fingerprint);
     }
 
     @Override
