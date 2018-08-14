@@ -109,7 +109,15 @@ public abstract class SinkConfiguration<T extends SinkTypeConfiguration> {
                     subclass = GoogleCloudPubSubSinkConfiguration.class;
                     break;
                 default:
-                    throw new IllegalArgumentException(String.format("Unknown sink configuration type: %s", id));
+                    final String otherClassName = String.format("io.divolte.server.config.%s.SinkConfiguration", id);
+                    try {
+                        final Class<?> candidateClass = Class.forName(otherClassName);
+                        subclass = candidateClass.asSubclass(SinkConfiguration.class);
+                    } catch (final ClassCastException e) {
+                        throw new IllegalStateException("Invalid configuration class for type " + id, e);
+                    } catch (final ClassNotFoundException e) {
+                        throw new IllegalStateException("Could not locate configuration class for type " + id, e);
+                    }
             }
             return context.constructSpecializedType(superType.orElseThrow(IllegalStateException::new), subclass);
         }

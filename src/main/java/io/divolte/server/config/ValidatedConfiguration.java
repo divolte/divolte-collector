@@ -185,7 +185,7 @@ public final class ValidatedConfiguration {
                 module                              // Register custom deserializers module
                 );
 
-        return mapper.readValue(new HoconTreeTraversingParser(resolved.root()), DivolteConfiguration.class);
+        return mapper.readValue(new HoconTreeTraversingParser(resolved.root(), mapper), DivolteConfiguration.class);
     }
 
     /**

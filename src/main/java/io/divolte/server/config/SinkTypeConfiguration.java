@@ -28,7 +28,7 @@ public abstract class SinkTypeConfiguration {
     public final int bufferSize;
     public final int threads;
 
-    protected SinkTypeConfiguration(final int bufferSize, final int threads, final boolean enabled) {
+    public SinkTypeConfiguration(final int bufferSize, final int threads, final boolean enabled) {
         this.bufferSize = bufferSize;
         this.threads = threads;
         this.enabled = enabled;

@@ -31,7 +31,7 @@ public abstract class TopicSinkConfiguration<T extends SinkTypeConfiguration> ex
 
     @JsonCreator
     @ParametersAreNullableByDefault
-    TopicSinkConfiguration(final String topic) {
+    public TopicSinkConfiguration(final String topic) {
         this.topic = Optional.ofNullable(topic).orElse(DEFAULT_TOPIC);
     }
 

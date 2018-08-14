@@ -234,6 +234,11 @@ task wrapper(type: Wrapper) {
     distributionType = 'all'
 }
 
+startScripts {
+    /* Replace hard linking all the jar files individually with a wildcard, allowing additional jars to be loaded. */
+    classpath = files('*.jar')
+}
+
 /*
  * This only applies to running with gradle run. We use a different run
  * script when creating a distribution.
