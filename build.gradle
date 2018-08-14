@@ -235,8 +235,10 @@ task wrapper(type: Wrapper) {
 }
 
 startScripts {
-    /* Replace hard linking all the jar files individually with a wildcard, allowing additional jars to be loaded. */
-    classpath = files('*.jar')
+    /* Replace hard linking all the jar files individually with a wildcard, allowing additional jars to be loaded.
+     * This modifies the generation of build\scripts\divolte-collector(.bat) which results in CLASSPATH=$APP_HOME/lib/*
+     */
+    classpath = files('*')
 }
 
 /*
