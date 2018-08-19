@@ -1,0 +1,33 @@
+version: "3.3"
+services:
+    openjdk8:
+        image: openjdk:8
+        working_dir: /code/
+        volumes:
+        - type: bind
+          source: ./
+          target: /code
+
+    openjdk9:
+        image: openjdk:9
+        working_dir: /code/
+        volumes:
+        - type: bind
+          source: ./
+          target: /code
+
+    openjdk10:
+        image: openjdk:10
+        working_dir: /code/
+        volumes:
+        - type: bind
+          source: ./
+          target: /code
+
+    openjdk11:
+        image: openjdk:11
+        working_dir: /code/
+        volumes:
+         - type: bind
+           source: ./
+           target: /code
