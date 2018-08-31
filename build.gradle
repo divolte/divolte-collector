@@ -217,7 +217,7 @@ checkstyle {
 }
 
 jacoco {
-    toolVersion = "0.8.1"
+    toolVersion = "0.8.2"
 }
 
 spotbugsMain.reports {
