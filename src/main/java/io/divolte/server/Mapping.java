@@ -99,15 +99,17 @@ public class Mapping {
         return result;
     }
 
-    public Optional<Item<AvroRecordBuffer>> map(final Item<UndertowEvent> originalIem, final DivolteEvent parsedEvent, final boolean duplicate) {
+    public Optional<Item<AvroRecordBuffer>> map(final Item<UndertowEvent> originalIem,
+                                                final DivolteEvent parsedEvent,
+                                                final boolean duplicate) {
         if (
                 (keepDuplicates || !duplicate) &&
                 (keepCorrupted || !parsedEvent.corruptEvent)) {
             final GenericRecord avroRecord = mapper.newRecordFromExchange(parsedEvent);
-            final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(
-                    parsedEvent.partyId,
-                    parsedEvent.sessionId,
-                    avroRecord);
+            final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(parsedEvent.partyId,
+                                                                            parsedEvent.sessionId,
+                                                                            parsedEvent.requestStartTime,
+                                                                            avroRecord);
 
             /*
              * We should really think of a way to get rid of this and test the

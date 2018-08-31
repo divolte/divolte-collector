@@ -51,7 +51,7 @@ public final class KafkaFlusher extends TopicFlusher<ProducerRecord<DivolteIdent
 
     @Override
     protected ProducerRecord<DivolteIdentifier, AvroRecordBuffer> buildRecord(final AvroRecordBuffer record) {
-        return new ProducerRecord<>(topic, record.getPartyId(), record);
+        return new ProducerRecord<>(topic, null, record.getTimestamp().toEpochMilli(), record.getPartyId(), record);
     }
 
     @Override

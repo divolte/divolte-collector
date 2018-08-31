@@ -23,6 +23,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.junit.Test;
 
+import java.time.Instant;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
@@ -54,12 +55,13 @@ public class ConfluentAvroRecordBufferSerializerTest {
             .set("detectedDuplicate", false)
             .set("detectedCorruption", false)
             .set("firstInSession", false)
-            .set("timestamp", 0L)
+            .set("timestamp", Instant.EPOCH.toEpochMilli())
             .set("clientTimestamp", 0L)
             .set("remoteHost", "localhost")
             .build();
         return AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(0L),
                                            DivolteIdentifier.generate(1L),
+                                           Instant.EPOCH,
                                            record);
     }
 }
