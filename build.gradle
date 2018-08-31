@@ -116,7 +116,7 @@ dependencies {
     //   - The client from 0.10.2.0 onwards supports brokers from 0.10.0.0 onwards.
     // Note: we refer to versioned producer documentation in our documentation.
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '2.0.0'
-    compile group: 'com.google.javascript', name:'closure-compiler-unshaded', version:'v20180716'
+    compile group: 'com.google.javascript', name:'closure-compiler-unshaded', version:'v20180805'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.5.1', classifier: 'indy'
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.4'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.4.0'
