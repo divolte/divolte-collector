@@ -21,6 +21,8 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 import io.divolte.server.config.ValidatedConfiguration;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,6 +42,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.mockito.Mockito.mock;
 
 public final class ServerTestUtils {
     private static final Logger logger = LoggerFactory.getLogger(ServerTestUtils.class);
@@ -196,5 +201,24 @@ public final class ServerTestUtils {
                 new Thread(server::shutdown).start();
             }
         }
+    }
+
+    public static DivolteEvent createMockBrowserEvent() {
+        final Instant now = Instant.now();
+        final HttpServerExchange mockExchange = new HttpServerExchange(mock(ServerConnection.class));
+        return new DivolteEvent(mockExchange,
+                                false,
+                                DivolteIdentifier.generate(),
+                                DivolteIdentifier.generate(),
+                                "mockEventId",
+                                "mockEventSource",
+                                now,
+                                now,
+                                true,
+                                true,
+                                Optional.empty(),
+                                Optional::empty,
+                                Optional.empty(),
+                                Optional.empty());
     }
 }

@@ -45,8 +45,11 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -507,6 +510,113 @@ public class DslRecordMapperTest {
         assertFalse((Boolean) event.record.get("dupe"));
         assertTrue((Boolean) event.record.get("queryparamBoolean"));
         assertTrue((Boolean) event.record.get("pathBoolean"));
+    }
+
+    private static ByteBuffer digest(final ByteBuffer buffer) throws NoSuchAlgorithmException {
+        final MessageDigest digester = MessageDigest.getInstance("sha-256");
+        digester.update(buffer);
+        return ByteBuffer.wrap(digester.digest());
+    }
+
+    private static ByteBuffer digest(final String s) throws NoSuchAlgorithmException {
+        return digest(ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private static String hexDump(final ByteBuffer buffer) {
+        final StringBuilder builder = new StringBuilder(buffer.remaining() * 2);
+        while (0 < buffer.remaining()) {
+            final byte b = buffer.get();
+            builder.append(Character.forDigit((b >> 4) & 0x0f, 16))
+                   .append(Character.forDigit((b     ) & 0x0f, 16));
+        }
+        buffer.rewind();
+        return builder.toString();
+    }
+
+    private static void assertByteBufferEquals(final ByteBuffer expected, final ByteBuffer actual) {
+        if (!Objects.equals(expected, actual)) {
+            assertEquals(hexDump(expected), hexDump(actual));
+        }
+    }
+
+    @Test
+    public void shouldSupportDigestingStringProvider() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-string-provider.groovy");
+        final EventPayload event = request("http://www.example.com/");
+
+        assertByteBufferEquals(digest(event.event.eventId), (ByteBuffer)event.record.get("digestBinary"));
+    }
+
+    @Test
+    public void shouldSupportDigestingStringLiterals() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-string-literal.groovy");
+        final EventPayload event = request("http://www.example.com/");
+
+        assertByteBufferEquals(digest("aLiteralString"), (ByteBuffer)event.record.get("digestBinary"));
+    }
+
+    @Test
+    public void shouldSupportDigestChaining() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-chaining.groovy");
+        final EventPayload event = request("http://www.example.com/");
+
+        assertByteBufferEquals(digest(event.event.eventId + "aLiteralString"), (ByteBuffer)event.record.get("digestBinary"));
+    }
+
+    @Test
+    public void shouldSupportDigestingJson() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-json.groovy");
+        final EventPayload event = request("http://www.example.com/", ImmutableList.of(HETEROGENOUS_EVENT_PARAMS));
+
+        assertByteBufferEquals(digest("string42apple"), (ByteBuffer)event.record.get("digestBinary"));
+    }
+
+    @Test
+    public void shouldSupportDigestingBytes() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-bytebuffer.groovy");
+        final EventPayload event = request("http://www.example.com/", ImmutableList.of(HETEROGENOUS_EVENT_PARAMS));
+
+        assertByteBufferEquals(digest(digest(ByteBuffer.allocate(0))), (ByteBuffer)event.record.get("digestBinary"));
+    }
+
+    @Test
+    public void digestingMissingValueShouldBeNoop() throws NoSuchAlgorithmException, IOException, InterruptedException {
+        setupServer("digest-missing-value.groovy");
+        final EventPayload event = request("http://www.example.com/");
+
+        assertByteBufferEquals(ByteBuffer.wrap(MessageDigest.getInstance("sha-256").digest()), (ByteBuffer)event.record.get("digestBinary"));
+    }
+
+    @Test
+    public void shouldSupportDigestingToBase64() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        setupServer("digest-with-string-conversion.groovy");
+        final EventPayload event = request("http://www.example.com");
+
+        assertEquals(StandardCharsets.UTF_8.decode(Base64.getEncoder().encode(digest(event.event.eventId))).toString(),
+                     event.record.get("digestString"));
+    }
+
+    @Test
+    public void shouldSupportSeededDigesting() throws IOException, InterruptedException {
+        setupServer("digest-with-seed.groovy");
+        final EventPayload event = request("http://www.example.com");
+
+        // Check that the same value produces a different hash if the seed is different.
+        final ImmutableList<String> values = ImmutableList.of(
+            (String) event.record.get("digestString"),
+            (String) event.record.get("digestString2"),
+            (String) event.record.get("digestString3")
+        );
+        final long uniqueValues = values.stream().distinct().count();
+        assertEquals(values.size(), uniqueValues);
+    }
+
+    @Test
+    public void shouldSupportDocumentedAlgorithms() throws IOException, InterruptedException {
+        // The mapping exercises the documented algorithms.
+        setupServer("digest-with-documented-algorithms.groovy");
+        final EventPayload event = request("http://www.example.com");
+        assertNotNull(event);
     }
 
     private static final ObjectMapper MAPPER =
