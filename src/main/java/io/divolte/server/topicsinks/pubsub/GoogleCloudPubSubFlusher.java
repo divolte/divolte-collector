@@ -16,7 +16,6 @@
 
 package io.divolte.server.topicsinks.pubsub;
 
-import com.google.api.client.util.DateTime;
 import com.google.api.core.ApiFuture;
 import com.google.api.gax.rpc.ApiException;
 import com.google.cloud.pubsub.v1.Publisher;
@@ -34,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.security.NoSuchAlgorithmException;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -43,9 +43,9 @@ import java.util.stream.Collectors;
 public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> {
     private final static Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubFlusher.class);
     private final static String MESSAGE_ATTRIBUTE_PARTYID = "partyIdentifier";
+    private final static String MESSAGE_ATTRIBUTE_TIMESTAMP = "timestamp";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID = "schemaConfluentId";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT = "schemaFingerprint";
-    private final static String MESSAGE_TIMESTAMP_LABEL = "timestamplabel";
 
     // The most compact fingerprint encoding that is practical is Base64, using the URL encoding
     // because that's safe for file names (which some registries might use to index schemas).
@@ -78,9 +78,7 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
         final PubsubMessage.Builder builder = PubsubMessage.newBuilder()
             .putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT, schemaFingerprint)
             .putAttributes(MESSAGE_ATTRIBUTE_PARTYID, record.getPartyId().toString())
-            .putAttributes(MESSAGE_TIMESTAMP_LABEL, new DateTime(
-                record.getTimestamp().toEpochMilli()).toStringRfc3339()
-            )
+            .putAttributes(MESSAGE_ATTRIBUTE_TIMESTAMP, DateTimeFormatter.ISO_INSTANT.format(record.getTimestamp()))
             .setData(ByteString.copyFrom(record.getByteBuffer()));
         return schemaConfluentId
             .map(id -> builder.putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID, id))
