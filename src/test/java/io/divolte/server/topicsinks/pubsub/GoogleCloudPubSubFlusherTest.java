@@ -105,12 +105,13 @@ public class GoogleCloudPubSubFlusherTest {
     private AvroRecordBuffer generateMessage() {
         final DivolteIdentifier partyId = this.partyId.orElseThrow(IllegalStateException::new);
         final DivolteIdentifier sessionId = this.sessionId.orElseThrow(IllegalStateException::new);
+        final String eventId = sessionId.toString() + '-' + Long.toHexString(generatedEventCounter);
         final GenericRecord record = new GenericRecordBuilder(MINIMAL_SCHEMA)
             .set("partyId", partyId.toString())
             .set("sessionId", sessionId.toString())
             .set("counter", generatedEventCounter++)
             .build();
-        return AvroRecordBuffer.fromRecord(partyId, sessionId, EVENT_TIMESTAMP, record);
+        return AvroRecordBuffer.fromRecord(partyId, sessionId, eventId, EVENT_TIMESTAMP, record);
     }
 
     private Item<AvroRecordBuffer> itemFromAvroRecordBuffer(final AvroRecordBuffer message) {
@@ -201,6 +202,14 @@ public class GoogleCloudPubSubFlusherTest {
         final PubsubMessage deliveredMessage = getFirstPublishedMessage();
         assertEquals(partyId.orElseThrow(IllegalStateException::new).toString(),
                      deliveredMessage.getAttributesOrThrow("partyIdentifier"));
+    }
+
+    @Test
+    public void testMessagesHaveEventIdAttribute() {
+        processSingleMessage();
+        final PubsubMessage deliveredMessage = getFirstPublishedMessage();
+        assertEquals(sessionId.orElseThrow(IllegalStateException::new).toString() + "-0",
+                     deliveredMessage.getAttributesOrThrow("eventIdentifier"));
     }
 
     @Test

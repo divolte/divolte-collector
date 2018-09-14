@@ -41,15 +41,18 @@ public final class AvroRecordBuffer {
 
     private final DivolteIdentifier partyId;
     private final DivolteIdentifier sessionId;
+    private final String eventId;
     private final Instant timestamp;
     private final ByteBuffer byteBuffer;
 
     private AvroRecordBuffer(final DivolteIdentifier partyId,
                              final DivolteIdentifier sessionId,
+                             final String eventId,
                              final Instant timestamp,
                              final GenericRecord record) throws IOException {
         this.partyId = Objects.requireNonNull(partyId);
         this.sessionId = Objects.requireNonNull(sessionId);
+        this.eventId = Objects.requireNonNull(eventId);
         this.timestamp = Objects.requireNonNull(timestamp);
 
         /*
@@ -79,17 +82,22 @@ public final class AvroRecordBuffer {
         return sessionId;
     }
 
+    public String getEventId() {
+        return eventId;
+    }
+
     public Instant getTimestamp() {
         return timestamp;
     }
 
     public static AvroRecordBuffer fromRecord(final DivolteIdentifier partyId,
                                               final DivolteIdentifier sessionId,
+                                              final String eventId,
                                               final Instant timestamp,
                                               final GenericRecord record) {
         for (;;) {
             try {
-                return new AvroRecordBuffer(partyId, sessionId, timestamp, record);
+                return new AvroRecordBuffer(partyId, sessionId, eventId, timestamp, record);
             } catch (final BufferOverflowException boe) {
                 // Increase the buffer size by about 10%
                 // Because we only ever increase the buffer size, we discard the

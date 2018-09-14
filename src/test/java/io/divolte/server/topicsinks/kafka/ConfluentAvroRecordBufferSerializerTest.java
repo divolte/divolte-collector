@@ -61,6 +61,7 @@ public class ConfluentAvroRecordBufferSerializerTest {
             .build();
         return AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(0L),
                                            DivolteIdentifier.generate(1L),
+                                           "-",
                                            Instant.EPOCH,
                                            record);
     }

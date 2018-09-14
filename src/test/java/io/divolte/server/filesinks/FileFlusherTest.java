@@ -466,6 +466,7 @@ public class FileFlusherTest {
 
         return AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
                                            DivolteIdentifier.generate(),
+                                           "anEventId",
                                            now,
                                            record);
     }

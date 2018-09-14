@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> {
     private final static Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubFlusher.class);
     private final static String MESSAGE_ATTRIBUTE_PARTYID = "partyIdentifier";
+    private final static String MESSAGE_ATTRIBUTE_EVENTID = "eventIdentifier";
     private final static String MESSAGE_ATTRIBUTE_TIMESTAMP = "timestamp";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID = "schemaConfluentId";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT = "schemaFingerprint";
@@ -78,6 +79,7 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
         final PubsubMessage.Builder builder = PubsubMessage.newBuilder()
             .putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT, schemaFingerprint)
             .putAttributes(MESSAGE_ATTRIBUTE_PARTYID, record.getPartyId().toString())
+            .putAttributes(MESSAGE_ATTRIBUTE_EVENTID, record.getEventId())
             .putAttributes(MESSAGE_ATTRIBUTE_TIMESTAMP, DateTimeFormatter.ISO_INSTANT.format(record.getTimestamp()))
             .setData(ByteString.copyFrom(record.getByteBuffer()));
         return schemaConfluentId
@@ -112,8 +114,10 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                 final String messageId = pendingResult.get();
                 if (logger.isDebugEnabled()) {
                     final PubsubMessage message = batch.get(i);
-                    logger.debug("Finished sending event (partyId={}) to Pub/Sub: messageId = {}",
-                        message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID), messageId);
+                    logger.debug("Finished sending event (partyId={}, eventId={}) to Pub/Sub: messageId = {}",
+                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
+                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                 messageId);
                 }
             } catch (final ExecutionException e) {
                 final PubsubMessage message = batch.get(i);
@@ -123,15 +127,22 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                 if (cause instanceof ApiException) {
                     final ApiException apiException = (ApiException) cause;
                     if (apiException.isRetryable()) {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Transient error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; retrying.", cause);
-                        }
+                        logger.debug("Transient error sending event (partyId={}, eventId={}) to Pub/Sub; retrying.",
+                                     message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
+                                     message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                     cause);
                         remaining.add(message);
                     } else {
-                        logger.warn("Permanent error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; abandoning.", cause);
+                        logger.warn("Permanent error sending event (partyId={}, eventId={}) to Pub/Sub; abandoning.",
+                                    message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
+                                    message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                    cause);
                     }
                 } else {
-                    logger.error("Unknown error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; abandoning.", cause);
+                    logger.error("Unknown error sending event (partyId={}, eventId={}) to Pub/Sub; abandoning.",
+                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
+                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                 cause);
                 }
             }
         }
