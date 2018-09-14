@@ -143,7 +143,7 @@ public final class IncomingRequestProcessor implements ItemProcessor<UndertowEve
         try {
             event = item.payload.parseRequest();
         } catch (final IncompleteRequestException e) {
-            logger.warn("Improper request received from {}.", Optional.ofNullable(item.payload.exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
+            logger.debug("Improper request received from {}.", Optional.ofNullable(item.payload.exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
             return CONTINUE;
         }
 

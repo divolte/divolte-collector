@@ -126,7 +126,7 @@ public final class ClientSideCookieEventHandler implements HttpHandler {
                 logEvent(exchange);
             } catch (final IncompleteRequestException ire) {
                 // improper request, could be anything
-                logger.warn("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
+                logger.debug("Improper request received from {}.", Optional.ofNullable(exchange.getSourceAddress()).map(InetSocketAddress::getHostString).orElse("<UNKNOWN HOST>"));
             }
         } else {
             if (logger.isDebugEnabled()) {
