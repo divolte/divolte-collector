@@ -15,10 +15,6 @@
  */
 
 buildscript {
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
     dependencies {
         classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.20.0'
     }
