@@ -16,6 +16,7 @@
 
 package io.divolte.server.topicsinks.pubsub;
 
+import com.google.api.client.util.DateTime;
 import com.google.api.core.ApiFuture;
 import com.google.api.gax.rpc.ApiException;
 import com.google.cloud.pubsub.v1.Publisher;
@@ -44,6 +45,7 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
     private final static String MESSAGE_ATTRIBUTE_PARTYID = "partyIdentifier";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID = "schemaConfluentId";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT = "schemaFingerprint";
+    private final static String MESSAGE_TIMESTAMP_LABEL = "timestamplabel";
 
     // The most compact fingerprint encoding that is practical is Base64, using the URL encoding
     // because that's safe for file names (which some registries might use to index schemas).
@@ -76,6 +78,9 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
         final PubsubMessage.Builder builder = PubsubMessage.newBuilder()
             .putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT, schemaFingerprint)
             .putAttributes(MESSAGE_ATTRIBUTE_PARTYID, record.getPartyId().toString())
+            .putAttributes(MESSAGE_TIMESTAMP_LABEL, new DateTime(
+                record.getTimestamp().toEpochMilli()).toStringRfc3339()
+            )
             .setData(ByteString.copyFrom(record.getByteBuffer()));
         return schemaConfluentId
             .map(id -> builder.putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID, id))
@@ -93,9 +98,9 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
         // (This will serialize them, determine the partition and then assign them to a per-partition buffer.)
         final int batchSize = batch.size();
         final List<ApiFuture<String>> sendResults =
-                batch.stream()
-                     .map(publisher::publish)
-                     .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
+            batch.stream()
+                .map(publisher::publish)
+                .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
 
         // At this point the messages are in flight, and we assume being flushed.
         // When they eventually complete, each message can be in one of several states:
@@ -110,7 +115,7 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                 if (logger.isDebugEnabled()) {
                     final PubsubMessage message = batch.get(i);
                     logger.debug("Finished sending event (partyId={}) to Pub/Sub: messageId = {}",
-                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID), messageId);
+                        message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID), messageId);
                 }
             } catch (final ExecutionException e) {
                 final PubsubMessage message = batch.get(i);
@@ -118,7 +123,7 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                 // retry indefinitely unless it's a cause that we don't understand.
                 final Throwable cause = e.getCause();
                 if (cause instanceof ApiException) {
-                    final ApiException apiException = (ApiException)cause;
+                    final ApiException apiException = (ApiException) cause;
                     if (apiException.isRetryable()) {
                         if (logger.isDebugEnabled()) {
                             logger.debug("Transient error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; retrying.", cause);
