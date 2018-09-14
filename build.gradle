@@ -15,19 +15,13 @@
  */
 
 buildscript {
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
     dependencies {
         classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.20.0'
     }
 }
 
 plugins {
-    // This version of the Spotbugs plugin is blocking our upgrade to Gradle 4.10.
-    // See: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/39
-    id 'com.github.spotbugs' version '1.6.2'
+    id 'com.github.spotbugs' version '1.6.3'
     id 'com.github.johnrengelman.shadow' version '2.0.4'
     id 'pl.allegro.tech.build.axion-release' version '1.9.3'
 }
@@ -101,7 +95,7 @@ dependencies {
     compile (group: 'com.google.auth', name: 'google-auth-library-oauth2-http', version: '0.11.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
-    compile group: 'com.google.cloud', name: 'google-cloud-pubsub', version: '1.42.0'
+    compile group: 'com.google.cloud', name: 'google-cloud-pubsub', version: '1.44.0'
     compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.22') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
@@ -118,7 +112,7 @@ dependencies {
     //   - The client from 0.10.2.0 onwards supports brokers from 0.10.0.0 onwards.
     // Note: we refer to versioned producer documentation in our documentation.
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '2.0.0'
-    compile group: 'com.google.javascript', name:'closure-compiler-unshaded', version:'v20180805'
+    compile group: 'com.google.javascript', name:'closure-compiler-unshaded', version:'v20180910'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.5.2', classifier: 'indy'
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.4'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.4.0'
@@ -130,7 +124,7 @@ dependencies {
 
     // Used for configuration validation
     compile group: 'javax.validation', name:'validation-api', version: '2.0.1.Final'
-    compile group: 'org.hibernate', name:'hibernate-validator', version: '6.0.12.Final'
+    compile group: 'org.hibernate', name:'hibernate-validator', version: '6.0.13.Final'
     compile group: 'org.glassfish', name:'javax.el', version: '3.0.0'
 
     // We use the SLF4J API. At runtime, this is LogBack.
@@ -232,7 +226,7 @@ spotbugsTest.reports {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.10'
+    gradleVersion = '4.10.1'
     distributionType = 'all'
 }
 
