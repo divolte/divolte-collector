@@ -16,6 +16,9 @@
 
 package io.divolte.server.js;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.javascript.jscomp.*;
+import com.google.javascript.jscomp.Compiler;
 import io.undertow.util.ETag;
 
 import java.io.IOException;
@@ -35,14 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.javascript.jscomp.CommandLineRunner;
-import com.google.javascript.jscomp.CompilationLevel;
-import com.google.javascript.jscomp.Compiler;
-import com.google.javascript.jscomp.CompilerOptions;
-import com.google.javascript.jscomp.ErrorManager;
-import com.google.javascript.jscomp.Result;
-import com.google.javascript.jscomp.SourceFile;
-import com.google.javascript.jscomp.WarningLevel;
 
 import static com.google.javascript.jscomp.CompilerOptions.LanguageMode.*;
 
@@ -110,7 +105,7 @@ public class JavaScriptResource {
 
         final SourceFile source = SourceFile.fromInputStream(filename, javascript, StandardCharsets.UTF_8);
         final Compiler compiler = new Compiler();
-        final ErrorManager errorManager = new Slf4jErrorManager(compiler);
+        final ErrorManager errorManager = new SortingErrorManager(ImmutableSet.of(new Slf4jErrorReportGenerator(compiler)));
         compiler.setErrorManager(errorManager);
         // TODO: Use an explicit list of externs instead of the default browser set, to control compatibility.
         final List<SourceFile> externs = CommandLineRunner.getBuiltinExterns(options.getEnvironment());
