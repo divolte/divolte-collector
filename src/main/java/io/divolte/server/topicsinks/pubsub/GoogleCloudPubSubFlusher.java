@@ -115,8 +115,8 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                 if (logger.isDebugEnabled()) {
                     final PubsubMessage message = batch.get(i);
                     logger.debug("Finished sending event (partyId={}, eventId={}) to Pub/Sub: messageId = {}",
-                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
-                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
                                  messageId);
                 }
             } catch (final ExecutionException e) {
@@ -128,20 +128,20 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                     final ApiException apiException = (ApiException) cause;
                     if (apiException.isRetryable()) {
                         logger.debug("Transient error sending event (partyId={}, eventId={}) to Pub/Sub; retrying.",
-                                     message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
-                                     message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                     message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                     message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
                                      cause);
                         remaining.add(message);
                     } else {
                         logger.warn("Permanent error sending event (partyId={}, eventId={}) to Pub/Sub; abandoning.",
-                                    message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
-                                    message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                    message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                    message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
                                     cause);
                     }
                 } else {
                     logger.error("Unknown error sending event (partyId={}, eventId={}) to Pub/Sub; abandoning.",
-                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID),
-                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_EVENTID),
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
                                  cause);
                 }
             }
