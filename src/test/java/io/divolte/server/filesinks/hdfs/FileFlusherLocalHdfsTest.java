@@ -197,6 +197,7 @@ public class FileFlusherLocalHdfsTest {
         records.stream().map(
                 (record) -> AvroRecordBuffer.fromRecord(DivolteIdentifier.generate(),
                                                         DivolteIdentifier.generate(),
+                                                        "anEventId",
                                                         Instant.ofEpochMilli((long)record.get("ts")),
                                                         record))
                         .forEach((arb) -> flusher.process(Item.of(0, arb.getPartyId().value, arb)));

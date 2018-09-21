@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.security.NoSuchAlgorithmException;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -42,6 +43,8 @@ import java.util.stream.Collectors;
 public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> {
     private final static Logger logger = LoggerFactory.getLogger(GoogleCloudPubSubFlusher.class);
     private final static String MESSAGE_ATTRIBUTE_PARTYID = "partyIdentifier";
+    private final static String MESSAGE_ATTRIBUTE_EVENTID = "eventIdentifier";
+    private final static String MESSAGE_ATTRIBUTE_TIMESTAMP = "timestamp";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID = "schemaConfluentId";
     private final static String MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT = "schemaFingerprint";
 
@@ -76,6 +79,8 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
         final PubsubMessage.Builder builder = PubsubMessage.newBuilder()
             .putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_FINGERPRINT, schemaFingerprint)
             .putAttributes(MESSAGE_ATTRIBUTE_PARTYID, record.getPartyId().toString())
+            .putAttributes(MESSAGE_ATTRIBUTE_EVENTID, record.getEventId())
+            .putAttributes(MESSAGE_ATTRIBUTE_TIMESTAMP, DateTimeFormatter.ISO_INSTANT.format(record.getTimestamp()))
             .setData(ByteString.copyFrom(record.getByteBuffer()));
         return schemaConfluentId
             .map(id -> builder.putAttributes(MESSAGE_ATTRIBUTE_SCHEMA_CONFLUENT_ID, id))
@@ -93,9 +98,9 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
         // (This will serialize them, determine the partition and then assign them to a per-partition buffer.)
         final int batchSize = batch.size();
         final List<ApiFuture<String>> sendResults =
-                batch.stream()
-                     .map(publisher::publish)
-                     .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
+            batch.stream()
+                .map(publisher::publish)
+                .collect(Collectors.toCollection(() -> new ArrayList<>(batchSize)));
 
         // At this point the messages are in flight, and we assume being flushed.
         // When they eventually complete, each message can be in one of several states:
@@ -109,8 +114,10 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                 final String messageId = pendingResult.get();
                 if (logger.isDebugEnabled()) {
                     final PubsubMessage message = batch.get(i);
-                    logger.debug("Finished sending event (partyId={}) to Pub/Sub: messageId = {}",
-                                 message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID), messageId);
+                    logger.debug("Finished sending event (partyId={}, eventId={}) to Pub/Sub: messageId = {}",
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
+                                 messageId);
                 }
             } catch (final ExecutionException e) {
                 final PubsubMessage message = batch.get(i);
@@ -118,17 +125,24 @@ public final class GoogleCloudPubSubFlusher extends TopicFlusher<PubsubMessage> 
                 // retry indefinitely unless it's a cause that we don't understand.
                 final Throwable cause = e.getCause();
                 if (cause instanceof ApiException) {
-                    final ApiException apiException = (ApiException)cause;
+                    final ApiException apiException = (ApiException) cause;
                     if (apiException.isRetryable()) {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Transient error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; retrying.", cause);
-                        }
+                        logger.debug("Transient error sending event (partyId={}, eventId={}) to Pub/Sub; retrying.",
+                                     message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                     message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
+                                     cause);
                         remaining.add(message);
                     } else {
-                        logger.warn("Permanent error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; abandoning.", cause);
+                        logger.warn("Permanent error sending event (partyId={}, eventId={}) to Pub/Sub; abandoning.",
+                                    message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                    message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
+                                    cause);
                     }
                 } else {
-                    logger.error("Unknown error sending event (partyId=" + message.getAttributesOrThrow(MESSAGE_ATTRIBUTE_PARTYID) + ") to Pub/Sub; abandoning.", cause);
+                    logger.error("Unknown error sending event (partyId={}, eventId={}) to Pub/Sub; abandoning.",
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_PARTYID, "N/A"),
+                                 message.getAttributesOrDefault(MESSAGE_ATTRIBUTE_EVENTID, "N/A"),
+                                 cause);
                 }
             }
         }

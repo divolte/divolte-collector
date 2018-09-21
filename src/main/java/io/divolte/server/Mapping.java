@@ -108,6 +108,7 @@ public class Mapping {
             final GenericRecord avroRecord = mapper.newRecordFromExchange(parsedEvent);
             final AvroRecordBuffer avroBuffer = AvroRecordBuffer.fromRecord(parsedEvent.partyId,
                                                                             parsedEvent.sessionId,
+                                                                            parsedEvent.eventId,
                                                                             parsedEvent.requestStartTime,
                                                                             avroRecord);
 

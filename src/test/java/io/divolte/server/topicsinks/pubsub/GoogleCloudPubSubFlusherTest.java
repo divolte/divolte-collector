@@ -49,6 +49,8 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -67,6 +69,8 @@ public class GoogleCloudPubSubFlusherTest {
                               .requiredString("sessionId")
                               .requiredLong("counter")
                      .endRecord();
+
+    private static final Instant EVENT_TIMESTAMP = ZonedDateTime.of(2018, 9, 14, 13, 32, 10, 34261025, ZoneOffset.UTC).toInstant();
 
     private Optional<DivolteIdentifier> partyId = Optional.empty();
     private Optional<DivolteIdentifier> sessionId = Optional.empty();
@@ -101,12 +105,13 @@ public class GoogleCloudPubSubFlusherTest {
     private AvroRecordBuffer generateMessage() {
         final DivolteIdentifier partyId = this.partyId.orElseThrow(IllegalStateException::new);
         final DivolteIdentifier sessionId = this.sessionId.orElseThrow(IllegalStateException::new);
+        final String eventId = sessionId.toString() + '-' + Long.toHexString(generatedEventCounter);
         final GenericRecord record = new GenericRecordBuilder(MINIMAL_SCHEMA)
             .set("partyId", partyId.toString())
             .set("sessionId", sessionId.toString())
             .set("counter", generatedEventCounter++)
             .build();
-        return AvroRecordBuffer.fromRecord(partyId, sessionId, Instant.EPOCH, record);
+        return AvroRecordBuffer.fromRecord(partyId, sessionId, eventId, EVENT_TIMESTAMP, record);
     }
 
     private Item<AvroRecordBuffer> itemFromAvroRecordBuffer(final AvroRecordBuffer message) {
@@ -197,6 +202,21 @@ public class GoogleCloudPubSubFlusherTest {
         final PubsubMessage deliveredMessage = getFirstPublishedMessage();
         assertEquals(partyId.orElseThrow(IllegalStateException::new).toString(),
                      deliveredMessage.getAttributesOrThrow("partyIdentifier"));
+    }
+
+    @Test
+    public void testMessagesHaveEventIdAttribute() {
+        processSingleMessage();
+        final PubsubMessage deliveredMessage = getFirstPublishedMessage();
+        assertEquals(sessionId.orElseThrow(IllegalStateException::new).toString() + "-0",
+                     deliveredMessage.getAttributesOrThrow("eventIdentifier"));
+    }
+
+    @Test
+    public void testMessagesHaveTimestampAttribute() {
+        processSingleMessage();
+        final PubsubMessage deliveredMessage = getFirstPublishedMessage();
+        assertEquals("2018-09-14T13:32:10.034261025Z", deliveredMessage.getAttributesOrThrow("timestamp"));
     }
 
     @Test
