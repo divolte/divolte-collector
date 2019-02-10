@@ -297,7 +297,7 @@ In order to use the custom events in your mapping, map values onto fields like t
    */
   map { parse eventParameter('foo') to int32 } onto 'intField'
 
-Custom events are delivered in the background in the order they are signalled. If the user navigates away from the current page, normally the queue is discarded because the Javascript is unloaded and stops running. This can pose problems when instrumenting links that lead to a new page: navigation to the new page can occur before the event has been delivered. So help with this it's possible to register a callback that will be invoked when all pending events have been delivered:
+Custom events are delivered in the background in the order they are signalled. If the user navigates away from the current page, normally the queue is discarded because the Javascript is unloaded and stops running. This can pose problems when instrumenting links that lead to a new page: navigation to the new page can occur before the event has been delivered. So to help with this, it's possible to register a callback that will be invoked when all pending events have been delivered:
 
 .. code-block:: javascript
 
