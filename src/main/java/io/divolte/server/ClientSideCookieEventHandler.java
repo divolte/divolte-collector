@@ -16,11 +16,11 @@
 
 package io.divolte.server;
 
-import avro.shaded.com.google.common.collect.ImmutableSortedMap;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
