@@ -249,6 +249,8 @@ if (!hasProperty("bindTestServerExternal")) {
 }
 
 test {
+    maxHeapSize = "1g"
+
     /* Test results depend on the value of this project property. */
     systemProperty "io.divolte.test.bindExternal", bindTestServerExternal
 
