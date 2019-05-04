@@ -21,7 +21,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.github.spotbugs' version '1.6.4'
+    id 'com.github.spotbugs' version '1.6.9'
     id 'com.github.johnrengelman.shadow' version '5.0.0'
     id 'pl.allegro.tech.build.axion-release' version '1.10.1'
 }
@@ -197,6 +197,8 @@ tasks.withType(JavaCompile) {
 
 spotbugs() {
     excludeFilter = file("config/findbugs/findbugs-excludes.xml")
+    // Versions 3.1.9 thru 3.1.12 depend on a beta version of slf4j, which our component selection rules block.
+    toolVersion = "3.1.8"
 }
 
 pmd {
