@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package io.divolte.server.js;
 
+import com.google.common.collect.ImmutableList;
 import com.google.javascript.jscomp.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,7 @@ public class Slf4jErrorReportGenerator implements SortingErrorManager.ErrorRepor
                       manager.getErrorCount(), manager.getWarningCount(), manager.getTypedPercent());
     }
 
-    private void logErrors(final Consumer<String> logMethod, final CheckLevel level, final JSError[] errors) {
+    private void logErrors(final Consumer<String> logMethod, final CheckLevel level, final ImmutableList<JSError> errors) {
         for (final JSError error : errors) {
             logMethod.accept(error.format(level, formatter));
         }
