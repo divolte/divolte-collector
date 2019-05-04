@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ public class JavaScriptResource {
         }
         logger.info("Pre-compiled JavaScript source: {}", resourceName);
         final Result result = compiler.getResult();
-        if (!result.success || 0 < result.warnings.length) {
+        if (!result.success || !result.warnings.isEmpty()) {
             throw new IllegalArgumentException("Javascript resource contains warnings and/or errors: " + resourceName);
         }
         final byte[] entityBytes = compiler.toSource().getBytes(StandardCharsets.UTF_8);

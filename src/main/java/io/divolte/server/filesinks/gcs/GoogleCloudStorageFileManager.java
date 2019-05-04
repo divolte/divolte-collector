@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
     private final String inflightDir;
     private final String publishDir;
 
-    private final RetryPolicy retryPolicy;
+    private final RetryPolicy<?> retryPolicy;
 
     public GoogleCloudStorageFileManager(
         final int recordBufferSize,
@@ -101,7 +101,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
         final String bucket,
         final String inflightDir,
         final String publishDir,
-        RetryPolicy retryPolicy
+        RetryPolicy<?> retryPolicy
     ) {
         try {
             this.recordBufferSize = recordBufferSize;
@@ -110,7 +110,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
             this.inflightDir = Objects.requireNonNull(inflightDir);
             this.publishDir = Objects.requireNonNull(publishDir);
             this.retryPolicy = Objects.requireNonNull(retryPolicy)
-                                      .retryOn(RetriableIOException.class);
+                                      .handle(RetriableIOException.class);
         } catch (final UnsupportedEncodingException e) {
             // Should not happen. URL encoding the bucket and dirs is verified during
             // configuration verification.
@@ -364,7 +364,7 @@ public class GoogleCloudStorageFileManager implements FileManager {
         }
     }
 
-    private static <T> T googlePost(final URL url, final Class<T> resultType, final ImmutableMap<String,String> additionalHeaders, final BodyWriter writer, final RetryPolicy retryPolicy) {
+    private static <T> T googlePost(final URL url, final Class<T> resultType, final ImmutableMap<String,String> additionalHeaders, final BodyWriter writer, final RetryPolicy<?> retryPolicy) {
         return withRetry(POST, url, true, additionalHeaders, connection -> {
             try (final OutputStream os = connection.getOutputStream()) {
                 writer.write(os);
@@ -422,11 +422,14 @@ public class GoogleCloudStorageFileManager implements FileManager {
                                    final boolean write,
                                    final ImmutableMap<String, String> additionalHeaders,
                                    final IOExceptions.IOFunction<HttpURLConnection, T> consumer,
-                                   final RetryPolicy retryPolicy) {
+                                   final RetryPolicy<?> retryPolicy) {
+        @SuppressWarnings("unchecked")
+        final RetryPolicy<T> localPolicy = (RetryPolicy<T>) retryPolicy.copy();
+        final RetryPolicy<T> listeningPolicy = localPolicy
+            .onRetry(event -> logger.error("Will retry after attempt #{}/{} of call to GCS API failed: {} {}", event.getAttemptCount(), retryPolicy.getMaxRetries(), method, url, event.getLastFailure()));
         return Failsafe
-            .with(retryPolicy)
-            .onRetry((ignored, error, context) -> logger.error("Will retry after attempt #{}/{} of call to GCS API failed: {} {}", context.getExecutions(), retryPolicy.getMaxRetries(), method, url, error))
-            .onFailure((ignored, error, context) -> logger.error("Failed GCS API call after {} attempts: {} {}", context.getExecutions(), method, url, error))
+            .with(listeningPolicy)
+            .onFailure(event -> logger.error("Failed GCS API call after {} attempts: {} {}", event.getAttemptCount(), method, url, event.getFailure()))
             .get(() -> consumer.apply(setupUrlConnection(method, url, write, additionalHeaders)));
     }
 
