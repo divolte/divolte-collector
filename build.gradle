@@ -154,8 +154,6 @@ configurations {
     all {
         resolutionStrategy {
             final List<String> whitelist = [
-                // Pub-sub is currently in beta.
-                'com.google.cloud:google-cloud-pubsub',
                 // These never left beta.
                 "xml-apis:xml-apis",
             ]
