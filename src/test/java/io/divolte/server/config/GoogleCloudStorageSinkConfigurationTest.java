@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ package io.divolte.server.config;
 
 import com.typesafe.config.ConfigFactory;
 import net.jodah.failsafe.RetryPolicy;
-import net.jodah.failsafe.util.Duration;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.junit.Assert.*;
 
 public class GoogleCloudStorageSinkConfigurationTest {
@@ -32,7 +32,7 @@ public class GoogleCloudStorageSinkConfigurationTest {
     @Test
     public void testDefaultRetryConfigurationValid() {
         // Check that we can generate settings from our defaults.
-        final RetryPolicy retryPolicy =
+        final RetryPolicy<?> retryPolicy =
             GoogleCloudStorageSinkConfiguration.DEFAULT_RETRY_SETTINGS.createRetryPolicy();
         assertNotNull(retryPolicy);
     }
@@ -66,13 +66,13 @@ public class GoogleCloudStorageSinkConfigurationTest {
 
         // Check that we generate the retry policy that matches the settings.
         final GoogleCloudStorageRetryConfiguration retrySettings = vc.configuration().getSinkConfiguration("gcs", GoogleCloudStorageSinkConfiguration.class).retrySettings;
-        final RetryPolicy retryPolicy = retrySettings.createRetryPolicy();
+        final RetryPolicy<?> retryPolicy = retrySettings.createRetryPolicy();
 
         assertEquals(8, retryPolicy.getMaxRetries());
-        assertEquals(new Duration(138, TimeUnit.SECONDS), retryPolicy.getMaxDuration());
-        assertEquals(new Duration(19, TimeUnit.SECONDS), retryPolicy.getDelay());
+        assertEquals(Duration.of(138, SECONDS), retryPolicy.getMaxDuration());
+        assertEquals(Duration.of(19, SECONDS), retryPolicy.getDelay());
         assertEquals(2.2, retryPolicy.getDelayFactor(), DEFAULT_DELTA);
-        assertEquals(new Duration(25, TimeUnit.SECONDS), retryPolicy.getMaxDelay());
+        assertEquals(Duration.of(25, SECONDS), retryPolicy.getMaxDelay());
         assertEquals(1925, retryPolicy.getJitter().toMillis(), DEFAULT_DELTA);
     }
 }

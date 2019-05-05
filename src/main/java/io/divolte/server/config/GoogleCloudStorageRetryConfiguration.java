@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import net.jodah.failsafe.RetryPolicy;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.ParametersAreNullableByDefault;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 @ParametersAreNonnullByDefault
 @EitherJitterDurationOrFactorButNotBoth
@@ -63,13 +63,13 @@ public class GoogleCloudStorageRetryConfiguration extends RetryConfiguration {
             : this.jitterFactor.isPresent() ? Optional.empty() : DEFAULT_JITTER_DURATION;
     }
 
-    public RetryPolicy createRetryPolicy() {
-        final RetryPolicy policyBeforeJitter = new RetryPolicy()
+    public RetryPolicy<?> createRetryPolicy() {
+        final RetryPolicy<Object> policyBeforeJitter = new RetryPolicy<>()
             .withMaxRetries(maxAttempts - 1)
-            .withMaxDuration(totalTimeout.toNanos(), TimeUnit.NANOSECONDS)
-            .withBackoff(initialRetryDelay.toNanos(), maxRetryDelay.toNanos(), TimeUnit.NANOSECONDS, retryDelayMultiplier);
-        final RetryPolicy policyWithJitterFactor = jitterFactor.map(policyBeforeJitter::withJitter).orElse(policyBeforeJitter);
-        return jitterDelay.map(d -> policyWithJitterFactor.withJitter(d.toNanos(), TimeUnit.NANOSECONDS)).orElse(policyWithJitterFactor);
+            .withMaxDuration(totalTimeout)
+            .withBackoff(initialRetryDelay.toNanos(), maxRetryDelay.toNanos(), ChronoUnit.NANOS, retryDelayMultiplier);
+        final RetryPolicy<Object> policyWithJitterFactor = jitterFactor.map(policyBeforeJitter::withJitter).orElse(policyBeforeJitter);
+        return jitterDelay.map(policyWithJitterFactor::withJitter).orElse(policyWithJitterFactor);
     }
 
     @Override

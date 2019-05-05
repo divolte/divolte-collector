@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2018 GoDataDriven B.V.
+  ~ Copyright 2019 GoDataDriven B.V.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -39,5 +39,18 @@
           -->
         <Class name="~io.divolte.groovyscript.MappingBase\$.*"/>
         <Bug pattern="SE_NO_SERIALVERSIONID"/>
+    </Match>
+    <Match>
+        <!--
+          ~ OpenJDK 11 and 12 generate bytecode during try-with-resources
+          ~ that trip this indicator. Oops.
+          -->
+        <Or>
+            <Class name="io.divolte.server.filesinks.gcs.GoogleCloudStorageFileManager"/>
+            <Class name="io.divolte.server.recordmapping.AvroGenericRecordMapper"/>
+            <Class name="io.divolte.server.ServerSinkSourceConfigurationTest"/>
+            <Class name="io.divolte.server.ServerSinkSourceConfigurationTest$AvroFileLocator"/>
+        </Or>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
     </Match>
 </FindBugsFilter>

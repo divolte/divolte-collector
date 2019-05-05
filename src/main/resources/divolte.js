@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -370,7 +370,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * @param {boolean} includeTimestampPrefix  whether or not the a timestamp
    *        should be included in the identifier. (This timestamp is always
    *        the module load time.)
-   * @return {string} a unique identifier.
+   * @return {!string} a unique identifier.
    */
   var generateId = function() {
     /*
@@ -536,7 +536,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
          * Generate a string that is globally unique.
          * This is based on a cryptographic hash of local information
          * that should be random.
-         * @type {function():string}
+         * @type {function():!Array.<number>}
          */
         generateRandomDigest = function() {
           var message = [
@@ -592,21 +592,58 @@ var AUTO_PAGE_VIEW_EVENT = true;
     };
   }();
 
-  // Locate our identifiers, or generate them if necessary.
-  var partyId    = getCookie(PARTY_COOKIE_NAME),
-      sessionId  = getCookie(SESSION_COOKIE_NAME),
+  /*
+   * Locate our identifiers, or generate them if necessary.
+   */
+  var /**
+       * The identifier of the session to which this page-view belongs.
+       * @type {!string}
+       */
+      partyId,
+      /**
+       * The identifier of the session to which this page-view belongs.
+       * @type {!string}
+       */
+      sessionId,
+      /**
+       * The identifier of this page-view, if provided by the server or
+       * the page-view has started.
+       * @type {?string}
+       */
       pageViewId = getServerPageView(divolteScriptUrl),
-      isNewParty = !partyId,
-      isFirstInSession = !sessionId,
+      /**
+       * Whether or not this is the first page view for this party.
+       * @type {!boolean}
+       */
+      isNewParty,
+      /**
+       * Whether or not this is the first page view for this session.
+       * @type {!boolean}
+       */
+      isFirstInSession,
+      /**
+       * Whether or not the page-view was supplied by the server of the page or not.
+       * @type {!boolean}
+       */
       isServerPageView = Boolean(pageViewId);
-  if (isNewParty) {
-    log("New party; generating identifier.");
-    partyId = generateId(true);
-  }
-  if (isFirstInSession) {
-    log("New session; generating identifier.");
-    sessionId = generateId(true);
-  }
+
+  (function() {
+    var restoredPartyId   = getCookie(PARTY_COOKIE_NAME),
+        restoredSessionId = getCookie(SESSION_COOKIE_NAME);
+    if ((isNewParty = !restoredPartyId)) {
+      log("New party; generating identifier.");
+      partyId = generateId(true);
+    } else {
+      partyId = restoredPartyId;
+    }
+    if ((isFirstInSession = !restoredSessionId)) {
+      log("New session; generating identifier.");
+      sessionId = generateId(true);
+    } else {
+      sessionId = restoredSessionId;
+    }
+  })();
+
   if (isServerPageView) {
     log("Using server-provided pageview identifier.", pageViewId);
   }
@@ -846,7 +883,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * and honours toJSON() semantics. It does not, however, use the JSON
    * encoding to serialize the value.
    * @param {*} value The value to serialize.
-   * @return {String} a string that represents the serialized value.
+   * @return {string} a string that represents the serialized value.
    */
   var mincode = function() {
     /**

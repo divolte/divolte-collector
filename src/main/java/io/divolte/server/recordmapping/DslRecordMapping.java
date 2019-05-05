@@ -19,6 +19,7 @@ package io.divolte.server.recordmapping;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.*;
+import com.google.common.net.InetAddresses;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
@@ -44,17 +45,13 @@ import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecordBuilder;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -736,7 +733,7 @@ public final class DslRecordMapping {
         final PrimitiveValueProducer<InetAddress> addressProducer =
                 new PrimitiveValueProducer<>("parse(" + source.identifier + " to IP address)",
                                              InetAddress.class,
-                                             (e, c) -> source.produce(e, c).flatMap(DslRecordMapping::tryParseIpv4),
+                                             (e, c) -> source.produce(e, c).flatMap(DslRecordMapping::tryParseIp),
                                              true);
         return new GeoIpValueProducer(addressProducer, verifyAndReturnLookupService());
     }
@@ -967,31 +964,10 @@ public final class DslRecordMapping {
         }
     }
 
-    /*
-     * Handy when using something other than the remote host as IP address (e.g. custom headers set by a load balancer).
-     * We force the address to be in the numeric IPv4 scheme, to prevent name resolution and IPv6.
-     */
-    private static Optional<InetAddress> tryParseIpv4(final String ip) {
-        final byte[] result = new byte[4];
-        final String[] parts = StringUtils.split(ip, '.');
-        if (parts.length != 4) {
-            return Optional.empty();
-        }
+    private static Optional<InetAddress> tryParseIp(final String ip) {
         try {
-            for (int c = 0; c < 4; c++) {
-                final int x = Integer.parseInt(parts[c]);
-                if (x < 0x00 || x > 0xff) {
-                    return Optional.empty();
-                }
-                result[c] = (byte) (x & 0xff);
-            }
-        } catch(final NumberFormatException nfe) {
-            return Optional.empty();
-        }
-
-        try {
-            return Optional.of(InetAddress.getByAddress(result));
-        } catch (final UnknownHostException e) {
+            return Optional.of(InetAddresses.forString(ip));
+        } catch (final IllegalArgumentException e) {
             return Optional.empty();
         }
     }

@@ -38,7 +38,6 @@ import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.io.DatumReader;
-import org.apache.commons.lang.mutable.MutableInt;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -133,15 +132,16 @@ public class FileFlusherLocalHdfsTest {
 
         flusher.cleanup();
 
-        final MutableInt count = new MutableInt(0);
-        Files.walk(tempPublishDir)
-             .filter((p) -> p.toString().endsWith(".avro"))
-             .forEach((p) -> {
-                 verifyAvroFile(records, schema, p);
-                 count.increment();
-             });
+        final long verifiedFileCount =
+            Files.walk(tempPublishDir)
+                 .filter(p -> p.toString().endsWith(".avro"))
+                 .filter(p -> {
+                     verifyAvroFile(records, schema, p);
+                     return true;
+                 })
+                 .count();
 
-        assertEquals(2, count.intValue());
+        assertEquals(2, verifiedFileCount);
     }
 
     @Test
@@ -159,14 +159,15 @@ public class FileFlusherLocalHdfsTest {
 
         flusher.cleanup();
 
-        final MutableInt count = new MutableInt(0);
-        Files.walk(tempPublishDir)
-             .filter((p) -> p.toString().endsWith(".avro"))
-             .forEach((p) -> {
-                 verifyAvroFile(records, schema, p);
-                 count.increment();
-             });
-        assertEquals(2, count.intValue());
+        final long verifiedFileCount =
+            Files.walk(tempPublishDir)
+                 .filter(p -> p.toString().endsWith(".avro"))
+                 .filter(p -> {
+                     verifyAvroFile(records, schema, p);
+                     return true;
+                 })
+                 .count();
+        assertEquals(2, verifiedFileCount);
     }
 
     private void setupFlusher(final String rollEvery, final int recordCount) throws IOException {
