@@ -1263,7 +1263,7 @@ If *any* sinks are configured these implicit sinks are not present and all sinks
 File Based Sinks
 ^^^^^^^^^^^^^^^^
 
-A file based sink writes `Avro files <http://avro.apache.org/docs/1.8.2/spec.html#Object+Container+Files>`_ containing records produced by mapping to a remote file system. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
+A file based sink writes `Avro files <http://avro.apache.org/docs/1.9.0/spec.html#Object+Container+Files>`_ containing records produced by mapping to a remote file system. The schema of the Avro file is the schema of the mapping producing the records. If multiple mappings produce records for a sink they must all use the same schema.
 
 File based sinks use multiple threads to write the records as they are produced. Each thread writes to its own Avro file, flushing regularly. Periodically the Avro files are closed and new ones started. Files are initially created in the configured working directory and have an extension of ``.avro.partial`` while open and being written to. When closed, they are renamed to have an extension of ``.avro`` and moved to the publish directory. This happens in a single (atomic) move operation, so long as the underlying storage supports this.
 
@@ -1586,7 +1586,7 @@ Records produced from events with the same party identifier are queued on a topi
 
 The body of each Kafka message contains a single Avro record, serialized in one of two possible ways depending on the sink mode:
 
-- In ``naked`` mode (the default) the record is serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
+- In ``naked`` mode (the default) the record is serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.9.0/spec.html#binary_encoding>`_. The schema is not included or referenced in the message. Because Avro's binary encoding is not self-describing, a topic consumer must be independently configured to use a *write schema* that corresponds to the schema used by the mapper that produced the record.
 - In ``confluent`` mode (experimental) the record is serialized using the `wire format for the Confluent platform <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This requires that mappings for this sink be configured with the ``confluent_id`` specifying the identifier of the Avro schema as registered in the Schema Registry. (Divolte does not register the schema itself.)
 
 Within the namespace for a Kafka sink properties are used to configure it.
@@ -1596,7 +1596,7 @@ Kafka Sink Property: ``mode``
 :Description:
   The Kafka sink mode, which controls how Avro records are formatted as Kafka messages:
 
-  - In ``naked`` mode the records are serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_.
+  - In ``naked`` mode the records are serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.9.0/spec.html#binary_encoding>`_.
   - In ``confluent`` mode (experimental) the records are serialised using `Confluent platform's wire format <https://docs.confluent.io/3.3.0/schema-registry/docs/serializer-formatter.html#wire-format>`_. This only affects the message body.
 
   Note that ``confluent`` mode is only permitted if the ``confluent_id`` is specified (and the same) for all mappings that this sink consumes from.
@@ -1626,12 +1626,12 @@ For authentication against Google Cloud services, Divolte Collector expects `App
 
 Messages produced from events with the same party identifier are sent to the topic in the same order they were received by the originating source. (The relative ordering across sources is not guaranteed.) Pub/Sub itself offers best-effort ordering for receipt by subscribers but this is not guaranteed.
 
-The data in each Pub/Sub message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.8.2/spec.html#binary_encoding>`_. In addition to the data, each message has several attributes set:
+The data in each Pub/Sub message contains a single Avro record, serialised using Avro's `binary encoding <http://avro.apache.org/docs/1.9.0/spec.html#binary_encoding>`_. In addition to the data, each message has several attributes set:
 
 :partyIdentifier:
   The party id associated with this event.
 :schemaFingerprint:
-  This is set to the `schema fingerprint <https://avro.apache.org/docs/1.8.2/spec.html#schema_fingerprints>`_ of the Avro schema used to encode the message, calculated using the `SHA-256 digest algorithm <http://en.wikipedia.org/wiki/SHA-2>`_. The digest itself is encoded using the ``base64url`` encoding `specified in RFC4648 <https://tools.ietf.org/html/rfc4648#section-5>`_, without padding.
+  This is set to the `schema fingerprint <https://avro.apache.org/docs/1.9.0/spec.html#schema_fingerprints>`_ of the Avro schema used to encode the message, calculated using the `SHA-256 digest algorithm <http://en.wikipedia.org/wiki/SHA-2>`_. The digest itself is encoded using the ``base64url`` encoding `specified in RFC4648 <https://tools.ietf.org/html/rfc4648#section-5>`_, without padding.
 :schemaConfluentId:
   This attribute is only set if the mapping used to produce the record specifies a ``confluent_id``. In this case the attribute contains that value, encoded using base 16.
 

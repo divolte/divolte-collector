@@ -124,7 +124,7 @@
     "title": "Test bytes mapping",
     "schema": { "type": "bytes" },
     "json": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZy4=",
-    "result": { "bytes" : "The quick brown fox jumps over the lazy dog." }
+    "result": "The quick brown fox jumps over the lazy dog."
   },
   {
     "title": "Test fixed mapping",
