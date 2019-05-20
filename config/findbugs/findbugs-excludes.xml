@@ -26,10 +26,18 @@
     </Match>
     <Match>
         <!--
-          ~ This method uses intentional fall-through from switch labels.
+          ~ These methods use intentional fall-through from switch labels.
           -->
-        <Class name="io.divolte.server.ChunkyByteBuffer"/>
-        <Method name="getBufferUsed"/>
+        <Or>
+            <And>
+                <Class name="io.divolte.server.ChunkyByteBuffer"/>
+                <Method name="getBufferUsed"/>
+            </And>
+            <And>
+                <Class name="io.divolte.server.ServerTestUtils$EventDecoder"/>
+                <Method name="decodeSchemaAsStrings"/>
+            </And>
+        </Or>
         <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     </Match>
     <Match>

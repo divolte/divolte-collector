@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.Headers;
 import net.sf.uadetector.ReadableUserAgent;
+import org.apache.avro.LogicalType;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
@@ -48,10 +49,12 @@ import org.apache.avro.generic.GenericRecordBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.net.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -270,12 +273,12 @@ public final class DslRecordMapping {
         return new BooleanValueProducer("duplicate()", (e,c) -> Optional.ofNullable(e.exchange.getAttachment(DUPLICATE_EVENT_KEY)));
     }
 
-    public ValueProducer<Long> timestamp() {
-        return new PrimitiveValueProducer<>("timestamp()", Long.class, (e,c) -> Optional.of(e.requestStartTime.toEpochMilli()));
+    public ValueProducer<Instant> timestamp() {
+        return new InstantValueProducer("timestamp()", (e,c) -> Optional.of(e.requestStartTime));
     }
 
-    public ValueProducer<Long> clientTimestamp() {
-        return new PrimitiveValueProducer<>("clientTimestamp()", Long.class, (e,c) -> Optional.of(e.clientTime.toEpochMilli()));
+    public ValueProducer<Instant> clientTimestamp() {
+        return new InstantValueProducer("clientTimestamp()", (e,c) -> Optional.of(e.clientTime));
     }
 
     public ValueProducer<String> remoteHost() {
@@ -1180,6 +1183,38 @@ public final class DslRecordMapping {
                         "not(" + identifier + ")",
                         (e,c) -> produce(e,c).map((b) -> !b));
             // This would have been a fine candidate use for a method reference to BooleanUtils
+        }
+    }
+
+    public static class InstantValueProducer extends ValueProducer<Instant> {
+
+        InstantValueProducer(final String identifier,
+                             final FieldSupplier<Instant> supplier) {
+            super(identifier, Instant.class, supplier, false);
+        }
+
+        private static boolean isTimestamp(final @Nullable LogicalType type) {
+            final boolean isTimestamp;
+            if (null == type) {
+                isTimestamp = false;
+            } else {
+                switch (type.getName()) {
+                    case "timestamp-millis":
+                    case "timestamp-micros":
+                        isTimestamp = true;
+                        break;
+                    default:
+                        isTimestamp = false;
+                }
+            }
+            return isTimestamp;
+        }
+
+        @Override
+        Optional<ValidationError> validateTypes(final Field target) {
+            return validateTrivialUnion(target.schema(),
+                                        schema -> Type.LONG == schema.getType() && isTimestamp(schema.getLogicalType()),
+                                        "Timestamps can only be mapped to timestamp logical types");
         }
     }
 
