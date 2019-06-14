@@ -7,6 +7,8 @@ services:
         - type: bind
           source: ./
           target: /code
+        environment:
+        - TERM=dumb
 
     openjdk9:
         image: openjdk:9
@@ -15,6 +17,8 @@ services:
         - type: bind
           source: ./
           target: /code
+        environment:
+        - TERM=dumb
 
     openjdk10:
         image: openjdk:10
@@ -23,6 +27,8 @@ services:
         - type: bind
           source: ./
           target: /code
+        environment:
+        - TERM=dumb
 
     openjdk11:
         image: openjdk:11
@@ -31,3 +37,5 @@ services:
          - type: bind
            source: ./
            target: /code
+        environment:
+        - TERM=dumb
