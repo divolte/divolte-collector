@@ -9,9 +9,4 @@ env:
   - DOCKER_CONTAINER=openjdk8
   - DOCKER_CONTAINER=openjdk11
 
-matrix:
-  allow_failures:
-  - env: DOCKER_CONTAINER=openjdk11
-  fast_finish: true
-
 script: docker-compose run --rm $DOCKER_CONTAINER bash -c "./config/ci/install-schemas.sh && ./gradlew test"
