@@ -140,7 +140,7 @@ dependencies {
     testCompile group: 'com.saucelabs', name:'sauce_junit', version: '2.1.25'
 
     testCompile group: 'org.seleniumhq.selenium', name:'selenium-java', version: '3.141.59'
-    testCompile group: 'com.saucelabs', name:'saucerest', version: '1.0.40'
+    testCompile group: 'com.saucelabs', name:'saucerest', version: '1.0.42'
     testCompile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.4.4'
 }
 
