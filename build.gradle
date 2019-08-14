@@ -169,7 +169,7 @@ configurations {
                     }
                 }
             }
-            force 'io.netty:netty-all:4.1.38.Final'
+            force 'io.netty:netty-all:4.1.39.Final'
         }
     }
 }
