@@ -92,7 +92,7 @@ dependencies {
         exclude group: 'jline', module: 'jline'
     }
     compile group: 'org.apache.hadoop', name: 'hadoop-hdfs', version: hadoopVersion
-    compile (group: 'com.google.auth', name: 'google-auth-library-oauth2-http', version: '0.16.2') {
+    compile (group: 'com.google.auth', name: 'google-auth-library-oauth2-http', version: '0.17.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
     compile group: 'com.google.cloud', name: 'google-cloud-pubsub', version: '1.87.0'
