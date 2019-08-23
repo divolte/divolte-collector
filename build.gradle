@@ -209,7 +209,7 @@ pmd {
 }
 
 checkstyle {
-    toolVersion = "8.20"
+    toolVersion = "8.23"
 }
 
 jacoco {
