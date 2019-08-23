@@ -16,7 +16,7 @@
 
 buildscript {
     dependencies {
-        classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.21.0'
+        classpath group: 'com.github.ben-manes', name: 'gradle-versions-plugin', version: '0.22.0'
     }
 }
 
