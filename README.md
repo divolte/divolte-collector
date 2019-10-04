@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/divolte/divolte-collector.svg?branch=master)](https://travis-ci.org/divolte/divolte-collector)
+
 Divolte Collector
 =================
 
