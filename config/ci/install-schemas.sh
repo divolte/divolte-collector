@@ -11,5 +11,3 @@ echo "Install the Divolte schema"
 git clone --depth 1 https://github.com/divolte/divolte-schema.git /tmp/divolte-schema \
       && cd /tmp/divolte-schema \
       && mvn -q -B install
-
-cd /code/
