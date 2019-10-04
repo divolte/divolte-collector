@@ -94,10 +94,10 @@ dependencies {
         exclude group: 'jline', module: 'jline'
     }
     compile group: 'org.apache.hadoop', name: 'hadoop-hdfs', version: hadoopVersion
-    compile (group: 'com.google.auth', name: 'google-auth-library-oauth2-http', version: '0.17.1') {
+    compile (group: 'com.google.auth', name: 'google-auth-library-oauth2-http', version: '0.17.2') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
-    compile group: 'com.google.cloud', name: 'google-cloud-pubsub', version: '1.90.0'
+    compile group: 'com.google.cloud', name: 'google-cloud-pubsub', version: '1.96.0'
     compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.22') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
@@ -114,7 +114,7 @@ dependencies {
     //   - The client from 0.10.2.0 onwards supports brokers from 0.10.0.0 onwards.
     // Note: we refer to versioned producer documentation in our documentation.
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '2.3.0'
-    compile group: 'com.google.javascript', name:'closure-compiler-unshaded', version:'v20190819'
+    compile group: 'com.google.javascript', name:'closure-compiler-unshaded', version:'v20190929'
     compile group: 'org.codehaus.groovy', name:'groovy', version: '2.5.8', classifier: 'indy'
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.4'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.4.0'
@@ -171,7 +171,7 @@ configurations {
                     }
                 }
             }
-            force 'io.netty:netty-all:4.1.39.Final'
+            force 'io.netty:netty-all:4.1.42.Final'
         }
     }
 }
