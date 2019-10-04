@@ -9,5 +9,8 @@ env:
   - DOCKER_CONTAINER=openjdk8
   - DOCKER_CONTAINER=openjdk11
 
+git:
+    depth: false
+
 # TODO: User documentation (sphinx) and RPM (buildrpm et al.)
 script: docker-compose run --rm $DOCKER_CONTAINER bash -c "./config/ci/install-schemas.sh && ./gradlew build zip tarball"
