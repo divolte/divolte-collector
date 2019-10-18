@@ -19,6 +19,7 @@ package io.divolte.server.mincode;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.exc.StreamReadException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Resources;
@@ -247,7 +248,7 @@ public class MincodeParserTest {
     private <T extends Number> void assertOutOfRange(final String expectedMessageSubstring,
                                                      final BigInteger maxValue,
                                                      final Class<T> type) throws IOException {
-        expectedException.expect(JsonParseException.class);
+        expectedException.expect(StreamReadException.class);
         expectedException.expectMessage(expectedMessageSubstring);
         MAPPER.readValue("j" + maxValue.add(BigInteger.ONE) + '!', type);
     }
