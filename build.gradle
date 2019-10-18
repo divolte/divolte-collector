@@ -68,7 +68,7 @@ dependencies {
     // Note: we refer to the Avro documentation in our own documentation.
     def avroVersion = '1.9.1'
     def hadoopVersion = '3.2.1'
-    def jacksonVersion = '2.9.10'
+    def jacksonVersion = '2.10.0'
     def slf4jVersion = '1.7.28'
 
     compile group: 'io.divolte', name: 'divolte-schema', version: version
