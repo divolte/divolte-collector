@@ -228,7 +228,7 @@ spotbugsTest.reports {
 }
 
 wrapper {
-    gradleVersion = '5.6'
+    gradleVersion = '5.6.3'
     distributionType = Wrapper.DistributionType.ALL
 }
 
