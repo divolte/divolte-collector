@@ -175,8 +175,8 @@ public class JsonEventHandler implements HttpHandler {
                 this.eventType          = Objects.requireNonNull(eventType);
                 this.sessionId          = Objects.requireNonNull(sessionId);
                 this.eventId            = Objects.requireNonNull(eventId);
-                this.isNewParty         = Objects.requireNonNull(isNewParty);
-                this.isNewSession       = Objects.requireNonNull(isNewSession);
+                this.isNewParty         = isNewParty;
+                this.isNewSession       = isNewSession;
                 this.clientTimestampIso = Objects.requireNonNull(clientTimestampIso);
                 this.parameters         = Objects.requireNonNull(parameters);
             }

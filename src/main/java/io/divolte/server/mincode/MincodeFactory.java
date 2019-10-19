@@ -35,7 +35,7 @@ public class MincodeFactory extends JsonFactory {
     public final static Version FORMAT_VERSION = Version.unknownVersion();
 
     public MincodeFactory() {
-        this(null);
+        this((ObjectCodec) null);
     }
 
     public MincodeFactory(@Nullable final ObjectCodec oc) {
@@ -44,6 +44,10 @@ public class MincodeFactory extends JsonFactory {
 
     public MincodeFactory(final MincodeFactory src, @Nullable final ObjectCodec codec) {
         super(src, codec);
+    }
+
+    public MincodeFactory(final JsonFactoryBuilder builder) {
+        super(builder);
     }
 
     @Override

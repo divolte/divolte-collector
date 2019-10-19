@@ -17,6 +17,7 @@
 package io.divolte.server.mincode;
 
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonFactoryBuilder;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.format.DataFormatDetector;
 import com.fasterxml.jackson.core.io.IOContext;
@@ -27,7 +28,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -81,7 +81,7 @@ public class MincodeFactoryTest {
         final byte[] bytes = MINCODE.getBytes(StandardCharsets.UTF_8);
         assertEquals(EXPECTED_STRING,
                      mincodeMapper.readValue(bytes, String.class));
-        mincodeMapper.getFactory().setInputDecorator(INVERTING_DECORATOR);
+        mincodeMapper = new ObjectMapper(new MincodeFactory(new JsonFactoryBuilder().inputDecorator(INVERTING_DECORATOR)));
         assertEquals(EXPECTED_STRING,
                      mincodeMapper.readValue(invert(bytes), String.class));
     }
@@ -129,12 +129,13 @@ public class MincodeFactoryTest {
     @Test
     public void testReadingFromCharArray() throws Exception {
         final char[] chars = MINCODE.toCharArray();
-        final JsonFactory factory = mincodeMapper.getFactory();
         assertEquals(EXPECTED_STRING,
-                     mincodeMapper.readValue(factory.createParser(chars), String.class));
-        factory.setInputDecorator(INVERTING_DECORATOR);
+                     mincodeMapper.readValue(mincodeMapper.getFactory().createParser(chars), String.class));
+
+        final JsonFactory invertedInputFactory = new MincodeFactory(new JsonFactoryBuilder().inputDecorator(INVERTING_DECORATOR));
+        mincodeMapper = new ObjectMapper(invertedInputFactory);
         assertEquals(EXPECTED_STRING,
-                     mincodeMapper.readValue(factory.createParser(invert(chars)), String.class));
+                     mincodeMapper.readValue(invertedInputFactory.createParser(invert(chars)), String.class));
     }
 
     @Test
