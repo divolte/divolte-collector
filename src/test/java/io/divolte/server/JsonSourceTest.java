@@ -367,6 +367,6 @@ public class JsonSourceTest {
         final DivolteEvent.JsonEventData jsonEventData = receivedEvent.jsonEventData.orElseThrow(AssertionError::new);
         assertNotNull(jsonEventData);
         final Optional<JsonNode> eventParameters = receivedEvent.eventParametersProducer.get();
-        assertFalse(eventParameters.isPresent());
+        assertFalse(eventParameters.filter(n -> !n.isNull()).isPresent());
     }
 }
