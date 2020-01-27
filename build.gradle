@@ -107,7 +107,7 @@ dependencies {
         // client which conflicts with the version via Hadoop.
         exclude group: 'com.google.http-client', module: 'google-http-client'
     }
-    compile group: 'net.jodah', name: 'failsafe', version: '2.3.1'
+    compile group: 'net.jodah', name: 'failsafe', version: '2.3.2'
 
     // Compatibility:
     //   - Horton and Cloudera are both on 0.10+ at the time of writing.
