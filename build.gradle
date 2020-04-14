@@ -74,7 +74,7 @@ dependencies {
     compile group: 'io.divolte', name: 'divolte-schema', version: version
     compile group: 'io.undertow', name: 'undertow-core', version: '2.0.30.Final'
     compile group: 'com.typesafe', name: 'config', version: '1.4.0'
-    compile group: 'com.google.guava', name: 'guava', version: '28.2-jre'
+    compile group: 'com.google.guava', name: 'guava', version: '29.0-jre'
     compile group: 'org.apache.avro', name: 'avro', version: avroVersion
 
     /*
