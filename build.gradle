@@ -23,7 +23,7 @@ buildscript {
 plugins {
     // Versions 1.6.10 thru 2.0.0 depend on a beta version of slf4j, which we don't resolve.
     // So for now we stay on this version of the plugin.
-    id 'com.github.spotbugs' version '1.6.9'
+    id 'com.github.spotbugs' version '4.0.8'
     id 'com.github.johnrengelman.shadow' version '5.2.0'
     id 'pl.allegro.tech.build.axion-release' version '1.11.0'
 }
