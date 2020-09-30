@@ -630,6 +630,38 @@ Property: ``divolte.global.gcps.project_id``
 
 .. _project id: https://support.google.com/cloud/answer/6158840?hl=en
 
+  It is also possible to configure divolte to work with a kerberized Kafka cluster the following configuration snippet shows how.
+
+
+  .. code-block:: none
+
+    divolte.global.kafka.producer = {
+      bootstrap.servers = ["server1:9092", "server2:9092", "server3:9092"]
+      client.id = divolte.collector
+
+      acks = 0
+      retries = 5
+
+      sasl.jaas.config = ""
+      sasl.jaas.config = ${?KAFKA_SASL_JAAS_CONFIG}
+
+      security.protocol = PLAINTEXT
+      security.protocol = ${?KAFKA_SECURITY_PROTOCOL}
+      sasl.mechanism = GSSAPI
+      sasl.kerberos.service.name = kafka
+    }
+
+  The :envvar:`KAFKA_SECURITY_PROTOCOL` can then be set to `SASL_PLAINTEXT` and the :envvar:`KAFKA_SASL_JAAS_CONFIG` can be set to something like:
+
+  .. code-block:: none
+
+    com.sun.security.auth.module.Krb5LoginModule required
+    useKeyTab=true
+    storeKey=true
+    keyTab="/etc/security/keytabs/divolte.keytab"
+    principal="divolte/hostname.divolte.io";
+
+
 Sources (``divolte.sources``)
 -----------------------------
 
@@ -641,6 +673,7 @@ Each source has a type configured via a mandatory ``type`` property. Two types o
 2. ``json``: A low-level event source for collecting events from server or mobile applications.
 
 For example:
+
 
 .. code-block:: none
 
