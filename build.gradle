@@ -72,7 +72,7 @@ dependencies {
     def slf4jVersion = '1.7.28'
 
     compile group: 'io.divolte', name: 'divolte-schema', version: version
-    compile group: 'io.undertow', name: 'undertow-core', version: '2.1.0.Final'
+    compile group: 'io.undertow', name: 'undertow-core', version: '2.2.1.Final'
     compile group: 'com.typesafe', name: 'config', version: '1.4.0'
     compile group: 'com.google.guava', name: 'guava', version: '29.0-jre'
     compile group: 'org.apache.avro', name: 'avro', version: avroVersion
