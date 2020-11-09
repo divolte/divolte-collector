@@ -1,5 +1,5 @@
 //
-// Copyright 2018 GoDataDriven B.V.
+// Copyright 2019 GoDataDriven B.V.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@
         { "name": "sessionStart",                    "type": "boolean" },
         { "name": "unreliable",                      "type": ["null","boolean"], "default": null },
         { "name": "dupe",                            "type": ["null","boolean"], "default": null },
-        { "name": "ts",                              "type": "long" },
+        { "name": "ts",                              "type": { "type": "long", "logicalType": "timestamp-millis" } },
+        { "name": "tsMicros",                        "type": ["null", { "type": "long", "logicalType": "timestamp-micros" } ], "default": null },
         { "name": "eventType",                       "type": ["null","string"],  "default": null },
         { "name": "userAgentString",                 "type": ["null","string"],  "default": null },
         { "name": "remoteHost",                      "type": "string" },

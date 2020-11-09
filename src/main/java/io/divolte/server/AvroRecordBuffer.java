@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,16 +28,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import com.google.common.base.MoreObjects;
+import org.apache.avro.data.TimeConversions;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.specific.SpecificDatumWriter;
 
 @ParametersAreNonnullByDefault
 public final class AvroRecordBuffer {
     private static final int INITIAL_BUFFER_SIZE = 100;
     private static final AtomicInteger BUFFER_SIZE = new AtomicInteger(INITIAL_BUFFER_SIZE);
+    static final GenericData AVRO_GENERIC_DATA;
+
+    static {
+        AVRO_GENERIC_DATA = new GenericData();
+        AVRO_GENERIC_DATA.addLogicalTypeConversion(new TimeConversions.TimestampMillisConversion());
+        AVRO_GENERIC_DATA.addLogicalTypeConversion(new TimeConversions.TimestampMicrosConversion());
+    }
 
     private final DivolteIdentifier partyId;
     private final DivolteIdentifier sessionId;
@@ -64,7 +73,7 @@ public final class AvroRecordBuffer {
          * will also allocate the larger size array from that point onward.
          */
         final ByteBuffer byteBuffer = ByteBuffer.allocate(BUFFER_SIZE.get());
-        final DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(record.getSchema());
+        final DatumWriter<GenericRecord> writer = new GenericDatumWriter<>(record.getSchema(), AVRO_GENERIC_DATA);
         final Encoder encoder = EncoderFactory.get().directBinaryEncoder(new ByteBufferOutputStream(byteBuffer), null);
 
         writer.write(record, encoder);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,14 @@ import com.typesafe.config.ConfigValueFactory;
 import io.divolte.server.config.ValidatedConfiguration;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.Decoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.util.ByteBufferInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +42,13 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
 import java.time.Instant;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static org.mockito.Mockito.mock;
 
@@ -118,12 +125,90 @@ public final class ServerTestUtils {
         final AvroRecordBuffer buffer;
         final GenericRecord record;
 
-        public EventPayload(final DivolteEvent event,
+        private EventPayload(final DivolteEvent event,
                              final AvroRecordBuffer buffer,
                              final GenericRecord record) {
             this.event = Objects.requireNonNull(event);
             this.buffer = Objects.requireNonNull(buffer);
             this.record = Objects.requireNonNull(record);
+        }
+    }
+
+    @ParametersAreNonnullByDefault
+    private static final class EventDecoder {
+        private final Map<Schema, DatumReader<GenericRecord>> readers = new ConcurrentHashMap<>();
+        private final Consumer<EventPayload> payloadConsumer;
+
+        private EventDecoder(final Consumer<EventPayload> payloadConsumer) {
+            this.payloadConsumer = Objects.requireNonNull(payloadConsumer);
+        }
+
+        private static void decodeSchemaAsStrings(final Schema schema) {
+            /*
+             * Recursively descend through a schema marking all the strings (and keys in maps)
+             * so that they're decoded as Java strings instead of Avro Utf8 instances.
+             * This is intended as a convenience for tests.
+             */
+            switch (schema.getType()) {
+                case MAP:
+                    decodeSchemaAsStrings(schema.getValueType());
+                    // Intentional fall-through.
+                case STRING:
+                    GenericData.setStringType(schema, GenericData.StringType.String);
+                    break;
+                case UNION:
+                    schema.getTypes().forEach(EventDecoder::decodeSchemaAsStrings);
+                    break;
+                case ARRAY:
+                    decodeSchemaAsStrings(schema.getElementType());
+                    break;
+                case RECORD:
+                    schema.getFields().stream().map(Schema.Field::schema).forEach(EventDecoder::decodeSchemaAsStrings);
+                    break;
+                default:
+                    // Nothing to do for other schema types.
+                    break;
+            }
+        }
+
+        private DatumReader<GenericRecord> getReader(final Schema schema) {
+            /*
+             * This is complicated, but the idea is to avoid marking a schema recursively to
+             * produce normal strings. We also want to cache the readers.
+             *
+             * A complication is that recursively marking the schema involves setting
+             * properties, which means the hash code changes.
+             *
+             * Our steps are:
+             * 1. See if the schema already has a reader.
+             *    If so, it's already marked for strings and we're done.
+             * 2. No reader? Mark the schema up for string conversions.
+             *    This changes the hash code if it wasn't already marked up.
+             * 3. Use compute-if-absent to atomically build a reader if there still isn't
+             *    one.
+             *
+             * (What we're doing here smells a bit like double-checked locking, but isn't;
+             *  instead it's more like opportunistic locking.)
+             */
+            DatumReader<GenericRecord> reader = readers.get(schema);
+            if (null == reader) {
+                decodeSchemaAsStrings(schema);
+                reader = readers.computeIfAbsent(schema,
+                    s -> new GenericDatumReader<>(s, s, AvroRecordBuffer.AVRO_GENERIC_DATA));
+            }
+            return reader;
+        }
+
+        private void onEvent(final DivolteEvent event, final AvroRecordBuffer buffer, final GenericRecord record) {
+            final DatumReader<GenericRecord> reader = getReader(record.getSchema());
+            final Decoder decoder = DecoderFactory.get().binaryDecoder(new ByteBufferInputStream(Collections.singletonList(buffer.getByteBuffer())), null);
+            try {
+                final GenericRecord normalizedRecord = reader.read(null, decoder);
+                payloadConsumer.accept(new EventPayload(event, buffer, normalizedRecord));
+            } catch (final IOException e) {
+                // Discard the event if we can't decode the record.
+                logger.error("Cannot decode Avro record", e);
+            }
         }
     }
 
@@ -159,10 +244,11 @@ public final class ServerTestUtils {
                                 .withValue("divolte.global.server.port", ConfigValueFactory.fromAnyRef(port));
 
             events = new ArrayBlockingQueue<>(100);
+            final EventDecoder eventDecoder = new EventDecoder(events::add);
             final ValidatedConfiguration vc = new ValidatedConfiguration(() -> this.config);
             Preconditions.checkArgument(vc.isValid(),
                                         "Invalid test server configuration: %s", vc.errors());
-            server = new Server(vc, (event, buffer, record) -> events.add(new EventPayload(event, buffer, record)));
+            server = new Server(vc, eventDecoder::onEvent);
             try {
                 server.run();
             } catch (final RuntimeException e) {

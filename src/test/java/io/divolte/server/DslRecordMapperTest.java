@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 GoDataDriven B.V.
+ * Copyright 2019 GoDataDriven B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import io.divolte.server.recordmapping.SchemaMappingException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.util.Utf8;
 import org.junit.After;
 import org.junit.Test;
 
@@ -50,6 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -100,7 +100,7 @@ public class DslRecordMapperTest {
         assertEquals(true, record.get("sessionStart"));
         assertEquals(true, record.get("unreliable"));
         assertEquals(false, record.get("dupe"));
-        assertEquals(event.requestStartTime.toEpochMilli(), record.get("ts"));
+        assertEquals(event.requestStartTime, record.get("ts"));
         assertEquals("https://example.com/", record.get("location"));
         assertEquals("http://example.com/", record.get("referer"));
 
@@ -163,7 +163,43 @@ public class DslRecordMapperTest {
         final EventPayload event = request("https://example.com/", "http://example.com/");
         final GenericRecord record = event.record;
 
-        assertEquals(ClientSideCookieEventHandler.tryParseBase36Long(CLIENT_SIDE_TIME), record.get("ts"));
+        assertEquals(Instant.ofEpochMilli(Long.parseLong(CLIENT_SIDE_TIME, 36)), record.get("ts"));
+    }
+
+    @Test
+    public void shouldMapTimestampFromLong() throws IOException, InterruptedException {
+        setupServer("timestamp-from-long.groovy");
+
+        final EventPayload event = request("https://example.com/", "http://example.com/");
+        final GenericRecord record = event.record;
+
+        assertEquals(Instant.ofEpochSecond(1558101158L, 679000000L), record.get("ts"));
+        assertEquals(Instant.ofEpochSecond(1558101158L, 679123000L), record.get("tsMicros"));
+    }
+
+    @Test
+    public void shouldMapTimestampMillis() throws IOException, InterruptedException {
+        setupServer("timestamp-as-millis.groovy");
+
+        final EventPayload event = request("https://example.com/", "http://example.com/");
+        final GenericRecord record = event.record;
+
+        assertEquals(Instant.ofEpochMilli(Long.parseLong(CLIENT_SIDE_TIME, 36)), record.get("ts"));
+    }
+
+    @Test
+    public void shouldMapTimestampMicros() throws IOException, InterruptedException {
+        setupServer("timestamp-as-micros.groovy");
+
+        final EventPayload event = request("https://example.com/", "http://example.com/");
+        final GenericRecord record = event.record;
+
+        // We can't easily test the microsecond precision because there's no way to inject a
+        // specific timestamp with microsecond precision into the event. (The server timestamp
+        // has it, but the tests can't force it to a specific value.)
+        // So we have to make do with the client timestamp and checking that it's interpreted
+        // correctly.
+        assertEquals(Instant.ofEpochMilli(Long.parseLong(CLIENT_SIDE_TIME, 36)), record.get("tsMicros"));
     }
 
     @Test(expected=SchemaMappingException.class)
@@ -185,7 +221,7 @@ public class DslRecordMapperTest {
 
         assertEquals("locationmatch", event.record.get("eventType"));
         assertEquals("referermatch", event.record.get("client"));
-        assertEquals(new Utf8("not set"), event.record.get("queryparam"));
+        assertEquals("not set", event.record.get("queryparam"));
 
         assertEquals("absent", event.record.get("event"));
         assertEquals("present", event.record.get("pageview"));
@@ -195,7 +231,7 @@ public class DslRecordMapperTest {
     public void shouldChainValueProducersWithIntermediateNull() throws IOException, InterruptedException {
         setupServer("chained-na-mapping.groovy");
         final EventPayload event = request("http://www.exmaple.com/");
-        assertEquals(new Utf8("not set"), event.record.get("queryparam"));
+        assertEquals("not set", event.record.get("queryparam"));
     }
 
     @Test
