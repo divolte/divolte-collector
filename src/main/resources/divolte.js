@@ -81,7 +81,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
      * our script name, as configured by the globally defined SCRIPT_NAME
      * value.
      */
-    var myElement = document['currentScript'];
+    var myElement = document['currentScript'] || undefined;
     var url;
     if ('undefined' === typeof myElement) {
       var regexEscape = function (s) {
@@ -90,7 +90,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
       var scriptElements = document.getElementsByTagName('script');
       var scriptPattern = new RegExp("^(:?.*\/)?" + regexEscape(SCRIPT_NAME) + "(:?[?#].*)?$");
       for (var i = scriptElements.length - 1; i >= 0; --i) {
-        var scriptElement = scriptElements.item(i);
+        var scriptElement = scriptElements[i];
         var scriptUrl = scriptElement.src;
         if (scriptPattern.test(scriptUrl)) {
           if ('undefined' === typeof url) {
@@ -128,7 +128,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * @returns {?(HTMLElement|Node)}
    */
   var bodyElement = function() {
-    return document.body || document.getElementsByTagName('body').item(0);
+    return document.body || document.getElementsByTagName('body')[0];
   };
 
   /* Some current browser features that we send to Divolte. */
