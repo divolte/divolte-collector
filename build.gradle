@@ -115,7 +115,7 @@ dependencies {
     // Note: we refer to versioned producer documentation in our documentation.
     compile group: 'org.apache.kafka', name:'kafka-clients', version: '2.6.0'
     compile group: 'com.google.javascript', name:'closure-compiler-unshaded', version:'v20200920'
-    compile group: 'org.codehaus.groovy', name:'groovy', version: '3.0.5', classifier: 'indy'
+    compile group: 'org.codehaus.groovy', name:'groovy', version: '3.0.7', classifier: 'indy'
     compile group: 'net.sf.jopt-simple', name:'jopt-simple', version: '5.0.4'
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.4.0'
     compile group: 'com.fasterxml.jackson.core', name:'jackson-databind', version: jacksonVersion
