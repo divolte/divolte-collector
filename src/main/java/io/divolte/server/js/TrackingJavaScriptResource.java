@@ -51,13 +51,14 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
         builder.put("PARTY_ID_TIMEOUT_SECONDS", trimLongToMaxInt(browserSourceConfiguration.partyTimeout.get(ChronoUnit.SECONDS)));
         builder.put("SESSION_COOKIE_NAME", browserSourceConfiguration.sessionCookie);
         builder.put("SESSION_ID_TIMEOUT_SECONDS", trimLongToMaxInt(browserSourceConfiguration.sessionTimeout.get(ChronoUnit.SECONDS)));
-        browserSourceConfiguration.cookieDomain.ifPresent((v) -> builder.put("COOKIE_DOMAIN", v));
+        browserSourceConfiguration.cookieDomain.ifPresent(v -> builder.put("COOKIE_DOMAIN", v));
+        browserSourceConfiguration.cookieSameSite.ifPresent(v -> builder.put("COOKIE_SAME_SITE", v));
         builder.put("LOGGING", browserSourceConfiguration.javascript.logging);
         builder.put(SCRIPT_CONSTANT_NAME, browserSourceConfiguration.javascript.name);
         builder.put("EVENT_SUFFIX", browserSourceConfiguration.eventSuffix);
         builder.put("AUTO_PAGE_VIEW_EVENT", browserSourceConfiguration.javascript.autoPageViewEvent);
         builder.put("EVENT_TIMEOUT_SECONDS", browserSourceConfiguration.javascript.eventTimeout.getSeconds() +
-                                             browserSourceConfiguration.javascript.eventTimeout.getNano() / (double)NANOS_PER_SECOND);
+            browserSourceConfiguration.javascript.eventTimeout.getNano() / (double) NANOS_PER_SECOND);
         return builder.build();
     }
 
@@ -68,7 +69,7 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
         } else {
             result = Integer.MAX_VALUE;
             logger.warn("Configured duration ({}) is too higher; capping at {}.",
-                        duration, result);
+                duration, result);
         }
         return result;
     }
@@ -76,9 +77,9 @@ public class TrackingJavaScriptResource extends JavaScriptResource {
     public static TrackingJavaScriptResource create(final ValidatedConfiguration vc,
                                                     final String sourceName) throws IOException {
         final BrowserSourceConfiguration browserSourceConfiguration =
-                vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class);
+            vc.configuration().getSourceConfiguration(sourceName, BrowserSourceConfiguration.class);
         return new TrackingJavaScriptResource("divolte.js",
-                                              createScriptConstants(browserSourceConfiguration),
-                                              browserSourceConfiguration.javascript.debug);
+            createScriptConstants(browserSourceConfiguration),
+            browserSourceConfiguration.javascript.debug);
     }
 }

@@ -842,6 +842,21 @@ Browser source property: ``cookie_domain``
       cookie_domain = ".example.com"
     }
 
+Browser source property: ``cookie_same_site``
+""""""""""""""""""""""""""""""""""""""""""
+:Description:
+  The cookie SameSite that is assigned to the cookies. When left empty, the cookies will be set with browser default. Available options to set - Strict, Lax & None; Secure
+:Default:
+  *Empty*
+:Example:
+
+  .. code-block:: none
+
+    divolte.sources.a_source {
+      type = browser
+      cookie_same_site = "Lax"
+    }
+
 Browser source property: ``javascript.name``
 """"""""""""""""""""""""""""""""""""""""""""
 :Description:
