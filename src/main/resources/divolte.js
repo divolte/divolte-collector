@@ -37,6 +37,8 @@ var SCRIPT_NAME = 'divolte.js';
 var EVENT_SUFFIX = 'csc-event';
 /** @define {boolean} */
 var AUTO_PAGE_VIEW_EVENT = true;
+/** @define {string} */
+var COOKIE_SAME_SITE = '';
 
 (function (global, factory) {
   factory(global);
@@ -179,7 +181,7 @@ var AUTO_PAGE_VIEW_EVENT = true;
    * @param {number} nowMs         The current time, in milliseconds since the Unix epoch.
    * @param {string} domain        The domain to set the cookies for, if non-zero in length.
    */
-  var setCookie = function(name, value, maxAgeSeconds, nowMs, domain) {
+  var setCookie = function(name, value, maxAgeSeconds, nowMs, domain, sameSite) {
         var expiry = new Date(nowMs + 1000 * maxAgeSeconds);
         // Assumes cookie name and value are sensible. (For our use they are.)
         // Note: No domain means these are always first-party cookies.
@@ -187,6 +189,12 @@ var AUTO_PAGE_VIEW_EVENT = true;
         if (domain) {
           cookieString += "; domain=" + domain;
         }
+
+        // SameSite supports None; Secure, Strict & Lax
+        if (sameSite) {
+          cookieString += "; SameSite=" + sameSite;
+        }
+
         document.cookie = cookieString;
       };
 
@@ -1309,8 +1317,8 @@ var AUTO_PAGE_VIEW_EVENT = true;
       isFirstInSession = false;
 
       // Update the party and session cookies.
-      setCookie(SESSION_COOKIE_NAME, sessionId, SESSION_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
-      setCookie(PARTY_COOKIE_NAME, partyId, PARTY_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN);
+      setCookie(SESSION_COOKIE_NAME, sessionId, SESSION_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN, COOKIE_SAME_SITE);
+      setCookie(PARTY_COOKIE_NAME, partyId, PARTY_ID_TIMEOUT_SECONDS, eventTime, COOKIE_DOMAIN, COOKIE_SAME_SITE);
 
       // Last thing we do: add a checksum to the queryString.
       addParam('x', calculateChecksum(params).toString(36));

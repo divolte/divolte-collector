@@ -16,21 +16,20 @@
 
 package io.divolte.server.config;
 
-import java.time.Duration;
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
-import javax.annotation.ParametersAreNullableByDefault;
-import javax.validation.Valid;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import io.divolte.server.BrowserSource;
 import io.divolte.server.HttpSource;
 import io.divolte.server.IncomingRequestProcessingPool;
+
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.ParametersAreNullableByDefault;
+import javax.validation.Valid;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public class BrowserSourceConfiguration extends SourceConfiguration {
@@ -43,19 +42,21 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     private static final String DEFAULT_HTTP_RESPONSE_DELAY = "0 seconds";
 
     public static final BrowserSourceConfiguration DEFAULT_BROWSER_SOURCE_CONFIGURATION = new BrowserSourceConfiguration(
-            DEFAULT_PREFIX,
-            DEFAULT_EVENT_SUFFIX,
-            Optional.empty(),
-            DEFAULT_PARTY_COOKIE,
-            DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT),
-            DEFAULT_SESSION_COOKIE,
-            DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT),
-            DurationDeserializer.parseDuration(DEFAULT_HTTP_RESPONSE_DELAY),
-            JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
+        DEFAULT_PREFIX,
+        DEFAULT_EVENT_SUFFIX,
+        Optional.empty(),
+        DEFAULT_PARTY_COOKIE,
+        DurationDeserializer.parseDuration(DEFAULT_PARTY_TIMEOUT),
+        DEFAULT_SESSION_COOKIE,
+        DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT),
+        DurationDeserializer.parseDuration(DEFAULT_HTTP_RESPONSE_DELAY),
+        JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION,
+        Optional.empty());
 
     public final String prefix;
     public final String eventSuffix;
     public final Optional<String> cookieDomain;
+    public final Optional<String> cookieSameSite;
     public final String partyCookie;
     public final Duration partyTimeout;
     public final String sessionCookie;
@@ -67,15 +68,16 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
 
     @JsonCreator
     @ParametersAreNullableByDefault
-    BrowserSourceConfiguration(@JsonProperty(defaultValue=DEFAULT_PREFIX) final String prefix,
-                               @JsonProperty(defaultValue=DEFAULT_EVENT_SUFFIX) final String eventSuffix,
+    BrowserSourceConfiguration(@JsonProperty(defaultValue = DEFAULT_PREFIX) final String prefix,
+                               @JsonProperty(defaultValue = DEFAULT_EVENT_SUFFIX) final String eventSuffix,
                                @Nonnull final Optional<String> cookieDomain,
-                               @JsonProperty(defaultValue=DEFAULT_PARTY_COOKIE) final String partyCookie,
-                               @JsonProperty(defaultValue=DEFAULT_PARTY_TIMEOUT) final Duration partyTimeout,
-                               @JsonProperty(defaultValue=DEFAULT_SESSION_COOKIE) final String sessionCookie,
-                               @JsonProperty(defaultValue=DEFAULT_SESSION_TIMEOUT) final Duration sessionTimeout,
-                               @JsonProperty(defaultValue=DEFAULT_HTTP_RESPONSE_DELAY) final Duration httpResponseDelay,
-                               final JavascriptConfiguration javascript) {
+                               @JsonProperty(defaultValue = DEFAULT_PARTY_COOKIE) final String partyCookie,
+                               @JsonProperty(defaultValue = DEFAULT_PARTY_TIMEOUT) final Duration partyTimeout,
+                               @JsonProperty(defaultValue = DEFAULT_SESSION_COOKIE) final String sessionCookie,
+                               @JsonProperty(defaultValue = DEFAULT_SESSION_TIMEOUT) final Duration sessionTimeout,
+                               @JsonProperty(defaultValue = DEFAULT_HTTP_RESPONSE_DELAY) final Duration httpResponseDelay,
+                               final JavascriptConfiguration javascript,
+                               @Nonnull final Optional<String> cookieSameSite) {
         // TODO: register a custom deserializer with Jackson that uses the defaultValue property from the annotation to fix this
         this.prefix = Optional.ofNullable(prefix).map(BrowserSourceConfiguration::ensureTrailingSlash).orElse(DEFAULT_PREFIX);
         this.eventSuffix = Optional.ofNullable(eventSuffix).orElse(DEFAULT_EVENT_SUFFIX);
@@ -86,6 +88,7 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
         this.sessionTimeout = Optional.ofNullable(sessionTimeout).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_SESSION_TIMEOUT));
         this.httpResponseDelay = Optional.ofNullable(httpResponseDelay).orElseGet(() -> DurationDeserializer.parseDuration(DEFAULT_HTTP_RESPONSE_DELAY));
         this.javascript = Optional.ofNullable(javascript).orElse(JavascriptConfiguration.DEFAULT_JAVASCRIPT_CONFIGURATION);
+        this.cookieSameSite = Objects.requireNonNull(cookieSameSite);
     }
 
     private static String ensureTrailingSlash(final String s) {
@@ -95,22 +98,23 @@ public class BrowserSourceConfiguration extends SourceConfiguration {
     @Override
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
-                .add("prefix", prefix)
-                .add("eventSuffix", eventSuffix)
-                .add("cookieDomain", cookieDomain)
-                .add("partyCookie", partyCookie)
-                .add("partyTimeout", partyTimeout)
-                .add("sessionCookie", sessionCookie)
-                .add("sessionTimeout", sessionTimeout)
-                .add("httpResponseDelay", httpResponseDelay)
-                .add("javascript", javascript);
+            .add("prefix", prefix)
+            .add("eventSuffix", eventSuffix)
+            .add("cookieDomain", cookieDomain)
+            .add("partyCookie", partyCookie)
+            .add("partyTimeout", partyTimeout)
+            .add("sessionCookie", sessionCookie)
+            .add("sessionTimeout", sessionTimeout)
+            .add("httpResponseDelay", httpResponseDelay)
+            .add("javascript", javascript)
+            .add("SameSite", cookieSameSite);
     }
 
     @Override
     public HttpSource createSource(
-            final ValidatedConfiguration vc,
-            final String sourceName,
-            final IncomingRequestProcessingPool processingPool) {
+        final ValidatedConfiguration vc,
+        final String sourceName,
+        final IncomingRequestProcessingPool processingPool) {
         return new BrowserSource(vc, sourceName, processingPool);
     }
 }
