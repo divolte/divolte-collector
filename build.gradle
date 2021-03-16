@@ -97,7 +97,7 @@ dependencies {
     compile (group: 'com.google.auth', name: 'google-auth-library-oauth2-http', version: '0.21.1') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
-    compile group: 'com.google.cloud', name: 'google-cloud-pubsub', version: '1.101.0'
+    compile group: 'com.google.cloud', name: 'google-cloud-pubsub', version: '1.112.0'
     compile (group: 'net.sf.uadetector', name: 'uadetector-core', version: '0.9.22') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
