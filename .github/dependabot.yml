@@ -1,0 +1,59 @@
+version: 2
+updates:
+- package-ecosystem: gradle
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: com.github.spotbugs
+    versions:
+    - "> 1.6.9, < 1.7"
+  - dependency-name: com.github.spotbugs
+    versions:
+    - ">= 1.7.a, < 1.8"
+  - dependency-name: com.github.spotbugs
+    versions:
+    - ">= 2.0.a, < 2.1"
+  - dependency-name: com.google.cloud:google-cloud-pubsub
+    versions:
+    - 1.110.3
+    - 1.111.0
+    - 1.111.1
+    - 1.111.2
+    - 1.111.4
+    - 1.112.0
+    - 1.112.1
+  - dependency-name: io.netty:netty-all
+    versions:
+    - 4.1.58.Final
+    - 4.1.59.Final
+    - 4.1.60.Final
+    - 4.1.62.Final
+  - dependency-name: com.github.spotbugs
+    versions:
+    - 4.6.0
+    - 4.6.2
+    - 4.7.0
+  - dependency-name: io.undertow:undertow-core
+    versions:
+    - 2.2.3.Final
+    - 2.2.4.Final
+    - 2.2.5.Final
+  - dependency-name: com.google.javascript:closure-compiler-unshaded
+    versions:
+    - v20210106
+    - v20210202
+    - v20210302
+  - dependency-name: org.hibernate:hibernate-validator
+    versions:
+    - 7.0.0.Final
+  - dependency-name: org.codehaus.groovy:groovy
+    versions:
+    - 3.0.7
+  - dependency-name: junit:junit
+    versions:
+    - 4.13.1
+  - dependency-name: com.github.johnrengelman.shadow
+    versions:
+    - 6.1.0
